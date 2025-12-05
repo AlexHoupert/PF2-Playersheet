@@ -1,0 +1,166 @@
+
+    [
+        {"name":"blinded","level":0,"description":"You can't see. All normal terrain is difficult terrain to you. You can't detect anything using vision. You automatically critically fail Perception checks that require you to be able to see, and if vision is your only precise sense, you take a –4 status penalty to Perception checks. You are immune to visual effects. Blinded overrides dazzled."},
+        {"name":"clumsy","level":0,"description":"Your movements become clumsy and inexact. Clumsy always includes a value. You take a status penalty equal to the condition value to Dexterity-based rolls and DCs, including AC, Reflex saves, ranged attack rolls, and skill checks using Acrobatics, Stealth, and Thievery."},
+        {"name":"concealed","level":0,"description":"You are difficult for one or more creatures to see due to thick fog or some other obscuring feature. You can be concealed to some creatures but not others. While concealed, you can still be observed, but you're tougher to target. A creature that you're concealed from must succeed at a DC 5 flat check when targeting you with an attack, spell, or other effect. If the check fails, you aren't affected. Area effects aren't subject to this flat check."},
+        {"name":"confused","level":0,"description":"You don't have your wits about you, and you attack wildly. You are off-guard, you don't treat anyone as your ally (though they might still treat you as theirs), and you can't Delay, Ready, or use reactions.\n\nYou use all your actions to Strike or cast offensive cantrips, though the GM can have you use other actions to facilitate attack, such as draw a weapon, move so target is in reach, and so forth. \n\nYour targets are determined randomly by the GM. If you have no other viable targets, you target yourself, automatically hitting but not scoring a critical hit. If it's impossible for you to attack or cast spells, you babble incoherently, wasting your actions. \n Each time you take damage from an attack or spell, you can attempt a DC 11 flat check to recover from your confusion and end the condition."},
+        {"name":"lorem","level":0,"description":"."},
+        {"name":"clumsy","level":0,"description":"."},
+        {"name":"clumsy","level":0,"description":"."},
+        {"name":"clumsy","level":0,"description":"."},
+        {"name":"clumsy","level":0,"description":"."},
+        {"name":"clumsy","level":0,"description":"."},
+        {"name":"clumsy","level":0,"description":"."},
+        {"name":"clumsy","level":0,"description":"."},
+        {}
+
+    ]
+
+
+
+[
+  {
+    "name": "blinded",
+    "level": 0,
+  },
+  {
+    "name": "clumsy",
+    "level": 0,
+  },
+  {
+    "name": "concealed",
+    "level": 0,
+  },
+  {
+    "name": "confused",
+    "level": 0,
+  },
+  {
+    "name": "controlled",
+    "level": 0,
+  },
+  {
+    "name": "dazzled",
+    "level": 0,
+  },
+  {
+    "name": "deafened",
+    "level": 0,
+  },
+  {
+    "name": "doomed",
+    "level": 0,
+  },
+  {
+    "name": "drained",
+    "level": 0,
+  },
+  {
+    "name": "dying",
+    "level": 0,
+  },
+  {
+    "name": "encumbered",
+    "level": 0,
+  },
+  {
+    "name": "enfeebled",
+    "level": 0,
+  },
+  {
+    "name": "fascinated",
+    "level": 0,
+  },
+  {
+    "name": "fatigued",
+    "level": 0,
+  },
+  {
+    "name": "fleeing",
+    "level": 0,
+  },
+  {
+    "name": "frightened",
+    "level": 0,
+  },
+  {
+    "name": "grabbed",
+    "level": 0,
+  },
+  {
+    "name": "hidden",
+    "level": 0,
+  },
+  {
+    "name": "immobilized",
+    "level": 0,
+  },
+  {
+    "name": "invisible",
+    "level": 0,
+  },
+  {
+    "name": "observed",
+    "level": 0,
+  },
+  {
+    "name": "off-guard",
+    "level": 0,
+  },
+  {
+    "name": "paralyzed",
+    "level": 0,
+  },
+  {
+    "name": "persistent damage",
+    "level": 0,
+  },
+  {
+    "name": "petrified",
+    "level": 0,
+  },
+  {
+    "name": "prone",
+    "level": 0,
+  },
+  {
+    "name": "quickened",
+    "level": 0,
+  },
+  {
+    "name": "restrained",
+    "level": 0,
+  },
+  {
+    "name": "sickened",
+    "level": 0,
+  },
+  {
+    "name": "slowed",
+    "level": 0,
+  },
+  {
+    "name": "stunned",
+    "level": 0,
+  },
+  {
+    "name": "stupefied",
+    "level": 0,
+  },
+  {
+    "name": "unconscious",
+    "level": 0,
+  },
+  {
+    "name": "undetected",
+    "level": 0,
+  },
+  {
+    "name": "unnoticed",
+    "level": 0,
+  },
+  {
+    "name": "wounded",
+    "level": 0,
+  }
+]
