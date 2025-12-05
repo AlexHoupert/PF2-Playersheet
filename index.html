@@ -79,17 +79,14 @@
             position: absolute; bottom: -5px; left: 0; height: 20px;
             background: rgba(0,0,0,0.5); border: 1px solid #90caf9; border-left: none;
             border-radius: 0 4px 4px 0; z-index: 2; box-shadow: 0 0 8px #2196f3;
-            cursor: pointer; transition: width 0.3s ease; overflow: hidden;
+            cursor: pointer; transition: opacity 0.3s ease, width 0.3s ease; overflow: hidden; width: 100%;
         }
-        .temp-bar-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #1e88e5, #42a5f5, #90caf9); }
+        .temp-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #1e88e5, #42a5f5, #90caf9); transition: width 0.3s ease; }
         .temp-text {
             position: absolute; top:0; left:5px; height:100%; display:flex; align-items:center; 
             font-size:0.8em; font-weight:bold; color: white; text-shadow: 1px 1px 2px black;
         }
-        .temp-hp-btn {
-            margin-top: 10px; background: rgba(33, 150, 243, 0.15); border: 1px dashed var(--accent-blue);
-            color: var(--accent-blue); padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.9em;
-        }
+        /* Temp HP CTA removed (shape reused for badges) */
 
         /* --- DEFENSES --- */
         .defenses-grid {
@@ -139,23 +136,37 @@
         }
 
         /* --- CONDITIONS AREA --- */
-        .conditions-area { margin-top: 15px; }
+        .conditions-area { margin-top: 15px; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; }
         .btn-condition-add {
-            width: 100%; padding: 10px; background: #222; border: 1px dashed #666;
-            color: #888; font-family: 'Cinzel', serif; cursor: pointer; border-radius: 4px;
-            transition: 0.2s;
+            grid-column: span 2; width: 80%; padding: 4px 8px; background: #222; border: 1px dashed #666;
+            color: #888; font-family: 'Cinzel', serif; cursor: pointer; border-radius: 20px;
+            transition: 0.2s; text-align: center; min-height: 24px; justify-self: center;
         }
         .btn-condition-add:hover { background: #333; color: var(--text-gold); border-color: var(--text-gold); }
         
-        .active-condition-row {
-            display: flex; align-items: center; gap: 10px; background: rgba(211, 47, 47, 0.15); 
-            border: 1px solid var(--accent-red); border-radius: 4px; padding: 5px 10px; margin-bottom: 5px;
-            cursor: pointer; transition: 0.2s;
+        .condition-badge {
+            background: rgba(211, 47, 47, 0.12);
+            border: 1px solid var(--accent-red);
+            border-radius: 20px;
+            padding: 4px 8px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+            min-height: 24px;
         }
-        .active-condition-row:hover { background: rgba(211, 47, 47, 0.3); }
-        .cond-icon { width: 24px; height: 24px; filter: invert(1); opacity: 0.8; }
-        .cond-name { flex-grow: 1; font-weight: bold; text-transform: uppercase; color: #ff8a80; }
-        .cond-level { font-weight: 900; font-size: 1.2em; color: white; }
+        .condition-badge.cond-positive { background: rgba(46, 125, 50, 0.12); border-color: var(--accent-green); }
+        .condition-badge.cond-visibility { background: rgba(66, 165, 245, 0.12); border-color: var(--accent-blue); }
+        .condition-badge:hover { background: rgba(211, 47, 47, 0.25); }
+        .condition-badge.cond-positive:hover { background: rgba(46, 125, 50, 0.25); }
+        .condition-badge.cond-visibility:hover { background: rgba(66, 165, 245, 0.25); }
+        .cond-icon { width: 22px; height: 22px; filter: invert(1); opacity: 0.85; }
+        .cond-name { font-weight: bold; text-transform: uppercase; color: #ff8a80; font-size: 0.85em; line-height: 1.2; }
+        .condition-badge.cond-positive .cond-name { color: #9ae6a0; }
+        .condition-badge.cond-visibility .cond-name { color: #b3e5ff; }
+        .cond-level { font-weight: 900; font-size: 1.1em; color: white; }
 
         /* --- SPLIT LAYOUT --- */
         .layout-split {
@@ -243,6 +254,7 @@
             display: none; position: fixed; top:0; left:0; width:100%; height:100%;
             background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 99;
         }
+        #infoModal { z-index: 120; }
         .modal-box {
             background: var(--bg-panel); padding: 20px; border: 2px solid var(--text-gold);
             width: 90%; max-width: 400px; box-shadow: 0 0 20px #000; position: relative; border-radius: 5px;
@@ -251,7 +263,7 @@
         .qty-control-box { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 20px 0; }
         .qty-btn {
             background: var(--bg-dark); color: var(--text-gold);
-            border: 1px solid var(--text-gold); font-size: 24px; width: 45px; height: 45px; border-radius: 5px;
+            border: 1px solid var(--text-gold); font-size: 29px; width: 54px; height: 54px; border-radius: 6px;
             cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
         .input-resource {
@@ -264,6 +276,9 @@
             margin-top: 10px; border-radius: 4px;
         }
         .qty-badge { font-size: 1.1em; padding: 5px 12px; background: rgba(0,0,0,0.3); border-radius: 4px; cursor: pointer; border: 1px solid transparent; }
+        .hp-input-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0; }
+        .hp-input-row label { color: #ccc; font-size: 0.9em; }
+        .hp-input-row input { width: 120px; padding: 6px; background: var(--bg-dark); border: 1px solid #666; color: white; border-radius: 4px; font-size: 1em; text-align: center; }
         
         /* CONDITION MODAL ITEMS */
         .cond-modal-row {
@@ -276,6 +291,9 @@
         }
         .cond-chevron.disabled { color: #444; cursor: default; }
         .cond-val-disp { width: 20px; text-align: center; font-weight: bold; font-size: 1.2em; }
+        .cond-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+        .cond-tab-btn { flex: 1; padding: 8px; background: #222; border: 1px solid #444; color: #ccc; cursor: pointer; border-radius: 4px; text-align: center; font-size: 0.9em; }
+        .cond-tab-btn.active { background: var(--text-gold); color: var(--bg-dark); border-color: var(--text-gold); }
 
         #loading { text-align: center; margin-top: 50px; font-style: italic; color: #888; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -313,13 +331,14 @@
                 <div class="bar-text"><span id="uiHP">0</span> / <span id="uiMaxHP">0</span></div>
             </div>
             <div id="tempHpArea">
-                <button id="btnTempHP" class="temp-hp-btn" onclick="openResourceModal('Temp')">+ Add Temp HP</button>
-                <div id="barTempHP" class="temp-bar-container" style="display:none;" onclick="openResourceModal('Temp')">
+                <div id="barTempHP" class="temp-bar-container" style="display:none;" onclick="openResourceModal('HP')">
                     <div class="temp-bar-fill"></div>
-                    <div class="temp-text">+<span id="uiTempHP">0</span></div>
+                    <div class="temp-text">+<span id="uiTempHP">0</span> Temp HP</div>
                 </div>
             </div>
         </div>
+
+        <div class="conditions-area" id="conditionsArea"></div>
 
         <h3>Defenses</h3>
         <div class="section-separator" style="margin-top:0;"></div>
@@ -327,9 +346,6 @@
         <div class="defenses-grid" id="savesGrid"></div>
         
         <div id="shieldStatusArea"></div>
-
-        <div class="conditions-area" id="conditionsArea">
-            </div>
 
         <h3 style="margin-top:20px;">Attributes & Skills</h3>
         <div class="section-separator" style="margin-top:0;"></div>
@@ -425,16 +441,44 @@
 <div id="resModal" class="modal" onclick="closeResModal()">
     <div class="modal-box" onclick="event.stopPropagation()">
         <h2 id="resTitle">Manage Resource</h2>
-        <p style="text-align:center; color:#888;">Current: <span id="resCurrent" style="color:var(--text-gold); font-weight:bold;">0</span></p>
-        
-        <div class="qty-control-box">
-            <button class="qty-btn" style="border-color:var(--accent-red); color:var(--accent-red);" onclick="modifyResource(-1)">-</button>
-            <input type="number" id="resInput" class="input-resource" placeholder="0" />
-            <button class="qty-btn" style="border-color:var(--accent-green); color:var(--accent-green);" onclick="modifyResource(1)">+</button>
+
+        <div id="resBodyGeneric">
+            <p style="text-align:center; color:#888;">Current: <span id="resCurrent" style="color:var(--text-gold); font-weight:bold;">0</span></p>
+            
+            <div class="qty-control-box">
+                <button class="qty-btn" style="border-color:var(--accent-red); color:var(--accent-red);" onclick="modifyResource(-1)">-</button>
+                <input type="number" id="resInput" class="input-resource" placeholder="0" />
+                <button class="qty-btn" style="border-color:var(--accent-green); color:var(--accent-green);" onclick="modifyResource(1)">+</button>
+            </div>
+            
+            <button class="set-btn" onclick="setResource()">Set to Value</button>
+            <div style="text-align:center; font-style:italic; font-size:0.8em; color:#666; margin-top:5px;">Enter amount and choose action</div>
         </div>
-        
-        <button class="set-btn" onclick="setResource()">Set to Value</button>
-        <div style="text-align:center; font-style:italic; font-size:0.8em; color:#666; margin-top:5px;">Enter amount and choose action</div>
+
+        <div id="resBodyHP" style="display:none;">
+            <p style="text-align:center; color:#888;">Current HP: <span id="resCurrentHP" style="color:var(--text-gold); font-weight:bold;">0</span> &nbsp; | &nbsp; Temp: <span id="resCurrentTemp" style="color:var(--accent-blue); font-weight:bold;">0</span></p>
+            <div class="hp-input-row" style="flex-direction:column; align-items:center;">
+                <label for="hpInput" style="margin-bottom:-6px; align-self:center;">Hit Points</label>
+                <div class="qty-control-box" style="margin:8px 0; width:100%; justify-content:center; gap:6px;">
+                    <button class="qty-btn" onclick="modifyHP('HP_Current', -1)">-</button>
+                    <input type="number" id="hpInput" min="0" style="width:120px;" />
+                    <button class="qty-btn" onclick="modifyHP('HP_Current', 1)">+</button>
+                </div>
+                <button class="set-btn" onclick="setHPValue('HP_Current')">Set HP to Value</button>
+            </div>
+
+            <div class="hp-input-row" style="margin-top:12px; flex-direction:column; align-items:center;">
+                <label for="tempInput" style="margin-bottom:-6px; align-self:center;">Temp HP</label>
+                <div class="qty-control-box" style="margin:8px 0; width:100%; justify-content:center; gap:6px;">
+                    <button class="qty-btn" onclick="modifyHP('HP_Temp', -1)">-</button>
+                    <input type="number" id="tempInput" min="0" style="width:120px;" />
+                    <button class="qty-btn" onclick="modifyHP('HP_Temp', 1)">+</button>
+                </div>
+                <button class="set-btn" onclick="setHPValue('HP_Temp')">Set Temp to Value</button>
+            </div>
+
+            <div style="text-align:center; font-style:italic; font-size:0.8em; color:#666; margin-top:5px;">Enter amount, then choose add/subtract or set</div>
+        </div>
     </div>
 </div>
 
@@ -452,6 +496,13 @@
         "Society": "Intelligence", "Stealth": "Dexterity", "Survival": "Wisdom", "Thievery": "Dexterity"
     };
     const PROF_NAMES = { 0: "Untrained", 2: "Trained", 4: "Expert", 6: "Master", 8: "Legendary" };
+    const NEG_CONDS = [
+        "blinded","clumsy","confused","controlled","dazzled","deafened","doomed","drained","dying","encumbered","enfeebled",
+        "fascinated","fatigued","fleeing","frightened","grabbed","immobilized","off-guard","paralyzed","persistent damage",
+        "petrified","prone","restrained","sickened","slowed","stunned","stupefied","unconscious","wounded"
+    ];
+    const POS_CONDS = ["quickened","blessed","fast healing"];
+    const VIS_CONDS = ["concealed","hidden","invisible","observed","undetected","unnoticed"];
     
     // GAME-ICONS.NET MAPPING
     const ICON_BASE = "https://game-icons.net/icons/ffffff/000000/1x1/";
@@ -476,11 +527,15 @@
         "hidden": "lorc/ninja-mask.svg",
         "immobilized": "lorc/net.svg",
         "invisible": "lorc/invisible.svg",
+        "observed": "delapouite/eye-shield.svg",
+        "off-guard": "delapouite/eye-shield.svg",
         "paralyzed": "lorc/electric.svg",
         "persistent damage": "lorc/burning-dot.svg",
         "petrified": "lorc/stone-bust.svg",
         "prone": "lorc/falling.svg",
         "quickened": "lorc/sprint.svg",
+        "blessed": "delapouite/holy-grail.svg",
+        "fast healing": "delapouite/heart-shield.svg",
         "restrained": "lorc/manacles.svg",
         "sickened": "lorc/vomiting.svg",
         "slowed": "lorc/snail.svg",
@@ -502,6 +557,13 @@
             try {
                 const res = await fetch(API_URL);
                 state = await res.json();
+
+                // Build a lower-case lookup for condition descriptions so name casing doesn't matter
+                if (state.db && state.db.conditions) {
+                    const lowerMap = {};
+                    Object.entries(state.db.conditions).forEach(([k, v]) => { lowerMap[k.toLowerCase()] = v; });
+                    state.db._conditionsByLower = lowerMap;
+                }
                 
                 // --- ROBUST CONDITION PARSING ---
                 if (!state.character.Conditions) {
@@ -578,16 +640,17 @@
         // --- TEMP HP ---
         const tempHp = parseInt(c.HP_Temp) || 0;
         setText('uiTempHP', tempHp);
+        const tBar = document.getElementById('barTempHP');
+        const tFill = tBar.querySelector('.temp-bar-fill');
         if (tempHp > 0) {
-            document.getElementById('btnTempHP').style.display = 'none';
-            const tBar = document.getElementById('barTempHP');
             tBar.style.display = 'block';
             const tempPct = Math.min(100, (tempHp / maxHp) * 100);
-            tBar.style.width = tempPct + "%";
+            tFill.style.width = tempPct + "%";
+            tBar.style.opacity = 1;
         } else {
-            document.getElementById('btnTempHP').style.display = 'inline-block';
-            document.getElementById('barTempHP').style.display = 'none';
+            tBar.style.display = 'none';
         }
+        refreshHPModalFields();
 
         // --- ATTRIBUTES ---
         ['Strength','Dexterity','Constitution','Intelligence','Wisdom','Charisma'].forEach(k => {
@@ -687,36 +750,122 @@
     // --- CONDITIONS LOGIC ---
     function renderConditions() {
         const area = document.getElementById('conditionsArea');
-        const active = state.character.Conditions.filter(c => c.level > 0);
-        
+        const active = state.character.Conditions.filter(c => c.level > 0).sort((a,b)=>a.name.localeCompare(b.name));
+        area.innerHTML = "";
         if (active.length === 0) {
             area.innerHTML = `<button class="btn-condition-add" onclick="openConditionModal()">+ Add Condition</button>`;
-        } else {
-            area.innerHTML = "";
-            active.forEach(c => {
-                const iconUrl = ICON_BASE + (ICON_MAP[c.name.toLowerCase()] || ICON_MAP['default']);
-                const div = document.createElement('div');
-                div.className = "active-condition-row";
-                div.onclick = () => openConditionModal();
-                div.innerHTML = `
-                    <img src="${iconUrl}" class="cond-icon">
-                    <span class="cond-name">${c.name}</span>
-                    <span class="cond-level">${c.level}</span>
-                `;
-                area.appendChild(div);
-            });
+            return;
         }
+        active.forEach(c => {
+            const iconUrl = ICON_BASE + (ICON_MAP[c.name.toLowerCase()] || ICON_MAP['default']);
+            const div = document.createElement('div');
+            let badgeClass = "condition-badge";
+            const lower = c.name.toLowerCase();
+            if (POS_CONDS.includes(lower)) badgeClass += " cond-positive";
+            else if (VIS_CONDS.includes(lower)) badgeClass += " cond-visibility";
+            div.className = badgeClass;
+            div.onclick = () => openConditionModal();
+            div.innerHTML = `
+                <img src="${iconUrl}" class="cond-icon">
+                <span class="cond-name">${c.name}</span>
+                <span class="cond-level">${c.level}</span>
+            `;
+            area.appendChild(div);
+        });
     }
 
     function openConditionModal() {
-        const list = document.getElementById('condList');
-        list.innerHTML = "";
-        
-        // Use all available conditions from Char State (which contains everything initialized)
-        // Sort alphabetically
-        const allConds = state.character.Conditions.sort((a,b) => a.name.localeCompare(b.name));
+        ensureConditionCatalog();
+        const hasActive = state.character.Conditions.some(c => c.level > 0);
+        currentCondTab = hasActive ? "active" : "negative";
+        buildConditionTabs();
+        renderConditionTab();
+        document.getElementById('condModal').style.display = 'flex';
+        attachCondSwipe();
+    }
 
-        allConds.forEach(c => {
+    function showConditionInfo(name) {
+        let desc = "No description available.";
+        const lowerName = name.toLowerCase();
+        const dbCond = state.db?.conditions || {};
+        const dbCondLower = state.db?._conditionsByLower || {};
+        // Check DB
+        if (dbCond[name]) desc = dbCond[name].description || desc;
+        else if (dbCondLower[lowerName]) desc = dbCondLower[lowerName].description || desc;
+        showInfoModal(name, desc);
+    }
+
+    // --- CONDITION TABS ---
+    let currentCondTab = "negative";
+    function ensureConditionCatalog() {
+        const allNames = [...NEG_CONDS, ...POS_CONDS, ...VIS_CONDS];
+        allNames.forEach(n => {
+            if (!state.character.Conditions.find(c => c.name.toLowerCase() === n)) {
+                state.character.Conditions.push({ name: n.replace(/\b\w/g, l=>l.toUpperCase()), level: 0 });
+            }
+        });
+        // Normalize names casing for matching
+        state.character.Conditions = state.character.Conditions.map(c => ({ name: c.name, level: c.level || 0 }));
+    }
+
+    function getCondTabs() {
+        const activeList = state.character.Conditions.filter(c => c.level > 0);
+        const tabs = [
+            { key: "negative", label: "Negative" },
+            { key: "positive", label: "Positive" },
+            { key: "visibility", label: "Visibility" }
+        ];
+        if (activeList.length > 0) tabs.unshift({ key: "active", label: "Active" });
+        if (!tabs.find(t => t.key === currentCondTab)) currentCondTab = tabs[0].key;
+        return tabs;
+    }
+
+    function buildConditionTabs() {
+        const container = document.getElementById('condList');
+        container.innerHTML = "";
+        const tabs = getCondTabs();
+        const tabBar = document.createElement('div');
+        tabBar.className = "cond-tabs";
+        tabs.forEach(t => {
+            const btn = document.createElement('button');
+            btn.className = `cond-tab-btn ${currentCondTab === t.key ? 'active' : ''}`;
+            btn.innerText = t.label;
+            btn.dataset.key = t.key;
+            btn.onclick = () => setConditionTab(t.key);
+            tabBar.appendChild(btn);
+        });
+        container.appendChild(tabBar);
+        const listWrap = document.createElement('div');
+        listWrap.id = "condTabList";
+        container.appendChild(listWrap);
+    }
+
+    function setConditionTab(key) {
+        currentCondTab = key;
+        buildConditionTabs();
+        renderConditionTab();
+    }
+
+    function renderConditionTab() {
+        const listWrap = document.getElementById('condTabList');
+        if (!listWrap) return;
+        listWrap.innerHTML = "";
+        const tabKey = currentCondTab;
+        let conds = state.character.Conditions;
+        if (tabKey === "active") conds = conds.filter(c => c.level > 0);
+        else if (tabKey === "negative") conds = conds.filter(c => NEG_CONDS.includes(c.name.toLowerCase()) || (!POS_CONDS.includes(c.name.toLowerCase()) && !VIS_CONDS.includes(c.name.toLowerCase())));
+        else if (tabKey === "positive") conds = conds.filter(c => POS_CONDS.includes(c.name.toLowerCase()));
+        else if (tabKey === "visibility") conds = conds.filter(c => VIS_CONDS.includes(c.name.toLowerCase()));
+        conds = conds.sort((a,b)=>a.name.localeCompare(b.name));
+        if (tabKey === "active" && conds.length === 0) { listWrap.innerHTML = "<div style='color:#888; text-align:center; padding:10px;'>No active conditions.</div>"; return; }
+
+        // Update tab highlight (in case this was called without rebuilding)
+        const tabs = document.querySelectorAll('.cond-tab-btn');
+        tabs.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.key === tabKey);
+        });
+
+        conds.forEach(c => {
             const iconUrl = ICON_BASE + (ICON_MAP[c.name.toLowerCase()] || ICON_MAP['default']);
             const row = document.createElement('div');
             row.className = 'cond-modal-row';
@@ -752,19 +901,25 @@
             
             row.appendChild(left);
             row.appendChild(right);
-            list.appendChild(row);
+            listWrap.appendChild(row);
         });
-
-        document.getElementById('condModal').style.display = 'flex';
     }
 
-    function showConditionInfo(name) {
-        let desc = "No description available.";
-        // Check DB
-        if (state.db.conditions && state.db.conditions[name]) {
-            desc = state.db.conditions[name].description;
-        }
-        showInfoModal(name, desc);
+    function attachCondSwipe() {
+        const modalBox = document.querySelector('#condModal .modal-box');
+        if (!modalBox) return;
+        let startX = 0;
+        modalBox.ontouchstart = (e) => { startX = e.changedTouches[0].screenX; };
+        modalBox.ontouchend = (e) => {
+            const dx = e.changedTouches[0].screenX - startX;
+            if (Math.abs(dx) < 40) return;
+            const tabs = getCondTabs();
+            let idx = tabs.findIndex(t => t.key === currentCondTab);
+            if (dx < 0 && idx < tabs.length - 1) { currentCondTab = tabs[idx+1].key; }
+            else if (dx > 0 && idx > 0) { currentCondTab = tabs[idx-1].key; }
+            buildConditionTabs();
+            renderConditionTab();
+        };
     }
 
     async function modifyConditionLevel(name, delta) {
@@ -776,8 +931,9 @@
         
         cond.level = newLevel;
         
-        // Re-render modal to show changes immediately
-        openConditionModal();
+        // Re-render modal to show changes immediately without resetting tab
+        buildConditionTabs();
+        renderConditionTab();
         // Re-render main view
         renderConditions();
         
@@ -847,24 +1003,68 @@
     function openResourceModal(type) {
         currentResType = type;
         const c = state.character;
-        let val = 0;
-        if (type === "Gold") { document.getElementById('resTitle').innerText = "Manage Gold"; val = parseFloat(c.Gold).toFixed(1); }
-        else if (type === "HP") { document.getElementById('resTitle').innerText = "Manage Hit Points"; val = parseInt(c.HP_Current) || 0; }
-        else if (type === "Temp") { document.getElementById('resTitle').innerText = "Manage Temp HP"; val = parseInt(c.HP_Temp) || 0; }
-        else if (type === "Shield") { document.getElementById('resTitle').innerText = "Manage Shield HP"; val = parseInt(c.HP_Shield_Current) || 0; }
-        document.getElementById('resCurrent').innerText = val;
-        document.getElementById('resInput').value = "";
+        
+        const bodyGeneric = document.getElementById('resBodyGeneric');
+        const bodyHP = document.getElementById('resBodyHP');
+        bodyGeneric.style.display = "none";
+        bodyHP.style.display = "none";
+
+        if (type === "HP") {
+            document.getElementById('resTitle').innerText = "Manage Hit Points";
+            refreshHPModalFields();
+            bodyHP.style.display = "block";
+        } else {
+            bodyGeneric.style.display = "block";
+            let val = 0;
+            if (type === "Gold") { document.getElementById('resTitle').innerText = "Manage Gold"; val = parseFloat(c.Gold).toFixed(1); }
+            else if (type === "Shield") { document.getElementById('resTitle').innerText = "Manage Shield HP"; val = parseInt(c.HP_Shield_Current) || 0; }
+            document.getElementById('resCurrent').innerText = val;
+            document.getElementById('resInput').value = "";
+        }
+
         document.getElementById('resModal').style.display = 'flex';
     }
     function closeResModal() { document.getElementById('resModal').style.display = 'none'; }
+    function getHpInputVal(id) {
+        const input = document.getElementById(id);
+        return parseFloat(input.value);
+    }
+
+    function refreshHPModalFields() {
+        const hp = parseInt(state.character.HP_Current) || 0;
+        const temp = parseInt(state.character.HP_Temp) || 0;
+        if (document.getElementById('resCurrentHP')) document.getElementById('resCurrentHP').innerText = hp;
+        if (document.getElementById('resCurrentTemp')) document.getElementById('resCurrentTemp').innerText = temp;
+        if (document.getElementById('hpInput')) document.getElementById('hpInput').value = hp;
+        if (document.getElementById('tempInput')) document.getElementById('tempInput').value = temp;
+    }
+
+    async function modifyHP(key, multiplier) {
+        const val = key === "HP_Current" ? getHpInputVal('hpInput') : getHpInputVal('tempInput');
+        if (isNaN(val) || val <= 0) return;
+        const current = parseFloat(state.character[key]) || 0;
+        const next = key === "HP_Temp" ? Math.max(0, current + (val * multiplier)) : current + (val * multiplier);
+        state.character[key] = next;
+        render();
+        refreshHPModalFields();
+        await post({action: "modify_stat", key: key, amount: val * multiplier});
+    }
+
+    async function setHPValue(key) {
+        const val = key === "HP_Current" ? getHpInputVal('hpInput') : getHpInputVal('tempInput');
+        if (isNaN(val)) return;
+        state.character[key] = key === "HP_Temp" ? Math.max(0, val) : val;
+        render();
+        refreshHPModalFields();
+        await post({action: "set_stat", key: key, value: state.character[key]});
+    }
+
     async function modifyResource(multiplier) {
         const input = document.getElementById('resInput');
         const amount = parseFloat(input.value);
         if (!amount || amount <= 0) return;
         let key = "", current = 0, change = amount * multiplier;
         if (currentResType === "Gold") { key = "Gold"; current = parseFloat(state.character.Gold) || 0; state.character.Gold = (current + change).toFixed(1); }
-        else if (currentResType === "HP") { key = "HP_Current"; current = parseInt(state.character.HP_Current) || 0; state.character.HP_Current = current + change; }
-        else if (currentResType === "Temp") { key = "HP_Temp"; current = parseInt(state.character.HP_Temp) || 0; state.character.HP_Temp = Math.max(0, current + change); }
         else if (currentResType === "Shield") { key = "HP_Shield_Current"; current = parseInt(state.character.HP_Shield_Current) || 0; state.character.HP_Shield_Current = Math.max(0, current + change); }
         render();
         document.getElementById('resCurrent').innerText = state.character[key];
@@ -876,8 +1076,6 @@
         if (isNaN(val)) return;
         let key = "";
         if (currentResType === "Gold") { key = "Gold"; state.character.Gold = val.toFixed(1); } 
-        else if (currentResType === "HP") { key = "HP_Current"; state.character.HP_Current = parseInt(val); } 
-        else if (currentResType === "Temp") { key = "HP_Temp"; state.character.HP_Temp = Math.max(0, parseInt(val)); }
         else if (currentResType === "Shield") { key = "HP_Shield_Current"; state.character.HP_Shield_Current = Math.max(0, parseInt(val)); }
         render();
         document.getElementById('resCurrent').innerText = state.character[key];
