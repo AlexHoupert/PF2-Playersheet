@@ -63,7 +63,9 @@
         /* --- HEALTH BAR --- */
         .health-section { margin-bottom: 20px; text-align: center; position: relative; padding-bottom: 10px; }
         .bar-container {
-            width: 100%; height: 40px; background: #111; 
+            width: 100%; 
+            height: 32px; 
+            background: #111; 
             border: 2px solid var(--text-gold); border-radius: 6px;
             position: relative; overflow: hidden; cursor: pointer;
             box-shadow: 0 0 15px rgba(0,0,0,0.8); z-index: 1;
@@ -86,7 +88,6 @@
             position: absolute; top:0; left:5px; height:100%; display:flex; align-items:center; 
             font-size:0.8em; font-weight:bold; color: white; text-shadow: 1px 1px 2px black;
         }
-        /* Temp HP CTA removed (shape reused for badges) */
 
         /* --- DEFENSES --- */
         .defenses-grid {
@@ -107,6 +108,7 @@
             border: 2px solid var(--border-color); border-top: none;
             border-radius: 4px 4px 50% 50%; padding-bottom: 10px; 
             box-shadow: inset 0 0 10px #000; position: relative; 
+            cursor: pointer; /* Clickable now */
         }
         .shield-label { color: var(--text-gold); font-family: 'Cinzel', serif; }
 
@@ -185,7 +187,7 @@
         /* PERCEPTION (Eye) */
         .eye-container {
             width: 60px; height: 60px; 
-            margin-top: 5px; /* REDUCED MARGIN */
+            margin-top: 5px;
             background: #151515; border: 2px solid var(--text-gold);
             border-radius: 75% 15% 75% 15%; 
             transform: rotate(45deg); 
@@ -280,6 +282,16 @@
         .hp-input-row label { color: #ccc; font-size: 0.9em; }
         .hp-input-row input { width: 120px; padding: 6px; background: var(--bg-dark); border: 1px solid #666; color: white; border-radius: 4px; font-size: 1em; text-align: center; }
         
+        /* TOGGLES */
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); margin-bottom: 8px; border-radius: 4px; }
+        .toggle-label { font-weight: bold; color: #ccc; }
+        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--text-gold); }
+        input:checked + .slider:before { transform: translateX(26px); }
+
         /* CONDITION MODAL ITEMS */
         .cond-modal-row {
             display: flex; align-items: center; justify-content: space-between;
@@ -442,6 +454,26 @@
     <div class="modal-box" onclick="event.stopPropagation()">
         <h2 id="resTitle">Manage Resource</h2>
 
+        <div id="resBodyAC" style="display:none;">
+            <div class="toggle-row">
+                <span class="toggle-label">Armor Equipped</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="checkArmor" onchange="toggleEquip('Armor')">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="toggle-row">
+                <span class="toggle-label">Shield Equipped</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="checkShield" onchange="toggleEquip('Shield')">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div style="text-align:center; font-style:italic; font-size:0.8em; color:#666; margin-top:15px;">
+                Toggling off uses Base AC<br>and hides shield stats.
+            </div>
+        </div>
+
         <div id="resBodyGeneric">
             <p style="text-align:center; color:#888;">Current: <span id="resCurrent" style="color:var(--text-gold); font-weight:bold;">0</span></p>
             
@@ -461,7 +493,7 @@
                 <label for="hpInput" style="margin-bottom:-6px; align-self:center;">Hit Points</label>
                 <div class="qty-control-box" style="margin:8px 0; width:100%; justify-content:center; gap:6px;">
                     <button class="qty-btn" onclick="modifyHP('HP_Current', -1)">-</button>
-                    <input type="number" id="hpInput" min="0" style="width:120px;" />
+                    <input type="number" id="hpInput" min="0" style="width:120px;" placeholder="0" />
                     <button class="qty-btn" onclick="modifyHP('HP_Current', 1)">+</button>
                 </div>
                 <button class="set-btn" onclick="setHPValue('HP_Current')">Set HP to Value</button>
@@ -471,7 +503,7 @@
                 <label for="tempInput" style="margin-bottom:-6px; align-self:center;">Temp HP</label>
                 <div class="qty-control-box" style="margin:8px 0; width:100%; justify-content:center; gap:6px;">
                     <button class="qty-btn" onclick="modifyHP('HP_Temp', -1)">-</button>
-                    <input type="number" id="tempInput" min="0" style="width:120px;" />
+                    <input type="number" id="tempInput" min="0" style="width:120px;" placeholder="0" />
                     <button class="qty-btn" onclick="modifyHP('HP_Temp', 1)">+</button>
                 </div>
                 <button class="set-btn" onclick="setHPValue('HP_Temp')">Set Temp to Value</button>
@@ -556,7 +588,21 @@
     async function init() {
             try {
                 const res = await fetch(API_URL);
-                state = await res.json();
+                const rawText = await res.text();
+                
+                try {
+                    // Try standard JSON first
+                    state = JSON.parse(rawText);
+                } catch (e) {
+                    console.warn("Standard JSON parse failed, attempting lenient parse...", e);
+                    // Fallback: This handles the trailing commas causing SyntaxError
+                    try {
+                        state = new Function("return " + rawText)();
+                    } catch (e2) {
+                         console.error("Critical: Failed to parse API response.", e2);
+                         throw e2;
+                    }
+                }
 
                 // Build a lower-case lookup for condition descriptions so name casing doesn't matter
                 if (state.db && state.db.conditions) {
@@ -591,6 +637,11 @@
                 
                 // Initialize defaults if parsing returned null/weirdness
                 if (!Array.isArray(state.character.Conditions)) state.character.Conditions = [];
+                
+                // --- TOGGLES DEFAULTS ---
+                // If the attributes don't exist yet, default them to TRUE (equipped)
+                if (state.character.Armor_Equipped === undefined) state.character.Armor_Equipped = true;
+                if (state.character.Shield_Equipped === undefined) state.character.Shield_Equipped = true;
 
                 render();
                 document.getElementById('loading').style.display = 'none';
@@ -663,16 +714,25 @@
         const savesContainer = document.getElementById('savesGrid');
         savesContainer.innerHTML = "";
         
+        // --- TOGGLE LOGIC ---
+        // Use loose check for false to allow true/null/undefined to mean 'equipped' by default
+        const isArmorOn = c.Armor_Equipped !== false;
+        const isShieldOn = c.Shield_Equipped !== false;
+
         const sDef = parseInt(c.Shield_Defense) || 0;
         const sHard = parseInt(c.Shield_Hardness) || 0;
         const sHp = parseInt(c.HP_Shield_Current) || 0;
         const sMax = parseInt(c.HP_Shield_Max) || 0;
-        const hasShield = (sDef > 0 || sHard > 0 || sMax > 0);
+        
+        // Show Shield logic: Must exist AND be equipped
+        const hasShield = (sDef > 0 || sHard > 0 || sMax > 0) && isShieldOn;
         const isBroken = (sHp <= (sMax / 2)) && hasShield;
         
-        const acVal = c.Armor || 10;
+        // Armor Logic: If equipped use Armor, else use Base_AC (default 10)
+        const acVal = isArmorOn ? (c.Armor || 10) : (c.Base_AC || 10);
+        
         let acHtml = `
-            <div class="stat-box shield-box">
+            <div class="stat-box shield-box" onclick="openResourceModal('AC')">
                 <div class="stat-val">${acVal}</div>
                 <div class="stat-label shield-label">AC</div>
                 ${hasShield ? `<div class="shield-bonus-badge ${isBroken?'broken-stat':''}">+${sDef}</div>` : ''}
@@ -1006,14 +1066,24 @@
         
         const bodyGeneric = document.getElementById('resBodyGeneric');
         const bodyHP = document.getElementById('resBodyHP');
+        const bodyAC = document.getElementById('resBodyAC');
         bodyGeneric.style.display = "none";
         bodyHP.style.display = "none";
+        bodyAC.style.display = "none";
 
         if (type === "HP") {
             document.getElementById('resTitle').innerText = "Manage Hit Points";
             refreshHPModalFields();
             bodyHP.style.display = "block";
-        } else {
+        } 
+        else if (type === "AC") {
+            document.getElementById('resTitle').innerText = "Equipment";
+            bodyAC.style.display = "block";
+            // Checkbox state
+            document.getElementById('checkArmor').checked = c.Armor_Equipped !== false;
+            document.getElementById('checkShield').checked = c.Shield_Equipped !== false;
+        }
+        else {
             bodyGeneric.style.display = "block";
             let val = 0;
             if (type === "Gold") { document.getElementById('resTitle').innerText = "Manage Gold"; val = parseFloat(c.Gold).toFixed(1); }
@@ -1024,6 +1094,16 @@
 
         document.getElementById('resModal').style.display = 'flex';
     }
+    
+    // --- TOGGLE HANDLER ---
+    async function toggleEquip(type) {
+        const key = type + "_Equipped";
+        const isChecked = document.getElementById('check'+type).checked;
+        state.character[key] = isChecked;
+        render(); // Update UI immediately
+        await post({action: "set_stat", key: key, value: isChecked});
+    }
+
     function closeResModal() { document.getElementById('resModal').style.display = 'none'; }
     function getHpInputVal(id) {
         const input = document.getElementById(id);
@@ -1035,8 +1115,10 @@
         const temp = parseInt(state.character.HP_Temp) || 0;
         if (document.getElementById('resCurrentHP')) document.getElementById('resCurrentHP').innerText = hp;
         if (document.getElementById('resCurrentTemp')) document.getElementById('resCurrentTemp').innerText = temp;
-        if (document.getElementById('hpInput')) document.getElementById('hpInput').value = hp;
-        if (document.getElementById('tempInput')) document.getElementById('tempInput').value = temp;
+        // Fields are now cleared/placeholdered by logic in render or openResourceModal, 
+        // we deliberately do NOT set .value here to keep them empty for new input.
+        if (document.getElementById('hpInput')) document.getElementById('hpInput').value = "";
+        if (document.getElementById('tempInput')) document.getElementById('tempInput').value = "";
     }
 
     async function modifyHP(key, multiplier) {
@@ -1046,7 +1128,9 @@
         const next = key === "HP_Temp" ? Math.max(0, current + (val * multiplier)) : current + (val * multiplier);
         state.character[key] = next;
         render();
-        refreshHPModalFields();
+        // Don't auto-refresh fields to empty immediately if user wants to spam click? 
+        // Actually, standard behavior is usually reset. Let's reset to be safe.
+        refreshHPModalFields(); 
         await post({action: "modify_stat", key: key, amount: val * multiplier});
     }
 
