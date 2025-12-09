@@ -707,6 +707,12 @@
 
         return formatted;
     }
+    
+    // Helper to escape strings for HTML attributes (fixes single quote issues)
+    function esc(str) {
+        if (!str) return "";
+        return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
 
     // Helper to find case-insensitive key value from an object
     // UPDATED: Now trims keys to handle accidental trailing spaces in headers (e.g., "Feat ")
@@ -1096,7 +1102,7 @@
                 for(let i=1; i<=inst.barrels; i++) {
                      const isLoaded = i <= loadedCount;
                      // Pass consumable name to function to handle deduction
-                     barrelHtml += `<div class="barrel-opt ${isLoaded?'loaded':''}" onclick="toggleBarrel(${index}, ${loadedCount}, ${inst.barrels}, '${consumes}', ${reserveAmmo}, ${isLoaded})"></div>`;
+                     barrelHtml += `<div class="barrel-opt ${isLoaded?'loaded':''}" onclick="toggleBarrel(${index}, ${loadedCount}, ${inst.barrels}, '${esc(consumes)}', ${reserveAmmo}, ${isLoaded})"></div>`;
                 }
                 barrelHtml += `</div>`;
             }
@@ -1160,11 +1166,13 @@
                  item.qty = (parseInt(item.qty) || 0) + ammoChange;
                  state.character.Inventory_Consumables = consumables;
              }
+             // Ensure ammo deduction is synced even if update_gun_state doesn't handle it
+             post({action: "adjust_qty", itemName: ammoName, delta: ammoChange});
         }
 
         render();
         
-        // Sync
+        // Sync Gun State
         await post({
             action: "update_gun_state", 
             weaponIndex: index, 
@@ -1588,8 +1596,9 @@
             if(item.specials) desc = "Specials: " + item.specials.join(", ");
             const row = document.createElement('div');
             row.className = 'item-row';
-            row.innerHTML = `<span class="item-name" onclick="showInfoModal('${item.name}', '${desc}')">${item.name}</span>
-                <span class="qty-badge" onclick="openQtyModal('${item.name}', ${item.qty||1}, ${price||0})">x${item.qty||1}</span>`;
+            // Fix: Use esc() helper to prevent SyntaxError on names with quotes (e.g., Alchemist's Fire)
+            row.innerHTML = `<span class="item-name" onclick="showInfoModal('${esc(item.name)}', '${esc(desc)}')">${item.name}</span>
+                <span class="qty-badge" onclick="openQtyModal('${esc(item.name)}', ${item.qty||1}, ${price||0})">x${item.qty||1}</span>`;
             el.appendChild(row);
         });
     }
@@ -1603,8 +1612,9 @@
             const price = getDBValue(d, "price") || 0;
             const row = document.createElement('div');
             row.className = 'item-row'; row.style.cursor="default";
-            row.innerHTML = `<div><strong class="item-name" onclick="showInfoModal('${name}','${desc}')">${name}</strong><br><small style="color:#888">${price} gp</small></div>
-                <div><button class="btn-add" onclick="buy('${name}',0)">Add</button><button class="btn-buy" onclick="buy('${name}',${price})">Buy</button></div>`;
+            // Fix: Use esc() helper
+            row.innerHTML = `<div><strong class="item-name" onclick="showInfoModal('${esc(name)}','${esc(desc)}')">${name}</strong><br><small style="color:#888">${price} gp</small></div>
+                <div><button class="btn-add" onclick="buy('${esc(name)}',0)">Add</button><button class="btn-buy" onclick="buy('${esc(name)}',${price})">Buy</button></div>`;
             el.appendChild(row);
         });
     }
@@ -1714,20 +1724,38 @@
         closeResModal(); 
         await post({action: "set_stat", key: key, value: val});
     }
+    
+    // Updated Buy Function with Quantity Logic
     async function buy(name, price) {
+        let qtyInput = prompt(`Enter quantity for ${name}:`, "1");
+        if (qtyInput === null) return;
+        let qty = parseInt(qtyInput);
+        if (isNaN(qty) || qty <= 0) return;
+
         let currentGold = parseFloat(state.character.Gold) || 0;
-        if (price > 0 && currentGold < price) { alert("Not enough gold!"); return; }
-        if (!confirm(`${price>0?'Buy':'Add'} ${name}?`)) return;
-        if(price > 0) state.character.Gold = (currentGold - price).toFixed(2);
+        let total = 0;
+        if (price > 0) {
+            total = price * qty;
+            if (currentGold < total) { alert("Not enough gold!"); return; }
+            if (!confirm(`Buy ${qty} x ${name} for ${total} gp?`)) return;
+            state.character.Gold = (currentGold - total).toFixed(2);
+            // Sync Gold locally
+            await post({action: "set_stat", key: "Gold", value: state.character.Gold});
+        }
+
+        // Update Inventory
         let list = parseList(state.character.Inventory_Consumables);
         if(!Array.isArray(list)) list=[];
-        if(typeof list[0] === 'string') list = list.map(i=>({name:i, qty:1})); // Normalized check
+        if(typeof list[0] === 'string') list = list.map(i=>({name:i, qty:1})); 
         let item = list.find(i=>i.name===name);
-        if(item) item.qty=(parseInt(item.qty)||1)+1; else list.push({name:name, qty:1});
+        if(item) item.qty=(parseInt(item.qty)||1)+qty; else list.push({name:name, qty:qty});
         state.character.Inventory_Consumables = list;
         render();
-        await post({action: "buy_item", itemName: name, price: price});
+        
+        // Use adjust_qty to handle the bulk addition, bypassing single buy_item logic if needed
+        await post({action: "adjust_qty", itemName: name, delta: qty});
     }
+
     function openQtyModal(n,q,p) { currentEditItem=n; document.getElementById('qTitle').innerText=n; document.getElementById('qValue').innerText=q; document.getElementById('qPrice').innerText=p; document.getElementById('qtyModal').style.display='flex'; }
     function closeQtyModal() { document.getElementById('qtyModal').style.display='none'; }
     function restockFromModal() { buy(currentEditItem, parseFloat(document.getElementById('qPrice').innerText)); document.getElementById('qValue').innerText = parseInt(document.getElementById('qValue').innerText)+1; }
