@@ -41,7 +41,7 @@
         .header-bar {
             display: flex; justify-content: space-between; align-items: center;
             border-bottom: 2px solid var(--text-gold);
-            padding-bottom: 10px; margin-bottom: 15px;
+            padding-bottom: 10px; margin-bottom: 15px; /* Reverted spacing */
         }
         .gold-display {
             font-size:1.2em; color:var(--text-gold); cursor: pointer; 
@@ -50,7 +50,7 @@
         }
 
         /* TABS */
-        .tabs { display: flex; gap: 5px; margin-bottom: 15px; }
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; } /* Reverted spacing */
         .tab-btn {
             background: var(--bg-panel); color: var(--text-light);
             border: 1px solid var(--border-color); flex: 1; padding: 10px;
@@ -60,11 +60,23 @@
         .view-section { display: none; animation: fadeIn 0.3s; }
         .view-section.active { display: block; }
 
+        /* SUB TABS (Actions & Items) */
+        .sub-tabs { 
+            display: flex; gap: 5px; margin-bottom: 10px; padding: 0 5px; 
+            margin-top: -10px; /* Pulls sub-tabs closer to main tabs */
+        }
+        .sub-tab-btn {
+            background: #222; color: #888; border: 1px solid #444; flex: 1; padding: 6px;
+            cursor: pointer; font-family: 'Roboto', sans-serif; font-size: 0.8em; text-transform: uppercase;
+            border-radius: 4px; transition: 0.2s;
+        }
+        .sub-tab-btn.active { background: #444; color: var(--text-gold); border-color: var(--text-gold); font-weight: bold; }
+
         /* --- HEALTH BAR --- */
         .health-section { margin-bottom: 20px; text-align: center; position: relative; padding-bottom: 10px; }
         .bar-container {
             width: 100%; 
-            height: 32px; 
+            height: 24px; 
             background: #111; 
             border: 2px solid var(--text-gold); border-radius: 6px;
             position: relative; overflow: hidden; cursor: pointer;
@@ -101,6 +113,8 @@
         }
         .stat-val { font-size: 1.4em; font-weight: bold; color: var(--text-gold); line-height: 1.1; }
         .stat-label { font-size: 0.6em; text-transform: uppercase; color: #888; margin-top: 2px; }
+        .stat-penalty { color: #ef5350 !important; }
+        .stat-penalty-sub { font-size: 0.6em; color: #ef5350; vertical-align: middle; }
 
         /* AC Shield */
         .shield-box {
@@ -169,6 +183,7 @@
         .condition-badge.cond-positive .cond-name { color: #9ae6a0; }
         .condition-badge.cond-visibility .cond-name { color: #b3e5ff; }
         .cond-level { font-weight: 900; font-size: 1.1em; color: white; }
+        .cond-level-hidden { display: none; }
 
         /* --- SPLIT LAYOUT --- */
         .layout-split {
@@ -243,10 +258,46 @@
             padding: 10px 12px; border-bottom: 1px solid var(--border-color);
             background: rgba(255,255,255,0.02);
         }
-        .item-name { font-weight: bold; cursor: pointer; color: #ccc; }
+        .item-name { font-weight: bold; cursor: pointer; color: #ccc; display: flex; align-items: center; gap: 4px; }
         .skill-val { font-family: 'Roboto', sans-serif; font-size: 1.1em; font-weight: 900; }
         .skill-trained { color: var(--text-gold); }
         .skill-untrained { color: var(--text-dim); opacity: 0.8; }
+        .action-bonus { font-weight: 900; color: var(--text-gold); font-size: 1.1em; }
+        
+        /* ACTION HEADERS */
+        .action-section-header {
+            background: transparent;
+            color: var(--text-gold);
+            font-family: 'Cinzel', serif;
+            padding: 5px 0;
+            margin: 20px 0 5px 0;
+            border-bottom: 2px solid var(--border-color);
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        /* WEAPON ROWS */
+        .weapon-entry {
+            display: flex; flex-direction: column; gap: 4px;
+            padding: 8px 12px; border-bottom: 1px solid var(--border-color);
+            background: rgba(255,255,255,0.02); cursor: pointer;
+        }
+        .weapon-top { display: flex; justify-content: space-between; align-items: center; }
+        .weapon-bot { display: flex; justify-content: space-between; align-items: center; font-size: 0.85em; color: var(--text-dim); }
+        .w-bonus { color: var(--text-gold); font-weight: 900; font-size: 1.1em; }
+        .w-ammo { color: #888; font-family: 'Roboto', sans-serif; }
+        .w-damage { color: #e0e0e0; font-style: italic; }
+
+        /* BARREL / GUN UI */
+        .barrel-container { display: flex; gap: 4px; align-items: center; margin: 0 10px; }
+        .barrel-opt {
+            width: 12px; height: 12px; border-radius: 50%;
+            border: 2px solid var(--text-gold); cursor: pointer;
+            background: transparent; transition: 0.2s;
+            box-shadow: 0 0 2px #000;
+        }
+        .barrel-opt.loaded { background: var(--text-gold); box-shadow: 0 0 5px var(--text-gold); }
+        .barrel-opt:hover { border-color: #fff; }
 
         /* BUTTONS & MODALS */
         .btn-buy { padding:6px 12px; background:var(--accent-red); color:white; border:none; border-radius:3px; cursor:pointer; font-weight:bold; }
@@ -277,6 +328,15 @@
             font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
             margin-top: 10px; border-radius: 4px;
         }
+        .modal-footer-btn {
+            width: 100%; background: #333; color: var(--text-light); border: 1px solid #555;
+            padding: 10px; margin-top: 15px; cursor: pointer; font-family: 'Cinzel', serif;
+        }
+        .modal-equip-btn {
+            width: 100%; background: var(--text-gold); color: var(--bg-dark); border: none;
+            padding: 10px; margin-top: 10px; cursor: pointer; font-weight: bold; text-transform: uppercase;
+        }
+
         .qty-badge { font-size: 1.1em; padding: 5px 12px; background: rgba(0,0,0,0.3); border-radius: 4px; cursor: pointer; border: 1px solid transparent; }
         .hp-input-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0; }
         .hp-input-row label { color: #ccc; font-size: 0.9em; }
@@ -307,6 +367,17 @@
         .cond-tab-btn { flex: 1; padding: 8px; background: #222; border: 1px solid #444; color: #ccc; cursor: pointer; border-radius: 4px; text-align: center; font-size: 0.9em; }
         .cond-tab-btn.active { background: var(--text-gold); color: var(--bg-dark); border-color: var(--text-gold); }
 
+        /* PF2E ACTION ICONS */
+        .pf-icon {
+            display: inline-block;
+            height: 1.1em;
+            width: auto;
+            vertical-align: text-bottom;
+            position: relative;
+            top: 1px;
+            fill: var(--text-gold); /* Icons color matches gold theme */
+        }
+        
         #loading { text-align: center; margin-top: 50px; font-style: italic; color: #888; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
@@ -331,8 +402,9 @@
 
     <div class="tabs">
         <button class="tab-btn active" onclick="setTab('main')">Stats</button>
-        <button class="tab-btn" onclick="setTab('gear')">Gear</button>
-        <button class="tab-btn" onclick="setTab('shop')">Shop</button>
+        <button class="tab-btn" onclick="setTab('actions')">Actions</button>
+        <button class="tab-btn" onclick="setTab('feats')">Feats</button>
+        <button class="tab-btn" onclick="setTab('items')">Items</button>
     </div>
 
     <div id="view-main" class="view-section active">
@@ -404,18 +476,47 @@
 
     </div>
 
-    <div id="view-gear" class="view-section">
-        <h3>Weapons (Worn)</h3>
-        <div id="listWeapons"></div>
-        <h3>Consumables</h3>
-        <div id="listConsumables"></div>
-        <h3>Backpack</h3>
-        <div id="listBackpack"></div>
+    <div id="view-actions" class="view-section">
+        <div class="sub-tabs">
+            <button class="sub-tab-btn active" onclick="setSubTab('Combat')">Combat</button>
+            <button class="sub-tab-btn" onclick="setSubTab('Movement')">Movement</button>
+            <button class="sub-tab-btn" onclick="setSubTab('Skill')">Skill</button>
+            <button class="sub-tab-btn" onclick="setSubTab('Other')">Other</button>
+            <button class="sub-tab-btn" onclick="setSubTab('Character')">Character</button>
+        </div>
+        <div id="actionsList" class="actions-container"></div>
     </div>
 
-    <div id="view-shop" class="view-section">
-        <h3>Consumables Market</h3>
-        <div id="shopList"></div>
+    <div id="view-feats" class="view-section">
+        <!-- Feats injected here -->
+    </div>
+
+    <div id="view-items" class="view-section">
+        <div class="sub-tabs">
+            <button class="sub-tab-btn active" onclick="setItemSubTab('Equipment')">Equipment</button>
+            <button class="sub-tab-btn" onclick="setItemSubTab('Inventory')">Inventory</button>
+            <button class="sub-tab-btn" onclick="setItemSubTab('Shop')">Shop</button>
+        </div>
+        
+        <!-- Renamed from Equipment to match functionality, now contains Weapons -->
+        <div id="item-view-Equipment">
+            <h3>Weapons</h3>
+            <div id="listEquippedWeapons"></div>
+            <h3>Unequipped</h3>
+            <div id="listUnequippedWeapons"></div>
+        </div>
+
+        <!-- Renamed old Inventory View -->
+        <div id="item-view-Inventory" style="display:none">
+            <h3>Consumables</h3>
+            <div id="listConsumables"></div>
+            <h3>Backpack</h3>
+            <div id="listBackpack"></div>
+        </div>
+
+        <div id="item-view-Shop" style="display:none">
+            <div id="shopList"></div>
+        </div>
     </div>
 
 </div>
@@ -424,8 +525,8 @@
     <div class="modal-box" onclick="event.stopPropagation()">
         <h2 id="mTitle">Title</h2>
         <div style="white-space: pre-wrap; line-height: 1.5; color:#ccc;" id="mDesc">Description...</div>
-        <hr style="border-color:#444; margin: 15px 0;">
-        <button onclick="document.getElementById('infoModal').style.display='none'" style="width:100%; padding:10px; cursor:pointer; background:var(--bg-dark); color:var(--text-light); border:1px solid #666;">Close</button>
+        <div id="mFooter"></div>
+        <button class="modal-footer-btn" onclick="document.getElementById('infoModal').style.display='none'">Close</button>
     </div>
 </div>
 
@@ -518,7 +619,7 @@
     // ---------------------------------------------------------
     // 1. CONFIGURATION
     // ---------------------------------------------------------
-    const API_URL = "https://script.google.com/macros/s/AKfycbxhYVYxNecn8KMSz5bz4KJ5hP8N18umOnLPcP-yKy2Kve3NN4orUkxmP6g4pbBrRu8B/exec"; // <--- PASTE NEW URL HERE
+    const API_URL = "https://script.google.com/macros/s/AKfycbxhYVYxNecn8KMSz5bz4KJ5hP8N18umOnLPcP-yKy2Kve3NN4orUkxmP6g4pbBrRu8B/exec";
 
     const STAT_MAP = {
         "Fortitude": "Constitution", "Reflex": "Dexterity", "Will": "Wisdom", "Perception": "Wisdom",
@@ -527,7 +628,30 @@
         "Nature": "Wisdom", "Occultism": "Intelligence", "Perform": "Charisma", "Religion": "Wisdom",
         "Society": "Intelligence", "Stealth": "Dexterity", "Survival": "Wisdom", "Thievery": "Dexterity"
     };
+    
+    // Defines which attribute is used for attack rolls per weapon group
+    const WEAPON_STAT_MAP = {
+        "Firearm": "Dexterity",
+        "Firearms": "Dexterity",
+        "Crossbow": "Dexterity",
+        "Crossbows": "Dexterity",
+        "Bomb": "Dexterity",
+        "Bombs": "Dexterity",
+        "Sword": "Strength",
+        "Swords": "Strength",
+        "Default": "Strength" // Fallback
+    };
+
     const PROF_NAMES = { 0: "Untrained", 2: "Trained", 4: "Expert", 6: "Master", 8: "Legendary" };
+    
+    // Conditions with binary behavior (Level 1 Max, Hidden number)
+    const BINARY_CONDS = [
+        "Blinded", "Clumsy", "Concealed", "Confused", "Controlled", "Dazzled", "Deafened", 
+        "Encumbered", "Fascinated", "Fleeing", "Grabbed", "Hidden", "Immobilized", "Invisible", 
+        "Observed", "Off-Guard", "Paralyzed", "Petrified", "Prone", "Quickened", "Restrained", 
+        "Stunned", "Unconscious", "Undetected", "Unnoticed"
+    ].map(s => s.toLowerCase());
+
     const NEG_CONDS = [
         "blinded","clumsy","confused","controlled","dazzled","deafened","doomed","drained","dying","encumbered","enfeebled",
         "fascinated","fatigued","fleeing","frightened","grabbed","immobilized","off-guard","paralyzed","persistent damage",
@@ -536,118 +660,234 @@
     const POS_CONDS = ["quickened","blessed","fast healing"];
     const VIS_CONDS = ["concealed","hidden","invisible","observed","undetected","unnoticed"];
     
-    // GAME-ICONS.NET MAPPING
     const ICON_BASE = "https://game-icons.net/icons/ffffff/000000/1x1/";
     const ICON_MAP = {
-        "blinded": "delapouite/blindfold.svg",
-        "clumsy": "lorc/boot-stomp.svg",
-        "concealed": "lorc/fog.svg",
-        "confused": "lorc/player-despair.svg",
-        "controlled": "lorc/puppet.svg",
-        "dazzled": "lorc/star-swirl.svg",
-        "deafened": "lorc/mute.svg",
-        "doomed": "lorc/skull-crossed-bones.svg",
-        "drained": "lorc/bleeding-heart.svg",
-        "dying": "lorc/dead-head.svg",
-        "encumbered": "lorc/weight.svg",
-        "enfeebled": "lorc/muscle-down.svg",
-        "fascinated": "lorc/hypnotic-eyes.svg",
-        "fatigued": "lorc/despair.svg",
-        "fleeing": "lorc/run.svg",
-        "frightened": "lorc/screaming.svg",
-        "grabbed": "lorc/hand-grip.svg",
-        "hidden": "lorc/ninja-mask.svg",
-        "immobilized": "lorc/net.svg",
-        "invisible": "lorc/invisible.svg",
-        "observed": "delapouite/eye-shield.svg",
-        "off-guard": "delapouite/eye-shield.svg",
-        "paralyzed": "lorc/electric.svg",
-        "persistent damage": "lorc/burning-dot.svg",
-        "petrified": "lorc/stone-bust.svg",
-        "prone": "lorc/falling.svg",
-        "quickened": "lorc/sprint.svg",
-        "blessed": "delapouite/holy-grail.svg",
-        "fast healing": "delapouite/heart-shield.svg",
-        "restrained": "lorc/manacles.svg",
-        "sickened": "lorc/vomiting.svg",
-        "slowed": "lorc/snail.svg",
-        "stunned": "lorc/knockout.svg",
-        "stupefied": "lorc/dunce-cap.svg",
-        "unconscious": "lorc/coma.svg",
-        "wounded": "lorc/bleeding-wound.svg",
+        "blinded": "delapouite/blindfold.svg", "clumsy": "lorc/boot-stomp.svg", "concealed": "lorc/fog.svg",
+        "confused": "lorc/player-despair.svg", "controlled": "lorc/puppet.svg", "dazzled": "lorc/star-swirl.svg",
+        "deafened": "lorc/mute.svg", "doomed": "lorc/skull-crossed-bones.svg", "drained": "lorc/bleeding-heart.svg",
+        "dying": "lorc/dead-head.svg", "encumbered": "lorc/weight.svg", "enfeebled": "lorc/muscle-down.svg",
+        "fascinated": "lorc/hypnotic-eyes.svg", "fatigued": "lorc/despair.svg", "fleeing": "lorc/run.svg",
+        "frightened": "lorc/screaming.svg", "grabbed": "lorc/hand-grip.svg", "hidden": "lorc/ninja-mask.svg",
+        "immobilized": "lorc/net.svg", "invisible": "lorc/invisible.svg", "observed": "delapouite/eye-shield.svg",
+        "off-guard": "delapouite/eye-shield.svg", "paralyzed": "lorc/electric.svg", "persistent damage": "lorc/burning-dot.svg",
+        "petrified": "lorc/stone-bust.svg", "prone": "lorc/falling.svg", "quickened": "lorc/sprint.svg",
+        "blessed": "delapouite/holy-grail.svg", "fast healing": "delapouite/heart-shield.svg", "restrained": "lorc/manacles.svg",
+        "sickened": "lorc/vomiting.svg", "slowed": "lorc/snail.svg", "stunned": "lorc/knockout.svg",
+        "stupefied": "lorc/dunce-cap.svg", "unconscious": "lorc/coma.svg", "wounded": "lorc/bleeding-wound.svg",
         "default": "lorc/aura.svg"
     };
+
+    // --- ICON SVGs ---
+    // Minimal geometric SVGs that look like the PF2e action icons
+    const ACTION_ICONS = {
+        // One Action (Diamond)
+        "\\[one-action\\]": `<svg class="pf-icon" viewBox="0 0 100 100"><path d="M50 5 L95 50 L50 95 L5 50 Z" /></svg>`,
+        // Two Actions (Two Diamonds)
+        "\\[two-actions\\]": `<svg class="pf-icon" viewBox="0 0 200 100" style="width:2.2em"><path d="M50 5 L95 50 L50 95 L5 50 Z" /><path d="M150 5 L195 50 L150 95 L105 50 Z" /></svg>`,
+        // Three Actions (Three Diamonds)
+        "\\[three-actions\\]": `<svg class="pf-icon" viewBox="0 0 300 100" style="width:3.3em"><path d="M50 5 L95 50 L50 95 L5 50 Z" /><path d="M150 5 L195 50 L150 95 L105 50 Z" /><path d="M250 5 L295 50 L250 95 L205 50 Z" /></svg>`,
+        // Free Action (Hollow Diamond)
+        "\\[free-action\\]": `<svg class="pf-icon" viewBox="0 0 100 100"><path d="M50 5 L95 50 L50 95 L5 50 Z" fill="none" stroke="currentColor" stroke-width="12" /></svg>`,
+        // Reaction (Curved Arrow)
+        "\\[reaction\\]": `<svg class="pf-icon" viewBox="0 0 100 100"><path d="M50 15 A 35 35 0 1 0 85 50 L 70 50 L 85 30 L 100 50 L 85 50 A 35 35 0 1 1 50 15" /></svg>`
+    };
+
+    function formatText(text) {
+        if (!text) return "";
+        // Replace custom tags regex
+        let formatted = text;
+        Object.entries(ACTION_ICONS).forEach(([key, svg]) => {
+             // Create regex with global and ignore case flags
+             const regex = new RegExp(key, "gi");
+             formatted = formatted.replace(regex, svg);
+        });
+        
+        // formatting for gold text
+        formatted = formatted.replace(/\[gold\](.*?)\[\/gold\]/gi, '<span style="color:var(--text-gold)">$1</span>');
+
+        return formatted;
+    }
+
+    // Helper to find case-insensitive key value from an object
+    // UPDATED: Now trims keys to handle accidental trailing spaces in headers (e.g., "Feat ")
+    function getDBValue(obj, targetKey) {
+        if (!obj || typeof obj !== 'object') return null;
+        const key = Object.keys(obj).find(k => k.trim().toLowerCase() === targetKey.toLowerCase());
+        return key ? obj[key] : null;
+    }
+    
+    // NEW HELPER: Robust List Parser
+    // Handles JSON arrays, comma-separated strings, or single items
+    function parseList(input) {
+        if (input === undefined || input === null) return [];
+        if (Array.isArray(input)) return input;
+        
+        // Handle numbers or booleans -> Treat as single item string
+        if (typeof input !== 'string') return [String(input)];
+
+        const trimmed = input.trim();
+        if (trimmed === "") return [];
+
+        // 1. Try JSON Parse
+        try {
+            const parsed = JSON.parse(trimmed);
+            if (Array.isArray(parsed)) return parsed;
+        } catch(e) {
+            // Not valid JSON, continue to next method
+        }
+
+        // 2. Try Comma Separation
+        if (trimmed.includes(',')) {
+            return trimmed.split(',').map(s => s.trim()).filter(s => s !== "");
+        }
+
+        // 3. Fallback: Single Item
+        return [trimmed];
+    }
 
     let state = { char: {}, db: {} };
     let currentEditItem = "";
     let currentResType = ""; 
+    let currentActionSubTab = "Combat"; // Default
+    let currentItemSubTab = "Equipment";
 
-    // ---------------------------------------------------------
-    // 2. LOGIC
-    // ---------------------------------------------------------
     async function init() {
             try {
                 const res = await fetch(API_URL);
                 const rawText = await res.text();
-                
-                try {
-                    // Try standard JSON first
-                    state = JSON.parse(rawText);
-                } catch (e) {
-                    console.warn("Standard JSON parse failed, attempting lenient parse...", e);
-                    // Fallback: This handles the trailing commas causing SyntaxError
-                    try {
-                        state = new Function("return " + rawText)();
-                    } catch (e2) {
-                         console.error("Critical: Failed to parse API response.", e2);
-                         throw e2;
-                    }
-                }
+                try { state = JSON.parse(rawText); } 
+                catch (e) { try { state = new Function("return " + rawText)(); } catch (e2) { throw e2; } }
 
-                // Build a lower-case lookup for condition descriptions so name casing doesn't matter
-                if (state.db && state.db.conditions) {
-                    const lowerMap = {};
-                    Object.entries(state.db.conditions).forEach(([k, v]) => { lowerMap[k.toLowerCase()] = v; });
-                    state.db._conditionsByLower = lowerMap;
-                }
-                
-                // --- ROBUST CONDITION PARSING ---
-                if (!state.character.Conditions) {
-                    state.character.Conditions = [];
-                } else if (typeof state.character.Conditions === 'string') {
-                    const rawCond = state.character.Conditions.trim();
-                    if (rawCond === "") {
-                        state.character.Conditions = [];
-                    } else {
-                        try {
-                            // 1. Try strict JSON first
-                            state.character.Conditions = JSON.parse(rawCond);
-                        } catch (e) {
-                            // 2. Fallback: Lenient Parse (Handles trailing commas & single quotes)
-                            try {
-                                // innovative use of 'new Function' to parse JS-like objects
-                                state.character.Conditions = new Function("return " + rawCond)();
-                            } catch (e2) {
-                                console.error("Failed to parse Conditions:", e2);
-                                state.character.Conditions = [];
-                            }
-                        }
+                if (state.db) {
+                    // Robust lookup for 'actions' table
+                    const actKey = Object.keys(state.db).find(k => k.toLowerCase().trim() === 'actions' || k.toLowerCase().includes('action'));
+                    if (actKey) state.db.actions = state.db[actKey]; else state.db.actions = {};
+
+                    // Map other tables flexibly
+                    const mapTable = (target, search) => {
+                         const k = Object.keys(state.db).find(k => k.toLowerCase().trim() === search);
+                         state.db[target] = k ? state.db[k] : {};
+                    };
+                    mapTable('weapons', 'weapons');
+                    mapTable('equipment', 'equipment');
+                    mapTable('consumables', 'consumables');
+                    mapTable('runes', 'runes');
+
+                    if (state.db.conditions) {
+                        const lowerMap = {};
+                        Object.entries(state.db.conditions).forEach(([k, v]) => { lowerMap[k.toLowerCase()] = v; });
+                        state.db._conditionsByLower = lowerMap;
+                    }
+                    
+                    if (state.db.feats) {
+                        const featLower = {};
+                        Object.entries(state.db.feats).forEach(([k, v]) => { featLower[k.toLowerCase()] = v; });
+                        state.db._featsByLower = featLower;
                     }
                 }
                 
-                // Initialize defaults if parsing returned null/weirdness
                 if (!Array.isArray(state.character.Conditions)) state.character.Conditions = [];
                 
-                // --- TOGGLES DEFAULTS ---
-                // If the attributes don't exist yet, default them to TRUE (equipped)
-                if (state.character.Armor_Equipped === undefined) state.character.Armor_Equipped = true;
-                if (state.character.Shield_Equipped === undefined) state.character.Shield_Equipped = true;
-
+                // Initialize default equipment states if missing
+                if (state.character.Inventory_Weapons === undefined) state.character.Inventory_Weapons = [];
+                
                 render();
+                renderActions();
+                attachActionSwipe(); 
+
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('app').style.display = 'block';
             } catch(e) { console.error(e); }
         }
+
+    // --- WEAPON & ATTACK CALCULATION ---
+    function calculateAttackBonus(weaponName, weaponData, instanceData) {
+        const char = state.character;
+        let total = 0;
+        let breakdown = [];
+
+        // 1. Attribute Modifier
+        const profStr = getDBValue(weaponData, 'proficiency') || "";
+        const profTags = profStr.split(',').map(s => s.trim());
+        
+        // Find main stat based on weapon type/group
+        // Check Proficiencies tags to determine group (Firearms, Swords, etc)
+        let attrName = "Strength"; // Default
+        
+        // Check against known groups in WEAPON_STAT_MAP
+        for (let tag of profTags) {
+            // Remove singular/plural issues for simple check
+            let cleanTag = tag.replace(/s$/, ''); // Bomb -> Bomb
+            if (WEAPON_STAT_MAP[tag]) { attrName = WEAPON_STAT_MAP[tag]; break; }
+            if (WEAPON_STAT_MAP[cleanTag]) { attrName = WEAPON_STAT_MAP[cleanTag]; break; }
+        }
+        
+        const attrVal = parseInt(char[attrName]) || 0;
+        total += attrVal;
+        breakdown.push(`${attrName.substr(0,3)}: ${attrVal}`);
+
+        // 2. Proficiency Bonus
+        let bestProf = 0;
+        let charProfs = char.Proficiencies || [];
+        // Ensure charProfs is array
+        if (typeof charProfs === 'string') try { charProfs = JSON.parse(charProfs); } catch(e){ charProfs=[]; }
+
+        profTags.forEach(tag => {
+            const found = charProfs.find(p => p.name.toLowerCase() === tag.toLowerCase());
+            if (found && found.prof > bestProf) bestProf = found.prof;
+        });
+
+        // Add Level to Proficiency if Trained or better (prof > 0)
+        // (PF2e rule: Prof Bonus = Level + Rank if Rank > 0)
+        const level = parseInt(char.Level) || 1;
+        const profBonus = (bestProf > 0) ? (bestProf + level) : 0;
+        total += profBonus;
+        breakdown.push(`Prof: ${profBonus}`);
+
+        // 3. Item Bonus (Runes)
+        let runeBonus = 0;
+        if (instanceData && instanceData.runes) {
+            instanceData.runes.forEach(r => {
+                if (r === "prof_1") runeBonus += 1;
+                else if (r === "prof_2") runeBonus += 2; // Future proofing
+                else if (r === "prof_3") runeBonus += 3;
+            });
+        }
+        if (runeBonus > 0) {
+            total += runeBonus;
+            breakdown.push(`Item: ${runeBonus}`);
+        }
+
+        return { total, breakdown: breakdown.join(', ') };
+    }
+
+    // ... [Previous Condition & Stat Logic remains the same] ...
+    function getConditionEffects(statName, attributeName) {
+        const conds = state.character.Conditions || [];
+        const active = {};
+        conds.forEach(c => { if(c.level > 0) active[c.name.toLowerCase()] = c.level; });
+        const has = (key) => !!active[key];
+        const val = (key) => active[key] || 0;
+        let statusPenalties = [];
+
+        if (has("frightened")) statusPenalties.push(-val("frightened"));
+        if (has("sickened")) statusPenalties.push(-val("sickened"));
+
+        if (attributeName === "Strength") { if (has("enfeebled")) statusPenalties.push(-val("enfeebled")); }
+        else if (attributeName === "Dexterity") { if (has("clumsy")) statusPenalties.push(-val("clumsy")); if (has("encumbered")) statusPenalties.push(-1); }
+        else if (attributeName === "Constitution") { if (has("drained")) statusPenalties.push(-val("drained")); }
+        else if (["Intelligence", "Wisdom", "Charisma"].includes(attributeName)) { if (has("stupefied")) statusPenalties.push(-val("stupefied")); }
+
+        if (statName === "AC" || statName === "Fortitude" || statName === "Reflex" || statName === "Will") { if (has("fatigued")) statusPenalties.push(-1); }
+        if (statName === "Perception") { if (has("blinded")) statusPenalties.push(-4); if (has("deafened")) statusPenalties.push(-2); if (has("unconscious")) statusPenalties.push(-4); }
+
+        let circPenalties = [];
+        if (statName === "AC") { if (has("off-guard") || has("blinded") || has("grabbed") || has("paralyzed") || has("prone") || has("restrained") || has("unconscious")) circPenalties.push(-2); }
+
+        const bestStatus = statusPenalties.length ? Math.min(...statusPenalties) : 0; 
+        const bestCirc = circPenalties.length ? Math.min(...circPenalties) : 0;
+        return { total: bestStatus + bestCirc, breakdown: (bestStatus ? `Status Penalty: ${bestStatus}\n` : "") + (bestCirc ? `Circumstance Penalty: ${bestCirc}\n` : "") };
+    }
 
     function calculateStat(statName, profValue) {
         const char = state.character;
@@ -655,31 +895,34 @@
         const prof = parseInt(profValue) || 0;
         let attrKey = "Intelligence"; 
         if (!statName.startsWith("Lore")) attrKey = STAT_MAP[statName] || "Strength";
-        
+        if (statName === "AC") attrKey = "Dexterity";
         const attrVal = parseInt(char[attrKey]) || 0;
-        const total = (prof > 0) ? prof + level + attrVal : attrVal;
-        const breakdown = (prof > 0) 
-            ? `${prof} (${PROF_NAMES[prof]})\n+ ${level} (Lvl)\n+ ${attrVal} (${attrKey.substr(0,3)})`
-            : `0 (Untrained)\n+ ${attrVal} (${attrKey.substr(0,3)})`;
-
-        return { total, breakdown, rank: PROF_NAMES[prof] || "Unknown" };
+        let total = (prof > 0) ? prof + level + attrVal : attrVal;
+        const cond = getConditionEffects(statName, attrKey);
+        total += cond.total;
+        const breakdown = (prof > 0) ? `${prof} (${PROF_NAMES[prof]})\n+ ${level} (Lvl)\n+ ${attrVal} (${attrKey.substr(0,3)})` : `0 (Untrained)\n+ ${attrVal} (${attrKey.substr(0,3)})`;
+        return { total, breakdown: breakdown + (cond.total !== 0 ? `\n\nConditions:\n${cond.breakdown}` : ""), rank: PROF_NAMES[prof] || "Unknown", penalty: cond.total };
     }
 
-    // ---------------------------------------------------------
-    // 3. RENDERING
-    // ---------------------------------------------------------
     function render() {
         const c = state.character;
         setText('uiName', c.Name);
         setText('uiLevel', c.Level);
         setText('uiXP', `${c.XP_Current} / ${c.XP_Max}`);
-        setText('uiGold', parseFloat(c.Gold).toFixed(1)); 
+        // UPDATED: Gold to 2 decimal places
+        setText('uiGold', parseFloat(c.Gold).toFixed(2)); 
         setText('uiSpeed', c.Speed || 25);
         setText('uiClassDC', c.Class_DC || 10);
         
-        // --- HP ---
+        const conds = state.character.Conditions || [];
+        const drained = conds.find(x => x.name.toLowerCase() === "drained");
+        const drainedVal = (drained && drained.level > 0) ? drained.level : 0;
+        const hpPenalty = drainedVal * (parseInt(c.Level) || 1);
+        
         const hp = parseInt(c.HP_Current) || 0;
-        const maxHp = parseInt(c.HP_Max) || 1;
+        let maxHp = parseInt(c.HP_Max) || 1;
+        if (hpPenalty > 0) maxHp = Math.max(1, maxHp - hpPenalty);
+
         setText('uiHP', hp);
         setText('uiMaxHP', maxHp);
         const pct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
@@ -688,55 +931,40 @@
         document.getElementById('hpBarFill').style.width = pct + "%";
         document.getElementById('hpBarFill').style.backgroundColor = barColor;
 
-        // --- TEMP HP ---
         const tempHp = parseInt(c.HP_Temp) || 0;
         setText('uiTempHP', tempHp);
         const tBar = document.getElementById('barTempHP');
         const tFill = tBar.querySelector('.temp-bar-fill');
-        if (tempHp > 0) {
-            tBar.style.display = 'block';
-            const tempPct = Math.min(100, (tempHp / maxHp) * 100);
-            tFill.style.width = tempPct + "%";
-            tBar.style.opacity = 1;
-        } else {
-            tBar.style.display = 'none';
-        }
+        if (tempHp > 0) { tBar.style.display = 'block'; const tempPct = Math.min(100, (tempHp / maxHp) * 100); tFill.style.width = tempPct + "%"; tBar.style.opacity = 1; } 
+        else { tBar.style.display = 'none'; }
         refreshHPModalFields();
 
-        // --- ATTRIBUTES ---
         ['Strength','Dexterity','Constitution','Intelligence','Wisdom','Charisma'].forEach(k => {
             const val = parseInt(c[k]) || 0;
             const sign = val >= 0 ? "+" : "";
             setText('ui'+k.substr(0,3), sign + val);
         });
 
-        // --- DEFENSES & SHIELD ---
         const savesContainer = document.getElementById('savesGrid');
         savesContainer.innerHTML = "";
         
-        // --- TOGGLE LOGIC ---
-        // Use loose check for false to allow true/null/undefined to mean 'equipped' by default
         const isArmorOn = c.Armor_Equipped !== false;
         const isShieldOn = c.Shield_Equipped !== false;
-
         const sDef = parseInt(c.Shield_Defense) || 0;
         const sHard = parseInt(c.Shield_Hardness) || 0;
         const sHp = parseInt(c.HP_Shield_Current) || 0;
         const sMax = parseInt(c.HP_Shield_Max) || 0;
-        
-        // Show Shield logic: Must exist AND be equipped
         const hasShield = (sDef > 0 || sHard > 0 || sMax > 0) && isShieldOn;
         const isBroken = (sHp <= (sMax / 2)) && hasShield;
         
-        // Armor Logic: If equipped use Armor, else use Base_AC (default 10)
-        const acVal = isArmorOn ? (c.Armor || 10) : (c.Base_AC || 10);
+        let baseAC = isArmorOn ? (c.Armor || 10) : (c.Base_AC || 10);
+        const acCond = getConditionEffects("AC", "Dexterity");
+        const acFinal = baseAC + acCond.total;
         
-        let acHtml = `
-            <div class="stat-box shield-box" onclick="openResourceModal('AC')">
-                <div class="stat-val">${acVal}</div>
-                <div class="stat-label shield-label">AC</div>
-                ${hasShield ? `<div class="shield-bonus-badge ${isBroken?'broken-stat':''}">+${sDef}</div>` : ''}
-            </div>`;
+        const acPenaltyHtml = acCond.total < 0 ? `<div class="stat-penalty-sub">(${acCond.total})</div>` : "";
+        const acValClass = acCond.total < 0 ? "stat-penalty" : "";
+        
+        let acHtml = `<div class="stat-box shield-box" onclick="openResourceModal('AC')"><div class="stat-val ${acValClass}">${acFinal}</div>${acPenaltyHtml}<div class="stat-label shield-label">AC</div>${hasShield ? `<div class="shield-bonus-badge ${isBroken?'broken-stat':''}">+${sDef}</div>` : ''}</div>`;
         savesContainer.innerHTML += acHtml;
 
         const saveMap = {"Fortitude": "Fortitude", "Reflex": "Reflex", "Will": "Willpower"};
@@ -744,10 +972,13 @@
             const raw = c[key] || 0;
             const calc = calculateStat(key, raw);
             const sign = calc.total >= 0 ? "+" : "";
+            const penaltyHtml = calc.penalty < 0 ? `<div class="stat-penalty-sub">(${calc.penalty})</div>` : "";
+            const valClass = calc.penalty < 0 ? "stat-penalty" : "";
+            
             const div = document.createElement('div');
             div.className = "stat-box"; div.style.cursor="pointer";
             div.onclick = () => showInfoModal(key, `Total: ${sign}${calc.total}\nRank: ${calc.rank}\n\n${calc.breakdown}`);
-            div.innerHTML = `<div class="stat-val">${sign}${calc.total}</div><div class="stat-label">${saveMap[key]}</div>`;
+            div.innerHTML = `<div class="stat-val ${valClass}">${sign}${calc.total}</div>${penaltyHtml}<div class="stat-label">${saveMap[key]}</div>`;
             savesContainer.appendChild(div);
         });
 
@@ -757,31 +988,24 @@
             const sPct = Math.max(0, Math.min(100, (sHp / sMax) * 100));
             const statusText = isBroken ? `<span style="color:var(--accent-red); margin-left:5px;">(Broken!)</span>` : "";
             const brokenClass = isBroken ? "broken-stat" : "";
-            shieldArea.innerHTML = `
-            <div class="shield-status-row" onclick="openResourceModal('Shield')">
-                <div class="shield-text ${brokenClass}">Hardness: ${sHard}</div>
-                <div class="shield-hp-bar">
-                    <div class="shield-fill" style="width:${sPct}%;"></div>
-                    <div class="shield-break-marker"></div>
-                </div>
-                <div class="shield-text">${sHp}/${sMax}${statusText}</div>
-            </div>`;
+            shieldArea.innerHTML = `<div class="shield-status-row" onclick="openResourceModal('Shield')"><div class="shield-text ${brokenClass}">Hardness: ${sHard}</div><div class="shield-hp-bar"><div class="shield-fill" style="width:${sPct}%;"></div><div class="shield-break-marker"></div></div><div class="shield-text">${sHp}/${sMax}${statusText}</div></div>`;
         }
 
-        // --- CONDITIONS RENDER ---
         renderConditions();
+        renderFeats();
+        renderWeapons(); // New weapon render
 
-        // --- PERCEPTION ---
         const perRaw = c.Perception || 0;
         const perCalc = calculateStat("Perception", perRaw);
-        setText("uiPer", (perCalc.total >= 0 ? "+":"") + perCalc.total);
+        const perSign = perCalc.total >= 0 ? "+" : "";
+        const perValClass = perCalc.penalty < 0 ? "stat-penalty" : "";
+        setText("uiPer", perSign + perCalc.total);
+        document.getElementById('uiPer').className = "stat-val " + perValClass;
         document.getElementById('uiPerBox').onclick = () => showInfoModal("Perception", `Total: ${perCalc.total}\nRank: ${perCalc.rank}\n\n${perCalc.breakdown}`);
 
-        // --- SENSES & LANGUAGES ---
         renderListArray(c.Senses, 'uiSenses');
         renderListArray(c.Languages, 'uiLanguages', 'LANGUAGES');
 
-        // --- SKILLS ---
         const skillContainer = document.getElementById('skillsList');
         skillContainer.innerHTML = "";
         let keys = Object.keys(STAT_MAP).filter(k=>!["Fortitude","Reflex","Will","Perception"].includes(k));
@@ -794,20 +1018,350 @@
             const row = document.createElement('div');
             row.className = 'item-row';
             row.onclick = () => showInfoModal(key, `Total: ${calc.total}\nRank: ${calc.rank}\n\n${calc.breakdown}`);
-            const valClass = isTrained ? "skill-trained" : "skill-untrained";
-            const nameColor = isTrained ? "var(--text-gold)" : "#ccc";
-            row.innerHTML = `<span class="item-name" style="color:${nameColor}" >${key.replace('_',' ')}</span>
-                             <span class="skill-val ${valClass}">${calc.total>=0?'+':''}${calc.total}</span>`;
+            let valClass = isTrained ? "skill-trained" : "skill-untrained";
+            let nameColor = isTrained ? "var(--text-gold)" : "#ccc";
+            let nameText = key.replace('_',' ');
+            if (calc.penalty < 0) { valClass = "stat-penalty"; nameText += ` <span style="font-size:0.8em; color:#ef5350;">(${calc.penalty})</span>`; }
+            row.innerHTML = `<span class="item-name" style="color:${nameColor}">${nameText}</span><span class="skill-val ${valClass}">${calc.total>=0?'+':''}${calc.total}</span>`;
             skillContainer.appendChild(row);
         });
 
-        renderList('listWeapons', c.Inventory_Weapons_Worn);
+        // Use new render function for Weapons (Equip tab), other lists standard
+        // renderList('listWeapons', c.Inventory_Weapons_Worn); // Replaced by renderWeapons in Equipment
         renderList('listConsumables', c.Inventory_Consumables);
         renderList('listBackpack', c.Inventory_Gear_Backpack);
-        renderShop();
     }
 
-    // --- CONDITIONS LOGIC ---
+    // --- WEAPON RENDERING ---
+    function renderWeapons() {
+        const equippedEl = document.getElementById('listEquippedWeapons');
+        const unequippedEl = document.getElementById('listUnequippedWeapons');
+        equippedEl.innerHTML = "";
+        unequippedEl.innerHTML = "";
+
+        // Get Character Weapons Array
+        let weapons = parseList(state.character.Inventory_Weapons);
+        
+        if (weapons.length === 0) {
+            equippedEl.innerHTML = "<div style='color:#666;font-style:italic;'>No weapons found.</div>";
+            return;
+        }
+
+        weapons.forEach((inst, index) => {
+            // Lookup static data
+            const staticData = state.db.weapons[inst.name];
+            if (!staticData) {
+                const fallback = document.createElement('div');
+                fallback.innerText = `${inst.name} (Data missing)`;
+                unequippedEl.appendChild(fallback);
+                return;
+            }
+
+            // Calculation
+            const hitCalc = calculateAttackBonus(inst.name, staticData, inst);
+            const sign = hitCalc.total >= 0 ? "+" : "";
+            
+            // Ammo Logic
+            let ammoText = "∞"; // Default unlimited
+            const consumes = getDBValue(staticData, "consumes");
+            const isGun = inst.barrels !== undefined;
+            const consumablesList = parseList(state.character.Inventory_Consumables);
+            let reserveAmmo = 0;
+
+            if (consumes) {
+                // For guns or standard ammo weapons, find reserve count
+                if (consumes.toLowerCase() === inst.name.toLowerCase()) {
+                    // Bomb Logic (Weapon consumes itself)
+                    const ammoItem = consumablesList.find(i => i.name && i.name.toLowerCase() === consumes.toLowerCase());
+                    reserveAmmo = ammoItem ? (parseInt(ammoItem.qty) || 0) : 0;
+                    ammoText = reserveAmmo;
+                } else {
+                    // Standard ammo (Arrows/Bolts/Bullets)
+                    const ammoItem = consumablesList.find(i => i.name && i.name.toLowerCase() === consumes.toLowerCase());
+                    reserveAmmo = ammoItem ? (parseInt(ammoItem.qty) || 0) : 0;
+                    ammoText = `${consumes}: ${reserveAmmo}`;
+                }
+            } else if (isGun) {
+                 // Fallback if 'consumes' missing but has barrels (shouldn't happen usually)
+                 ammoText = "No Ammo Defined";
+            }
+
+            const damage = getDBValue(staticData, "damage") || "1d4";
+            
+            // Barrel UI Construction
+            let barrelHtml = "";
+            if (isGun && inst.barrels > 0) {
+                barrelHtml = `<div class="barrel-container" onclick="event.stopPropagation()">`;
+                const loadedCount = parseInt(inst.barrels_loaded) || 0;
+                for(let i=1; i<=inst.barrels; i++) {
+                     const isLoaded = i <= loadedCount;
+                     // Pass consumable name to function to handle deduction
+                     barrelHtml += `<div class="barrel-opt ${isLoaded?'loaded':''}" onclick="toggleBarrel(${index}, ${loadedCount}, ${inst.barrels}, '${consumes}', ${reserveAmmo}, ${isLoaded})"></div>`;
+                }
+                barrelHtml += `</div>`;
+            }
+
+            // HTML Construction
+            const div = document.createElement('div');
+            div.className = 'weapon-entry';
+            div.onclick = () => showWeaponModal(inst, staticData, index, hitCalc);
+
+            div.innerHTML = `
+                <div class="weapon-top">
+                    <span class="item-name">${inst.name}</span>
+                    ${barrelHtml}
+                    <span class="w-bonus">${sign}${hitCalc.total}</span>
+                </div>
+                <div class="weapon-bot">
+                    <span class="w-damage">${damage}</span>
+                    <span class="w-ammo">${ammoText}</span>
+                </div>
+            `;
+
+            if (inst.equipped == 1) equippedEl.appendChild(div);
+            else unequippedEl.appendChild(div);
+        });
+    }
+
+    async function toggleBarrel(index, currentLoaded, maxBarrels, ammoName, reserveAmmo, isLoaded) {
+        // Prevent event bubbling handled by HTML onclick, but double check logic
+        let weapons = parseList(state.character.Inventory_Weapons);
+        let consumables = parseList(state.character.Inventory_Consumables);
+        
+        if (!weapons[index]) return;
+
+        let newLoaded = currentLoaded;
+        let ammoChange = 0;
+
+        if (isLoaded) {
+            // UNCHECKING (Firing): Reduce loaded count (consumes loaded bullet)
+            // No reserve change, bullet was already deducted on load
+            if (newLoaded > 0) newLoaded--;
+        } else {
+            // CHECKING (Reloading): Increase loaded count, Deduct from Reserve
+            if (newLoaded < maxBarrels) {
+                if (reserveAmmo > 0) {
+                    newLoaded++;
+                    ammoChange = -1;
+                } else {
+                    // Visual feedback for no ammo?
+                    return; // Cannot reload
+                }
+            }
+        }
+        
+        // Update State locally
+        weapons[index].barrels_loaded = newLoaded;
+        state.character.Inventory_Weapons = weapons;
+
+        if (ammoChange !== 0) {
+             let item = consumables.find(i => i.name && i.name.toLowerCase() === ammoName.toLowerCase());
+             if (item) {
+                 item.qty = (parseInt(item.qty) || 0) + ammoChange;
+                 state.character.Inventory_Consumables = consumables;
+             }
+        }
+
+        render();
+        
+        // Sync
+        await post({
+            action: "update_gun_state", 
+            weaponIndex: index, 
+            barrelsLoaded: newLoaded,
+            ammoName: ammoName,
+            ammoChange: ammoChange
+        });
+    }
+
+    function showWeaponModal(inst, staticData, index, hitCalc) {
+        const title = inst.name;
+        const desc = getDBValue(staticData, 'description') || "No description.";
+        const crit = getDBValue(staticData, 'critdamage') || "2x Damage";
+        const range = getDBValue(staticData, 'range') || "Melee";
+        const special = getDBValue(staticData, 'special') || "-";
+        
+        let body = `
+            <div style="color:var(--text-gold); font-size:1.1em; margin-bottom:10px;">Attack Bonus: ${hitCalc.total >= 0 ? '+' : ''}${hitCalc.total}</div>
+            <div style="font-size:0.9em; color:#888; margin-bottom:10px;">Calc: ${hitCalc.breakdown}</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px; background:rgba(255,255,255,0.05); padding:10px; border-radius:4px;">
+                <div><strong>Range:</strong> ${range}</div>
+                <div><strong>Crit:</strong> ${crit}</div>
+            </div>
+            <div style="margin-bottom:10px;">${formatText(desc)}</div>
+            ${special !== "-" ? `<div style="font-size:0.9em; color:#aaa; margin-top:5px;"><em>Special: ${special}</em></div>` : ''}
+        `;
+
+        document.getElementById('mTitle').innerText = title;
+        document.getElementById('mDesc').innerHTML = body;
+        
+        // Footer Button (Equip/Unequip)
+        const btn = document.createElement('button');
+        btn.className = "modal-equip-btn";
+        const isEquipped = inst.equipped == 1;
+        btn.innerText = isEquipped ? "UNEQUIP" : "EQUIP";
+        btn.style.backgroundColor = isEquipped ? "#444" : "var(--text-gold)";
+        btn.style.color = isEquipped ? "#ccc" : "var(--bg-dark)";
+        btn.onclick = () => toggleWeaponEquip(index);
+        
+        const footer = document.getElementById('mFooter');
+        footer.innerHTML = "";
+        footer.appendChild(btn);
+
+        document.getElementById('infoModal').style.display = 'flex';
+    }
+
+    async function toggleWeaponEquip(index) {
+        let weapons = parseList(state.character.Inventory_Weapons);
+        if (weapons[index]) {
+            weapons[index].equipped = weapons[index].equipped == 1 ? 0 : 1;
+            state.character.Inventory_Weapons = weapons;
+            render(); // Re-render lists
+            document.getElementById('infoModal').style.display = 'none';
+            await post({action: "update_weapon_status", index: index, equipped: weapons[index].equipped});
+        }
+    }
+
+    // --- GENERIC ACTIONS ---
+
+    function setSubTab(tabName) {
+        currentActionSubTab = tabName;
+        renderActions();
+    }
+
+    function renderActions() {
+        const listEl = document.getElementById('actionsList');
+        listEl.innerHTML = "";
+        document.querySelectorAll('#view-actions .sub-tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.textContent.trim() === currentActionSubTab);
+        });
+
+        const actionsDB = state.db.actions || {};
+        const entries = Object.entries(actionsDB);
+        
+        let hasItems = false;
+        const charFeats = parseList(state.character.Feats);
+        const charFeatSet = new Set(charFeats.map(f => String(f).toLowerCase().trim()));
+
+        entries.forEach(([name, data]) => {
+            const requiredFeat = getDBValue(data, 'feat') || getDBValue(data, 'feats') || getDBValue(data, 'prerequisite') || getDBValue(data, 'prerequisites');
+            if (requiredFeat && requiredFeat.trim() !== "") {
+                if (!charFeatSet.has(requiredFeat.toLowerCase().trim())) return;
+            }
+
+            let typeStr = getDBValue(data, 'type') || "Other";
+            const types = typeStr.split(',').map(t => t.trim().toLowerCase());
+            if (!types.includes(currentActionSubTab.toLowerCase())) return;
+            
+            hasItems = true;
+
+            if (name.startsWith('!')) {
+                const header = document.createElement('div');
+                header.className = 'action-section-header';
+                header.innerText = name.substring(1); 
+                listEl.appendChild(header);
+                return; 
+            }
+
+            const desc = getDBValue(data, 'description') || "No description.";
+            const skillNameString = getDBValue(data, 'skill');
+            let rightSide = ""; 
+            
+            if (skillNameString && skillNameString.trim()) {
+                const skillNames = skillNameString.split(',').map(s => s.trim());
+                let bestCalc = null;
+                skillNames.forEach(sName => {
+                    let rawProf = 0;
+                    const charKey = Object.keys(state.character).find(k => k.toLowerCase() === sName.toLowerCase());
+                    if (charKey) rawProf = state.character[charKey];
+                    const calc = calculateStat(sName, rawProf);
+                    if (!bestCalc || calc.total > bestCalc.total) bestCalc = calc;
+                });
+                if (bestCalc) {
+                    const sign = bestCalc.total >= 0 ? "+" : "";
+                    rightSide = `<span class="action-bonus">${sign}${bestCalc.total}</span>`;
+                }
+            }
+
+            const row = document.createElement('div');
+            row.className = 'item-row';
+            row.innerHTML = `<span class="item-name">${formatText(name)}</span> ${rightSide}`;
+            row.onclick = () => showInfoModal(name, desc);
+            listEl.appendChild(row);
+        });
+
+        if (!hasItems) listEl.innerHTML = `<div style='padding:10px; color:#aaa; font-style:italic;'>No actions available.</div>`;
+    }
+
+    function attachActionSwipe() {
+        const container = document.getElementById('view-actions');
+        if (!container) return;
+        let startX = 0;
+        container.addEventListener('touchstart', (e) => { startX = e.changedTouches[0].screenX; }, {passive: true});
+        container.addEventListener('touchend', (e) => {
+            const dx = e.changedTouches[0].screenX - startX;
+            if (Math.abs(dx) < 50) return;
+            const tabs = ["Combat", "Movement", "Skill", "Other", "Character"];
+            let idx = tabs.indexOf(currentActionSubTab);
+            if (dx < 0) { idx++; if (idx >= tabs.length) idx = 0; if (idx < tabs.length) setSubTab(tabs[idx]); } 
+            else { idx--; if (idx < 0) idx = 0; if (idx >= 0) setSubTab(tabs[idx]); }
+        }, {passive: true});
+    }
+
+    function renderFeats() {
+        const container = document.getElementById('view-feats');
+        container.innerHTML = "";
+        let rawFeats = parseList(state.character.Feats);
+        if (rawFeats.length === 0) { container.innerHTML = "<div style='text-align:center;color:#666;font-style:italic;'>No feats found.</div>"; return; }
+
+        const cats = { "Class": [], "Ancestry": [], "General": [], "Skill": [], "Other": [] };
+        const dbFeats = state.db.feats || {};
+        const dbFeatsLower = state.db._featsByLower || {};
+
+        rawFeats.forEach(featName => {
+            if (!featName) return;
+            let featObj = dbFeats[featName] || dbFeatsLower[featName.toLowerCase()];
+            let type = "Other";
+            let desc = "No description available.";
+            
+            if (featObj) {
+                const foundType = getDBValue(featObj, "type") || getDBValue(featObj, "feat type") || getDBValue(featObj, "category") || getDBValue(featObj, "trait");
+                if (foundType) type = foundType;
+                const foundDesc = getDBValue(featObj, "description") || getDBValue(featObj, "desc") || getDBValue(featObj, "text") || getDBValue(featObj, "effect");
+                if (foundDesc) desc = foundDesc;
+            }
+            const tLow = String(type).toLowerCase();
+            let target = "Other";
+            if (tLow.includes("class")) target = "Class";
+            else if (tLow.includes("ancestry")) target = "Ancestry";
+            else if (tLow.includes("skill")) target = "Skill";
+            else if (tLow.includes("general")) target = "General";
+            cats[target].push({ name: featName, desc: desc });
+        });
+
+        const order = ["Class", "Ancestry", "General", "Skill", "Other"];
+        order.forEach(key => {
+            const list = cats[key];
+            if (list.length > 0) {
+                const h3 = document.createElement('h3');
+                h3.innerText = key + " Feats";
+                container.appendChild(h3);
+                const listDiv = document.createElement('div');
+                list.sort((a,b) => a.name.localeCompare(b.name)).forEach(f => {
+                    const row = document.createElement('div');
+                    row.className = 'item-row';
+                    row.innerHTML = `<span class="item-name">${f.name}</span>`;
+                    row.onclick = () => showInfoModal(f.name, f.desc);
+                    listDiv.appendChild(row);
+                });
+                container.appendChild(listDiv);
+                const sep = document.createElement('div');
+                sep.className = 'section-separator';
+                container.appendChild(sep);
+            }
+        });
+    }
+
     function renderConditions() {
         const area = document.getElementById('conditionsArea');
         const active = state.character.Conditions.filter(c => c.level > 0).sort((a,b)=>a.name.localeCompare(b.name));
@@ -823,13 +1377,11 @@
             const lower = c.name.toLowerCase();
             if (POS_CONDS.includes(lower)) badgeClass += " cond-positive";
             else if (VIS_CONDS.includes(lower)) badgeClass += " cond-visibility";
+            const isBinary = BINARY_CONDS.includes(lower);
+            const levelClass = isBinary ? "cond-level-hidden" : "cond-level";
             div.className = badgeClass;
             div.onclick = () => openConditionModal();
-            div.innerHTML = `
-                <img src="${iconUrl}" class="cond-icon">
-                <span class="cond-name">${c.name}</span>
-                <span class="cond-level">${c.level}</span>
-            `;
+            div.innerHTML = `<img src="${iconUrl}" class="cond-icon"><span class="cond-name">${c.name}</span><span class="${levelClass}">${c.level}</span>`;
             area.appendChild(div);
         });
     }
@@ -849,13 +1401,14 @@
         const lowerName = name.toLowerCase();
         const dbCond = state.db?.conditions || {};
         const dbCondLower = state.db?._conditionsByLower || {};
-        // Check DB
-        if (dbCond[name]) desc = dbCond[name].description || desc;
-        else if (dbCondLower[lowerName]) desc = dbCondLower[lowerName].description || desc;
+        let condObj = dbCond[name] || dbCondLower[lowerName];
+        if (condObj) {
+             const found = getDBValue(condObj, "description") || getDBValue(condObj, "desc") || getDBValue(condObj, "text") || getDBValue(condObj, "effect");
+             if (found) desc = found;
+        }
         showInfoModal(name, desc);
     }
 
-    // --- CONDITION TABS ---
     let currentCondTab = "negative";
     function ensureConditionCatalog() {
         const allNames = [...NEG_CONDS, ...POS_CONDS, ...VIS_CONDS];
@@ -864,17 +1417,12 @@
                 state.character.Conditions.push({ name: n.replace(/\b\w/g, l=>l.toUpperCase()), level: 0 });
             }
         });
-        // Normalize names casing for matching
         state.character.Conditions = state.character.Conditions.map(c => ({ name: c.name, level: c.level || 0 }));
     }
 
     function getCondTabs() {
         const activeList = state.character.Conditions.filter(c => c.level > 0);
-        const tabs = [
-            { key: "negative", label: "Negative" },
-            { key: "positive", label: "Positive" },
-            { key: "visibility", label: "Visibility" }
-        ];
+        const tabs = [{ key: "negative", label: "Negative" }, { key: "positive", label: "Positive" }, { key: "visibility", label: "Visibility" }];
         if (activeList.length > 0) tabs.unshift({ key: "active", label: "Active" });
         if (!tabs.find(t => t.key === currentCondTab)) currentCondTab = tabs[0].key;
         return tabs;
@@ -919,31 +1467,30 @@
         conds = conds.sort((a,b)=>a.name.localeCompare(b.name));
         if (tabKey === "active" && conds.length === 0) { listWrap.innerHTML = "<div style='color:#888; text-align:center; padding:10px;'>No active conditions.</div>"; return; }
 
-        // Update tab highlight (in case this was called without rebuilding)
         const tabs = document.querySelectorAll('.cond-tab-btn');
-        tabs.forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.key === tabKey);
-        });
+        tabs.forEach(btn => { btn.classList.toggle('active', btn.dataset.key === tabKey); });
 
         conds.forEach(c => {
             const iconUrl = ICON_BASE + (ICON_MAP[c.name.toLowerCase()] || ICON_MAP['default']);
+            const lower = c.name.toLowerCase();
+            const isBinary = BINARY_CONDS.includes(lower);
+            const maxLevel = isBinary ? 1 : 20;
+
             const row = document.createElement('div');
             row.className = 'cond-modal-row';
             
-            // Left side: Icon + Name (clickable for info)
             const left = document.createElement('div');
             left.className = 'cond-modal-left';
             left.onclick = () => showConditionInfo(c.name);
             left.innerHTML = `<img src="${iconUrl}" style="width:24px; filter:invert(1);"> <span>${c.name}</span>`;
             
-            // Right side: Chevrons
             const right = document.createElement('div');
             right.style.display="flex"; right.style.alignItems="center";
             
             const minus = document.createElement('span');
             minus.className = `cond-chevron ${c.level <= 0 ? 'disabled' : ''}`;
-            minus.innerHTML = "&#10094;"; // <
-            minus.onclick = () => modifyConditionLevel(c.name, -1);
+            minus.innerHTML = "&#10094;";
+            minus.onclick = () => modifyConditionLevel(c.name, -1, maxLevel);
             
             const val = document.createElement('span');
             val.className = "cond-val-disp";
@@ -951,14 +1498,13 @@
             val.innerText = c.level;
             
             const plus = document.createElement('span');
-            plus.className = `cond-chevron ${c.level >= 4 ? 'disabled' : ''}`;
-            plus.innerHTML = "&#10095;"; // >
-            plus.onclick = () => modifyConditionLevel(c.name, 1);
+            plus.className = `cond-chevron ${c.level >= maxLevel ? 'disabled' : ''}`;
+            plus.innerHTML = "&#10095;";
+            plus.onclick = () => modifyConditionLevel(c.name, 1, maxLevel);
             
             right.appendChild(minus);
             right.appendChild(val);
             right.appendChild(plus);
-            
             row.appendChild(left);
             row.appendChild(right);
             listWrap.appendChild(row);
@@ -982,36 +1528,23 @@
         };
     }
 
-    async function modifyConditionLevel(name, delta) {
+    async function modifyConditionLevel(name, delta, maxLevel = 20) {
         const cond = state.character.Conditions.find(c => c.name === name);
         if (!cond) return;
-        
         const newLevel = cond.level + delta;
-        if (newLevel < 0 || newLevel > 4) return;
-        
+        if (newLevel < 0 || newLevel > maxLevel) return;
         cond.level = newLevel;
-        
-        // Re-render modal to show changes immediately without resetting tab
         buildConditionTabs();
         renderConditionTab();
-        // Re-render main view
-        renderConditions();
-        
+        render(); // Full render to update stats
         await post({action: "modify_condition", name: name, level: newLevel});
     }
 
-
-    // --- HELPERS & SHARED ---
     function renderListArray(data, elId, label) {
         const box = document.getElementById(elId);
-        let arr = data;
-        if (typeof arr === 'string') { try { arr = JSON.parse(arr); } catch(e) { if(arr.trim()) arr=[arr]; else arr=[]; } }
-        if (Array.isArray(arr) && arr.length > 0) {
-            box.innerHTML = (label ? `<div class="lang-label">${label}</div>` : "") + arr.join("<br>");
-            box.style.display = "block";
-        } else {
-            box.style.display = "none";
-        }
+        const arr = parseList(data);
+        if (arr.length > 0) { box.innerHTML = (label ? `<div class="lang-label">${label}</div>` : "") + arr.join("<br>"); box.style.display = "block"; } 
+        else { box.style.display = "none"; }
     }
 
     function showSpeedDetails() {
@@ -1027,16 +1560,31 @@
         showInfoModal("Movement Speeds", text);
     }
 
+    // ITEM & SHOP RENDER LOGIC
+    function setItemSubTab(tab) {
+        currentItemSubTab = tab;
+        document.querySelectorAll('#view-items .sub-tab-btn').forEach(b => {
+            b.classList.toggle('active', b.textContent.trim() === tab);
+        });
+        ['Inventory', 'Equipment', 'Shop'].forEach(t => {
+            document.getElementById('item-view-'+t).style.display = (t === tab) ? 'block' : 'none';
+        });
+        if(tab === 'Shop') renderShop();
+    }
+
     function renderList(elId, items) {
         const el = document.getElementById(elId);
         el.innerHTML = "";
-        if (typeof items === 'string') { if (items.trim() === "") items = []; else try { items = JSON.parse(items); } catch(e) { items = []; } }
+        items = parseList(items);
         if (!items || !items.length) { el.innerHTML = "<div style='color:#666;font-style:italic;'>Empty</div>"; return; }
-        if (!Array.isArray(items)) items = [{name: items, qty:1}];
+        if (typeof items[0] === 'string') items = items.map(i => ({name: i, qty: 1}));
         items.forEach(item => {
             let desc = "No description.", price = 0;
-            if(state.db.consumables && state.db.consumables[item.name]) { desc = state.db.consumables[item.name].description; price = state.db.consumables[item.name].price; }
-            else if(state.db.equipment && state.db.equipment[item.name]) { desc = state.db.equipment[item.name].description; }
+            if(state.db.consumables && state.db.consumables[item.name]) { 
+                const d = state.db.consumables[item.name];
+                desc = getDBValue(d, "description") || desc;
+                price = getDBValue(d, "price") || price; 
+            }
             if(item.specials) desc = "Specials: " + item.specials.join(", ");
             const row = document.createElement('div');
             row.className = 'item-row';
@@ -1051,15 +1599,16 @@
         el.innerHTML = "";
         if(!state.db.consumables) return;
         Object.entries(state.db.consumables).forEach(([name, d]) => {
+            const desc = getDBValue(d, "description") || "No description.";
+            const price = getDBValue(d, "price") || 0;
             const row = document.createElement('div');
             row.className = 'item-row'; row.style.cursor="default";
-            row.innerHTML = `<div><strong class="item-name" onclick="showInfoModal('${name}','${d.description}')">${name} ℹ️</strong><br><small style="color:#888">${d.price} gp</small></div>
-                <div><button class="btn-add" onclick="buy('${name}',0)">Add</button><button class="btn-buy" onclick="buy('${name}',${d.price})">Buy</button></div>`;
+            row.innerHTML = `<div><strong class="item-name" onclick="showInfoModal('${name}','${desc}')">${name}</strong><br><small style="color:#888">${price} gp</small></div>
+                <div><button class="btn-add" onclick="buy('${name}',0)">Add</button><button class="btn-buy" onclick="buy('${name}',${price})">Buy</button></div>`;
             el.appendChild(row);
         });
     }
 
-    // --- GENERIC ACTIONS ---
     function openResourceModal(type) {
         currentResType = type;
         const c = state.character;
@@ -1079,14 +1628,14 @@
         else if (type === "AC") {
             document.getElementById('resTitle').innerText = "Equipment";
             bodyAC.style.display = "block";
-            // Checkbox state
             document.getElementById('checkArmor').checked = c.Armor_Equipped !== false;
             document.getElementById('checkShield').checked = c.Shield_Equipped !== false;
         }
         else {
             bodyGeneric.style.display = "block";
             let val = 0;
-            if (type === "Gold") { document.getElementById('resTitle').innerText = "Manage Gold"; val = parseFloat(c.Gold).toFixed(1); }
+            // UPDATED: Gold to 2 decimal
+            if (type === "Gold") { document.getElementById('resTitle').innerText = "Manage Gold"; val = parseFloat(c.Gold).toFixed(2); }
             else if (type === "Shield") { document.getElementById('resTitle').innerText = "Manage Shield HP"; val = parseInt(c.HP_Shield_Current) || 0; }
             document.getElementById('resCurrent').innerText = val;
             document.getElementById('resInput').value = "";
@@ -1095,12 +1644,11 @@
         document.getElementById('resModal').style.display = 'flex';
     }
     
-    // --- TOGGLE HANDLER ---
     async function toggleEquip(type) {
         const key = type + "_Equipped";
         const isChecked = document.getElementById('check'+type).checked;
         state.character[key] = isChecked;
-        render(); // Update UI immediately
+        render();
         await post({action: "set_stat", key: key, value: isChecked});
     }
 
@@ -1115,8 +1663,6 @@
         const temp = parseInt(state.character.HP_Temp) || 0;
         if (document.getElementById('resCurrentHP')) document.getElementById('resCurrentHP').innerText = hp;
         if (document.getElementById('resCurrentTemp')) document.getElementById('resCurrentTemp').innerText = temp;
-        // Fields are now cleared/placeholdered by logic in render or openResourceModal, 
-        // we deliberately do NOT set .value here to keep them empty for new input.
         if (document.getElementById('hpInput')) document.getElementById('hpInput').value = "";
         if (document.getElementById('tempInput')) document.getElementById('tempInput').value = "";
     }
@@ -1128,8 +1674,6 @@
         const next = key === "HP_Temp" ? Math.max(0, current + (val * multiplier)) : current + (val * multiplier);
         state.character[key] = next;
         render();
-        // Don't auto-refresh fields to empty immediately if user wants to spam click? 
-        // Actually, standard behavior is usually reset. Let's reset to be safe.
         refreshHPModalFields(); 
         await post({action: "modify_stat", key: key, amount: val * multiplier});
     }
@@ -1148,7 +1692,11 @@
         const amount = parseFloat(input.value);
         if (!amount || amount <= 0) return;
         let key = "", current = 0, change = amount * multiplier;
-        if (currentResType === "Gold") { key = "Gold"; current = parseFloat(state.character.Gold) || 0; state.character.Gold = (current + change).toFixed(1); }
+        if (currentResType === "Gold") { 
+            key = "Gold"; 
+            current = parseFloat(state.character.Gold) || 0; 
+            state.character.Gold = (current + change).toFixed(2); // UPDATED: 2 decimals
+        }
         else if (currentResType === "Shield") { key = "HP_Shield_Current"; current = parseInt(state.character.HP_Shield_Current) || 0; state.character.HP_Shield_Current = Math.max(0, current + change); }
         render();
         document.getElementById('resCurrent').innerText = state.character[key];
@@ -1159,7 +1707,7 @@
         const val = parseFloat(input.value);
         if (isNaN(val)) return;
         let key = "";
-        if (currentResType === "Gold") { key = "Gold"; state.character.Gold = val.toFixed(1); } 
+        if (currentResType === "Gold") { key = "Gold"; state.character.Gold = val.toFixed(2); } 
         else if (currentResType === "Shield") { key = "HP_Shield_Current"; state.character.HP_Shield_Current = Math.max(0, parseInt(val)); }
         render();
         document.getElementById('resCurrent').innerText = state.character[key];
@@ -1170,10 +1718,10 @@
         let currentGold = parseFloat(state.character.Gold) || 0;
         if (price > 0 && currentGold < price) { alert("Not enough gold!"); return; }
         if (!confirm(`${price>0?'Buy':'Add'} ${name}?`)) return;
-        if(price > 0) state.character.Gold = (currentGold - price).toFixed(1);
-        let list = state.character.Inventory_Consumables;
-        if(typeof list==='string') { if(list.trim()==="") list=[]; else try{list=JSON.parse(list)}catch(e){list=[]}; }
+        if(price > 0) state.character.Gold = (currentGold - price).toFixed(2);
+        let list = parseList(state.character.Inventory_Consumables);
         if(!Array.isArray(list)) list=[];
+        if(typeof list[0] === 'string') list = list.map(i=>({name:i, qty:1})); // Normalized check
         let item = list.find(i=>i.name===name);
         if(item) item.qty=(parseInt(item.qty)||1)+1; else list.push({name:name, qty:1});
         state.character.Inventory_Consumables = list;
@@ -1185,13 +1733,22 @@
     function restockFromModal() { buy(currentEditItem, parseFloat(document.getElementById('qPrice').innerText)); document.getElementById('qValue').innerText = parseInt(document.getElementById('qValue').innerText)+1; }
     async function adjustQty(delta) {
         const disp = document.getElementById('qValue'); disp.innerText = Math.max(0, parseInt(disp.innerText)+delta);
-        let list = state.character.Inventory_Consumables; if(typeof list==='string') { if(list.trim()==="") list=[]; else try{list=JSON.parse(list)}catch(e){list=[]}; }
+        let list = parseList(state.character.Inventory_Consumables);
+        if(typeof list[0] === 'string') list = list.map(i=>({name:i, qty:1}));
         let item = list.find(i=>i.name===currentEditItem);
         if(item) { item.qty = (parseInt(item.qty)||0)+delta; if(item.qty<=0) { list = list.filter(i=>i.name!==currentEditItem); closeQtyModal(); } }
         state.character.Inventory_Consumables = list; render(); await post({action: "adjust_qty", itemName: currentEditItem, delta: delta});
     }
     async function post(payload) { try { await fetch(API_URL, { method: "POST", mode: "no-cors", headers: {"Content-Type": "text/plain"}, body: JSON.stringify(payload) }); } catch(e) { console.error("Sync Error", e); } }
-    function showInfoModal(t,b) { document.getElementById('mTitle').innerText=t; document.getElementById('mDesc').innerHTML=b||""; document.getElementById('infoModal').style.display='flex'; }
+    
+    // Updated Show Info Modal to clear footer
+    function showInfoModal(t,b) { 
+        document.getElementById('mTitle').innerText=t; 
+        document.getElementById('mDesc').innerHTML=formatText(b)||""; 
+        document.getElementById('mFooter').innerHTML = ""; // Clear dynamic buttons
+        document.getElementById('infoModal').style.display='flex'; 
+    }
+    
     function setText(id,v) { if(document.getElementById(id)) document.getElementById(id).innerText=(v!==undefined&&v!=="")?v:"0"; }
     function setTab(n) { document.querySelectorAll('.view-section').forEach(x=>x.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active')); document.getElementById('view-'+n).classList.add('active'); event.target.classList.add('active'); }
 
