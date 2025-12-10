@@ -1,0 +1,63 @@
+next lets tackle spellcasting. for this we need an entire new tab "Magic" this tab should only be visible if the character is a caster, for this i added a new field to the Character Tab called Is_Caster that contains a boolean. 
+
+
+
+The magic tab should start with a stat overview: in a hexagonal box the Spell DC should be displayed (Spell_DC in the character sheet) next to it, in the middle a badge with the Magic Tradition(found in Spell_Tradition) and to the right of that, in a rectangular box the attack bonus (Spell Attribute + Level + Spell Proficiency value) spell proficiency is found in the Spell_Attack field and follows the usual proficiency logic (2 = trained etc) the Spell Attribute is found as string in Spell_Attribute (in this case "Charisma")
+
+
+
+underneath this we want a header "Spells & Spellslots" and underneath this on the left a column of boxes, similar to the boxes of the Attributes on the Stats page. These boxes should have 1-4 clickable Checkboxes to mark the remaining spellslots. The boxes and checkmarks should only be visible if the corresponding spellslots exist.
+
+in the Character Tab in our sheet there is the field Spellslots that looks like this:
+
+{
+
+"1_max":4,"1_curr":4,
+
+"2_max":3,"2_curr":2,
+
+"3_max":0,"3_curr":0,
+
+"4_max":0,"4_curr":0,
+
+"5_max":0,"5_curr":0,
+
+"6_max":0,"6_curr":0,
+
+"7_max":0,"7_curr":0,
+
+"8_max":0,"8_curr":0,
+
+"9_max":0,"9_curr":0,
+
+"10_max":0,"10_curr":0,
+
+"f_max":1,"f_curr":1
+
+}
+
+and shows the current existing and available spellslots. in this example there should be one Box "Fokus Points", with one checkbox underneath a Box "Level 1" with 4 Checkboxes inside, and underneath it another box "Level 2" with 3 checkboxes
+
+
+
+ and to the right the spells the character knows, sorted by level, starting with Fokus (or f), cantrip (or 0) and then 1-10 in ascending order.
+
+The Spells can be found in the character Tab under Fields:
+
+Spells_0, Spells_1 ....Spells_10, Spells_Focus (example Level_0: Scatter Scree, Glamorize, Needle Darts, Root Reading, Tangle Vine, Bullhorn, Figment, Guidance)
+
+
+
+these are mirrored in the new Tab Spells that contains the headers:
+
+Name, Level, Tradition, Target, Tags, CastTime, Description
+
+Level can be "Cantrip", "Focus",1,2......,10
+
+Target can be Fortitude, Dexterity, Willpower, AC or None
+
+CastTime can be [one-action],[two-actions],[three-actions], [reaction] or "[one-action]-[three-actions]" and should be displayed as the action symbols.
+
+or spell rows should show name to the left, target in shortform (Dexterity = Dex, None = "") and CastTime both to the right.
+
+Clicking on any should open an info box as always showing the Description
