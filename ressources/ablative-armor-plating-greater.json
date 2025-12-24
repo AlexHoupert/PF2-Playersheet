@@ -1,0 +1,39 @@
+{
+    "name": "Ablative Armor Plating (Greater) edited",
+    "type": "consumable",
+    "img": "icons/equipment/consumables/other-consumables/ablative-armor-plating.webp",
+    "system": {
+        "description": {
+            "value": ""
+        },
+        "level": {
+            "value": 7
+        },
+        "price": {
+            "value": {
+                "gp": 70
+            }
+        },
+        "traits": {
+            "value": [
+                "consumable",
+                "gadget"
+            ],
+            "rarity": "uncommon"
+        },
+        "bulk": {
+            "value": ""
+        },
+        "usage": {
+            "value": ""
+        },
+        "damage": {
+            "dice": 1,
+            "die": "d6",
+            "damageType": "slashing"
+        },
+        "range": "",
+        "category": "gadget",
+        "group": ""
+    }
+}

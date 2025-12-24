@@ -1,0 +1,47 @@
+{
+    "name": "Aberrant Form",
+    "type": "spell",
+    "img": "icons/creatures/claws/claw-talons-glowing-purple.webp",
+    "system": {
+        "description": {
+            "value": ""
+        },
+        "level": {
+            "value": 5
+        },
+        "school": {
+            "value": "evocation"
+        },
+        "traits": {
+            "value": [
+                "concentrate",
+                "manipulate",
+                "polymorph"
+            ],
+            "rarity": "common",
+            "traditions": [
+                "occult"
+            ]
+        },
+        "time": {
+            "value": "2"
+        },
+        "range": {
+            "value": ""
+        },
+        "target": {
+            "value": ""
+        },
+        "area": {
+            "value": ""
+        },
+        "duration": {
+            "value": ""
+        },
+        "defense": {
+            "save": {
+                "statistic": ""
+            }
+        }
+    }
+}

@@ -1,0 +1,894 @@
+{
+    "feats": {
+        "Burn it!": {
+            "id": "6222e64b-ff09-4622-b20d-4c80ab77db16",
+            "name": "Burn it!",
+            "type": "Ancestry",
+            "description": "Your spells and alchemical items that deal fire damage gain a status bonus to damage equal to half the spell's rank or one-quarter the item's level (minimum bonus +1). You also gain a +1 status bonus to any persistent fire damage you deal."
+        },
+        "Munitions Crafter": {
+            "id": "4a322263-0ae6-4803-92a3-179fcd458d09",
+            "name": "Munitions Crafter",
+            "type": "Class",
+            "description": "You can use the advanced alchemy benefits to create a number of daily consumables equal to 4 + half your level (rounded up); these consumables must be bombs or alchemical ammunition. You create the ammunition in batches of 4"
+        },
+        "Quick Alchemy": {
+            "id": "71f827a3-e980-41d6-becd-9ec12c6f9f6b",
+            "name": "Quick Alchemy",
+            "type": "Class",
+            "description": "You can create up to 4 versatile vials during your daily preparation. You can use up a versatile vial to make another alchemical consumable at a moment's notice. Any effect created by an item made with Quick Alchemy that would have a duration longer than 10 minutes lasts for 10 minutes instead.\n\n<b>Create Consumable</b> [one-action]: You expend one of your versatile vials to create a single alchemical consumable item of your level or lower that's in your formula book. You don't have to spend the normal monetary cost in alchemical raw materials or need to attempt a Crafting check. This item has the infused trait, but it remains potent only until the start of your next turn. (As normal, you need only one formula for an item to create any level of that item.)\n"
+        },
+        "Combat Climber": {
+            "id": "9d0f4a6e-b4ff-4a90-b253-bdb646c530fd",
+            "name": "Combat Climber",
+            "type": "Ancestry",
+            "description": "Your techniques allow you to fight as you climb. You’re not offguard while Climbing and can Climb with a hand occupied. You must still use another hand and both legs to Climb."
+        },
+        "Crafter's Appraisal": {
+            "id": "ab255832-5728-4ff1-96e7-e88a59810833",
+            "name": "Crafter's Appraisal",
+            "type": "Skill",
+            "description": "Your knowledge of items' construction allows you to discern their magical effects as well. You can use Crafting instead of a skill associated with a magic tradition to Identify Magic on magic items, though not on any other sorts of magic."
+        },
+        "Fake Out": {
+            "id": "f7e19870-ffa4-4473-b2c3-fee6f62d44e7",
+            "name": "Fake Out",
+            "type": "Class",
+            "description": "<b>Trigger:</b> An ally is about to use an action that requires an attack roll, targeting a creature within your weapon's first range increment. \n<b>Requirements:</b> You're wielding a loaded firearm or crossbow. Fake Out does not require you to actually fire your weapon. \n\nWith a skilled flourish of your weapon, you force an enemy to acknowledge you as a threat. Make an attack roll to <b>[gold]Aid[/gold]</b> the triggering attack. If you dealt damage to that enemy with the same weapon since the start of your last turn, you gain a +1 circumstance bonus to this roll."
+        },
+        "Natural Medicine": {
+            "id": "0ce080a5-780f-48b9-8852-9afaaaf4b5b7",
+            "name": "Natural Medicine",
+            "type": "Skill",
+            "description": "You can apply natural cures to heal your allies. You can use Nature instead of Medicine to Treat Wounds, including higher Nature proficiency letting you attempt more difficult checks. It doesn’t replace Medicine for uses of the skill other than Treat Wounds or for feat prerequisites.\n\nIf you’re in the wilderness, you might have easier access to fresh ingredients, allowing you to gain a +2 circumstance bonus to your check to Treat Wounds using Nature, subject to the GM’s determination."
+        },
+        "Reach Spell": {
+            "id": "35ad7492-1165-44be-962d-3a1531ad1338",
+            "name": "Reach Spell",
+            "type": "Class",
+            "description": "You can extend your spells’ range. If the next action you use is to Cast a Spell that has a range, increase that spell’s range by 30 feet. As is standard for increasing spell ranges, if the spell normally has a range of touch, you extend its range to 30 feet."
+        },
+        "Unbowed, Unbroken": {
+            "id": "7ccedde0-20b0-4550-b558-ac663b2e222f",
+            "name": "Unbowed, Unbroken",
+            "type": "Ancestry",
+            "description": "Your connection to elemental wood manifests as resilience—towering trees, rough bark, deep roots, and patient determination. You gain the Unwavering Resilience reaction.\n\nUnwavering Resilience [reaction] Trigger You attempt a saving throw against a poison, disease, or mental effect, but you haven’t rolled yet. EffectYou tap into the power of the Plane of Wood, gaining strength and mental fortitude. You gain a +1 circumstance bonus on the triggering save. If you critically succeed at this saving throw, you become bolstered by your success; blossoms and new growth temporarily sprout all over your body, and you gain a number of temporary Hit Point equal to your level. These temporary Hit Points last for one minute. When there temporary Hit Points are lost, the verdant growth subsides."
+        },
+        "Ash-Piercing Gaze": {
+            "id": "92140922-f53a-4f9f-b593-b8f9890fe1cb",
+            "name": "Ash-Piercing Gaze",
+            "type": "Ancestry",
+            "description": "Neither cinders nor winds shall prevent you from seeing those who need help. You automatically succeed at the flat check to target a concealed creature if that creature is concealed only by smoke or mist."
+        },
+        "Blood Magic": {
+            "id": "7798fcc4-4f06-4cf5-9ab6-5eb9d21691c1",
+            "name": "Blood Magic",
+            "type": "Class",
+            "description": "Casting a sorcerous gift spell granted by your bloodline or a bloodline spell allows you to benefit from a blood magic effect you know. You can typically only benefit from one blood magic effect at a time, though some feats and abilities may change this.\n\nElemental Fury Elemental energy wreathes your form and infuses your magic. Either you gain a +2 status bonus to Intimidation checks for 1 round, or a target takes 1 damage per spell rank; this damage type is listed under your elemental influence. If the spell already deals that type of damage, combine it with the spell's initial damage before determining weaknesses and resistances."
+        },
+        "Sorcerous Potency": {
+            "id": "c2823a57-8315-48be-89a5-e5b5c843d505",
+            "name": "Sorcerous Potency",
+            "type": "Class",
+            "description": "Because of the magical power inherent in your blood, your spells that hurt or cure are stronger than those of other spellcasters. When you Cast a Spell from your spell slots that either deals damage or restores Hit Points, you gain a status bonus to that spell's damage or healing equal to the spell's rank. This applies only to the initial damage or healing the spell deals when cast. An individual creature takes this damage or benefits from this healing only once per spell, even if the spell would damage or heal that creature multiple times."
+        }
+    },
+    "actions": {
+        "Strike [one-action]": {
+            "id": "4b257f9a-c7fb-4623-b2bf-7a864d642baa",
+            "name": "Strike [one-action]",
+            "type": "Combat",
+            "subtype": "Attack",
+            "skill": null,
+            "feat": null,
+            "description": "You attack with a weapon you’re wielding within its given range. If you critically succeed on the attack roll, you deal double damage*."
+        },
+        "Feint [one-action]": {
+            "id": "e3ead862-d04a-456f-bee3-42971f6c9425",
+            "name": "Feint [one-action]",
+            "type": "Combat",
+            "subtype": "Attack",
+            "skill": "Deception",
+            "feat": null,
+            "description": "<b>Requirements:</b> You are within melee reach of the target you attempt to Feint.\n\nWith a misleading flourish, you leave an opponent unprepared for your real attack. Attempt a Deception check against your target's Perception DC.\n\n<b>[gold]Critical Success[/gold]</b> You throw your enemy's defenses against you entirely off. The target is off-guard against melee attacks that you attempt against it until the end of your next turn.\n<b>[gold]Success[/gold]</b> Your foe is fooled, but only momentarily. The target is off-guard against the next melee attack that you attempt against it before the end of your current turn.\n<b>[gold]Critical Failure[/gold]</b> Your feint backfires. You are off-guard against melee attacks the target attempts against you until the end of your next turn."
+        },
+        "Grapple [one-action]": {
+            "id": "e65b17ff-e706-4347-a1eb-ca1548ce15c2",
+            "name": "Grapple [one-action]",
+            "type": "Combat",
+            "subtype": "Attack",
+            "skill": "Athletics",
+            "feat": null,
+            "description": "<b>Requirements:</b> You have at least one free hand and your target is no more than one size larger than you.\n\nAttempt an Athletics check against the target's Fortitude DC. You can Grapple a target you already have grabbed or restrained without having a hand free.\n\n<b>[gold]Critical Success[/gold]</b> Your target is restrained until the end of your next turn unless you move or your target Escapes.\n<b>[gold]Success[/gold]</b> Your target is grabbed until the end of your next turn unless you move or your target Escapes.\n<b>[gold]Failure[/gold]</b> You fail to grab your target. If you already had the target grabbed or restrained using a Grapple, those conditions on the target end.\n<b>[gold]Critical Failure[/gold]</b> If you already had the target grabbed or restrained, it breaks free. Your target can either grab you, as if it succeeded at using the Grapple action against you, or force you to fall and land prone."
+        },
+        "Shove [one-action]": {
+            "id": "d48f3dc2-d2ac-4756-875f-ee834f1ff368",
+            "name": "Shove [one-action]",
+            "type": "Combat",
+            "subtype": "Attack",
+            "skill": "Athletics",
+            "feat": null,
+            "description": "<b>Requirements:</b> You have at least one hand free. The target can't be more than one size larger than you.\n\nYou push a creature away from you. Attempt an Athletics check against your target's Fortitude DC.\n\n<b>[gold]Critical Success[/gold]</b> You push your target up to 10 feet away from you. You can Stride after it, but you must move the same distance and in the same direction.\n<b>[gold]Success[/gold]</b> You push your target back 5 feet. You can Stride after it, but you must move the same distance and in the same direction.\n<b>[gold]Critical Failure[/gold]</b> You lose your balance, fall, and land prone."
+        },
+        "Trip [one-action]": {
+            "id": "7d9af7dc-7a39-491a-8319-0a2cf0c42c86",
+            "name": "Trip [one-action]",
+            "type": "Combat",
+            "subtype": "Attack",
+            "skill": "Athletics",
+            "feat": null,
+            "description": "<b>Requirements:</b> You have at least one hand free. Your target can't be more than one size larger than you. \n\nYou try to knock a creature to the ground. Attempt an Athletics check against the target's Reflex DC. \n\n<b>[gold]Critical Success[/gold]</b> The target falls, lands prone, and takes 1d6 bludgeoning damage. \n<b>[gold]Success[/gold]</b> The target falls and lands prone. \n<b>[gold]Critical Failure[/gold]</b> You lose your balance, fall, and land prone."
+        },
+        "Disarm [one-action]": {
+            "id": "7f3f9bc8-6af6-4974-9b0e-c8f36084105c",
+            "name": "Disarm [one-action]",
+            "type": "Combat",
+            "subtype": "Attack",
+            "skill": "Athletics",
+            "feat": null,
+            "description": "<b>Requirements:</b> You have at least one hand free. The target can't be more than one size larger than you. \n\nYou try to knock an item out of a creature's grasp. Attempt an Athletics check against the target's Reflex DC. \n\n<b>[gold]Critical Success[/gold]</b> You knock the item out of the target's grasp. It falls to the ground in the target's space. \n<b>[gold]Success[/gold]</b> You weaken your target's grasp on the item. Further attempts to Disarm the target of that item gain a +2 circumstance bonus, and the target takes a –2 circumstance penalty to attacks with the item or other checks requiring a firm grasp on the item. The creature can end the effect by Interacting to change its grip on the item; otherwise, it lasts as long as the creature holds the item. \n<b>[gold]Critical Failure[/gold]</b> You lose your balance and become off-guard until the start of your next turn."
+        },
+        "Escape [one-action]": {
+            "id": "3b54c800-2087-4dbf-81b7-58bc4e36faeb",
+            "name": "Escape [one-action]",
+            "type": "Combat",
+            "subtype": "Defense",
+            "skill": "Athletics,Acrobatics",
+            "feat": null,
+            "description": "You attempt to escape from being grabbed, immobilized, or restrained. Choose one creature, object, spell effect, hazard, or other impediment imposing any of those conditions on you. Attempt a check using your unarmed attack modifier against the DC of the effect. This is typically the Athletics DC of a creature grabbing you, the Thievery DC of a creature who tied you up, the spell DC for a spell effect, or the listed Escape DC of an object, hazard, or other impediment. You can attempt an Acrobatics or Athletics check instead of using your attack modifier if you choose (but this action still has the attack trait).\n\n<b>[gold]Critical Success[/gold]</b>  You get free and remove the grabbed, immobilized, and restrained conditions imposed by your chosen target. You can then Stride up to 5 feet.\n<b>[gold]Success[/gold]</b>  You get free and remove the grabbed, immobilized, and restrained conditions imposed by your chosen target.\n<b>[gold]Critical Failure[/gold]</b>  You don't get free, and you can't attempt to Escape again until your next turn."
+        },
+        "Raise a Shield [one-action]": {
+            "id": "31bb7c53-b0f7-480d-a2bd-014546e841e1",
+            "name": "Raise a Shield [one-action]",
+            "type": "Combat",
+            "subtype": "Defense",
+            "skill": null,
+            "feat": null,
+            "description": "You position your shield to protect yourself. When you have Raised a Shield, you gain its listed circumstance bonus to AC. Your shield remains raised until the start of your next turn."
+        },
+        "Shield Block [reaction]": {
+            "id": "7655ae7c-a6b5-4f7f-acb4-9d5deeb977e6",
+            "name": "Shield Block [reaction]",
+            "type": "Combat",
+            "subtype": "Defense",
+            "skill": null,
+            "feat": "\"Shield Block\"",
+            "description": "<b>Trigger:</b> While you have your shield raised, you would take physical damage (bludgeoning, piercing, or slashing) from an attack. \n\nYou snap your shield in place to ward off a blow. Your shield prevents you from taking an amount of damage up to the shield’s Hardness. You and the shield each take any remaining damage, possibly breaking or destroying the shield."
+        },
+        "Take Cover [one-action]": {
+            "id": "6069f4e2-baad-4b6e-87d8-792b4bfa88f1",
+            "name": "Take Cover [one-action]",
+            "type": "Combat",
+            "subtype": "Defense",
+            "skill": null,
+            "feat": null,
+            "description": "<b>Requirements:</b> You are benefiting from cover, are near a feature that allows you to take cover, or are prone.\n\nYou press yourself against a wall or duck behind an obstacle to take better advantage of cover. If you would have standard cover, you instead gain greater cover, which provides a +4 circumstance bonus to AC; to Reflex saves against area effects; and to Stealth checks to Hide, Sneak, or otherwise avoid detection. Otherwise, you gain the benefits of standard cover (a +2 circumstance bonus instead). This lasts until you move from your current space, use an attack action, become unconscious, or end this effect as a free action."
+        },
+        "Avert Gaze [one-action]": {
+            "id": "cbca4b19-2794-4773-be68-7b065de02721",
+            "name": "Avert Gaze [one-action]",
+            "type": "Combat",
+            "subtype": "Defense",
+            "skill": null,
+            "feat": null,
+            "description": null
+        },
+        "Demoralize [one-action]": {
+            "id": "2a157815-7278-4b87-a4bb-4ce97069a2bc",
+            "name": "Demoralize [one-action]",
+            "type": "Combat",
+            "subtype": "Social",
+            "skill": "Intimidate",
+            "feat": null,
+            "description": "With a sudden shout, a well-timed taunt, or a cutting put-down, you can shake an enemy's resolve. Choose a creature within 30 feet of you who you're aware of. Attempt an Intimidation check against that target's Will DC. If the target doesn't understand the language you are speaking, or you're not speaking a language, you take a –4 circumstance penalty to the check. Regardless of your result, the target is temporarily immune to your attempts to Demoralize it for 10 minutes.\n\n<b>[gold]Critical Success[/gold]</b> The target becomes frightened 2.\n<b>[gold]Success[/gold]</b> The target becomes frightened 1."
+        },
+        "Create a Diversion [one-action]": {
+            "id": "7f518be0-d415-44ed-9785-07e762ca451c",
+            "name": "Create a Diversion [one-action]",
+            "type": "Combat",
+            "subtype": "Social",
+            "skill": "Deception",
+            "feat": null,
+            "description": "With a gesture, a trick, or some distracting words, you can create a diversion that draws creatures' attention elsewhere. If you use a gesture or trick, this action gains the manipulate trait. If you use distracting words, it gains the auditory and linguistic traits.\n\nAttempt a single Deception check and compare it to the Perception DCs of the creatures whose attention you're trying to divert. Whether or not you succeed, creatures you attempt to divert gain a +4 circumstance bonus to their Perception DCs against your attempts to Create a Diversion for 1 minute.\n\n<b>[gold]Success[/gold]</b> You become hidden to each creature whose Perception DC is less than or equal to your result. (The hidden condition allows you to Sneak away) This lasts until the end of your turn or until you do anything except Step or use the Stealth skill to Hide or Sneak. If you Strike a creature, the creature remains off-guard against that attack, and you then become observed. If you do anything else, you become observed just before you act unless the GM determines otherwise.\n<b>[gold]Failure[/gold]</b> You don't divert the attention of any creatures whose Perception DC exceeds your result, and those creatures are aware you were trying to trick them."
+        },
+        "Bon Mot": {
+            "id": "a72be877-ae82-45d4-91ae-f20ea4d15814",
+            "name": "Bon Mot",
+            "type": "Combat",
+            "subtype": "Social",
+            "skill": "Diplomacy",
+            "feat": "Bon Mot",
+            "description": "You launch an insightful quip at a foe, distracting them. Choose a foe within 30 feet and roll a Diplomacy check against the target's Will DC.\n\n<b>[gold]Critical Success[/gold]</b> The target is distracted and takes a –3 status penalty to Perception and Will saves for 1 minute. The target can end the effect early with a retort to your Bon Mot. This can either be a single action that has the concentrate trait or an appropriate skill action to frame their retort. The GM determines which skill actions qualify, though they must take at least 1 action. Typically, the retort needs to use a linguistic Charisma-based skill action.\n<b>[gold]Success[/gold]</b> As critical success, but the penalty is –2.\n<b>[gold]Critical Failure[/gold]</b> Your quip is atrocious. You take the same penalty an enemy would take had you succeeded. This ends after 1 minute or if you issue another Bon Mot and succeed."
+        },
+        "[gold]Fake Out[/gold] [reaction]": {
+            "id": "d9b61d2a-490c-40b1-b514-900c24abebbf",
+            "name": "[gold]Fake Out[/gold] [reaction]",
+            "type": "Combat",
+            "subtype": "Reaction",
+            "skill": null,
+            "feat": "Fake Out",
+            "description": "<b>Trigger:</b> An ally is about to use an action that requires an attack roll, targeting a creature within your weapon's first range increment. \n<b>Requirements:</b> You're wielding a loaded firearm or crossbow. Fake Out does not require you to actually fire your weapon. \n\nWith a skilled flourish of your weapon, you force an enemy to acknowledge you as a threat. Make an attack roll to <b>[gold]Aid[/gold]</b> the triggering attack. If you dealt damage to that enemy with the same weapon since the start of your last turn, you gain a +1 circumstance bonus to this roll."
+        },
+        "[gold]Reach Spell[/gold] [one-action]": {
+            "id": "47c605f3-c910-4aaf-b6f1-c5a3bb34d72b",
+            "name": "[gold]Reach Spell[/gold] [one-action]",
+            "type": "Combat",
+            "subtype": "Feat",
+            "skill": null,
+            "feat": "Reach Spell",
+            "description": "You can extend your spell’s range. If the next action you use is to Cast a Spell that has a range, increase that spell’s range by 30 feet. As is standard for increasing spell ranges, if the spell normally has a range of touch, you extend its range to 30 feet."
+        },
+        "Stride [one-action]": {
+            "id": "8a928bf7-a925-43df-95d6-12dfbc8f4a74",
+            "name": "Stride [one-action]",
+            "type": "Movement",
+            "subtype": "Ground",
+            "skill": null,
+            "feat": null,
+            "description": "You move up to your Speed"
+        },
+        "Step [one-action]": {
+            "id": "0be99e22-983e-4507-b753-4f9ba1b6a8ec",
+            "name": "Step [one-action]",
+            "type": "Movement",
+            "subtype": "Ground",
+            "skill": null,
+            "feat": null,
+            "description": "You carefully move 5 feet. Unlike most types of movement, Stepping doesn't trigger reactions, such as Reactive Strike, that can be triggered by move actions or upon leaving or entering a square.\n\nYou can't Step into difficult terrain, and you can't Step using a Speed other than your land Speed."
+        },
+        "Stand [one-action]": {
+            "id": "f1943f9a-5fb2-43ce-a0c9-16d40105a939",
+            "name": "Stand [one-action]",
+            "type": "Movement",
+            "subtype": "Prone",
+            "skill": null,
+            "feat": null,
+            "description": "You stand up from prone. \n\nStanding up counts as moving for the purpose of effects such as Reactive Strike"
+        },
+        "Crawl [one-action]": {
+            "id": "7313a892-bb33-47b4-9811-0ce3828edef4",
+            "name": "Crawl [one-action]",
+            "type": "Movement",
+            "subtype": "Prone",
+            "skill": null,
+            "feat": null,
+            "description": "While you are prone, you are unable to Stride or Step. Instead, you Crawl 5ft (if speed is more than 5ft)."
+        },
+        "Leap [one-action]": {
+            "id": "598bd379-66c2-41fd-9da9-a6ed7a84c4a5",
+            "name": "Leap [one-action]",
+            "type": "Movement",
+            "subtype": "Jump",
+            "skill": null,
+            "feat": null,
+            "description": "You take a short horizontal or vertical jump. Jumping a greater distance requires using the Athletics skill for a High Jump or Long Jump.\n\n<b>[gold]Horizontal Jump[/gold]</b>up to 10 feet horizontally if your Speed is at least 15 feet, or up to 15 feet horizontally if your Speed is at least 30 feet. You land in the space where your Leap ends (meaning you can typically clear a 5-foot gap, or a 10-foot gap if your Speed is 30 feet or more). You can't make a horizontal Leap if your Speed is less than 15 feet.\n\n<b>[gold]Vertical Jump[/gold]</b> up to 3 feet vertically and 5 feet horizontally onto an elevated surface."
+        },
+        "Fly [one-action]": {
+            "id": "97ca2221-cd87-4faa-ab2d-2b8a72b9a8a2",
+            "name": "Fly [one-action]",
+            "type": "Movement",
+            "subtype": "Other",
+            "skill": null,
+            "feat": null,
+            "description": "You move through the air up to your fly Speed. Moving upward (straight up or diagonally) uses the rules for moving through difficult terrain. You can move straight down 10 feet for every 5 feet of movement you spend. If you Fly to the ground, you don't take falling damage. You can use an action to Fly 0 feet to hover in place. If you're airborne at the end of your turn and didn't use a Fly action this round, you fall."
+        },
+        "Burrow [one-action]": {
+            "id": "e7c988e4-eabb-41b4-a2bb-7087156988d5",
+            "name": "Burrow [one-action]",
+            "type": "Movement",
+            "subtype": "Other",
+            "skill": null,
+            "feat": null,
+            "description": "You dig your way through dirt, sand, or a similar loose material at a rate up to your burrow Speed. You can't burrow through rock or other substances denser than dirt unless you have an ability that allows you to do so."
+        },
+        "Long Jump [two-actions]": {
+            "id": "9c5992e3-7425-4d80-9a84-3839bc2ff19e",
+            "name": "Long Jump [two-actions]",
+            "type": "Movement",
+            "subtype": "Jump",
+            "skill": "Athletics",
+            "feat": null,
+            "description": "You Stride, then attempt a DC 15 Athletics check to make a long jump in the direction you were Striding. If you didn't Stride at least 10 feet, you automatically fail your check. The GM might increase or decrease this DC depending on the situation.\n\n<b>[gold]Success[/gold]</b> You Leap up to a distance equal to your check result rounded down to the nearest 5 feet. You can't jump farther than your land Speed.\n<b>[gold]Failure[/gold]</b> You make a normal horizontal Leap.\n<b>[gold]Critical Failure[/gold]</b> You make a normal horizontal Leap, then fall and land prone."
+        },
+        "Interact [one-action]": {
+            "id": "a58269a3-9069-4c3d-8d21-bffae26e9d5f",
+            "name": "Interact [one-action]",
+            "type": "Other",
+            "skill": null,
+            "feat": null,
+            "description": "You can grab an unattended or stored object, open a door, etc.. You might have to attempt a skill check to determine if successful. This action generally provokes reactions such as Attack of Opportunity.\n"
+        }
+    },
+    "rules": {},
+    "runes": {
+        "\"+1\"": {
+            "id": "d9f53cdb-421a-4661-b341-6fea2e49ea42",
+            "name": "\"+1\"",
+            "type": "Fundamental",
+            "description": null
+        },
+        "\"+2\"": {
+            "id": "dcca5097-eda6-4182-b361-0181eda52db1",
+            "name": "\"+2\"",
+            "type": "Fundamental",
+            "description": null
+        },
+        "\"+3\"": {
+            "id": "16704b2c-567f-4507-9e06-3b540d40287b",
+            "name": "\"+3\"",
+            "type": "Fundamental",
+            "description": null
+        }
+    },
+    "characters": [
+        {
+            "id": "08de1c24-cca9-47e6-be52-e6cb74719b4d",
+            "name": "Nozzik",
+            "level": 3,
+            "xp": {
+                "current": 465,
+                "max": 1200
+            },
+            "gold": 32.14,
+            "stats": {
+                "hp": {
+                    "current": 20,
+                    "max": 30,
+                    "temp": 0
+                },
+                "ac": {
+                    "value": 10,
+                    "base": 19,
+                    "armor": 20,
+                    "shield": 0,
+                    "armor_equipped": true,
+                    "shield_equipped": true,
+                    "shield_hp": 40,
+                    "shield_max": 50,
+                    "shield_hardness": 5,
+                    "shield_bonus": 2
+                },
+                "attributes": {
+                    "strength": 0,
+                    "dexterity": 4,
+                    "constitution": 0,
+                    "intelligence": 2,
+                    "wisdom": 0,
+                    "charisma": 2
+                },
+                "saves": {
+                    "fortitude": 4,
+                    "reflex": 4,
+                    "will": 4
+                },
+                "speed": {
+                    "land": 25,
+                    "swim": 10,
+                    "climb": 10,
+                    "fly": 0
+                },
+                "class_dc": 19,
+                "perception": 4
+            },
+            "skills": {
+                "Acrobatics": 0,
+                "Arcana": 0,
+                "Athletics": 2,
+                "Crafting": 4,
+                "Deception": 2,
+                "Diplomacy": 0,
+                "Intimidate": 2,
+                "Lore_1": 2,
+                "Lore_2": null,
+                "Lore_3": null,
+                "Lore_4": null,
+                "Medicine": 0,
+                "Nature": 2,
+                "Occultism": 0,
+                "Perform": 0,
+                "Religion": 0,
+                "Society": 2,
+                "Stealth": 2,
+                "Survival": 2,
+                "Thievery": 0
+            },
+            "inventory": [
+                {
+                    "name": "Healing Potion (Minor)",
+                    "qty": 5,
+                    "itemId": "d497cbe7-618d-408a-a271-5ae443df40ad"
+                },
+                {
+                    "name": "Bullet",
+                    "qty": 17,
+                    "itemId": "8432308f-8b98-447f-98d2-fb7a0c1f5ebb"
+                },
+                {
+                    "name": "Pepperbox",
+                    "barrels": 3,
+                    "barrels_loaded": 2,
+                    "equipped": 1,
+                    "itemId": "a8836fc4-bb5a-43fd-ab34-1b1a5eb0b09c"
+                },
+                {
+                    "name": "Alchemist's Fire (Lesser)",
+                    "equipped": 1,
+                    "itemId": "49ea2e7e-ff4c-4426-ac0a-4b3f4c707bfe"
+                }
+            ],
+            "magic": {
+                "attribute": null,
+                "proficiency": null,
+                "slots": {
+                    "1_max": 0,
+                    "1_curr": 0,
+                    "2_max": 0,
+                    "2_curr": 0,
+                    "3_max": 0,
+                    "3_curr": 0,
+                    "4_max": 0,
+                    "4_curr": 0,
+                    "5_max": 0,
+                    "5_curr": 0,
+                    "6_max": 0,
+                    "6_curr": 0,
+                    "7_max": 0,
+                    "7_curr": 0,
+                    "8_max": 0,
+                    "8_curr": 0,
+                    "9_max": 0,
+                    "9_curr": 0,
+                    "10_max": 0,
+                    "10_curr": 0,
+                    "f_max": 0,
+                    "f_curr": 0
+                },
+                "list": []
+            },
+            "feats": [
+                "Burn it!",
+                "Munitions Crafter",
+                "Quick Alchemy",
+                "Combat Climber",
+                "Crafter's Appraisal",
+                "Fake Out"
+            ],
+            "conditions": [
+                {
+                    "name": "fatigued",
+                    "level": 0
+                },
+                {
+                    "name": "Clumsy",
+                    "level": 0
+                },
+                {
+                    "name": "Confused",
+                    "level": 0
+                },
+                {
+                    "name": "Blinded",
+                    "level": 0
+                },
+                {
+                    "name": "Encumbered",
+                    "level": 0
+                },
+                {
+                    "name": "Dazzled",
+                    "level": 0
+                },
+                {
+                    "name": "Wounded",
+                    "level": 0
+                },
+                {
+                    "name": "Prone",
+                    "level": 0
+                },
+                {
+                    "name": "Sickened",
+                    "level": 0
+                },
+                {
+                    "name": "Frightened",
+                    "level": 2
+                },
+                {
+                    "name": "Fast Healing",
+                    "level": 0
+                },
+                {
+                    "name": "Quickened",
+                    "level": 0
+                },
+                {
+                    "name": "Blessed",
+                    "level": 0
+                },
+                {
+                    "name": "Unconscious",
+                    "level": 0
+                },
+                {
+                    "name": "Stupefied",
+                    "level": 0
+                }
+            ],
+            "proficiencies": {
+                "Unarmored": 2,
+                "Light": 2,
+                "Medium": 0,
+                "Heavy": 0,
+                "Firearms": 4,
+                "Crossbows": 4,
+                "Bombs": 2
+            },
+            "languages": [
+                "Common",
+                "Dwarfen",
+                "Goblin"
+            ],
+            "senses": [
+                "Nightvision"
+            ]
+        },
+        {
+            "id": "4638038f-0dad-403d-bbd6-fd47efc356bc",
+            "name": "Nimwe",
+            "level": 3,
+            "xp": {
+                "current": 465,
+                "max": 1200
+            },
+            "gold": 40,
+            "stats": {
+                "hp": {
+                    "current": 29,
+                    "max": 29,
+                    "temp": 0
+                },
+                "ac": {
+                    "value": 10,
+                    "base": 16,
+                    "armor": 17,
+                    "shield": 0,
+                    "armor_equipped": false,
+                    "shield_equipped": false,
+                    "shield_hp": null,
+                    "shield_max": null,
+                    "shield_hardness": null,
+                    "shield_bonus": null
+                },
+                "attributes": {
+                    "strength": 0,
+                    "dexterity": 1,
+                    "constitution": 1,
+                    "intelligence": 1,
+                    "wisdom": 2,
+                    "charisma": 4
+                },
+                "saves": {
+                    "fortitude": 2,
+                    "reflex": 2,
+                    "will": 4
+                },
+                "speed": {
+                    "land": 25,
+                    "swim": 10,
+                    "climb": 10,
+                    "fly": 0
+                },
+                "class_dc": 19,
+                "perception": 2
+            },
+            "skills": {
+                "Acrobatics": 0,
+                "Arcana": 0,
+                "Athletics": 0,
+                "Crafting": 0,
+                "Deception": 2,
+                "Diplomacy": 0,
+                "Intimidate": 2,
+                "Lore_1": 2,
+                "Lore_2": null,
+                "Lore_3": null,
+                "Lore_4": null,
+                "Medicine": 2,
+                "Nature": 2,
+                "Occultism": 2,
+                "Perform": 4,
+                "Religion": 0,
+                "Society": 0,
+                "Stealth": 0,
+                "Survival": 2,
+                "Thievery": 0
+            },
+            "inventory": [
+                {
+                    "name": "Dagger of the Cinderblessed",
+                    "equipped": 1,
+                    "itemId": "0991b7c7-443a-4399-8a56-fe1b9cba63c8"
+                }
+            ],
+            "magic": {
+                "attribute": "Charisma",
+                "proficiency": 2,
+                "slots": {
+                    "1_max": 4,
+                    "1_curr": 4,
+                    "2_max": 3,
+                    "2_curr": 1,
+                    "3_max": 0,
+                    "3_curr": 0,
+                    "4_max": 0,
+                    "4_curr": 0,
+                    "5_max": 0,
+                    "5_curr": 0,
+                    "6_max": 0,
+                    "6_curr": 0,
+                    "7_max": 0,
+                    "7_curr": 0,
+                    "8_max": 0,
+                    "8_curr": 0,
+                    "9_max": 0,
+                    "9_curr": 0,
+                    "10_max": 0,
+                    "10_curr": 0,
+                    "f_max": 1,
+                    "f_curr": 1
+                },
+                "list": [
+                    {
+                        "name": "Scatter Scree",
+                        "level": "0"
+                    },
+                    {
+                        "name": "Glamorize",
+                        "level": "0"
+                    },
+                    {
+                        "name": "Needle Darts",
+                        "level": "0"
+                    },
+                    {
+                        "name": "Root Reading",
+                        "level": "0"
+                    },
+                    {
+                        "name": "Tangle Vine",
+                        "level": "0"
+                    },
+                    {
+                        "name": "Bullhorn",
+                        "level": "0"
+                    },
+                    {
+                        "name": "Figment",
+                        "level": "0"
+                    },
+                    {
+                        "name": "Guidance",
+                        "level": "0"
+                    },
+                    {
+                        "name": "Heal",
+                        "level": "1",
+                        "Bloodmagic": true
+                    },
+                    {
+                        "name": "Grease",
+                        "level": "1"
+                    },
+                    {
+                        "name": "Interposing Earth",
+                        "level": "1"
+                    },
+                    {
+                        "name": "Charm",
+                        "level": "1"
+                    },
+                    {
+                        "name": "Briarbirth",
+                        "level": "2",
+                        "Bloodmagic": true
+                    },
+                    {
+                        "name": "Scorching Ray",
+                        "level": "2"
+                    },
+                    {
+                        "name": "Resist Energy",
+                        "level": "2"
+                    },
+                    {
+                        "name": "Heal",
+                        "level": "2"
+                    },
+                    {
+                        "name": "Elemental Toss",
+                        "level": "Focus",
+                        "Bloodmagic": true
+                    }
+                ],
+                "bloodmagic": "Elemental Fury"
+            },
+            "feats": [
+                "Natural Medicine",
+                "Reach Spell",
+                "Unbowed, Unbroken",
+                "Ash-Piercing Gaze",
+                "Blood Magic",
+                "Sorcerous Potency"
+            ],
+            "conditions": [],
+            "proficiencies": {
+                "Unarmored": 2,
+                "Light": 0,
+                "Medium": 0,
+                "Heavy": 0
+            },
+            "languages": [
+                "Elvish",
+                "Fey",
+                "Netherese"
+            ],
+            "senses": [
+                "Nightvision",
+                "Ash-Piercing Gaze"
+            ]
+        }
+    ],
+    "quests": [
+        {
+            "id": "9320ee66-062c-4edc-980c-e77981c87b39",
+            "title": "The Big Mainquest",
+            "status": "Active",
+            "description": "This is the Quest that decides the fate of the world",
+            "objectives": [
+                {
+                    "text": "Find the missing Cat",
+                    "completed": false
+                },
+                {
+                    "text": "Buy Cucumbers",
+                    "completed": true
+                },
+                {
+                    "text": "[h] The Cat is a demon, flee from it",
+                    "completed": false
+                }
+            ],
+            "rewards": {
+                "xp": 300,
+                "gold": 20,
+                "items": "+ 1 Reputation City",
+                "reputation": []
+            },
+            "subquests": [],
+            "descriptionPublic": "You only see this",
+            "tempObjectivesText": "Find the missing Cat\n[x] Buy Cucumbers\n[h] The Cat is a demon, flee from it"
+        },
+        {
+            "id": "2edbbcb2-8c27-4674-b462-0d6bf8fb740a",
+            "title": "Test",
+            "type": "Side",
+            "status": "Active",
+            "descriptionPublic": "Something is crawling in the Serwers",
+            "descriptionGM": "The prisoner is actually the King",
+            "objectives": [
+                {
+                    "text": "Unleash the Elemental",
+                    "completed": false,
+                    "hidden": false
+                },
+                {
+                    "text": "Dont Kill the Prisoner",
+                    "completed": false,
+                    "hidden": true
+                }
+            ],
+            "rewards": {
+                "xp": 100,
+                "gold": 0,
+                "items": "",
+                "reputation": [
+                    {
+                        "faction": "Velran City",
+                        "value": 1
+                    }
+                ]
+            },
+            "subquests": [],
+            "parentId": null,
+            "tempObjectivesText": "Unleash the Elemental\n[h] Dont Kill the Prisoner"
+        },
+        {
+            "id": "a3b8ce08-a6e6-4e26-bdb8-671f36026455",
+            "title": "New Subquest",
+            "type": "Side",
+            "status": "Active",
+            "descriptionPublic": "subtest",
+            "descriptionGM": "",
+            "objectives": [
+                {
+                    "text": "Just click me",
+                    "completed": false,
+                    "hidden": false
+                }
+            ],
+            "rewards": {
+                "xp": 0,
+                "gold": 0,
+                "items": "",
+                "reputation": [
+                    {
+                        "faction": "The GM",
+                        "value": -10
+                    }
+                ]
+            },
+            "subquests": [],
+            "parentId": "2edbbcb2-8c27-4674-b462-0d6bf8fb740a",
+            "tempObjectivesText": "Just click me"
+        }
+    ],
+    "lootBags": [
+        {
+            "id": "2cf4f28f-b84a-4ffa-a508-fef7449a7d10",
+            "name": "Neko's Trashcan",
+            "items": [
+                {
+                    "name": "Eidetic Potion",
+                    "img": "icons/default-icons/consumable.svg",
+                    "sourceFile": "eidetic-potion.json",
+                    "type": "Consumable",
+                    "category": "potion",
+                    "group": null,
+                    "price": 40,
+                    "level": 6,
+                    "rarity": "common",
+                    "traits": {
+                        "rarity": "common",
+                        "value": [
+                            "consumable",
+                            "magical",
+                            "potion"
+                        ]
+                    },
+                    "instanceId": "30512321-d4fe-49b0-9f9b-843f378d1e7a",
+                    "addedAt": 1766175938754
+                },
+                {
+                    "name": "Bronze Dragon's Breath Potion (Wyrm)",
+                    "img": "icons/equipment/consumables/potions/bronze-dragons-breath-potion.webp",
+                    "sourceFile": "bronze-dragons-breath-potion-wyrm.json",
+                    "type": "Consumable",
+                    "category": "potion",
+                    "group": null,
+                    "price": 3000,
+                    "level": 17,
+                    "rarity": "common",
+                    "traits": {
+                        "rarity": "common",
+                        "value": [
+                            "consumable",
+                            "electricity",
+                            "magical",
+                            "potion"
+                        ]
+                    },
+                    "damage": {
+                        "dice": null,
+                        "die": null,
+                        "damageType": ""
+                    },
+                    "range": null,
+                    "instanceId": "15d8e1ce-6127-4e22-ad39-aec0f8c24129",
+                    "addedAt": 1766175951668
+                }
+            ],
+            "isLocked": true
+        }
+    ]
+}

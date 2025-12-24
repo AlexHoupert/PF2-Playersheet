@@ -1,0 +1,27 @@
+{
+    "name": "Test",
+    "type": "action",
+    "img": "systems/pf2e/icons/default-icons/action.svg",
+    "system": {
+        "description": {
+            "value": "test 1"
+        },
+        "actionType": {
+            "value": "action"
+        },
+        "actions": {
+            "value": 1
+        },
+        "category": "interaction",
+        "traits": {
+            "value": [],
+            "rarity": "common"
+        },
+        "classification": {
+            "type": "Combat",
+            "subtype": "General",
+            "skill": "Arcana",
+            "feat": "Fake Out"
+        }
+    }
+}

@@ -1,0 +1,41 @@
+{
+    "name": "aaatest",
+    "type": "spell",
+    "img": "systems/pf2e/icons/default-icons/spell.svg",
+    "system": {
+        "description": {
+            "value": ""
+        },
+        "level": {
+            "value": 1
+        },
+        "school": {
+            "value": "evocation"
+        },
+        "traits": {
+            "value": [],
+            "rarity": "common",
+            "traditions": []
+        },
+        "time": {
+            "value": "[two-actions]"
+        },
+        "range": {
+            "value": "30 feet"
+        },
+        "target": {
+            "value": ""
+        },
+        "area": {
+            "value": ""
+        },
+        "duration": {
+            "value": ""
+        },
+        "defense": {
+            "save": {
+                "statistic": "reflex"
+            }
+        }
+    }
+}

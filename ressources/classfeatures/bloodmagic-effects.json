@@ -1,0 +1,9 @@
+{
+	"name": "Bloodmagic Effects",
+	"Effects": {
+		"Elemental Fury": {
+			"name": "Elemental Fury",
+			"description": "<p>Elemental energy wreathes your form and infuses your magic. Either you gain a +2 status bonus to Intimidation checks for 1 round, or a target takes 1 damage per spell rank; this damage type is listed under your elemental influence. If the spell already deals that type of damage, combine it with the spell's initial damage before determining weaknesses and resistances.</p>"
+		}
+	}
+}

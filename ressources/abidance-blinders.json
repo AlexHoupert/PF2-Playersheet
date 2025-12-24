@@ -1,0 +1,39 @@
+{
+    "name": "Abidance Blinders",
+    "type": "equipment",
+    "img": "icons/commodities/leather/leather-leaf-tan.webp",
+    "system": {
+        "description": {
+            "value": ""
+        },
+        "level": {
+            "value": 1
+        },
+        "price": {
+            "value": {
+                "gp": 25
+            }
+        },
+        "traits": {
+            "value": [
+                "invested",
+                "magical"
+            ],
+            "rarity": "common"
+        },
+        "bulk": {
+            "value": ""
+        },
+        "usage": {
+            "value": ""
+        },
+        "damage": {
+            "dice": 1,
+            "die": "d6",
+            "damageType": "slashing"
+        },
+        "range": "",
+        "category": "",
+        "group": ""
+    }
+}

@@ -1,0 +1,50 @@
+{
+    "name": "Abyssal Plague",
+    "type": "spell",
+    "img": "icons/magic/lightning/bolt-strike-purple.webp",
+    "system": {
+        "description": {
+            "value": ""
+        },
+        "level": {
+            "value": 5
+        },
+        "school": {
+            "value": "evocation"
+        },
+        "traits": {
+            "value": [
+                "chaotic",
+                "concentrate",
+                "disease",
+                "evil",
+                "manipulate"
+            ],
+            "rarity": "common",
+            "traditions": [
+                "divine",
+                "occult"
+            ]
+        },
+        "time": {
+            "value": "2"
+        },
+        "range": {
+            "value": "touch"
+        },
+        "target": {
+            "value": ""
+        },
+        "area": {
+            "value": ""
+        },
+        "duration": {
+            "value": ""
+        },
+        "defense": {
+            "save": {
+                "statistic": "fortitude"
+            }
+        }
+    }
+}

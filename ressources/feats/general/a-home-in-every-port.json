@@ -1,0 +1,30 @@
+{
+    "name": "A Home in Every Port",
+    "type": "feat",
+    "img": "icons/sundries/books/book-red-exclamation.webp",
+    "system": {
+        "description": {
+            "value": ""
+        },
+        "level": {
+            "value": 10
+        },
+        "traits": {
+            "value": [
+                "downtime",
+                "general"
+            ],
+            "rarity": "common"
+        },
+        "actionType": {
+            "value": ""
+        },
+        "actions": {
+            "value": null
+        },
+        "prerequisites": {
+            "value": []
+        },
+        "category": "feat"
+    }
+}

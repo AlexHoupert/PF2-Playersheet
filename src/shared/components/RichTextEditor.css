@@ -1,0 +1,69 @@
+.rich-text-editor {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #1e1e1e;
+    overflow: hidden;
+}
+
+.rte-toolbar {
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+    background: #2b2b2e;
+    border-bottom: 1px solid #444;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.rte-toolbar button {
+    background: #333;
+    border: 1px solid #555;
+    color: #ccc;
+    font-size: 0.9em;
+    cursor: pointer;
+    border-radius: 3px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.rte-toolbar button:hover {
+    background: #444;
+    color: #fff;
+    border-color: #777;
+}
+
+.rte-sep {
+    color: #555;
+    margin: 0 4px;
+    user-select: none;
+}
+
+.rte-textarea {
+    flex: 1;
+    background: #1e1e1e;
+    color: #e0e0e0;
+    border: none;
+    padding: 10px;
+    resize: vertical;
+    min-height: 120px;
+    font-family: inherit;
+    line-height: 1.5;
+    width: 100%;
+}
+
+.rte-textarea:focus {
+    outline: none;
+}
+
+.pf2-icon {
+    font-family: "Pathfinder2eActions", sans-serif;
+    /* If font exists, otherwise fallback */
+    font-weight: bold;
+}

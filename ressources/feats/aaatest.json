@@ -1,0 +1,27 @@
+{
+    "name": "aaatest",
+    "type": "feat",
+    "img": "systems/pf2e/icons/default-icons/feat.svg",
+    "system": {
+        "description": {
+            "value": "lorem"
+        },
+        "level": {
+            "value": 1
+        },
+        "traits": {
+            "value": [],
+            "rarity": "common"
+        },
+        "actionType": {
+            "value": "[one-action]"
+        },
+        "actions": {
+            "value": null
+        },
+        "prerequisites": {
+            "value": []
+        },
+        "category": "class"
+    }
+}

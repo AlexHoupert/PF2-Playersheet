@@ -1,0 +1,27 @@
+{
+  "name": "pf2-playersheet",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server/index.js",
+    "build:shop": "node scripts/build_shop.js",
+    "build:spells": "node scripts/build_spells.js",
+    "build:feats": "node scripts/build_feats.js",
+    "build:actions": "node scripts/generate_action_index.js",
+    "build:data": "npm run build:shop && npm run build:spells && npm run build:feats && npm run build:actions",
+    "build": "npm run build:data && vite build && node scripts/copy_ressources_to_dist.js",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "firebase": "^12.7.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.2",
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.0.0"
+  }
+}

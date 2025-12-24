@@ -1,0 +1,38 @@
+{
+    "name": "aaaaaaa",
+    "type": "weapon",
+    "img": "systems/pf2e/icons/default-icons/mystery-man.svg",
+    "system": {
+        "description": {
+            "value": "werttrt"
+        },
+        "level": {
+            "value": 0
+        },
+        "price": {
+            "value": {
+                "gp": 0
+            }
+        },
+        "traits": {
+            "value": [
+                "acid"
+            ],
+            "rarity": "common"
+        },
+        "bulk": {
+            "value": "0.1"
+        },
+        "usage": {
+            "value": ""
+        },
+        "damage": {
+            "dice": 1,
+            "die": "d6",
+            "damageType": "slashing"
+        },
+        "range": "",
+        "category": "advanced",
+        "group": ""
+    }
+}
