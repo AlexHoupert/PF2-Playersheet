@@ -57,11 +57,11 @@ export function getFeatIndexItemByName(name) {
 export async function fetchFeatDetailBySourceFile(sourceFile) {
     if (!sourceFile) return null;
     const baseUrl = import.meta.env.PROD ? '/ressources' : '/api/static';
-    const res = await fetch(`${baseUrl}/classfeatures/${sourceFile}`);
-    if (!res.ok) {
+    const response = await fetch(`${baseUrl}/${sourceFile}`);
+    if (!response.ok) {
         throw new Error(`Failed to load feat: ${sourceFile}`);
     }
-    const data = await res.json();
+    const data = await response.json();
     const sys = data.system || {};
 
     return {

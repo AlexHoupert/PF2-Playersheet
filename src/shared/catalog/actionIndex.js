@@ -40,11 +40,12 @@ export function getAllActionIndexItems() {
 
 export async function fetchActionDetailBySourceFile(sourceFile) {
     if (!sourceFile) return null;
-    const res = await fetch(`/api/static/${sourceFile}`);
-    if (!res.ok) {
+    const baseUrl = import.meta.env.PROD ? '/ressources' : '/api/static';
+    const response = await fetch(`${baseUrl}/${sourceFile}`);
+    if (!response.ok) {
         throw new Error(`Failed to load action: ${sourceFile}`);
     }
-    const data = await res.json();
+    const data = await response.json();
     const sys = data.system || {};
 
     const cls = sys.classification || {};

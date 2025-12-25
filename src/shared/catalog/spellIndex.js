@@ -75,11 +75,11 @@ export function getSpellIndexItemByName(name) {
 export async function fetchSpellDetailBySourceFile(sourceFile) {
     if (!sourceFile) return null;
     const baseUrl = import.meta.env.PROD ? '/ressources' : '/api/static';
-    const res = await fetch(`${baseUrl}/spells/${sourceFile}`); // The sourceFile from the index already includes the subdirectory, so we just append it to ressources
-    if (!res.ok) {
+    const response = await fetch(`${baseUrl}/${sourceFile}`); // The sourceFile from the index already includes the subdirectory, so we just append it to ressources
+    if (!response.ok) {
         throw new Error(`Failed to load spell: ${sourceFile}`);
     }
-    const data = await res.json();
+    const data = await response.json();
     const sys = data.system || {};
 
     return {
