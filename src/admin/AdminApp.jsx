@@ -14,7 +14,6 @@ import SpellsView from './SpellsView';
 import FeatsView from './FeatsView';
 import ActionsView from './ActionsView';
 import QuestsView from './QuestsView';
-import LootView from './LootView';
 import FirebaseMigrator from './FirebaseMigrator';
 import SessionManager from './views/SessionManager';
 import { useCampaign } from '../shared/context/CampaignContext';
@@ -83,19 +82,24 @@ export default function AdminApp({ db, setDb }) {
     }, [modalData, modalMode]);
 
     const updateCharacter = (index, fn) => {
-        if (!activeCampaign) return;
         setDb(prev => {
             const next = { ...prev };
-            const campId = activeCampaign.id;
-            const nextChars = [...next.campaigns[campId].characters];
-            const charClone = deepClone(nextChars[index]);
-            fn(charClone);
-            nextChars[index] = charClone;
-
-            next.campaigns[campId] = {
-                ...next.campaigns[campId],
-                characters: nextChars
-            };
+            if (activeCampaign) {
+                const campId = activeCampaign.id;
+                const nextChars = [...next.campaigns[campId].characters];
+                if (!nextChars[index]) return prev;
+                const charClone = deepClone(nextChars[index]);
+                fn(charClone);
+                nextChars[index] = charClone;
+                next.campaigns[campId] = { ...next.campaigns[campId], characters: nextChars };
+            } else {
+                const nextChars = [...(next.characters || [])];
+                if (!nextChars[index]) return prev;
+                const charClone = deepClone(nextChars[index]);
+                fn(charClone);
+                nextChars[index] = charClone;
+                next.characters = nextChars;
+            }
             return next;
         });
     };
@@ -681,11 +685,10 @@ export default function AdminApp({ db, setDb }) {
                 <div className="header-controls">
                     <button className={`nav-btn ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => setActiveTab('sessions')}>Sessions</button>
                     <button className={`nav-btn ${activeTab === 'players' ? 'active' : ''}`} onClick={() => setActiveTab('players')}>Players</button>
-                    <button className={`btn-char-switch ${activeTab === 'items' ? 'active' : ''}`} onClick={() => setActiveTab('items')} title="Items">🎒</button>
+                    <button className={`btn-char-switch ${activeTab === 'items' ? 'active' : ''}`} onClick={() => setActiveTab('items')} title="Items & Loot">🎒</button>
                     <button className={`btn-char-switch ${activeTab === 'spells' ? 'active' : ''}`} onClick={() => setActiveTab('spells')} title="Spells">✨</button>
                     <button className={`btn-char-switch ${activeTab === 'feats' ? 'active' : ''}`} onClick={() => setActiveTab('feats')} title="Feats">🎓</button>
                     <button className={`btn-char-switch ${activeTab === 'quests' ? 'active' : ''}`} onClick={() => setActiveTab('quests')} title="Quests">📜</button>
-                    <button className={`btn-char-switch ${activeTab === 'loot' ? 'active' : ''}`} onClick={() => setActiveTab('loot')} title="Loot">💰</button>
                     <button className={`btn-char-switch ${activeTab === 'system' ? 'active' : ''}`} onClick={() => setActiveTab('system')} title="System">⚙️</button>
                     <div style={{ width: 20 }}></div>
                     <button className="btn-char-switch" onClick={() => window.location.search = ''} title="Player View">👤</button>
@@ -700,8 +703,9 @@ export default function AdminApp({ db, setDb }) {
                     <div className="admin-layout">
                         {/* LEFT SIDE: Party Overview */}
                         <div className="admin-panel admin-left">
-                            <h3>Party Overview</h3>
-                            {db.characters.map((char, idx) => (
+                            <h3>Party Overview {activeCampaign ? `(${activeCampaign.name})` : '(Legacy)'}</h3>
+                            {(!activeCampaign && (!db.characters || db.characters.length === 0)) && <div style={{ padding: 10, color: '#666' }}>No characters found.</div>}
+                            {(activeCampaign ? activeCampaign.characters : db.characters)?.map((char, idx) => (
                                 <div key={char.id} className="party-row">
                                     <div className="party-row-header">
                                         <span className="char-name">{char.name}</span>
