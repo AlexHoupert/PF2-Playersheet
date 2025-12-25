@@ -283,7 +283,7 @@ export default function AdminApp({ db, setDb }) {
                                 <div style={{ fontSize: '0.7em', color: '#888' }}>PERC</div>
                             </div>
                             <div style={{ marginBottom: 5 }}>
-                                <div style={{ fontWeight: 'bold', color: '#c5a059' }}>{char.stats.speed.land}</div>
+                                <div style={{ fontWeight: 'bold', color: '#c5a059' }}>{char.stats.speed?.land || 25}</div>
                                 <div style={{ fontSize: '0.7em', color: '#888' }}>SPD</div>
                             </div>
                             <div>

@@ -38,6 +38,7 @@ export default function SessionManager({ db, setDb }) {
                 ac: { value: 10 },
                 classDC: { value: 10, label: 'Class DC' },
                 perception: { value: 0 },
+                speed: { land: 25 },
                 saves: {
                     fortitude: { value: 0 },
                     reflex: { value: 0 },
