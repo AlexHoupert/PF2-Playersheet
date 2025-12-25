@@ -2127,8 +2127,8 @@ export default function PlayerApp() {
         );
     };
 
-    // --- MODAL COMPONENT ---
-    const EditModal = () => {
+    // --- MODAL RENDERER ---
+    const renderEditModal = () => {
         // Helper for HP/Gold Modals
         const [editVal, setEditVal] = useState("");
 
@@ -2557,14 +2557,6 @@ export default function PlayerApp() {
                             })}
                         </div>
                     </div>
-
-                    <div style={{ marginTop: 20, textAlign: 'center', borderTop: '1px solid #444', paddingTop: 10 }}>
-                        <div style={{ fontSize: '0.9em', color: '#888', marginBottom: 5 }}>Base Calculation</div>
-                        <div style={{ fontSize: '0.85em', fontFamily: 'monospace' }}>
-                            10 + Dex({acData.dexUsed}) + Prof({acData.profBonus || 0}) + Item({acData.armorItemBonus || 0})
-                            {acData.activeShieldBonus > 0 ? ` + Shield(${acData.activeShieldBonus})` : ''}
-                        </div>
-                    </div>
                 </>
             );
         } else if (modalMode === 'condition') {
@@ -2835,25 +2827,6 @@ export default function PlayerApp() {
                     <div style={{ textAlign: 'center', marginBottom: 20 }}>
                         <div style={{ fontSize: '2em', color: 'var(--text-gold)', fontWeight: 'bold' }}>DC {dcVal}</div>
                         <div style={{ fontSize: '1.5em', color: '#aaa' }}>Attack {atkBonus >= 0 ? '+' : ''}{atkBonus}</div>
-                    </div>
-                    <div style={{ background: '#222', padding: 15, borderRadius: 8, fontSize: '0.9em' }}>
-                        <div style={{ marginBottom: 10 }}><strong>Calculation:</strong></div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                            <span>Base</span>
-                            <span>10</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                            <span>Attribute ({attrName})</span>
-                            <span>{attrMod >= 0 ? '+' : ''}{attrMod}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                            <span>Proficiency ({rankLabel})</span>
-                            <span>{prof >= 0 ? '+' : ''}{prof}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #444', paddingTop: 5 }}>
-                            <span>Level (if trained)</span>
-                            <span>{prof > 0 ? `+${level}` : '0'}</span>
-                        </div>
                     </div>
                 </>
             );
@@ -3627,8 +3600,13 @@ export default function PlayerApp() {
                     -webkit-overflow-scrolling: touch;
                 }
                 .modal-tabs .tab-btn {
-                    flex: 0 0 auto; /* Don't squeeze modal tabs, let them scroll */
+                    flex: 1; /* Match main tabs behavior (squeeze) */
+                    min-width: 0; /* Allow shrinking below content size if needed, or stick to fit-content */
+                    padding: 8px 4px; /* Reduced padding */
+                    font-size: 0.9em;
                     white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
             `}</style>
             <div className="header-bar">
@@ -3765,7 +3743,7 @@ export default function PlayerApp() {
             )}
 
             {/* General Modals */}
-            <EditModal />
+            {renderEditModal()}
         </div>
     );
 }
