@@ -11,19 +11,34 @@ export default function FirebaseMigrator() {
 
         setStatus('working');
         try {
+            console.log("Starting migration...");
             // 1. Read from LocalStorage (Source of Truth for migration)
             const rawData = localStorage.getItem(DB_STORAGE_KEY);
             if (!rawData) throw new Error("No local data found.");
 
             const data = JSON.parse(rawData);
+            console.log("Local data loaded, size:", rawData.length);
 
-            // 2. Upload to Firestore
-            await setDoc(doc(firestore, "data", "master"), data);
+            // 1.5 Verify Config
+            if (!firestore) throw new Error("Firebase Firestore not initialized.");
+            if (!firestore.app.options.apiKey || firestore.app.options.apiKey.includes("YOUR_")) {
+                throw new Error("Invalid Firebase Config. Check Environment Variables.");
+            }
 
+            // 2. Upload to Firestore (with Timeout Race)
+            const uploadTask = setDoc(doc(firestore, "data", "master"), data);
+
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Upload timed out (10s). Check console/network.")), 10000)
+            );
+
+            await Promise.race([uploadTask, timeoutPromise]);
+
+            console.log("Upload success.");
             setStatus('success');
             alert("Migration Complete! Data is now in the cloud.");
         } catch (err) {
-            console.error(err);
+            console.error("Migration Error:", err);
             setStatus('error');
             alert(`Migration Failed: ${err.message}`);
         }

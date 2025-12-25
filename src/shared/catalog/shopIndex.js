@@ -104,7 +104,8 @@ function parseHands(usageValue) {
 
 export async function fetchShopItemDetailBySourceFile(sourceFile) {
     if (!sourceFile) return null;
-    const res = await fetch(`/api/static/equipment/${sourceFile}`);
+    const baseUrl = import.meta.env.PROD ? '/ressources' : '/api/static';
+    const res = await fetch(`${baseUrl}/equipment/${sourceFile}`);
     if (!res.ok) {
         throw new Error(`Failed to load item: ${sourceFile}`);
     }
