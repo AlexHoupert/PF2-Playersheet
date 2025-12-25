@@ -317,9 +317,43 @@ export default function AdminApp({ db, setDb }) {
             );
         }
         if (mode === 'spells') {
+            if (!char.spells) {
+                return (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#888', padding: 20 }}>
+                        <div style={{ marginBottom: 10 }}>Not a spellcaster</div>
+                        <button
+                            onClick={() => updateCharacter(index, c => {
+                                c.spells = {
+                                    focus: { points: 1, max: 1 },
+                                    slots: {
+                                        "1": { value: 2, max: 2 },
+                                        "2": { value: 0, max: 0 },
+                                        "3": { value: 0, max: 0 },
+                                        "4": { value: 0, max: 0 },
+                                        "5": { value: 0, max: 0 },
+                                        "6": { value: 0, max: 0 },
+                                        "7": { value: 0, max: 0 },
+                                        "8": { value: 0, max: 0 },
+                                        "9": { value: 0, max: 0 },
+                                        "10": { value: 0, max: 0 }
+                                    },
+                                    known: []
+                                };
+                            })}
+                            style={{ padding: '8px 16px', background: '#c5a059', border: 'none', borderRadius: 4, fontWeight: 'bold', cursor: 'pointer', color: '#000' }}
+                        >
+                            Enable Spellcasting
+                        </button>
+                    </div>
+                );
+            }
+
+            const spellList = char.spells.known || char.spells.list || [];
+
             return (
                 <div className="card-content-scroll">
-                    {char.spells.list.map((s, i) => (
+                    {spellList.length === 0 && <div style={{ color: '#666', fontStyle: 'italic', padding: 10 }}>No spells known.</div>}
+                    {spellList.map((s, i) => (
                         <div key={i} className="item-row compact">
                             <span>{s.name}</span>
                             <span style={{ color: '#888', fontSize: '0.8em' }}>Rank {s.level}</span>
@@ -704,6 +738,41 @@ export default function AdminApp({ db, setDb }) {
                         {/* LEFT SIDE: Party Overview */}
                         <div className="admin-panel admin-left">
                             <h3>Party Overview {activeCampaign ? `(${activeCampaign.name})` : '(Legacy)'}</h3>
+
+                            {/* CAMPAIGN XP CONTROL */}
+                            {activeCampaign && (
+                                <div style={{ background: '#222', padding: 8, borderRadius: 4, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #444' }}>
+                                    <span style={{ fontSize: '0.9em', color: '#c5a059' }}>Campaign XP</span>
+                                    <input
+                                        type="number"
+                                        style={{ width: 70, padding: 4, background: '#111', color: '#fff', border: '1px solid #555', textAlign: 'center' }}
+                                        value={activeCampaign.xp || 0}
+                                        onChange={(e) => {
+                                            const newXp = parseInt(e.target.value) || 0;
+                                            setDb(prev => {
+                                                const next = { ...prev };
+                                                const campId = activeCampaign.id;
+                                                const camp = next.campaigns[campId];
+
+                                                // Update Campaign XP
+                                                camp.xp = newXp;
+
+                                                // Sync to ALL characters
+                                                if (camp.characters) {
+                                                    camp.characters.forEach(c => {
+                                                        if (!c.xp) c.xp = { current: 0, max: 1000 };
+                                                        c.xp.current = newXp;
+                                                    });
+                                                }
+
+                                                next.campaigns[campId] = camp;
+                                                return next;
+                                            });
+                                        }}
+                                    />
+                                </div>
+                            )}
+
                             {(!activeCampaign && (!db.characters || db.characters.length === 0)) && <div style={{ padding: 10, color: '#666' }}>No characters found.</div>}
                             {(activeCampaign ? activeCampaign.characters : db.characters)?.map((char, idx) => (
                                 <div key={char.id} className="party-row">
@@ -738,6 +807,7 @@ export default function AdminApp({ db, setDb }) {
                                                         <button
                                                             key={m}
                                                             onClick={() => toggleCardMode(index, m)}
+                                                            style={cardModes[index] === m ? { background: '#c5a059', color: '#000' } : {}}
                                                         >
                                                             {m.charAt(0).toUpperCase() + m.slice(1)}
                                                         </button>

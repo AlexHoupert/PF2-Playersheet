@@ -30,6 +30,8 @@ export default function SessionManager({ db, setDb }) {
             id: crypto.randomUUID(),
             name: newCharName,
             level: parseInt(newCharLvl) || 1,
+            xp: { current: 0, max: 1000 },
+            gold: 0,
             initiative: 0,
             stats: {
                 hp: { current: 15, max: 15, temp: 0 },
