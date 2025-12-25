@@ -20,6 +20,7 @@ export default function SessionManager({ db, setDb }) {
     // --- QUICK CREATE CHARACTER ---
     const [newCharName, setNewCharName] = useState('');
     const [newCharLvl, setNewCharLvl] = useState(1);
+    const [isSpellcaster, setIsSpellcaster] = useState(false);
 
     // Skeleton Character
     const handleCreateCharacter = () => {
@@ -28,35 +29,56 @@ export default function SessionManager({ db, setDb }) {
         const newChar = {
             id: crypto.randomUUID(),
             name: newCharName,
-            level: parseInt(newCharLvl),
-            xp: { current: 0, max: 1000 }, // Standard 1000 XP
-            gold: 15.00, // 15gp start
+            level: parseInt(newCharLvl) || 1,
+            initiative: 0,
             stats: {
                 hp: { current: 15, max: 15, temp: 0 },
-                ac: { value: 10, base: 10 },
-                attributes: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 },
-                saves: { fortitude: 0, reflex: 0, will: 0 },
-                speed: { land: 25 },
-                class_dc: 10,
-                perception: 0
+                ac: { value: 10 },
+                classDC: { value: 10, label: 'Class DC' },
+                perception: { value: 0 },
+                saves: {
+                    fortitude: { value: 0 },
+                    reflex: { value: 0 },
+                    will: { value: 0 }
+                },
+                attributes: {
+                    str: 0, dex: 0, con: 0,
+                    int: 0, wis: 0, cha: 0
+                }
             },
-            skills: {}, // Empty skills map
-            inventory: [],
-            magic: { slots: {}, list: [] },
-            feats: [],
+            skills: {
+                acrobatics: 0, arcana: 0, athletics: 0, crafting: 0, deception: 0,
+                diplomacy: 0, intimidation: 0, medicine: 0, nature: 0, occultism: 0,
+                performance: 0, religion: 0, society: 0, stealth: 0, survival: 0, thievery: 0,
+                lore: []
+            },
             conditions: [],
-            proficiencies: { Unarmored: 0, Light: 0, Medium: 0, Heavy: 0 },
-            languages: ['Common'],
-            senses: []
+            feats: [],
+            inventory: [],
+            weapons: [],
+            armor: [],
+            spells: isSpellcaster ? {
+                focus: { points: 1, max: 1 },
+                slots: {
+                    "1": { value: 2, max: 2 },
+                    "2": { value: 0, max: 0 },
+                    "3": { value: 0, max: 0 },
+                    "4": { value: 0, max: 0 },
+                    "5": { value: 0, max: 0 },
+                    "6": { value: 0, max: 0 },
+                    "7": { value: 0, max: 0 },
+                    "8": { value: 0, max: 0 },
+                    "9": { value: 0, max: 0 },
+                    "10": { value: 0, max: 0 }
+                },
+                known: []
+            } : null // Null magic hides the tab
         };
 
         setDb(prev => {
             const next = { ...prev };
-            const cmap = next.campaigns[activeCampaignId];
-            if (!cmap) return prev;
-
-            // Ensure array exists
-            const chars = cmap.characters ? [...cmap.characters] : [];
+            const cmap = { ...next.campaigns[activeCampaignId] };
+            const chars = [...(cmap.characters || [])];
             chars.push(newChar);
 
             next.campaigns[activeCampaignId] = {
@@ -67,6 +89,7 @@ export default function SessionManager({ db, setDb }) {
         });
 
         setNewCharName('');
+        setIsSpellcaster(false);
     };
 
     const handleDeleteChar = (charId) => {
@@ -170,6 +193,14 @@ export default function SessionManager({ db, setDb }) {
                                     style={{ width: 60, padding: 8, background: '#111', border: '1px solid #444', color: '#fff' }}
                                     min={1} max={20}
                                 />
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#111', padding: '0 10px', border: '1px solid #444', borderRadius: 4, cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={isSpellcaster}
+                                        onChange={e => setIsSpellcaster(e.target.checked)}
+                                    />
+                                    <span style={{ fontSize: '0.9em' }}>Caster?</span>
+                                </label>
                                 <button onClick={handleCreateCharacter} style={{ padding: '8px 15px', background: '#c5a059', border: 'none', color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>Create</button>
                             </div>
                         </div>

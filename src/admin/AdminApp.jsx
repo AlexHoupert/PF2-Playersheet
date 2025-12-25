@@ -745,7 +745,7 @@ export default function AdminApp({ db, setDb }) {
                                                 </div>
                                             </div>
                                             <div className="char-card-body">
-                                                {renderCardContent(char, idx)}
+                                                {renderCardContent(char, index)}
                                             </div>
                                         </div>
                                     ))}
