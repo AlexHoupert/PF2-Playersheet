@@ -3,11 +3,12 @@ import { shouldStack } from '../shared/utils/inventoryUtils';
 
 // MODES: 'BUY', 'QTY', 'TRANSFER', 'CONTEXT'
 
-export default function ItemActionsModal({ mode, item, db, activeCharIndex, onClose, onBuy, onChangeQty, onTransfer, onUnstack, onLoadSpecial, onUnloadAll, onOpenMode }) {
+export default function ItemActionsModal({ mode, item, characters, activeCharIndex, onClose, onBuy, onChangeQty, onTransfer, onUnstack, onLoadSpecial, onUnloadAll, onOpenMode }) {
     const [val, setVal] = useState(1);
     const [targetCharId, setTargetCharId] = useState('');
 
-    const character = db.characters[activeCharIndex];
+    const character = characters[activeCharIndex];
+    if (!character) return null; // Guard
     const inventory = character.inventory || [];
 
     useEffect(() => {
@@ -18,9 +19,9 @@ export default function ItemActionsModal({ mode, item, db, activeCharIndex, onCl
         }
     }, [mode, item]);
 
-    const characters = useMemo(() => {
-        return db.characters.map((c, i) => ({ name: c.name, index: i })).filter((c, i) => i !== activeCharIndex);
-    }, [db, activeCharIndex]);
+    const otherCharacters = useMemo(() => {
+        return characters.map((c, i) => ({ name: c.name, index: i })).filter((c, i) => i !== activeCharIndex);
+    }, [characters, activeCharIndex]);
 
     if (!mode) return null;
 
@@ -205,7 +206,7 @@ export default function ItemActionsModal({ mode, item, db, activeCharIndex, onCl
                                 }}
                             >
                                 <option value="">-- Select Player --</option>
-                                {characters.map(c => (
+                                {otherCharacters.map(c => (
                                     <option key={c.index} value={c.index}>{c.name}</option>
                                 ))}
                             </select>

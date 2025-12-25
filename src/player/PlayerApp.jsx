@@ -1,9 +1,10 @@
 /* d:\Repositories\PF2-Playersheet-1\src\player\PlayerApp.jsx */
 import React, { useEffect, useRef, useState } from 'react';
+import { useCampaign } from '../shared/context/CampaignContext';
 import { calculateStat, formatText, ACTION_ICONS } from '../utils/rules';
-import dbData from '../data/new_db.json';
+import { deepClone } from '../shared/utils/deepClone';
 import ShopView from './ShopView';
-import { usePersistedDb } from '../shared/db/usePersistedDb';
+// import { usePersistedDb } from '../shared/db/usePersistedDb';
 import { NEG_CONDS, POS_CONDS, VIS_CONDS, getConditionIcon } from '../shared/constants/conditions';
 import { conditionsCatalog, getConditionCatalogEntry, getConditionImgSrc, isConditionValued } from '../shared/constants/conditionsCatalog';
 import { fetchShopItemDetailBySourceFile, getShopIndexItemByName } from '../shared/catalog/shopIndex';
@@ -11,7 +12,7 @@ import { fetchSpellDetailBySourceFile, getSpellIndexItemByName, SPELL_INDEX_ITEM
 import { fetchFeatDetailBySourceFile, getFeatIndexItemByName, FEAT_INDEX_ITEMS, FEAT_INDEX_FILTER_OPTIONS } from '../shared/catalog/featIndex';
 import { fetchActionDetailBySourceFile, getAllActionIndexItems, getActionIndexItemByName } from '../shared/catalog/actionIndex';
 import { getShopItemRowMeta } from '../shared/catalog/shopRowMeta';
-import { deepClone } from '../shared/utils/deepClone';
+
 import { shouldStack } from '../shared/utils/inventoryUtils';
 import bloodMagicEffects from '../../ressources/classfeatures/bloodmagic-effects.json';
 import ItemCatalog from './ItemCatalog';
@@ -27,11 +28,53 @@ const ARMOR_RANKS = [
     { value: 8, label: 'Legendary (+8)' }
 ];
 
-export default function PlayerApp() {
-    const [db, setDb] = usePersistedDb(dbData);
+export default function PlayerApp({ db, setDb }) {
+    const { activeCampaign, myCharacter, updateActiveCampaign } = useCampaign();
+    // const [db, setDb] = usePersistedDb(dbData);
     // const [db, setDb] = useState(dbData);
 
     const [activeCharIndex, setActiveCharIndex] = useState(0);
+
+    useEffect(() => {
+        if (myCharacter && activeCampaign?.characters) {
+            const idx = activeCampaign.characters.findIndex(c => c.id === myCharacter.id);
+            if (idx !== -1) setActiveCharIndex(idx);
+        }
+    }, [myCharacter, activeCampaign]);
+
+    // Fallback if no campaign
+    const characters = activeCampaign?.characters || [];
+    const character = characters[activeCharIndex];
+
+    // If no character found (e.g. empty campaign), guard against crash
+    if (!character) {
+        return (
+            <div style={{ padding: 20, color: '#e0e0e0', textAlign: 'center', marginTop: '20vh' }}>
+                <h1 style={{ fontFamily: 'Cinzel, serif', color: '#c5a059' }}>PF2e Companion</h1>
+                {activeCampaign ? (
+                    <div>
+                        <h3>Connected to: {activeCampaign.name}</h3>
+                        <p>No character assigned to you.</p>
+                        <p style={{ opacity: 0.7 }}>Ask your GM to assign a character to your email.</p>
+                    </div>
+                ) : (
+                    <div>
+                        <h3>No Active Campaign</h3>
+                        <p>Waiting for connection...</p>
+                    </div>
+                )}
+
+                <div style={{ marginTop: 40 }}>
+                    <button
+                        onClick={() => window.location.search = '?admin=true'}
+                        style={{ padding: '10px 20px', background: '#333', border: '1px solid #555', color: '#fff', borderRadius: 4, cursor: 'pointer' }}
+                    >
+                        Login as GM
+                    </button>
+                </div>
+            </div>
+        );
+    }
     const [activeTab, setActiveTab] = useState('stats');
     const [actionSubTab, setActionSubTab] = useState('Combat');
     const [itemSubTab, setItemSubTab] = useState('Equipment');
@@ -408,53 +451,62 @@ export default function PlayerApp() {
     };
 
     const executeTransfer = (item, targetIdx, qty) => {
-        const sourceChar = db.characters[activeCharIndex];
-        const targetChar = db.characters[parseInt(targetIdx)];
+        const targetInd = parseInt(targetIdx);
+        if (isNaN(targetInd)) return;
 
-        if (!targetChar) return;
+        updateActiveCampaign(camp => {
+            const chars = [...(camp.characters || [])];
+            const sender = { ...chars[activeCharIndex], inventory: [...(chars[activeCharIndex].inventory || [])] };
+            const recipient = { ...chars[targetInd], inventory: [...(chars[targetInd].inventory || [])] };
 
-        // Confirmation is partly handled by UI, assuming standard flow
-        // "Confirm" button on modal commits this
+            if (!sender || !recipient) return camp;
 
-        // We need to update DB root, not just current char
-        // But `updateCharacter` only updates active char.
-        // We need `setDb`.
+            chars[activeCharIndex] = sender;
+            chars[targetInd] = recipient;
 
-        setDb(prev => {
-            const next = deepClone(prev);
-            const sChar = next.characters[activeCharIndex];
-            const tChar = next.characters[parseInt(targetIdx)];
-
-            const sIdx = sChar.inventory.findIndex(i =>
+            const sIdx = sender.inventory.findIndex(i =>
                 (item.instanceId && i.instanceId === item.instanceId) ||
-                (!item.instanceId && i.name === item.name && !!i.equipped === !!item.equipped)
+                (!item.instanceId && i.name === item.name)
             );
 
             if (sIdx === -1) {
                 alert("Error: Item not available.");
-                return prev;
+                return camp;
             }
 
-            const sItem = sChar.inventory[sIdx];
-            if (sItem.qty < qty) {
-                // Should validation be stricter here?
+            const sItem = { ...sender.inventory[sIdx] };
+            if ((sItem.qty || 1) < qty) {
+                alert("Not enough qty");
+                return camp;
             }
 
-            // Deduct
-            sItem.qty -= qty;
-            if (sItem.qty <= 0) {
-                sChar.inventory.splice(sIdx, 1);
+            // Remove from sender
+            if ((sItem.qty || 1) > qty) {
+                sItem.qty = (sItem.qty || 1) - qty;
+                sender.inventory[sIdx] = sItem;
+            } else {
+                sender.inventory.splice(sIdx, 1);
             }
 
-            // Add
-            const stackable = shouldStack(item);
-            const tItem = stackable ? tChar.inventory.find(i => i.name === item.name) : null;
-            if (tItem) tItem.qty = (tItem.qty || 1) + qty;
-            else tChar.inventory.push({ ...item, qty: qty, equipped: false, instanceId: crypto.randomUUID ? crypto.randomUUID() : undefined }); // Ensure new instance gets ID if possible
+            // Add to recipient
+            if (shouldStack(item)) {
+                const existingIndex = recipient.inventory.findIndex(i => i.name === item.name);
+                if (existingIndex > -1) {
+                    const existing = { ...recipient.inventory[existingIndex] };
+                    existing.qty = (existing.qty || 1) + qty;
+                    recipient.inventory[existingIndex] = existing;
+                } else {
+                    recipient.inventory.push({ ...item, qty });
+                }
+            } else {
+                for (let i = 0; i < qty; i++) {
+                    recipient.inventory.push({ ...item, qty: 1, instanceId: crypto.randomUUID() });
+                }
+            }
 
-            alert(`Transferred ${qty}x ${item.name} to ${tChar.name}.`);
-            return next;
+            return { ...camp, characters: chars };
         });
+
         setActionModal({ mode: null, item: null });
     };
 
@@ -618,7 +670,7 @@ export default function PlayerApp() {
         setModalHistory(prevHistory => prevHistory.slice(0, -1));
     };
 
-    const character = db.characters[activeCharIndex];
+
 
     const equipTapRef = useRef({ key: null, time: 0 });
     const equipTapTimeoutRef = useRef(null);
@@ -701,15 +753,28 @@ export default function PlayerApp() {
 
     // --- STATE UPDATERS ---
 
-    const updateCharacter = (fn) => {
+
+    const updateCharacter = (updater) => {
         setDb(prev => {
-            const newDb = { ...prev };
-            const newChars = [...newDb.characters];
-            const charClone = deepClone(newChars[activeCharIndex]);
-            fn(charClone);
-            newChars[activeCharIndex] = charClone;
-            newDb.characters = newChars;
-            return newDb;
+            const next = { ...prev };
+            const campaignId = activeCampaign?.id;
+            if (!campaignId || !next.campaigns?.[campaignId]) return prev;
+
+            const nextChars = [...next.campaigns[campaignId].characters];
+            const charClone = deepClone(nextChars[activeCharIndex]);
+
+            if (typeof updater === 'function') {
+                updater(charClone); // Allow mutation
+                nextChars[activeCharIndex] = charClone;
+            } else {
+                nextChars[activeCharIndex] = updater;
+            }
+
+            next.campaigns[campaignId] = {
+                ...next.campaigns[campaignId],
+                characters: nextChars
+            };
+            return next;
         });
     };
 
@@ -3612,7 +3677,7 @@ export default function PlayerApp() {
                 </div>
                 <div className="header-controls">
                     <button className="btn-char-switch" onClick={() => {
-                        setActiveCharIndex((prev) => (prev + 1) % db.characters.length);
+                        setActiveCharIndex((prev) => (prev + 1) % characters.length);
                     }}>👥</button>
                     <div className="gold-display" onClick={() => setModalMode('gold')}>
                         <span>💰</span> {parseFloat(character.gold).toFixed(2)} <span className="gold-unit">gp</span>
@@ -3706,7 +3771,7 @@ export default function PlayerApp() {
             <ItemActionsModal
                 mode={actionModal.mode}
                 item={actionModal.item}
-                db={db}
+                characters={characters}
                 activeCharIndex={activeCharIndex}
                 onClose={() => setActionModal({ mode: null, item: null })}
                 onOpenMode={(m, i) => setActionModal({ mode: m, item: i })}

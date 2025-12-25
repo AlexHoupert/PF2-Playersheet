@@ -1,8 +1,8 @@
 /* d:\Repositories\PF2-Playersheet-1\src\AdminApp.jsx */
 import React, { useEffect, useRef, useState } from 'react';
 import { calculateStat, formatText } from '../utils/rules';
-import dbData from '../data/new_db.json';
-import { DB_STORAGE_KEY, usePersistedDb } from '../shared/db/usePersistedDb';
+// import dbData from '../data/new_db.json'; // Removed, passed via props
+import { DB_STORAGE_KEY } from '../shared/db/usePersistedDb'; // Keep constant if needed
 import { NEG_CONDS, POS_CONDS, VIS_CONDS, getConditionIcon } from '../shared/constants/conditions';
 import { conditionsCatalog, getConditionCatalogEntry, getConditionImgSrc, isConditionValued } from '../shared/constants/conditionsCatalog';
 import { fetchShopItemDetailBySourceFile, getShopIndexItemByName } from '../shared/catalog/shopIndex';
@@ -16,12 +16,14 @@ import ActionsView from './ActionsView';
 import QuestsView from './QuestsView';
 import LootView from './LootView';
 import FirebaseMigrator from './FirebaseMigrator';
+import SessionManager from './views/SessionManager';
+import { useCampaign } from '../shared/context/CampaignContext';
 import '../App.css';
 
-export default function AdminApp() {
-    const [db, setDb] = usePersistedDb(dbData);
-
-    const [viewMode, setViewMode] = useState('players'); // players, items, quests, spells, feats
+export default function AdminApp({ db, setDb }) {
+    const { activeCampaign, updateActiveCampaign } = useCampaign();
+    // const [db, setDb] = usePersistedDb(dbData); // LIFTED TO APP
+    const [activeTab, setActiveTab] = useState('sessions'); // Default to sessions now
 
     // Modal State
     const [modalMode, setModalMode] = useState(null); // null, 'hp', 'condition', 'item', 'spell', 'feat'
@@ -81,14 +83,20 @@ export default function AdminApp() {
     }, [modalData, modalMode]);
 
     const updateCharacter = (index, fn) => {
+        if (!activeCampaign) return;
         setDb(prev => {
-            const newDb = { ...prev };
-            const newChars = [...newDb.characters];
-            const charClone = deepClone(newChars[index]);
+            const next = { ...prev };
+            const campId = activeCampaign.id;
+            const nextChars = [...next.campaigns[campId].characters];
+            const charClone = deepClone(nextChars[index]);
             fn(charClone);
-            newChars[index] = charClone;
-            newDb.characters = newChars;
-            return newDb;
+            nextChars[index] = charClone;
+
+            next.campaigns[campId] = {
+                ...next.campaigns[campId],
+                characters: nextChars
+            };
+            return next;
         });
     };
 
@@ -671,144 +679,175 @@ export default function AdminApp() {
                     <h1>GM Screen</h1>
                 </div>
                 <div className="header-controls">
-                    <button className={`btn-char-switch ${viewMode === 'players' ? 'active' : ''}`} onClick={() => setViewMode('players')} title="Players">👥</button>
-                    <button className={`btn-char-switch ${viewMode === 'items' ? 'active' : ''}`} onClick={() => setViewMode('items')} title="Items">🎒</button>
-                    <button className={`btn-char-switch ${viewMode === 'spells' ? 'active' : ''}`} onClick={() => setViewMode('spells')} title="Spells">✨</button>
-                    <button className={`btn-char-switch ${viewMode === 'feats' ? 'active' : ''}`} onClick={() => setViewMode('feats')} title="Feats">🎓</button>
-                    <button className={`btn-char-switch ${viewMode === 'actions' ? 'active' : ''}`} onClick={() => setViewMode('actions')} title="Actions">⚔️</button>
-                    <button className={`btn-char-switch ${viewMode === 'Quests' ? 'active' : ''}`} onClick={() => setViewMode('Quests')} title="Quests">📜</button>
-                    <button className={`btn-char-switch ${viewMode === 'system' ? 'active' : ''}`} onClick={() => setViewMode('system')} title="System">⚙️</button>
-                    <button className="btn-char-switch" onClick={() => window.location.search = ''} title="Player View">↩️</button>
-                    <button className="btn-char-switch" onClick={resetData} title="Reset Data">↻</button>
-                </div>
+                    <button className={`nav-btn ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => setActiveTab('sessions')}>Sessions</button>
+                    <button className={`nav-btn ${activeTab === 'players' ? 'active' : ''}`} onClick={() => setActiveTab('players')}>Players</button>
+                    <button className={`btn-char-switch ${activeTab === 'items' ? 'active' : ''}`} onClick={() => setActiveTab('items')} title="Items">🎒</button>
+                    <button className={`btn-char-switch ${activeTab === 'spells' ? 'active' : ''}`} onClick={() => setActiveTab('spells')} title="Spells">✨</button>
+                    <button className={`btn-char-switch ${activeTab === 'feats' ? 'active' : ''}`} onClick={() => setActiveTab('feats')} title="Feats">🎓</button>
+                    <button className={`btn-char-switch ${activeTab === 'quests' ? 'active' : ''}`} onClick={() => setActiveTab('quests')} title="Quests">📜</button>
+                    <button className={`btn-char-switch ${activeTab === 'loot' ? 'active' : ''}`} onClick={() => setActiveTab('loot')} title="Loot">💰</button>
+                    <button className={`btn-char-switch ${activeTab === 'system' ? 'active' : ''}`} onClick={() => setActiveTab('system')} title="System">⚙️</button>
+                    <div style={{ width: 20 }}></div>
+                    <button className="btn-char-switch" onClick={() => window.location.search = ''} title="Player View">👤</button>
+                </div>    <button className="btn-char-switch" onClick={resetData} title="Reset Data">↻</button>
             </div>
 
-            {/* MAIN CONTENT */}
-            {viewMode === 'players' && (
-                <div className="admin-layout">
-                    {/* LEFT SIDE: Party Overview */}
-                    <div className="admin-panel admin-left">
-                        <h3>Party Overview</h3>
-                        {db.characters.map((char, idx) => (
-                            <div key={char.id} className="party-row">
-                                <div className="party-row-header">
-                                    <span className="char-name">{char.name}</span>
-                                    <input
-                                        className="init-input"
-                                        type="number"
-                                        value={char.initiative}
-                                        onChange={(e) => updateCharacter(idx, c => c.initiative = parseInt(e.target.value) || 0)}
-                                        placeholder="Init"
-                                    />
-                                </div>
-                                {renderHealthBar(char, idx)}
-                                {renderConditionsBadges(char, idx)}
-                                {renderDefenses(char)}
-                            </div>
-                        ))}
-                    </div>
 
-                    {/* RIGHT SIDE: Character Cards */}
-                    <div className="admin-panel admin-right">
-                        <div className="admin-card-grid">
+            {/* MAIN CONTENT */}
+            {activeTab === 'sessions' && <SessionManager db={db} setDb={setDb} />}
+            {
+                activeTab === 'players' && (
+                    <div className="admin-layout">
+                        {/* LEFT SIDE: Party Overview */}
+                        <div className="admin-panel admin-left">
+                            <h3>Party Overview</h3>
                             {db.characters.map((char, idx) => (
-                                <div key={char.id} className="char-card">
-                                    <div className="char-card-header">
-                                        <span>{char.name}</span>
-                                        <div className="card-tabs">
-                                            {['stats', 'spells', 'feats', 'items'].map(m => (
-                                                <button
-                                                    key={m}
-                                                    className={`card-tab-btn ${(cardModes[idx] || 'stats') === m ? 'active' : ''}`}
-                                                    onClick={() => toggleCardMode(idx, m)}
-                                                >
-                                                    {m.charAt(0).toUpperCase() + m.slice(1)}
-                                                </button>
-                                            ))}
-                                        </div>
+                                <div key={char.id} className="party-row">
+                                    <div className="party-row-header">
+                                        <span className="char-name">{char.name}</span>
+                                        <input
+                                            className="init-input"
+                                            type="number"
+                                            value={char.initiative}
+                                            onChange={(e) => updateCharacter(idx, c => c.initiative = parseInt(e.target.value) || 0)}
+                                            placeholder="Init"
+                                        />
                                     </div>
-                                    <div className="char-card-body">
-                                        {renderCardContent(char, idx)}
-                                    </div>
+                                    {renderHealthBar(char, idx)}
+                                    {renderConditionsBadges(char, idx)}
+                                    {renderDefenses(char)}
                                 </div>
                             ))}
                         </div>
+
+                        {/* RIGHT SIDE: Character Cards */}
+                        <div className="admin-panel admin-right">
+                            <div className="card-grid">
+                                {(!activeCampaign?.characters || activeCampaign.characters.length === 0)
+                                    ? <div style={{ color: '#888' }}>No characters in active campaign. Go to 'Sessions' to add one.</div>
+                                    : activeCampaign.characters.map((char, index) => (
+                                        <div key={char.id} className="char-card">
+                                            <div className="char-header">
+                                                <span>{char.name}</span>
+                                                <div className="card-tabs">
+                                                    {['stats', 'spells', 'feats', 'items'].map(m => (
+                                                        <button
+                                                            key={m}
+                                                            onClick={() => toggleCardMode(idx, m)}
+                                                        >
+                                                            {m.charAt(0).toUpperCase() + m.slice(1)}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="char-card-body">
+                                                {renderCardContent(char, idx)}
+                                            </div>
+                                        </div>
+                                    ))}
+                            </div>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
-            {viewMode === 'items' && (
-                <ItemsView
-                    db={db}
-                    setDb={setDb}
-                    onInspectItem={(item) => {
-                        setModalData(item);
-                        setModalMode('item');
-                    }}
-                />
-            )}
-            {viewMode === 'Quests' && <QuestsView />}
-            {viewMode === 'Loot' && <LootView />}
-            {viewMode === 'spells' && (
-                <SpellsView
-                    onInspectItem={(item) => {
-                        setModalData(item);
-                        setModalMode('spell');
-                    }}
-                />
-            )}
+            {
+                activeTab === 'items' && (
+                    <ItemsView
+                        db={db}
+                        setDb={setDb}
+                        onInspectItem={(item) => {
+                            setModalData(item);
+                            setModalMode('item');
+                        }}
+                    />
+                )
+            }
 
-            {viewMode === 'feats' && (
-                <FeatsView
-                    onInspectItem={(item) => {
-                        setModalData(item);
-                        setModalMode('feat');
-                    }}
-                />
-            )}
+            {
+                activeTab === 'spells' && (
+                    <SpellsView
+                        db={db}
+                        setDb={setDb}
+                        onInspectItem={(item) => {
+                            setModalData(item);
+                            setModalMode('spell');
+                        }}
+                    />
+                )
+            }
 
-            {viewMode === 'actions' && (
-                <ActionsView
-                    onInspectItem={(item) => {
-                        setModalData(item);
-                        setModalMode('item'); // Actions reuse generic item modal for now, or we can use 'action' if needed
-                    }}
-                />
-            )}
+            {
+                activeTab === 'feats' && (
+                    <FeatsView
+                        db={db}
+                        setDb={setDb}
+                        onInspectItem={(item) => {
+                            setModalData(item);
+                            setModalMode('feat');
+                        }}
+                    />
+                )
+            }
 
-            {viewMode === 'system' && (
-                <div style={{ padding: 20, color: '#e0e0e0' }}>
-                    <h2>System Maintenance</h2>
-                    <FirebaseMigrator />
-                    <div style={{ background: '#222', padding: 20, borderRadius: 8, border: '1px solid #444', maxWidth: 600 }}>
-                        <h3>Rebuild Indexes</h3>
-                        <p style={{ color: '#aaa', marginBottom: 20 }}>
-                            Rebuild the search indexes for items, spells, and feats. Run this after manually editing JSON files.
-                        </p>
+            {
+                activeTab === 'actions' && (
+                    <ActionsView
+                        db={db}
+                        setDb={setDb}
+                        onInspectItem={(item) => {
+                            setModalData(item);
+                            setModalMode('item');
+                        }}
+                    />
+                )
+            }
 
-                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                            <button className="set-btn" onClick={() => handleRebuild('spells')}>Rebuild Spells</button>
-                            <button className="set-btn" onClick={() => handleRebuild('items')}>Rebuild Items</button>
-                            <button className="set-btn" onClick={() => handleRebuild('feats')}>Rebuild Feats</button>
-                            <button className="set-btn" style={{ background: '#d32f2f' }} onClick={() => handleRebuild('all')}>Rebuild ALL</button>
+            {activeTab === 'quests' && <QuestsView db={db} setDb={setDb} />}
+            {activeTab === 'loot' && <LootView db={db} setDb={setDb} />}
+
+            {
+                activeTab === 'system' && (
+                    <div style={{ padding: 20, color: '#e0e0e0' }}>
+                        <h2>System Maintenance</h2>
+                        <FirebaseMigrator db={db} />
+
+                        <div style={{ background: '#222', padding: 20, borderRadius: 8, border: '1px solid #444', maxWidth: 600, marginTop: 20 }}>
+                            <h3>Rebuild Indexes</h3>
+                            <p style={{ color: '#aaa', marginBottom: 20 }}>
+                                Rebuild the search indexes for items, spells, and feats. Run this after manually editing JSON files.
+                            </p>
+
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                <button className="set-btn" onClick={() => handleRebuild('spells')}>Rebuild Spells</button>
+                                <button className="set-btn" onClick={() => handleRebuild('items')}>Rebuild Items</button>
+                                <button className="set-btn" onClick={() => handleRebuild('feats')}>Rebuild Feats</button>
+                                <button className="set-btn" style={{ background: '#d32f2f' }} onClick={() => handleRebuild('all')}>Rebuild ALL</button>
+                            </div>
+
+                            {rebuildStatus && (
+                                <div style={{
+                                    marginTop: 20, padding: 10, borderRadius: 4,
+                                    background: rebuildStatus.status === 'error' ? 'rgba(211, 47, 47, 0.2)' : 'rgba(76, 175, 80, 0.2)',
+                                    border: `1px solid ${rebuildStatus.status === 'error' ? '#d32f2f' : '#4caf50'}`,
+                                    color: rebuildStatus.status === 'error' ? '#ff8a80' : '#81c784'
+                                }}>
+                                    {rebuildStatus.status === 'running' && '⏳ '}
+                                    {rebuildStatus.message}
+                                </div>
+                            )}
                         </div>
 
-                        {rebuildStatus && (
-                            <div style={{
-                                marginTop: 20, padding: 10, borderRadius: 4,
-                                background: rebuildStatus.status === 'error' ? 'rgba(211, 47, 47, 0.2)' : 'rgba(76, 175, 80, 0.2)',
-                                border: `1px solid ${rebuildStatus.status === 'error' ? '#d32f2f' : '#4caf50'}`,
-                                color: rebuildStatus.status === 'error' ? '#ff8a80' : '#81c784'
-                            }}>
-                                {rebuildStatus.status === 'running' && '⏳ '}
-                                {rebuildStatus.message}
-                            </div>
-                        )}
+                        <div style={{ marginTop: 20 }}>
+                            <button onClick={resetData} style={{ background: '#d32f2f', color: '#fff', border: 'none', padding: '10px 20px', cursor: 'pointer', borderRadius: 5 }}>
+                                Reset All Local Data
+                            </button>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {renderGMEditModal()}
-        </div>
+        </div >
     );
 }

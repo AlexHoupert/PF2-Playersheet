@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useCampaign } from '../shared/context/CampaignContext';
 import ItemEditor from './editors/ItemEditor';
 import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
 import { SHOP_CATEGORIES } from '../shared/constants/shop';
@@ -12,6 +13,7 @@ const uniqueRarities = SHOP_INDEX_FILTER_OPTIONS.rarities;
 const uniqueTraits = SHOP_INDEX_FILTER_OPTIONS.traits;
 
 export default function ItemsView({ db, setDb, onInspectItem }) {
+    const { activeCampaign } = useCampaign();
     const [itemSearch, setItemSearch] = useState('');
     const [itemFilterType, setItemFilterType] = useState([]);
     const [itemFilterCategory, setItemFilterCategory] = useState([]);
@@ -225,7 +227,9 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                         if (!existingNames.has(itemName)) trader.inventory.push(itemName);
                     }
                 } else if (action === 'givePlayer') {
-                    const char = next.characters[payload];
+                    const campaignId = activeCampaign?.id;
+                    if (!campaignId) return next;
+                    const char = next.campaigns[campaignId].characters[payload];
                     if (char) {
                         const stackable = shouldStack({ name: itemName });
                         const existing = stackable ? (char.inventory || []).find(i => i.name === itemName) : null;
@@ -236,7 +240,9 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                         else char.inventory.push({ name: itemName, qty: 1 });
                     }
                 } else if (action === 'giveFormula') {
-                    const char = next.characters[payload];
+                    const campaignId = activeCampaign?.id;
+                    if (!campaignId) return next;
+                    const char = next.campaigns[campaignId].characters[payload];
                     if (char) {
                         if (!char.formulaBook) char.formulaBook = [];
                         if (!char.formulaBook.includes(itemName)) {
@@ -647,13 +653,13 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
 
                         <div style={{ borderTop: '1px solid #444', margin: '2px 0' }}></div>
                         <div className="ctx-header">Give to Player</div>
-                        {db.characters.map((c, i) => (
+                        {(activeCampaign?.characters || []).map((c, i) => (
                             <div key={c.id} className="ctx-item sub" onClick={() => performContextAction('givePlayer', i)}>{c.name}</div>
                         ))}
 
                         <div style={{ borderTop: '1px solid #444', margin: '2px 0' }}></div>
                         <div className="ctx-header">Give Formula to Player</div>
-                        {db.characters.map((c, i) => (
+                        {(activeCampaign?.characters || []).map((c, i) => (
                             <div key={c.id} className="ctx-item sub" onClick={() => performContextAction('giveFormula', i)}>{c.name}</div>
                         ))}
 
