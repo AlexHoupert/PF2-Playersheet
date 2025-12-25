@@ -48,6 +48,7 @@ export default function PlayerApp() {
     const [modalHistory, setModalHistory] = useState([]);
     // Modals
     const [actionModal, setActionModal] = useState({ mode: null, item: null });
+    const [condTab, setCondTab] = useState('active'); // Hoisted state to prevent reset on re-render
 
     // Double Tap Logic
     const tapRef = useRef({ id: null, time: 0 });
@@ -961,7 +962,7 @@ export default function PlayerApp() {
                         const iconSrc = getConditionImgSrc(c.name);
 
                         return (
-                            <div key={c.name} className={badgeClass} onClick={() => setModalMode('condition')}>
+                            <div key={c.name} className={badgeClass} onClick={() => { setModalMode('condition'); setCondTab('active'); }}>
                                 {iconSrc ? (
                                     <img src={iconSrc} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
                                 ) : (
@@ -973,7 +974,7 @@ export default function PlayerApp() {
                         );
                     })}
                 </div>
-                {activeConditions.length === 0 && <button className="btn-add-condition" onClick={() => setModalMode('condition')}>
+                {activeConditions.length === 0 && <button className="btn-add-condition" onClick={() => { setModalMode('condition'); setCondTab(activeConditions.length > 0 ? 'active' : 'negative'); }}>
                     + Add Condition
                 </button>}
             </div>
@@ -2132,7 +2133,7 @@ export default function PlayerApp() {
         const [editVal, setEditVal] = useState("");
 
         // Condition Modal State
-        const [condTab, setCondTab] = useState('active'); // 'active', 'negative', 'positive', 'visibility'
+        // const [condTab, setCondTab] = useState('active'); // Hoisted to PlayerApp scope
 
         // New Collapsible State
         const [showProficiencies, setShowProficiencies] = useState(false);
@@ -2614,7 +2615,9 @@ export default function PlayerApp() {
                 <>
                     <h2>Conditions</h2>
                     <div className="modal-tabs">
-                        <button className={`tab-btn ${condTab === 'active' ? 'active' : ''}`} onClick={() => setCondTab('active')}>Active</button>
+                        {activeConditions.length > 0 && (
+                            <button className={`tab-btn ${condTab === 'active' ? 'active' : ''}`} onClick={() => setCondTab('active')}>Active</button>
+                        )}
                         <button className={`tab-btn ${condTab === 'negative' ? 'active' : ''}`} onClick={() => setCondTab('negative')}>Negative</button>
                         <button className={`tab-btn ${condTab === 'positive' ? 'active' : ''}`} onClick={() => setCondTab('positive')}>Positive</button>
                         <button className={`tab-btn ${condTab === 'visibility' ? 'active' : ''}`} onClick={() => setCondTab('visibility')}>Visibility</button>
@@ -3595,6 +3598,38 @@ export default function PlayerApp() {
                 .spell-row:hover { background: rgba(255,255,255,0.03); }
                 .spell-meta { display: flex; align-items: center; gap: 8px; font-size: 0.8em; color: #888; }
                 .bloodline-drop { color: #d32f2f; margin-left: 5px; font-size: 0.9em; }
+
+                /* MOBILE TABS POLISH */
+                .tabs { 
+                    display: flex; 
+                    flex-wrap: nowrap; 
+                    gap: 5px; 
+                    overflow-x: auto; 
+                    -webkit-overflow-scrolling: touch;
+                    scrollbar-width: none; /* Firefox */
+                }
+                .tabs::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+                .tab-btn { 
+                    flex: 1; 
+                    white-space: nowrap; 
+                    min-width: fit-content; 
+                    padding: 8px 12px;
+                }
+                
+                /* MODAL TABS POLISH */
+                .modal-tabs {
+                    display: flex;
+                    flex-wrap: nowrap;
+                    overflow-x: auto;
+                    gap: 5px;
+                    margin-bottom: 15px;
+                    padding-bottom: 5px;
+                    -webkit-overflow-scrolling: touch;
+                }
+                .modal-tabs .tab-btn {
+                    flex: 0 0 auto; /* Don't squeeze modal tabs, let them scroll */
+                    white-space: nowrap;
+                }
             `}</style>
             <div className="header-bar">
                 <div className="header-title">
