@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useCampaign } from '../shared/context/CampaignContext';
-import { deepClone } from '../shared/utils/deepClone';
+import { useCampaign } from '../../shared/context/CampaignContext';
+import { deepClone } from '../../shared/utils/deepClone';
 
 export default function SessionManager({ db, setDb }) {
     const {
