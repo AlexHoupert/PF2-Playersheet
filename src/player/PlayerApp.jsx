@@ -3246,15 +3246,11 @@ export default function PlayerApp() {
                     <div style={{ fontSize: '2em', textAlign: 'center', color: 'var(--text-gold)', margin: '10px 0' }}>
                         {modalData.total >= 0 ? '+' : ''}{modalData.total}
                     </div>
-                    {/* DEBUG DATA ON SCREEN */}
-                    <div style={{ fontSize: '0.7em', color: 'orange', background: '#333', padding: 5, marginBottom: 10, wordBreak: 'break-all' }}>
-                        DEBUG: {JSON.stringify(modalData.breakdown)}
-                    </div>
+
 
                     {/* Explicit check for object type and existence of breakdown */}
                     {modalData.breakdown && typeof modalData.breakdown === 'object' ? (
                         <div style={{ background: '#222', padding: 15, borderRadius: 8, fontSize: '0.9em' }}>
-                            <div style={{ marginBottom: 10, color: '#aaa', textTransform: 'uppercase', fontSize: '0.8em', letterSpacing: 1 }}>Calculation</div>
 
                             {/* Base 10 if applicable */}
                             {modalData.base === 10 && (
