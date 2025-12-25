@@ -1,6 +1,8 @@
 import { usePersistedDb } from './shared/db/usePersistedDb';
 import dbData from './data/new_db.json';
 import { CampaignProvider } from './shared/context/CampaignContext';
+import PlayerApp from './player/PlayerApp';
+import AdminApp from './admin/AdminApp';
 
 export default function App() {
     const [db, setDb] = usePersistedDb(dbData);
