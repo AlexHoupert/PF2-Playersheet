@@ -737,7 +737,7 @@ export default function AdminApp({ db, setDb }) {
                                                     {['stats', 'spells', 'feats', 'items'].map(m => (
                                                         <button
                                                             key={m}
-                                                            onClick={() => toggleCardMode(idx, m)}
+                                                            onClick={() => toggleCardMode(index, m)}
                                                         >
                                                             {m.charAt(0).toUpperCase() + m.slice(1)}
                                                         </button>

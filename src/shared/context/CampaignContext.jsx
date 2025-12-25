@@ -46,7 +46,7 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false }) {
     // If nothing selected/assigned, try to use "default" or first available?
     const targetCampaignId = isGM
         ? (selectedCampaignId || Object.keys(campaigns)[0])
-        : userInfo?.campaignId;
+        : (userInfo?.campaignId || selectedCampaignId); // Fallback to selected for GM previewing as player
 
     const activeCampaign = campaigns[targetCampaignId] || null;
 
