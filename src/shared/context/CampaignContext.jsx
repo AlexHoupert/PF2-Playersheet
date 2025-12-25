@@ -7,7 +7,7 @@ export function useCampaign() {
     return useContext(CampaignContext);
 }
 
-export function CampaignProvider({ db, setDb, children }) {
+export function CampaignProvider({ db, setDb, children, isAdmin = false }) {
     const { user } = useAuth();
 
     // We need to determine:
@@ -16,7 +16,7 @@ export function CampaignProvider({ db, setDb, children }) {
     // 3. What is their assigned character?
 
     const userInfo = user && db.users ? db.users[user.email] : null;
-    const isGM = userInfo?.role === 'gm'; // Simple GM check
+    const isGM = (userInfo?.role === 'gm') || isAdmin; // Simple GM check or Admin View override
 
     // For Players: Resolve Campaign ID from assignment
     // For GMs: Allow Manual Selection (Local State for UI)

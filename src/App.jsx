@@ -10,9 +10,11 @@ export default function App() {
 
     if (!db) return <div style={{ color: '#fff' }}>Loading...</div>;
 
+    const isAdmin = queryParams.get('admin') === 'true';
+
     return (
-        <CampaignProvider db={db} setDb={setDb}>
-            {queryParams.get('admin') === 'true'
+        <CampaignProvider db={db} setDb={setDb} isAdmin={isAdmin}>
+            {isAdmin
                 ? <AdminApp db={db} setDb={setDb} />
                 : <PlayerApp db={db} setDb={setDb} />
             }
