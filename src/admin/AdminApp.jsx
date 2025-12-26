@@ -22,9 +22,10 @@ import { useCampaign } from '../shared/context/CampaignContext';
 import '../App.css';
 
 export default function AdminApp({ db, setDb }) {
-    const { activeCampaign, updateActiveCampaign } = useCampaign();
+    const { activeCampaign, updateActiveCampaign, assignUser } = useCampaign();
     // const [db, setDb] = usePersistedDb(dbData); // LIFTED TO APP
     const [activeTab, setActiveTab] = useState('sessions'); // Default to sessions now
+    const [playerTabMode, setPlayerTabMode] = useState('cards'); // 'cards' or 'users'
 
     // Modal State
     const [modalMode, setModalMode] = useState(null); // null, 'hp', 'condition', 'item', 'spell', 'feat'
@@ -808,33 +809,139 @@ export default function AdminApp({ db, setDb }) {
                             ))}
                         </div>
 
-                        {/* RIGHT SIDE: Character Cards */}
+                        {/* RIGHT SIDE: Character Cards OR User Management */}
                         <div className="admin-panel admin-right">
-                            <div className="card-grid">
-                                {(!activeCampaign?.characters || activeCampaign.characters.length === 0)
-                                    ? <div style={{ color: '#888' }}>No characters in active campaign. Go to 'Sessions' to add one.</div>
-                                    : activeCampaign.characters.map((char, index) => (
-                                        <div key={char.id} className="char-card">
-                                            <div className="char-header">
-                                                <span>{char.name}</span>
-                                                <div className="card-tabs">
-                                                    {['stats', 'spells', 'feats', 'items'].map(m => (
-                                                        <button
-                                                            key={m}
-                                                            onClick={() => toggleCardMode(index, m)}
-                                                            style={cardModes[index] === m ? { background: '#c5a059', color: '#000' } : {}}
-                                                        >
-                                                            {m.charAt(0).toUpperCase() + m.slice(1)}
-                                                        </button>
-                                                    ))}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10, gap: 10 }}>
+                                <button
+                                    onClick={() => setPlayerTabMode('cards')}
+                                    style={{ background: playerTabMode === 'cards' ? '#c5a059' : '#333', color: playerTabMode === 'cards' ? '#000' : '#888', border: 'none', padding: '6px 12px', cursor: 'pointer', borderRadius: 4, fontWeight: 'bold' }}
+                                >
+                                    Character Cards
+                                </button>
+                                <button
+                                    onClick={() => setPlayerTabMode('users')}
+                                    style={{ background: playerTabMode === 'users' ? '#c5a059' : '#333', color: playerTabMode === 'users' ? '#000' : '#888', border: 'none', padding: '6px 12px', cursor: 'pointer', borderRadius: 4, fontWeight: 'bold' }}
+                                >
+                                    User Management
+                                </button>
+                            </div>
+
+                            {playerTabMode === 'cards' && (
+                                <div className="card-grid">
+                                    {(!activeCampaign?.characters || activeCampaign.characters.length === 0)
+                                        ? <div style={{ color: '#888' }}>No characters in active campaign. Go to 'Sessions' to add one.</div>
+                                        : activeCampaign.characters.map((char, index) => (
+                                            <div key={char.id} className="char-card">
+                                                <div className="char-header">
+                                                    <span>{char.name}</span>
+                                                    <div className="card-tabs">
+                                                        {['stats', 'spells', 'feats', 'items'].map(m => (
+                                                            <button
+                                                                key={m}
+                                                                onClick={() => toggleCardMode(index, m)}
+                                                                style={cardModes[index] === m ? { background: '#c5a059', color: '#000' } : {}}
+                                                            >
+                                                                {m.charAt(0).toUpperCase() + m.slice(1)}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div className="char-card-body">
+                                                    {renderCardContent(char, index)}
                                                 </div>
                                             </div>
-                                            <div className="char-card-body">
-                                                {renderCardContent(char, index)}
-                                            </div>
-                                        </div>
-                                    ))}
-                            </div>
+                                        ))}
+                                </div>
+                            )}
+
+                            {playerTabMode === 'users' && (
+                                <div style={{ background: '#222', padding: 20, borderRadius: 8, border: '1px solid #444' }}>
+                                    <h3>User Access Control</h3>
+                                    <div style={{ marginBottom: 20, display: 'flex', gap: 10 }}>
+                                        <input
+                                            placeholder="New User Email"
+                                            className="modal-input"
+                                            style={{ width: 250 }}
+                                            id="new-user-email"
+                                        />
+                                        <button className="set-btn" style={{ width: 'auto', marginTop: 0 }} onClick={() => {
+                                            const email = document.getElementById('new-user-email').value;
+                                            if (email && email.includes('@')) {
+                                                assignUser(email, activeCampaign?.id, null, 'player');
+                                                document.getElementById('new-user-email').value = '';
+                                            } else {
+                                                alert("Please enter a valid email.");
+                                            }
+                                        }}>Authorize User</button>
+                                    </div>
+
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', color: '#e0e0e0' }}>
+                                        <thead>
+                                            <tr style={{ background: '#333', borderBottom: '2px solid #555' }}>
+                                                <th style={{ padding: 10, textAlign: 'left' }}>Email</th>
+                                                <th style={{ padding: 10, textAlign: 'left' }}>Role</th>
+                                                <th style={{ padding: 10, textAlign: 'left' }}>Assigned Character</th>
+                                                <th style={{ padding: 10 }}>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(!db.users || Object.keys(db.users).length === 0) && (
+                                                <tr><td colSpan="4" style={{ padding: 20, textAlign: 'center', color: '#888' }}>No authorized users.</td></tr>
+                                            )}
+                                            {db.users && Object.entries(db.users).map(([email, info]) => {
+                                                const currentRole = info.role || 'player';
+                                                const currentCharId = info.characterId;
+                                                // Find char name if possible
+                                                const charName = activeCampaign?.characters?.find(c => c.id === currentCharId || c.name === currentCharId)?.name || currentCharId || 'None';
+
+                                                return (
+                                                    <tr key={email} style={{ borderBottom: '1px solid #444' }}>
+                                                        <td style={{ padding: 10 }}>{email}</td>
+                                                        <td style={{ padding: 10 }}>
+                                                            <select
+                                                                value={currentRole}
+                                                                onChange={(e) => assignUser(email, info.campaignId, info.characterId, e.target.value)}
+                                                                style={{ background: '#111', color: '#fff', border: '1px solid #555', padding: 4 }}
+                                                            >
+                                                                <option value="player">Player</option>
+                                                                <option value="gm">GM</option>
+                                                            </select>
+                                                        </td>
+                                                        <td style={{ padding: 10 }}>
+                                                            <select
+                                                                value={currentCharId || ''}
+                                                                onChange={(e) => assignUser(email, info.campaignId, e.target.value || null, currentRole)}
+                                                                style={{ background: '#111', color: '#fff', border: '1px solid #555', padding: 4, width: '100%' }}
+                                                            >
+                                                                <option value="">-- No Character --</option>
+                                                                {activeCampaign?.characters?.map(c => (
+                                                                    <option key={c.id || c.name} value={c.id || c.name}>{c.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        </td>
+                                                        <td style={{ padding: 10, textAlign: 'center' }}>
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (confirm(`Revoke access for ${email}?`)) {
+                                                                        setDb(prev => {
+                                                                            const next = { ...prev };
+                                                                            delete next.users[email];
+                                                                            return next;
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                style={{ background: '#d32f2f', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}
+                                                            >
+                                                                Revoke
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )
