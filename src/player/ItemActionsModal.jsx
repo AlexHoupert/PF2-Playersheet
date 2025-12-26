@@ -3,7 +3,7 @@ import { shouldStack } from '../shared/utils/inventoryUtils';
 
 // MODES: 'BUY', 'QTY', 'TRANSFER', 'CONTEXT'
 
-export default function ItemActionsModal({ mode, item, characters, activeCharIndex, onClose, onBuy, onChangeQty, onTransfer, onUnstack, onLoadSpecial, onUnloadAll, onOpenMode }) {
+export default function ItemActionsModal({ mode, item, characters, activeCharIndex, onClose, onBuy, onChangeQty, onTransfer, onUnstack, onLoadSpecial, onUnloadAll, onOpenMode, onEditProficiency }) {
     const [val, setVal] = useState(1);
     const [targetCharId, setTargetCharId] = useState('');
 
@@ -27,6 +27,7 @@ export default function ItemActionsModal({ mode, item, characters, activeCharInd
 
     // --- CONTEXT MENU ---
     if (mode === 'CONTEXT') {
+        const isWeapon = (item.type || '').toLowerCase() === 'weapon';
         return (
             <div className="modal-overlay" onClick={onClose} style={{
                 position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -42,6 +43,9 @@ export default function ItemActionsModal({ mode, item, characters, activeCharInd
                         <button className="btn-add-condition" onClick={() => onOpenMode('CHANGE_QTY', item)}>Change Amount</button>
                         <button className="btn-add-condition" onClick={() => onOpenMode('BUY_RESTOCK', item)}>Restock</button>
                         <button className="btn-add-condition" onClick={() => onOpenMode('TRANSFER', item)}>Give to Player</button>
+                        {isWeapon && onEditProficiency && (
+                            <button className="btn-add-condition" onClick={() => onEditProficiency(item)}>Proficiency</button>
+                        )}
                         {onUnstack && (item.qty || 1) > 1 && !shouldStack(item) && (
                             <button className="btn-add-condition" style={{ borderColor: '#d32f2f', color: '#ff8a80' }} onClick={() => onUnstack(item)}>Unstack Split</button>
                         )}
