@@ -11,6 +11,7 @@ import { fetchShopItemDetailBySourceFile, getShopIndexItemByName } from '../shar
 import { fetchSpellDetailBySourceFile, getSpellIndexItemByName, SPELL_INDEX_ITEMS, SPELL_INDEX_FILTER_OPTIONS } from '../shared/catalog/spellIndex';
 import { fetchFeatDetailBySourceFile, getFeatIndexItemByName, FEAT_INDEX_ITEMS, FEAT_INDEX_FILTER_OPTIONS } from '../shared/catalog/featIndex';
 import { fetchActionDetailBySourceFile, getAllActionIndexItems, getActionIndexItemByName } from '../shared/catalog/actionIndex';
+import { fetchImpulseDetailBySourceFile, getImpulseIndexItemByName, IMPULSE_INDEX_ITEMS, IMPULSE_INDEX_FILTER_OPTIONS } from '../shared/catalog/impulseIndex';
 import { getShopItemRowMeta } from '../shared/catalog/shopRowMeta';
 
 import { shouldStack } from '../shared/utils/inventoryUtils';
@@ -61,9 +62,25 @@ export default function PlayerApp({ db, setDb }) {
         }
     }, [myCharacter, activeCampaign]);
 
+    useEffect(() => {
+        if (myCharacter && activeCampaign?.characters) {
+            const idx = activeCampaign.characters.findIndex(c => c.id === myCharacter.id);
+            if (idx !== -1) setActiveCharIndex(idx);
+        }
+    }, [myCharacter, activeCampaign]);
+
     // Fallback if no campaign
     const characters = activeCampaign?.characters || [];
     const character = characters[activeCharIndex];
+
+    // INITIALIZATION GUARD
+    if (character) {
+        if (!character.impulses) character.impulses = [];
+        if (!character.stats.impulse_proficiency) character.stats.impulse_proficiency = 0;
+        if (character.isKineticist === undefined) character.isKineticist = false;
+        if (character.isCaster === undefined) character.isCaster = false;
+        if (!character.stats.spell_proficiency) character.stats.spell_proficiency = 0;
+    }
 
     // If no character found (e.g. empty campaign), guard against crash
     if (!character) {
@@ -195,7 +212,13 @@ export default function PlayerApp({ db, setDb }) {
         updateCharacter(c => {
             const idx = c.inventory.findIndex(i =>
                 (item.instanceId && i.instanceId === item.instanceId) ||
-                (!item.instanceId && i.name === item.name && !!i.equipped === !!item.equipped)
+                (
+                    !item.instanceId &&
+                    i.name === item.name &&
+                    !!i.equipped === !!item.equipped &&
+                    !!i.prepared === !!item.prepared &&
+                    i.addedAt === item.addedAt
+                )
             );
 
             if (idx > -1) {
@@ -211,7 +234,13 @@ export default function PlayerApp({ db, setDb }) {
 
     const executeUnstack = (item) => {
         updateCharacter(c => {
-            const target = c.inventory.find(i => i.name === item.name && i.qty === item.qty && !!i.equipped === !!item.equipped);
+            const target = c.inventory.find(i =>
+                i.name === item.name &&
+                i.qty === item.qty &&
+                !!i.equipped === !!item.equipped &&
+                !!i.prepared === !!item.prepared &&
+                i.addedAt === item.addedAt
+            );
             if (target && (target.qty || 1) > 1) {
                 const qty = target.qty;
                 target.qty = 1;
@@ -573,6 +602,14 @@ export default function PlayerApp({ db, setDb }) {
                 const level = item.level && typeof item.level === 'number' ? String(item.level) : "1";
                 newItem.level = level;
                 c.magic.list.push(newItem);
+            } else if (type === 'impulse') {
+                if (!c.impulses) c.impulses = [];
+                // Check dupes?
+                if (!c.impulses.find(i => i.name === newItem.name)) {
+                    // Fetch details? Usually item has them.
+                    // Flatten if needed.
+                    c.impulses.push({ ...item });
+                }
             }
         });
         setCatalogMode(null);
@@ -585,6 +622,8 @@ export default function PlayerApp({ db, setDb }) {
             } else if (type === 'spell') {
                 const idx = c.magic.list.findIndex(s => s.name === item.name && s.level === item.level);
                 if (idx > -1) c.magic.list.splice(idx, 1);
+            } else if (type === 'impulse') {
+                if (c.impulses) c.impulses = c.impulses.filter(i => i.name !== item.name);
             }
         });
         setModalMode(null);
@@ -722,14 +761,18 @@ export default function PlayerApp({ db, setDb }) {
 
         const isSpell = modalData._entityType === 'spell';
         const isFeat = modalData._entityType === 'feat';
+
         const isAction = modalData._entityType === 'action';
+        const isImpulse = modalData._entityType === 'impulse' || modalData.type === 'Impulse';
 
         let sourceFile = modalData.sourceFile;
         // Fallback lookup if sourceFile missing but name exists
         if (!sourceFile && modalData.name) {
+
             if (isSpell) sourceFile = getSpellIndexItemByName(modalData.name)?.sourceFile;
             else if (isFeat) sourceFile = getFeatIndexItemByName(modalData.name)?.sourceFile;
             else if (isAction) sourceFile = getActionIndexItemByName(modalData.name)?.sourceFile;
+            else if (isImpulse) sourceFile = getImpulseIndexItemByName(modalData.name)?.sourceFile;
             else sourceFile = getShopIndexItemByName(modalData.name)?.sourceFile;
         }
 
@@ -747,9 +790,11 @@ export default function PlayerApp({ db, setDb }) {
         setShopItemDetailError(null);
 
         let promise = null;
+
         if (isSpell) promise = fetchSpellDetailBySourceFile(sourceFile);
         else if (isFeat) promise = fetchFeatDetailBySourceFile(sourceFile);
         else if (isAction) promise = fetchActionDetailBySourceFile(sourceFile);
+        else if (isImpulse) promise = fetchImpulseDetailBySourceFile(sourceFile);
         else promise = fetchShopItemDetailBySourceFile(sourceFile);
 
         promise
@@ -844,12 +889,27 @@ export default function PlayerApp({ db, setDb }) {
         const itemName = targetItem?.name || targetItem;
         if (!itemName) return;
 
-        let shieldFetchData = null;
-        const char = db.characters[activeCharIndex];
+        console.log("ToggleInventory Target:", {
+            name: itemName,
+            equipped: targetItem.equipped,
+            prepared: targetItem.prepared,
+            added: targetItem.addedAt
+        });
 
-        // Find specific item using equipped state to avoid ambiguity (e.g. split bombs)
+        let shieldFetchData = null;
+        // Use the character variable from component scope (derived from activeCampaign)
+        // Check if character exists in scope
+        const char = character;
+        if (!char) return;
+
+        // Find specific item using equipped state AND other unique props to avoid ambiguity (e.g. split bombs, temp items)
         const itemToToggle = typeof targetItem === 'object'
-            ? char.inventory.find(i => i.name === itemName && !!i.equipped === !!targetItem.equipped)
+            ? char.inventory.find(i =>
+                i.name === itemName &&
+                !!i.equipped === !!targetItem.equipped &&
+                !!i.prepared === !!targetItem.prepared &&
+                i.addedAt === targetItem.addedAt
+            )
             : char.inventory.find(i => i.name === itemName);
 
         if (itemToToggle) {
@@ -876,7 +936,9 @@ export default function PlayerApp({ db, setDb }) {
             const idx = c.inventory.findIndex(i => {
                 if (i.name !== itemName) return false;
                 if (typeof targetItem === 'object') {
-                    return !!i.equipped === !!targetItem.equipped;
+                    return !!i.equipped === !!targetItem.equipped &&
+                        !!i.prepared === !!targetItem.prepared &&
+                        i.addedAt === targetItem.addedAt;
                 }
                 return true;
             });
@@ -955,7 +1017,13 @@ export default function PlayerApp({ db, setDb }) {
 
                 // CASE 2: Unequipping -> Merge back if possible
                 if (current.equipped) {
-                    const stackTarget = c.inventory.find(i => i.name === current.name && !i.equipped && i !== current);
+                    const stackTarget = c.inventory.find(i =>
+                        i.name === current.name &&
+                        !i.equipped &&
+                        i !== current &&
+                        !!i.prepared === !!current.prepared &&
+                        i.addedAt === current.addedAt
+                    );
                     if (stackTarget) {
                         stackTarget.qty = (stackTarget.qty || 1) + (current.qty || 1);
                         // Remove the now-merged item
@@ -1292,16 +1360,22 @@ export default function PlayerApp({ db, setDb }) {
         "intelligence": "INT", "wisdom": "WIS", "charisma": "CHA"
     };
 
-    const renderAttributes = () => (
-        <div className="attributes-container">
-            {Object.entries(character.stats.attributes).map(([key, val]) => (
-                <div className="attr-box" key={key} {...pressEvents({ key, label: ATTR_ABBREV[key] || key }, 'attribute')}>
-                    <div className="attr-val">{val >= 0 ? `+${val}` : val}</div>
-                    <div className="attr-label">{ATTR_ABBREV[key] || key.substring(0, 3)}</div>
-                </div>
-            ))}
-        </div>
-    );
+    const renderAttributes = () => {
+        const orderedKeys = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"];
+        return (
+            <div className="attributes-container">
+                {orderedKeys.map(key => {
+                    const val = character.stats.attributes[key] || 0;
+                    return (
+                        <div className="attr-box" key={key} {...pressEvents({ key, label: ATTR_ABBREV[key] || key }, 'attribute')}>
+                            <div className="attr-val">{val >= 0 ? `+${val}` : val}</div>
+                            <div className="attr-label">{ATTR_ABBREV[key] || key.substring(0, 3)}</div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
 
     const renderSpecialStats = () => (
         <div className="special-stats-row">
@@ -1388,7 +1462,8 @@ export default function PlayerApp({ db, setDb }) {
             const isTrained = val > 0;
             const baseSkill = name.split('_')[0].toLowerCase();
             const ability = baseSkill === 'lore' ? 'Int' : skillAbility[baseSkill];
-            const displayName = name.replace('_', ' ');
+            const rawName = name.replace('_', ' ');
+            const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
             const label = ability ? `${displayName} (${ability})` : displayName;
 
             return (
@@ -1726,8 +1801,8 @@ export default function PlayerApp({ db, setDb }) {
                                 </div>
                             )}
 
-                            {/* Weapon Proficiency Bonus (Right side) */}
-                            {isEquipableInventoryItem(item) && (
+                            {/* Weapon Proficiency Bonus (Right side) - Hide for Armor */}
+                            {isEquipableInventoryItem(item) && String(merged.type || '').toLowerCase() !== 'armor' && (
                                 <div
                                     style={{
                                         marginLeft: 10,
@@ -1985,6 +2060,139 @@ export default function PlayerApp({ db, setDb }) {
             c.magic.slots[lvlKey + "_curr"] = newVal;
         });
     };
+
+
+    const renderImpulses = () => {
+        const impulses = character.impulses || [];
+        // Group by Level? Or simple list? Magic uses Rank (Level).
+        // Let's group by Level.
+
+
+        // Stats Calculation
+        // Stats Calculation
+        // const classDC = character.stats.class_dc || 10; // Removed to avoid dup
+
+        const profRank = character.stats.impulse_proficiency || 0;
+        const level = parseInt(character.level) || 1;
+        const conMod = character.stats.attributes?.constitution ?? 0;
+
+        const profBonus = profRank > 0 ? (level + profRank) : 0;
+        const classDC = 10 + profBonus + conMod;
+        const impulseAttack = profBonus + conMod; // d20 + ...
+
+        console.log("Impulse Stats Debug:", {
+            level,
+            conMod,
+            profRank,
+            profBonus,
+            classDC,
+            impulseAttack,
+            attributes: character.stats.attributes
+        });
+
+        return (
+            <div className="magic-container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {/* 1. Header Stats (Centered) */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 30, paddingBottom: 10, borderBottom: '1px solid #333' }}>
+                    <div className="hex-box">
+                        <div className="hex-content">
+                            <div className="stat-val" style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>{classDC}</div>
+                            <div className="stat-label" style={{ fontSize: '0.6em', textTransform: 'uppercase', color: '#888', marginTop: 2 }}>CLASS DC</div>
+                        </div>
+                    </div>
+                    <div className="spell-attack-box" style={{
+                        display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+                        padding: '8px 16px', border: '2px solid var(--text-gold)', borderRadius: '4px',
+                        background: 'var(--bg-panel)', alignSelf: 'center'
+                    }}>
+                        <div className="stat-val" style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>+{impulseAttack}</div>
+                        <div className="stat-label" style={{ fontSize: '0.6em', textTransform: 'uppercase', color: '#888', marginTop: 2 }}>ATTACK</div>
+                    </div>
+                </div>
+
+                <div className="spells-list" style={{ width: '100%' }}>
+                    <div className="spell-level-header" style={{ textAlign: 'left', borderBottom: '2px solid #5c4033', paddingBottom: 5, marginBottom: 10, color: 'var(--text-gold)', fontFamily: 'Cinzel, serif', fontSize: '1.2em' }}>
+                        Impulses
+                    </div>
+
+                    {impulses.length === 0 && <div style={{ textAlign: 'center', color: '#666', marginTop: 20 }}>No Impulses learned.</div>}
+                    {impulses.sort((a, b) => a.name.localeCompare(b.name)).map(imp => {
+                        // Extract Meta Info (Time, Range, Target, Defense)
+                        // Support both flat index data and nested system data
+                        const rawTime = imp.time || imp.actions || imp.system?.actions?.value || "";
+                        console.log("Impulse Render:", imp.name, { rawTime, actions: imp.actions, sysActions: imp.system?.actions });
+                        let timeIcon = "";
+                        if (rawTime) {
+                            const t = String(rawTime).toLowerCase();
+                            if (t === "1" || t.includes("one")) timeIcon = ACTION_ICONS["[one-action]"];
+                            else if (t === "2" || t.includes("two")) timeIcon = ACTION_ICONS["[two-actions]"];
+                            else if (t === "3" || t.includes("three")) timeIcon = ACTION_ICONS["[three-actions]"];
+                            else if (t.includes("reaction")) timeIcon = ACTION_ICONS["[reaction]"];
+                            else if (t.includes("free")) timeIcon = ACTION_ICONS["[free-action]"];
+                            else timeIcon = formatText(rawTime);
+                        }
+
+                        // Range / Target / Defense
+                        let range = imp.range || imp.system?.range?.value || "";
+                        if (range) range = range.replace(/feet/gi, "ft");
+
+                        const target = imp.target || imp.area || imp.system?.target?.value || imp.system?.area?.value || "";
+
+                        let defense = imp.defense || imp.system?.defense?.save?.statistic || "";
+                        // Fallback: If no defense but it's an attack, maybe show "AC"? 
+                        // Actually Elemental Blast text says "against the AC". 
+                        // If no specific save is defined, but it is an attack, we might assume AC or just leave it.
+                        // The user JSON for Elemental Blast has actionType: "action" and traits: "attack".
+                        if (!defense && (imp.traits?.includes('attack') || imp.system?.traits?.value?.includes('attack'))) {
+                            defense = "AC";
+                        }
+
+                        if (defense) {
+                            const defMap = { fortitude: "Fort", reflex: "Ref", will: "Will", ac: "AC" };
+                            defense = defMap[defense.toLowerCase()] || (defense.charAt(0).toUpperCase() + defense.slice(1));
+                        }
+
+                        const metaParts = [];
+                        if (range) metaParts.push(<span key="range">{range}</span>);
+                        if (target) metaParts.push(<span key="target">{target}</span>);
+                        if (defense) metaParts.push(<span key="def" style={{ color: '#aaa' }}>{defense}</span>);
+                        if (timeIcon) metaParts.push(<span key="cast" dangerouslySetInnerHTML={{ __html: timeIcon }} style={{ display: 'flex', alignItems: 'center' }} />);
+
+
+                        return (
+                            <div key={imp.name} className="spell-row"
+                                onClick={() => {
+                                    setModalData({ title: imp.name, ...imp, _entityType: 'impulse' });
+                                    setModalMode('item');
+                                }}
+                                {...pressEvents(imp, 'impulse')}
+                            >
+                                <div style={{ fontWeight: 'bold', color: '#ccc', display: 'flex', alignItems: 'center' }}>
+                                    {imp.name}
+                                </div>
+                                <div className="spell-meta">
+                                    {metaParts.reduce((acc, curr, idx) => {
+                                        if (idx > 0) acc.push(<span key={`sep-${idx}`} style={{ color: '#444' }}>•</span>);
+                                        acc.push(curr);
+                                        return acc;
+                                    }, [])}
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    <div style={{ marginTop: 20, textAlign: 'center' }}>
+                        <button className="add-item-btn" onClick={() => {
+                            setCatalogMode('impulse');
+                            setModalMode('catalog');
+                        }}>+ Add Impulse</button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+
 
     const renderMagic = () => {
         // Guard for missing magic data
@@ -2319,9 +2527,9 @@ export default function PlayerApp({ db, setDb }) {
                                 {item.Bloodmagic ? 'Remove Bloodmagic' : 'Add Bloodmagic'}
                             </button>
                         )}
-                        {(type === 'feat' || type === 'spell') && (
+                        {(type === 'feat' || type === 'spell' || type === 'impulse') && (
                             <button className="set-btn" style={{ background: '#d32f2f', color: '#fff' }} onClick={() => removeFromCharacter(item, type)}>
-                                Remove {type === 'feat' ? 'Feat' : 'Spell'}
+                                Remove {type === 'feat' ? 'Feat' : type === 'spell' ? 'Spell' : 'Impulse'}
                             </button>
                         )}
 
@@ -2497,40 +2705,120 @@ export default function PlayerApp({ db, setDb }) {
                 { value: 8, label: 'Legendary (+8)' }
             ];
 
-            const toggleArmorEquipped = () => {
+            const toggleInventoryEquipped = (item) => {
+                updateCharacter(c => {
+                    const inventory = c.inventory || [];
+                    const match = inventory.find(i => i.name === item.name && i.type === item.type && i.addedAt === item.addedAt) || inventory.find(i => i.name === item.name);
+                    if (match) {
+                        match.equipped = !match.equipped;
+                    }
+                });
+            };
+
+            const toggleArmorEquipped = (e) => {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                console.log("Toggling Armor...", { activeCharIndex, charName: character?.name });
+                updateCharacter(c => {
+                    try {
+                        console.log("Inside updater. Inventory len:", c.inventory?.length);
+                        if (!Array.isArray(c.inventory)) c.inventory = [];
+                        if (!c.stats) c.stats = {};
+                        if (!c.stats.ac) c.stats.ac = {};
+
+                        const isArmor = (invItem) => {
+                            const fromIndex = invItem?.name ? getShopIndexItemByName(invItem.name) : null;
+                            const type = String(invItem?.type || fromIndex?.type || '').toLowerCase();
+                            const category = String(invItem?.category || fromIndex?.category || '').toLowerCase();
+                            return type === 'armor' || category === 'armor';
+                        };
+
+                        const armorIndices = [];
+                        c.inventory.forEach((item, idx) => {
+                            if (isArmor(item)) armorIndices.push(idx);
+                        });
+
+                        // Check if any armor is currently equipped
+                        const currentlyEquippedIndex = armorIndices.find(idx => !!c.inventory[idx].equipped);
+
+                        if (currentlyEquippedIndex !== undefined) {
+                            // Unequip it
+                            c.stats.ac.last_armor = c.inventory[currentlyEquippedIndex].name;
+                            c.inventory[currentlyEquippedIndex].equipped = false;
+                            c.stats.ac.armor_equipped = false;
+                            return;
+                        }
+
+                        // Nothing equipped, so equip something
+                        let targetIndex = -1;
+                        const last = c.stats.ac.last_armor;
+
+                        if (last) {
+                            targetIndex = armorIndices.find(idx => c.inventory[idx].name === last);
+                        }
+
+                        // If not found, use first available armor
+                        if ((targetIndex === undefined || targetIndex === -1) && armorIndices.length > 0) {
+                            targetIndex = armorIndices[0];
+                        }
+
+                        if (targetIndex !== undefined && targetIndex !== -1) {
+                            // Unequip others first to be safe
+                            armorIndices.forEach(idx => c.inventory[idx].equipped = false);
+
+                            c.inventory[targetIndex].equipped = true;
+                            c.stats.ac.last_armor = c.inventory[targetIndex].name;
+                            c.stats.ac.armor_equipped = true;
+                        } else {
+                            c.stats.ac.armor_equipped = false;
+                        }
+                    } catch (e) {
+                        console.error("Error in toggleArmorEquipped updater:", e);
+                    }
+                });
+            };
+
+
+
+            const toggleShieldEquipped = (e) => {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                console.log("Toggling Shield...");
                 updateCharacter(c => {
                     if (!Array.isArray(c.inventory)) c.inventory = [];
-                    if (!c.stats) c.stats = {};
-                    if (!c.stats.ac) c.stats.ac = {};
 
-                    const isArmor = (invItem) => {
+                    const isShield = (invItem) => {
                         const fromIndex = invItem?.name ? getShopIndexItemByName(invItem.name) : null;
                         const type = String(invItem?.type || fromIndex?.type || '').toLowerCase();
-                        return type === 'armor';
+                        return type === 'shield';
                     };
 
-                    const armorInv = c.inventory.filter(isArmor);
-                    const currentlyEquipped = armorInv.find(i => Boolean(i?.equipped));
+                    const shieldIndices = [];
+                    c.inventory.forEach((item, idx) => {
+                        if (isShield(item)) shieldIndices.push(idx);
+                    });
 
-                    if (currentlyEquipped) {
-                        c.stats.ac.last_armor = currentlyEquipped.name;
-                        armorInv.forEach(i => { i.equipped = false; });
-                        c.stats.ac.armor_equipped = false;
+                    console.log("Found Shield Indices:", shieldIndices);
+
+                    // Check if any shield is currently equipped
+                    const currentlyEquippedIndex = shieldIndices.find(idx => !!c.inventory[idx].equipped);
+
+                    if (currentlyEquippedIndex !== undefined) {
+                        console.log("Unequipping shield index:", currentlyEquippedIndex);
+                        c.inventory[currentlyEquippedIndex].equipped = false;
                         return;
                     }
 
-                    const lastName = c.stats.ac.last_armor;
-                    let toEquip = lastName ? armorInv.find(i => i.name === lastName) : null;
-                    if (!toEquip && armorInv.length === 1) toEquip = armorInv[0];
-                    if (!toEquip) {
-                        c.stats.ac.armor_equipped = false;
-                        return;
+                    // Nothing equipped, equip first available
+                    if (shieldIndices.length > 0) {
+                        const targetIndex = shieldIndices[0];
+                        console.log("Equipping shield index:", targetIndex);
+                        c.inventory[targetIndex].equipped = true;
                     }
-
-                    armorInv.forEach(i => { i.equipped = false; });
-                    toEquip.equipped = true;
-                    c.stats.ac.last_armor = toEquip.name;
-                    c.stats.ac.armor_equipped = true;
                 });
             };
 
@@ -2554,20 +2842,7 @@ export default function PlayerApp({ db, setDb }) {
                             No armor found in inventory.
                         </div>
                     )}
-                    <div className="modal-toggle-row" onClick={() => {
-                        const shieldToToggle = equippedShield ? equippedShield.name : (() => {
-                            // Find best available shield in inventory
-                            const inv = character.inventory || [];
-                            const shields = inv.filter(i => {
-                                const fromIndex = i?.name ? getShopIndexItemByName(i.name) : null;
-                                const type = String(i?.type || fromIndex?.type || '').toLowerCase();
-                                return type === 'shield';
-                            });
-                            return shields.length > 0 ? shields[0].name : null;
-                        })();
-
-                        if (shieldToToggle) toggleInventoryEquipped(shieldToToggle);
-                    }}>
+                    <div className="modal-toggle-row" onClick={toggleShieldEquipped}>
                         <span>Shield Equipped</span>
                         <label className="switch">
                             <input type="checkbox" checked={Boolean(inventory.some(i => {
@@ -3369,6 +3644,7 @@ export default function PlayerApp({ db, setDb }) {
                     )}
                 </>
             );
+
         } else if (modalMode === 'detail' && modalData) {
             console.log("Rendering Detail/Weapon Modal", modalMode, modalData);
             content = (
@@ -3540,7 +3816,7 @@ export default function PlayerApp({ db, setDb }) {
             content = (
                 <>
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-                        <h2 style={{ margin: 0, flex: 1 }} dangerouslySetInnerHTML={{ __html: formatText(String(titleText)) }} />
+                        <h2 style={{ margin: 0, flex: 1 }} dangerouslySetInnerHTML={{ __html: formatText(String(titleText), { actor: character }) }} />
                         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                             {modalHistory.length > 0 && (
                                 <button
@@ -3586,7 +3862,8 @@ export default function PlayerApp({ db, setDb }) {
                         dangerouslySetInnerHTML={{
                             __html: formatText(
                                 modalData.description ||
-                                (isLoadingShopDetail ? 'Loading item details…' : shopDetailError ? `Failed to load item details: ${shopDetailError}` : 'No description.')
+                                (isLoadingShopDetail ? 'Loading item details…' : shopDetailError ? `Failed to load item details: ${shopDetailError}` : 'No description.'),
+                                { actor: character }
                             )
                         }}
                     />
@@ -3753,25 +4030,18 @@ export default function PlayerApp({ db, setDb }) {
             </div>
 
             {/* TABS */}
+            {/* TABS */}
+            {/* TABS */}
             <div className="tabs">
-                {['stats', 'actions', 'magic', 'feats', 'items'].map(tab => {
-                    // Hide magic tab if character has no attribute set
-                    // Hide magic tab if character has no attribute set
-                    if (tab === 'magic') {
-                        const magic = character.magic;
-                        // Relaxed check: Only hide if BOTH attribute and proficiency are missing/null
-                        const hasAttr = magic && magic.attribute;
-                        const hasProf = magic && magic.proficiency;
-                        if (!magic || (!hasAttr && !hasProf)) return null;
-                    }
-                    const hasLoot = tab === 'items' && db.lootBags?.some(b => !b.isLocked && b.items.some(i => !i.claimedBy));
+                {['stats', 'actions', 'feats', ...(character.isCaster || character.magic?.list?.length > 0 ? ['magic'] : []), ...(character.isKineticist ? ['impulses'] : []), 'items'].map(tab => {
+                    const hasLoot = tab === 'items' && character?.inventory?.some(i => i.isLoot);
                     return (
                         <button
                             key={tab}
                             className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
                             onClick={() => setActiveTab(tab)}
                         >
-                            {tab === 'magic' ? 'Magic' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {tab === 'magic' ? 'Magic' : tab === 'impulses' ? 'Impulses' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                             {hasLoot && <span style={{ color: '#d32f2f', marginLeft: 5, fontWeight: 'bold' }}>!</span>}
                         </button>
                     );
@@ -3810,16 +4080,22 @@ export default function PlayerApp({ db, setDb }) {
                 {activeTab === 'actions' && renderActions()}
 
                 {activeTab === 'magic' && renderMagic()}
-
+                {activeTab === 'impulses' && renderImpulses()}
                 {activeTab === 'feats' && renderFeats()}
+            </div>
 
-                {activeTab === 'items' && (
+            {/* MODALS / FULL PAGE VIEWS */}
+
+            {
+                activeTab === 'items' && (
                     <div>
                         {renderInventory()}
                     </div>
-                )}
+                )
+            }
 
-                {activeTab === 'shop' && (
+            {
+                activeTab === 'shop' && (
                     <ShopView
                         db={db}
                         onInspectItem={(item) => {
@@ -3830,8 +4106,8 @@ export default function PlayerApp({ db, setDb }) {
                         onBuyFormula={handleBuyFormula}
                         knownFormulas={character.formulaBook || []}
                     />
-                )}
-            </div>
+                )
+            }
 
             {/* Item Actions Modal */}
             <ItemActionsModal
@@ -3855,24 +4131,47 @@ export default function PlayerApp({ db, setDb }) {
             />
 
             {/* Catalog Overlay */}
-            {catalogMode === 'feat' && (
-                <ItemCatalog
-                    title="Add Feat"
-                    items={FEAT_INDEX_ITEMS}
-                    filterOptions={FEAT_INDEX_FILTER_OPTIONS}
-                    onSelect={(item) => addToCharacter(item, 'feat')}
-                    onClose={() => setCatalogMode(null)}
-                />
-            )}
-            {catalogMode === 'spell' && (
-                <ItemCatalog
-                    title="Add Spell"
-                    items={SPELL_INDEX_ITEMS}
-                    filterOptions={SPELL_INDEX_FILTER_OPTIONS}
-                    onSelect={(item) => addToCharacter(item, 'spell')}
-                    onClose={() => setCatalogMode(null)}
-                />
-            )}
+            {
+                catalogMode === 'feat' && (
+                    <ItemCatalog
+                        title="Add Feat"
+                        items={FEAT_INDEX_ITEMS}
+                        filterOptions={FEAT_INDEX_FILTER_OPTIONS}
+                        onSelect={(item) => addToCharacter(item, 'feat')}
+                        onClose={() => setCatalogMode(null)}
+                    />
+                )
+            }
+
+            {
+                catalogMode === 'impulse' && (
+                    <ItemCatalog
+                        title="Add Impulse"
+                        items={IMPULSE_INDEX_ITEMS}
+                        filterOptions={IMPULSE_INDEX_FILTER_OPTIONS}
+                        onClose={() => setCatalogMode(null)}
+                        onSelect={(impulseData) => {
+                            updateCharacter(c => {
+                                if (!c.impulses) c.impulses = [];
+                                c.impulses.push(impulseData);
+                            });
+                            setCatalogMode(null);
+                        }}
+                    />
+                )
+            }
+
+            {
+                catalogMode === 'spell' && (
+                    <ItemCatalog
+                        title="Add Spell"
+                        items={SPELL_INDEX_ITEMS}
+                        filterOptions={SPELL_INDEX_FILTER_OPTIONS}
+                        onSelect={(item) => addToCharacter(item, 'spell')}
+                        onClose={() => setCatalogMode(null)}
+                    />
+                )
+            }
 
             {/* General Modals */}
             {renderEditModal()}

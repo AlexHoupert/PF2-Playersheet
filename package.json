@@ -9,7 +9,8 @@
     "build:spells": "node scripts/build_spells.js",
     "build:feats": "node scripts/build_feats.js",
     "build:actions": "node scripts/generate_action_index.js",
-    "build:data": "npm run build:shop && npm run build:spells && npm run build:feats && npm run build:actions",
+    "build:impulses": "node scripts/build_impulses.js",
+    "build:data": "npm run build:shop && npm run build:spells && npm run build:feats && npm run build:actions && npm run build:impulses",
     "build": "npm run build:data && vite build && node scripts/copy_ressources_to_dist.js",
     "preview": "vite preview"
   },

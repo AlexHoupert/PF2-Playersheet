@@ -20,7 +20,7 @@ export const ACTION_ICONS = {
     "[reaction]": `<svg class="pf-icon" viewBox="0 0 73 73" style="height:1.1em;width:auto;vertical-align:middle;fill:var(--text-gold);"><g transform="translate(0,73) scale(0.1,-0.1)" fill="var(--text-gold)" stroke="none"><path d="M235 647 c-75 -20 -147 -61 -189 -107 -44 -49 -41 -62 6 -28 59 44 96 53 213 53 91 0 118 -4 156 -21 92 -43 148 -126 134 -200 -10 -55 -85 -128 -152 -148 l-22 -7 19 66 c10 36 15 65 11 65 -4 0 -74 -40 -155 -89 l-148 -89 59 -12 c32 -7 107 -23 168 -35 60 -13 111 -23 112 -21 1 1 -9 19 -23 40 -14 21 -24 39 -22 40 1 1 30 8 63 15 314 67 356 351 68 461 -72 28 -223 36 -298 17z"/></g></svg>`
 };
 
-export function formatText(text) {
+export function formatText(text, context = {}) {
     if (!text) return "";
     let formatted = text;
 
@@ -46,6 +46,11 @@ export function formatText(text) {
         const distMatch = params.match(/distance:(\d+)/);
         const dist = distMatch ? distMatch[1] : "?";
         return `${dist}-foot ${type}`;
+    });
+
+    // Replace Checks (e.g. @Check[reflex|...])
+    formatted = formatted.replace(/@Check\[(reflex|fortitude|will)[^\]]*\]/gi, (match, type) => {
+        return `${type.charAt(0).toUpperCase() + type.slice(1)} Saving Throw`;
     });
 
     // Replace @UUID links
@@ -88,7 +93,51 @@ export function formatText(text) {
 
     // Replace Damage
     formatted = formatted.replace(/@Damage\[((?:[^\[\]]|\[[^\[\]]*\])+)\]/gi, (match, content) => {
-        return content.replace(/\[/g, ' ').replace(/\]/g, '');
+        // Content examples:
+        // 1. (floor((@actor.level -1)/2)+1)d6
+        // 2. (floor((@actor.level -1)/2)+1)d6[slashing]|options:area-damage
+
+        let parsed = content;
+
+        // 1. Replace Variables
+        if (context.actor) {
+            parsed = parsed.replace(/@actor\.level/g, (context.actor.level || 0));
+        }
+
+        // 2. Parse Components: Formula + Die + (Type)? + (Rest)?
+        // Regex: (Formula)(Die)(Type)?(Rest)?
+        // We assume Formula ends at the 'd' of the die.
+        const parts = parsed.match(/^([\d\s\(\)\+\-\*\/\.Mathfloorceil]+)(d\d+)(?:\[([^\]]+)\])?.*$/);
+
+        if (parts) {
+            let formula = parts[1];
+            const die = parts[2];
+            const type = parts[3] || ""; // e.g. "slashing"
+
+            // Replace math functions strings with JS Math
+            formula = formula.replace(/floor/g, 'Math.floor')
+                .replace(/ceil/g, 'Math.ceil')
+                .replace(/round/g, 'Math.round')
+                .replace(/abs/g, 'Math.abs')
+                .replace(/min/g, 'Math.min')
+                .replace(/max/g, 'Math.max');
+
+            try {
+                // Safe-ish Evaluation
+                if (/^[0-9\s\(\)\+\-\*\/\.Mathfloorceil]+$/.test(formula.replace(/Math\.(floor|ceil|round|abs|min|max)/g, ''))) {
+                    const result = new Function(`return ${formula}`)();
+                    // Output: "2d6 slashing" (2d6 gold)
+                    let out = `<span style="color:var(--text-gold)">${result}${die}</span>`;
+                    if (type) out += ` ${type}`;
+                    return out;
+                }
+            } catch (e) {
+                console.warn("Failed to eval damage formula:", formula, e);
+            }
+        }
+
+        // Fallback: Return cleanly stripped content if eval failed but looks like structure
+        return parsed.replace(/\[/g, ' ').replace(/\]/g, '').replace(/\|.*/, '');
     });
 
     // Highlight Degrees of Success

@@ -7,10 +7,12 @@ import { NEG_CONDS, POS_CONDS, VIS_CONDS, getConditionIcon } from '../shared/con
 import { conditionsCatalog, getConditionCatalogEntry, getConditionImgSrc, isConditionValued } from '../shared/constants/conditionsCatalog';
 import { fetchShopItemDetailBySourceFile, getShopIndexItemByName } from '../shared/catalog/shopIndex';
 import { fetchSpellDetailBySourceFile, getSpellIndexItemByName } from '../shared/catalog/spellIndex';
+import { fetchImpulseDetailBySourceFile, getImpulseIndexItemByName } from '../shared/catalog/impulseIndex';
 import { fetchFeatDetailBySourceFile, getFeatIndexItemByName } from '../shared/catalog/featIndex';
 import { deepClone } from '../shared/utils/deepClone';
 import ItemsView from './ItemsView';
 import SpellsView from './SpellsView';
+import ImpulsesView from './ImpulsesView';
 import FeatsView from './FeatsView';
 import ActionsView from './ActionsView';
 import QuestsView from './QuestsView';
@@ -61,6 +63,7 @@ export default function AdminApp({ db, setDb }) {
 
         let fetcher = fetchShopItemDetailBySourceFile;
         if (modalMode === 'spell') fetcher = fetchSpellDetailBySourceFile;
+        if (modalMode === 'impulse') fetcher = fetchImpulseDetailBySourceFile;
         if (modalMode === 'feat') fetcher = fetchFeatDetailBySourceFile;
 
         fetcher(sourceFile)
@@ -719,8 +722,15 @@ export default function AdminApp({ db, setDb }) {
                 <div className="header-controls">
                     <button className={`nav-btn ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => setActiveTab('sessions')}>Sessions</button>
                     <button className={`nav-btn ${activeTab === 'players' ? 'active' : ''}`} onClick={() => setActiveTab('players')}>Players</button>
-                    <button className={`btn-char-switch ${activeTab === 'items' ? 'active' : ''}`} onClick={() => setActiveTab('items')} title="Items & Loot">🎒</button>
-                    <button className={`btn-char-switch ${activeTab === 'spells' ? 'active' : ''}`} onClick={() => setActiveTab('spells')} title="Spells">✨</button>
+                    <button className={`nav-btn ${activeTab === 'items' ? 'active' : ''}`} onClick={() => setActiveTab('items')}>
+                        <span>Items</span>
+                    </button>
+                    <button className={`nav-btn ${activeTab === 'impulses' ? 'active' : ''}`} onClick={() => setActiveTab('impulses')}>
+                        <span>Impulses</span>
+                    </button>
+                    <button className={`nav-btn ${activeTab === 'spells' ? 'active' : ''}`} onClick={() => setActiveTab('spells')}>
+                        <span>Spells</span>
+                    </button>
                     <button className={`btn-char-switch ${activeTab === 'feats' ? 'active' : ''}`} onClick={() => setActiveTab('feats')} title="Feats">🎓</button>
                     <button className={`btn-char-switch ${activeTab === 'quests' ? 'active' : ''}`} onClick={() => setActiveTab('quests')} title="Quests">📜</button>
                     <button className={`btn-char-switch ${activeTab === 'system' ? 'active' : ''}`} onClick={() => setActiveTab('system')} title="System">⚙️</button>
@@ -732,6 +742,7 @@ export default function AdminApp({ db, setDb }) {
 
             {/* MAIN CONTENT */}
             {activeTab === 'sessions' && <SessionManager db={db} setDb={setDb} />}
+
             {
                 activeTab === 'players' && (
                     <div className="admin-layout">
@@ -839,6 +850,19 @@ export default function AdminApp({ db, setDb }) {
             }
 
             {
+                activeTab === 'impulses' && (
+                    <ImpulsesView
+                        db={db}
+                        setDb={setDb}
+                        onInspectItem={(item) => {
+                            setModalData(item);
+                            setModalMode('impulse');
+                        }}
+                    />
+                )
+            }
+
+            {
                 activeTab === 'spells' && (
                     <SpellsView
                         db={db}
@@ -894,6 +918,7 @@ export default function AdminApp({ db, setDb }) {
 
                             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                                 <button className="set-btn" onClick={() => handleRebuild('spells')}>Rebuild Spells</button>
+                                <button className="set-btn" onClick={() => handleRebuild('impulses')}>Rebuild Impulses</button>
                                 <button className="set-btn" onClick={() => handleRebuild('items')}>Rebuild Items</button>
                                 <button className="set-btn" onClick={() => handleRebuild('feats')}>Rebuild Feats</button>
                                 <button className="set-btn" style={{ background: '#d32f2f' }} onClick={() => handleRebuild('all')}>Rebuild ALL</button>

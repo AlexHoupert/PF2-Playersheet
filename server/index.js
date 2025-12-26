@@ -131,6 +131,9 @@ async function createServer() {
             case 'spells':
                 command = `${npmCmd} run build:spells`;
                 break;
+            case 'impulses':
+                command = `${npmCmd} run build:impulses`;
+                break;
             case 'items':
             case 'shop':
                 command = `${npmCmd} run build:shop`;
