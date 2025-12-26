@@ -55,12 +55,18 @@ export default function PlayerApp({ db, setDb }) {
 
     const [activeCharIndex, setActiveCharIndex] = useState(0);
 
-    useEffect(() => {
-        if (myCharacter && activeCampaign?.characters) {
-            const idx = activeCampaign.characters.findIndex(c => c.id === myCharacter.id);
-            if (idx !== -1) setActiveCharIndex(idx);
-        }
-    }, [myCharacter, activeCampaign]);
+    const [activeTab, setActiveTab] = useState('stats');
+    const [actionSubTab, setActionSubTab] = useState('Combat');
+    const [itemSubTab, setItemSubTab] = useState('Equipment');
+    const [newAction, setNewAction] = useState({ name: '', type: 'Combat', subtype: 'Basic', skill: '', feat: '', description: '' });
+    const [dailyPrepQueue, setDailyPrepQueue] = useState([]);
+    const [modalMode, setModalMode] = useState(null);
+    const [modalData, setModalData] = useState(null);
+    const [modalHistory, setModalHistory] = useState([]);
+    const [actionModal, setActionModal] = useState({ mode: null, item: null });
+    const [condTab, setCondTab] = useState('active');
+    const tapRef = useRef({ id: null, time: 0 });
+    const tapTimeout = useRef(null);
 
     useEffect(() => {
         if (myCharacter && activeCampaign?.characters) {
@@ -68,6 +74,8 @@ export default function PlayerApp({ db, setDb }) {
             if (idx !== -1) setActiveCharIndex(idx);
         }
     }, [myCharacter, activeCampaign]);
+
+
 
     // Fallback if no campaign
     const characters = activeCampaign?.characters || [];
@@ -111,27 +119,7 @@ export default function PlayerApp({ db, setDb }) {
             </div>
         );
     }
-    const [activeTab, setActiveTab] = useState('stats');
-    const [actionSubTab, setActionSubTab] = useState('Combat');
-    const [itemSubTab, setItemSubTab] = useState('Equipment');
 
-    // New Action Form State
-    const [newAction, setNewAction] = useState({ name: '', type: 'Combat', subtype: 'Basic', skill: '', feat: '', description: '' });
-
-    // Daily Crafting State
-    const [dailyPrepQueue, setDailyPrepQueue] = useState([]);
-
-    // Modal State
-    const [modalMode, setModalMode] = useState(null); // null, 'hp', 'gold', 'ac', 'condition', 'detail', 'item'
-    const [modalData, setModalData] = useState(null);
-    const [modalHistory, setModalHistory] = useState([]);
-    // Modals
-    const [actionModal, setActionModal] = useState({ mode: null, item: null });
-    const [condTab, setCondTab] = useState('active'); // Hoisted state to prevent reset on re-render
-
-    // Double Tap Logic
-    const tapRef = useRef({ id: null, time: 0 });
-    const tapTimeout = useRef(null);
 
     const handleItemClick = (item) => {
         const now = Date.now();
