@@ -1,0 +1,27 @@
+{
+    "name": "[gold]Raconteur's Reload[/gold]",
+    "type": "action",
+    "img": "systems/pf2e/icons/default-icons/action.svg",
+    "system": {
+        "description": {
+            "value": "Whether you're a professional duelist or a pistol-twirling entertainer, you have quick feet and quicker hands that never seem to let you down, and an equally sharp wit and tongue that jab your foes. You might leave a hand free or cultivate the ambidexterity for twin weapons. Either way, you stay close enough to your enemies to leverage your superior reflexes while leaving enough space to safely fire.\n---\n<strong>Slinger's Reload:</strong> Raconteur's Reload\n<strong>Deeds Initial</strong> Ten Paces; <strong>Advanced</strong> Pistoler's Retort; <strong>Greater</strong> Grim Swagger\n<strong>Way Skill</strong> choose Deception or Intimidation"
+        },
+        "actionType": {
+            "value": "action"
+        },
+        "actions": {
+            "value": 1
+        },
+        "category": "interaction",
+        "traits": {
+            "value": [],
+            "rarity": "common"
+        },
+        "classification": {
+            "type": "Combat",
+            "subtype": "Social",
+            "skill": "",
+            "feat": "Way of the Pistolero"
+        }
+    }
+}

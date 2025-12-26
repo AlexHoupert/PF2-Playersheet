@@ -1,0 +1,27 @@
+{
+    "name": "Tailed Goblin",
+    "type": "feat",
+    "img": "icons/default-icons/feat.svg",
+    "system": {
+        "description": {
+            "value": "You have a powerful tail, likely because you descend from a community of monkey goblins. You gain a +2 circumstance bonus to Athletics checks to Climb, you gain Combat Climber as a bonus feat, and you reduce the number of free hands required to Climb or Trip by one."
+        },
+        "level": {
+            "value": 0
+        },
+        "traits": {
+            "value": [],
+            "rarity": "common"
+        },
+        "actionType": {
+            "value": ""
+        },
+        "actions": {
+            "value": null
+        },
+        "prerequisites": {
+            "value": []
+        },
+        "category": "ancestry"
+    }
+}

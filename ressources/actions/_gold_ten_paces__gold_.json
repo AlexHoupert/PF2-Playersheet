@@ -1,0 +1,27 @@
+{
+    "name": "[gold]Ten Paces[/gold]",
+    "type": "action",
+    "img": "systems/pf2e/icons/default-icons/action.svg",
+    "system": {
+        "description": {
+            "value": "Trigger You roll initiative.\n----\nYou react to trouble with lightning speed, positioning yourself just right. You gain a +2 circumstance bonus to your initiative roll, and you can Interact to draw a one-handed firearm or one-handed crossbow. As your first action on your first turn, you can Step up to 10 feet as a free action."
+        },
+        "actionType": {
+            "value": "free"
+        },
+        "actions": {
+            "value": null
+        },
+        "category": "interaction",
+        "traits": {
+            "value": [],
+            "rarity": "common"
+        },
+        "classification": {
+            "type": "Movement",
+            "subtype": "Ground",
+            "skill": "",
+            "feat": "Way of the Pistolero"
+        }
+    }
+}

@@ -728,6 +728,9 @@ export default function AdminApp({ db, setDb }) {
                     <button className={`nav-btn ${activeTab === 'impulses' ? 'active' : ''}`} onClick={() => setActiveTab('impulses')}>
                         <span>Impulses</span>
                     </button>
+                    <button className={`nav-btn ${activeTab === 'actions' ? 'active' : ''}`} onClick={() => setActiveTab('actions')}>
+                        <span>Actions</span>
+                    </button>
                     <button className={`nav-btn ${activeTab === 'spells' ? 'active' : ''}`} onClick={() => setActiveTab('spells')}>
                         <span>Spells</span>
                     </button>
@@ -742,6 +745,7 @@ export default function AdminApp({ db, setDb }) {
 
             {/* MAIN CONTENT */}
             {activeTab === 'sessions' && <SessionManager db={db} setDb={setDb} />}
+
 
             {
                 activeTab === 'players' && (

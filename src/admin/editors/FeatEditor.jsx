@@ -7,7 +7,7 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
     const [formData, setFormData] = useState({
         name: '',
         level: 1,
-        type: 'Class',
+        category: 'Class',
         traits: [],
         rarity: 'common',
         actionType: '[one-action]',
@@ -21,10 +21,14 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
 
     useEffect(() => {
         if (initialItem) {
+            // Map category. If missing, might be hidden in system.category
+            const cat = initialItem.category || initialItem.system?.category || 'Class';
+            const displayCat = cat.charAt(0).toUpperCase() + cat.slice(1);
+
             setFormData({
                 name: initialItem.name || '',
                 level: initialItem.level || 0,
-                type: initialItem.type || 'Class',
+                category: displayCat,
                 traits: initialItem.traits || [],
                 rarity: initialItem.rarity || 'common',
                 actionType: initialItem.actionType || '',
@@ -55,7 +59,7 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
                     actionType: { value: formData.actionType }, // Simplified
                     actions: { value: null }, // Often linked to actionType
                     prerequisites: { value: formData.prerequisites ? [formData.prerequisites] : [] },
-                    category: formData.type.toLowerCase() // ancestry, class, etc
+                    category: formData.category.toLowerCase() // ancestry, class, etc
                 }
             };
 
@@ -98,6 +102,8 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
         setFormData(prev => ({ ...prev, [field]: val }));
     };
 
+    const CATEGORY_OPTIONS = ['Ancestry', 'Class', 'General', 'Skill', 'Bonus'];
+
     return (
         <div className="editor-container" style={{ padding: 20, background: '#222', height: '100%', overflowY: 'auto' }}>
             <h2>{initialItem ? 'Edit Feat' : 'Create Feat'}</h2>
@@ -114,9 +120,9 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
                     <input type="number" className="modal-input" value={formData.level} onChange={e => handleChange('level', e.target.value)} />
                 </div>
                 <div className="form-group">
-                    <label>Type</label>
-                    <select className="modal-input" value={formData.type} onChange={e => handleChange('type', e.target.value)}>
-                        {FEAT_INDEX_FILTER_OPTIONS.types.map(t => <option key={t} value={t}>{t}</option>)}
+                    <label>Category</label>
+                    <select className="modal-input" value={formData.category} onChange={e => handleChange('category', e.target.value)}>
+                        {CATEGORY_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                 </div>
             </div>
