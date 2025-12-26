@@ -267,6 +267,25 @@
     "area": null
   },
   {
+    "sourceFile": "spells/impulses/base-kinesis.json",
+    "img": "icons/actions/TwoActions.webp",
+    "name": "Base Kinesis",
+    "type": "Impulse",
+    "level": 0,
+    "description": "<p>It's trivial for you to create some of your element or alter a portion of it that already exists. Choose one of your kinetic elements to affect. This impulse has a range of 30 feet, and the Bulk of the target must be negligible or light. The GM decides what Bulk the element is. You can't affect an element that's magical, secured in place (like a stone mortared in a wall), or attended by a creature unwilling to let you.</p>\n<p>Choose one of the following options, though the GM might allow you to make similar small alterations. Base Kinesis can't deal damage or cause conditions unless otherwise noted.</p>\n<ul>\n<li><strong>Generate</strong> You bring an ordinary, non-magical piece of the chosen element from its elemental plane. The element can be used for any of its normal uses. For example, air can be breathed by an air-breathing creature, and fire casts light and can ignite flammable substances.</li>\n<li><strong>Move</strong> Move an existing piece of the element up to 20 feet in any direction. If you bring it into your space, you can catch it in an open hand. You can Sustain the impulse to keep moving the element.</li>\n<li><strong>Suppress</strong> You destroy an existing piece of element, such as snuffing out a flame or evaporating water from a cup. This affects only natural forms of the element, not durable, crafted goods like a stone statue, metal lock, or wooden door.</li>\n</ul>\n<hr />\n<p><strong>Level (+4)</strong> The range increases by 15 feet, and the maximum Bulk increases by 1 (allowing Bulk 1 at 5th level).</p>",
+    "traits": [
+      "impulse",
+      "kineticist",
+      "primal"
+    ],
+    "school": null,
+    "range": null,
+    "time": "2",
+    "actions": 2,
+    "defense": null,
+    "area": null
+  },
+  {
     "sourceFile": "spells/impulses/beasts-of-slumbering-steel.json",
     "img": "icons/sundries/books/book-red-exclamation.webp",
     "name": "Beasts of Slumbering Steel",
@@ -906,6 +925,25 @@
     "range": null,
     "time": null,
     "actions": null,
+    "defense": null,
+    "area": null
+  },
+  {
+    "sourceFile": "spells/impulses/extract-element.json",
+    "img": "icons/actions/OneAction.webp",
+    "name": "Extract Element",
+    "type": "Impulse",
+    "level": 0,
+    "description": "<p>You extract elemental matter from a creature's body to weaken it and take its power for your own. Target a creature within 30 feet that has a trait matching one of your kinetic elements or is made of one of your kinetic elements. The target takes @Damage[(ceil(@actor.level/2))d4[untyped]] damage (with no damage type) and becomes susceptible to your impulses, depending on its @Check[fortitude|against:kineticist] save against your class DC.</p>\n<hr />\n<p><strong>Critical Success</strong> The creature is unaffected</p>\n<p><strong>Success</strong> The creature takes half damage, and you add some of its elemental matter to your kinetic aura. Your impulses bypass any immunity the creature has to their elemental trait or traits, and the target takes a -1 circumstance penalty to its saves and AC against your impulses. If the target normally has a resistance that would apply to damage from one of your impulses, ignore that resistance; if it normally would be immune to that damage type, it instead has resistance equal to its level to damage from the impulse. You can't target a creature with Extract Element if elemental matter you extracted from it is already in your kinetic aura. These effects last for 5 minutes or until your kinetic aura ends, whichever comes first</p>\n<p><strong>Failure</strong> As success, but the creature takes full damage.</p>\n<p><strong>Critical Failure</strong> As failure, but the creature takes double damage.</p>\n<hr />\n<p><strong>Level (+2)</strong> The damage increases by 1d4.</p>",
+    "traits": [
+      "impulse",
+      "kineticist",
+      "primal"
+    ],
+    "school": null,
+    "range": null,
+    "time": "1",
+    "actions": 1,
     "defense": null,
     "area": null
   },
