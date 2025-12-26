@@ -49,7 +49,7 @@ const LanguageEditor = ({ initialLanguages, onSave }) => {
 };
 
 export default function PlayerApp({ db, setDb }) {
-    const { activeCampaign, myCharacter, updateActiveCampaign } = useCampaign();
+    const { activeCampaign, myCharacter, updateActiveCampaign, isGM } = useCampaign();
     // const [db, setDb] = usePersistedDb(dbData);
     // const [db, setDb] = useState(dbData);
 
@@ -4007,13 +4007,13 @@ export default function PlayerApp({ db, setDb }) {
                     <small>Level {character.level} | XP: {character.xp.current}</small>
                 </div>
                 <div className="header-controls">
-                    <button className="btn-char-switch" onClick={() => {
+                    {isGM && <button className="btn-char-switch" onClick={() => {
                         setActiveCharIndex((prev) => (prev + 1) % characters.length);
-                    }}>👥</button>
+                    }}>👥</button>}
                     <div className="gold-display" onClick={() => setModalMode('gold')}>
                         <span>💰</span> {parseFloat(character.gold).toFixed(2)} <span className="gold-unit">gp</span>
                     </div>
-                    <button className="btn-char-switch" onClick={() => window.location.search = '?admin=true'} title="GM Screen">GM</button>
+                    {isGM && <button className="btn-char-switch" onClick={() => window.location.search = '?admin=true'} title="GM Screen">GM</button>}
                 </div>
             </div>
 
