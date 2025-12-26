@@ -2600,8 +2600,8 @@ export default function PlayerApp({ db, setDb }) {
                 const shieldHp = character.stats.ac.shield_hp || 0;
                 const fromIndex = equippedShield?.name ? getShopIndexItemByName(equippedShield.name) : null;
                 const merged = fromIndex ? { ...fromIndex, ...equippedShield } : equippedShield;
-                const shieldMax = (merged.system?.hp?.max) || 20;
-                const hardness = (merged.system?.hardness) || 0;
+                const shieldMax = (merged.hpMax) || (merged.system?.hp?.max) || 20;
+                const hardness = (merged.hardness) || (merged.system?.hardness) || 0;
 
                 content = (
                     <>
