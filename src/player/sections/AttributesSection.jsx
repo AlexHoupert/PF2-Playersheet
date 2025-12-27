@@ -43,7 +43,7 @@ export function AttributesSection({ character, onOpenModal, pressEvents }) {
                     </div>
                 </div>
                 <div className="senses-box">
-                    {character.senses.length ? character.senses.join(", ") : "Normal"}
+                    {character.senses && character.senses.length ? character.senses.join(", ") : "Normal"}
                 </div>
             </div>
 
@@ -51,12 +51,12 @@ export function AttributesSection({ character, onOpenModal, pressEvents }) {
             <div className="special-stat-group">
                 <div className="circle-box"
                     onClick={() => {
-                        onOpenModal('item', { title: "Speed", description: Object.entries(character.stats.speed).map(([k, v]) => `${k}: ${v} ft`).join('\n') });
+                        onOpenModal('item', { title: "Speed", description: Object.entries(character.stats.speed || { land: 25 }).map(([k, v]) => `${k}: ${v} ft`).join('\n') });
                     }}
                     {...pressEvents?.(character.stats.speed, 'speed')}
                 >
                     <div className="circle-content">
-                        <span>{character.stats.speed.land}</span>
+                        <span>{character.stats.speed?.land || 0}</span>
                         <span style={{ fontSize: '0.4em', textTransform: 'uppercase' }}>Speed</span>
                     </div>
                 </div>
@@ -66,7 +66,7 @@ export function AttributesSection({ character, onOpenModal, pressEvents }) {
             <div className="special-stat-group">
                 <div className="diamond-box" {...pressEvents?.(null, 'class_dc')}>
                     <div className="diamond-content">
-                        <span>{character.stats.class_dc}</span>
+                        <span>{character.stats.class_dc || 10}</span>
                         <span style={{ fontSize: '0.4em', textTransform: 'uppercase' }}>Class DC</span>
                     </div>
                 </div>
@@ -78,7 +78,7 @@ export function AttributesSection({ character, onOpenModal, pressEvents }) {
         <div className="languages-box" {...pressEvents?.(null, 'language')}>
             <div className="lang-header">Languages</div>
             <div className="lang-list">
-                {character.languages.map(l => <div key={l} className="lang-item">{l}</div>)}
+                {(character.languages || []).map(l => <div key={l} className="lang-item">{l}</div>)}
             </div>
         </div>
     );

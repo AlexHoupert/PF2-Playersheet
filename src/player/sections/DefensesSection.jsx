@@ -15,7 +15,7 @@ export function DefensesSection({ character, updateCharacter, onOpenModal, press
     let shieldHp = 0, shieldMax = 20, isBroken = false, hardness = 0, shieldPct = 0;
 
     if (equippedShield) {
-        shieldHp = character.stats.ac.shield_hp || 0;
+        shieldHp = character.stats.ac?.shield_hp || 0;
         const fromIndex = equippedShield.name ? getShopIndexItemByName(equippedShield.name) : null;
         const merged = fromIndex ? { ...fromIndex, ...equippedShield } : equippedShield;
         shieldMax = (merged.system?.hp?.max) || 20;
@@ -87,7 +87,7 @@ export function DefensesSection({ character, updateCharacter, onOpenModal, press
 
                 {/* Saves */}
                 {saves.map(save => {
-                    const raw = character.stats.saves[save.toLowerCase()] || 0;
+                    const raw = (character.stats.saves || {})[save.toLowerCase()] || 0;
                     const calc = calculateStat(character, save, raw);
                     return (
                         <div
