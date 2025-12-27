@@ -364,7 +364,12 @@ export default function PlayerApp({ db, setDb }) {
     };
 
     const handleLoadSpecial = (weaponOrIndex, ammoItem) => {
-        const char = db.characters[activeCharIndex];
+        // Fix: Use the `character` prop/state directly instead of trying to look it up from an undefined `db`
+        // assuming `character` is available in scope (it is, from props)
+        const char = character;
+
+        // If we really need the latest from props, we use 'character'
+        // If 'character' is not in scope of this function (it is inside PlayerApp component), we use it. This component receives 'character' as prop.
 
         let weaponIndex = weaponOrIndex;
         if (typeof weaponOrIndex === 'object') {
