@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { usePersistedDb } from '../shared/db/usePersistedDb';
 import { deepClone } from '../shared/utils/deepClone';
-import { shouldStack } from '../shared/hooks/useInventoryLogic';
+import { shouldStack } from '../shared/utils/inventoryUtils';
 
 // Views
 import { StatsView } from './views/StatsView';
