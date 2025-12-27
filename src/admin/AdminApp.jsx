@@ -1,6 +1,6 @@
 /* d:\Repositories\PF2-Playersheet-1\src\AdminApp.jsx */
 import React, { useEffect, useRef, useState } from 'react';
-import { calculateStat, formatText } from '../utils/rules';
+import { calculateStat, formatText } from '../shared/utils/rules';
 // import dbData from '../data/new_db.json'; // Removed, passed via props
 import { DB_STORAGE_KEY } from '../shared/db/usePersistedDb'; // Keep constant if needed
 import { NEG_CONDS, POS_CONDS, VIS_CONDS, getConditionIcon } from '../shared/constants/conditions';

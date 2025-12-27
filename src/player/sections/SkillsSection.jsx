@@ -1,0 +1,59 @@
+import React from 'react';
+import { calculateStat } from '../../shared/utils/rules';
+
+export function SkillsSection({ character, onOpenModal, pressEvents }) {
+    const skillAbility = {
+        acrobatics: 'Dex',
+        arcana: 'Int',
+        athletics: 'Str',
+        crafting: 'Int',
+        deception: 'Cha',
+        diplomacy: 'Cha',
+        intimidation: 'Cha',
+        intimidate: 'Cha',
+        medicine: 'Wis',
+        nature: 'Wis',
+        occultism: 'Int',
+        performance: 'Cha',
+        perform: 'Cha',
+        religion: 'Wis',
+        society: 'Int',
+        stealth: 'Dex',
+        survival: 'Wis',
+        thievery: 'Dex'
+    };
+
+    const renderSkills = () => {
+        return Object.entries(character.skills).sort().map(([name, val]) => {
+            if ((!val && val !== 0) && name.startsWith("Lore")) return null;
+
+            const calc = calculateStat(character, name, val);
+            const isTrained = val > 0;
+            const baseSkill = name.split('_')[0].toLowerCase();
+            const ability = baseSkill === 'lore' ? 'Int' : skillAbility[baseSkill];
+            const rawName = name.replace('_', ' ');
+            const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+            const label = ability ? `${displayName} (${ability})` : displayName;
+
+            return (
+                <div className="item-row" key={name}
+                    onClick={() => onOpenModal('detail', { title: name.replace('_', ' '), ...calc })}
+                    {...pressEvents?.({ key: name, name: label }, 'skill')}
+                >
+                    <span className="item-name" style={{ color: isTrained ? 'var(--text-gold)' : '#ccc' }}>
+                        {label} {calc.penalty < 0 && <span className="stat-penalty-sub">({calc.penalty})</span>}
+                    </span>
+                    <span className={`skill-val ${calc.penalty < 0 ? 'stat-penalty' : ''}`} style={{ color: isTrained && calc.penalty >= 0 ? 'var(--text-gold)' : '' }}>
+                        {calc.total >= 0 ? '+' : ''}{calc.total}
+                    </span>
+                </div>
+            );
+        });
+    };
+
+    return (
+        <div>
+            {renderSkills()}
+        </div>
+    );
+}

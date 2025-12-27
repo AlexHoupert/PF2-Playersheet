@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import db from '../data/new_db.json';
 import RichTextEditor from '../shared/components/RichTextEditor';
-import { formatText } from '../utils/rules';
+import { formatText } from '../shared/utils/rules';
 
 export default function QuestsView() {
     const [quests, setQuests] = useState(db.quests || []);

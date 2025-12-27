@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { calculateStat } from '../utils/rules';
+import { calculateStat } from '../shared/utils/rules';
 
 const ATTRIBUTES = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"];
 const SAVES = ["Fortitude", "Reflex", "Will"];
