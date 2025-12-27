@@ -5,7 +5,7 @@ import { calculateStat, formatText, ACTION_ICONS } from '../utils/rules';
 import { deepClone } from '../shared/utils/deepClone';
 import ShopView from './ShopView';
 // import { usePersistedDb } from '../shared/db/usePersistedDb';
-import { NEG_CONDS, POS_CONDS, VIS_CONDS, getConditionIcon } from '../shared/constants/conditions';
+import { NEG_CONDS, POS_CONDS, VIS_CONDS, BINARY_CONDS, CONDITION_ICONS, getConditionIcon } from '../shared/constants/conditions';
 import { conditionsCatalog, getConditionCatalogEntry, getConditionImgSrc, isConditionValued } from '../shared/constants/conditionsCatalog';
 import { fetchShopItemDetailBySourceFile, getShopIndexItemByName } from '../shared/catalog/shopIndex';
 import { fetchSpellDetailBySourceFile, getSpellIndexItemByName, SPELL_INDEX_ITEMS, SPELL_INDEX_FILTER_OPTIONS } from '../shared/catalog/spellIndex';
@@ -19,6 +19,8 @@ import bloodMagicEffects from '../../ressources/classfeatures/bloodmagic-effects
 import ItemCatalog from './ItemCatalog';
 import ItemActionsModal from './ItemActionsModal';
 import QuickSheetModal from './QuickSheetModal';
+import { StatsView } from './views/StatsView';
+import { ConditionsModal } from './modals/ConditionsModal';
 
 
 
@@ -156,6 +158,15 @@ export default function PlayerApp({ db, setDb }) {
 
     const handleItemLongPressAction = (item) => {
         setActionModal({ mode: 'CONTEXT', item });
+    };
+
+    const handleLongPress = (data, type) => {
+        if (type === 'item') {
+            setActionModal({ mode: 'CONTEXT', item: data });
+        } else {
+            setModalData({ item: data, type });
+            setModalMode('context');
+        }
     };
 
     // Reuse pressEvents generic but map to this specific handler
@@ -555,11 +566,17 @@ export default function PlayerApp({ db, setDb }) {
     const [catalogMode, setCatalogMode] = useState(null); // 'feat', 'spell'
 
     // Long Press State
+    // Long Press State
     const longPressTimer = useRef(null);
-    const handleLongPress = (item, type) => {
-        setModalData({ item, type });
-        setModalMode('context');
-    };
+    // handleLongPress is defined above at line 160
+
+    // Legacy helpers (startPress/cancelPress/pressEvents) might still be used by non-refactored parts?
+    // Let's keep them but remove the duplicate function definitions if they collide.
+    // However, the error was specifically about 'handleLongPress' redeclaration.
+    // The previous definition at 160 covers it.
+
+    // Removing the duplicate handleLongPress here.
+
     const startPress = (item, type) => {
         longPressTimer.current = setTimeout(() => {
             handleLongPress(item, type);
@@ -572,7 +589,6 @@ export default function PlayerApp({ db, setDb }) {
             longPressTimer.current = null;
         }
     };
-    // Helper to bind events
     // Helper to bind events
     const pressEvents = (item, type) => ({
         onContextMenu: (e) => {
@@ -2674,6 +2690,7 @@ export default function PlayerApp({ db, setDb }) {
 
         } else if (modalMode === 'ac') {
             const acData = getArmorClassData(character);
+            console.log("DEBUG PlayerApp AC Modal Data:", acData);
             const inventory = Array.isArray(character?.inventory) ? character.inventory : [];
             const armorItems = inventory.filter(invItem => {
                 const fromIndex = invItem?.name ? getShopIndexItemByName(invItem.name) : null;
@@ -3317,7 +3334,11 @@ export default function PlayerApp({ db, setDb }) {
             );
         } else if (modalMode === 'conditionInfo') {
             const condName = typeof modalData === 'string' ? modalData : modalData?.name;
+            console.log("DEBUG InfoModal:", { modalData, condName });
+
             const entry = getConditionCatalogEntry(condName);
+            console.log("DEBUG Entry:", entry);
+
             const iconSrc = getConditionImgSrc(condName);
             const active = character.conditions.find(c => c.name === condName);
             const level = active ? active.level : 0;
@@ -3393,6 +3414,67 @@ export default function PlayerApp({ db, setDb }) {
                         dangerouslySetInnerHTML={{ __html: formatText(entry?.description || "No description.") }}
                         style={{ marginTop: 12 }}
                     />
+                </>
+            );
+        } else if (modalMode === 'conditions') {
+            return (
+                <ConditionsModal
+                    character={character}
+                    updateCharacter={updateCharacter}
+                    onClose={() => setModalMode(null)}
+                    onOpenInfo={(condName) => {
+                        setModalMode('conditionInfo');
+                        setModalData({ name: condName });
+                    }}
+                />
+            );
+            const allConds = [
+                { title: 'Negative', list: NEG_CONDS },
+                { title: 'Positive', list: POS_CONDS },
+                { title: 'Visibility', list: VIS_CONDS },
+                { title: 'Binary', list: BINARY_CONDS.filter(c => !NEG_CONDS.includes(c) && !POS_CONDS.includes(c) && !VIS_CONDS.includes(c)) } // Fallback
+            ];
+
+            const renderCondBtn = (condName) => {
+                const isActive = character.conditions.some(c => c.name === condName);
+                const icon = getConditionIcon(condName);
+                return (
+                    <button key={condName}
+                        onClick={() => {
+                            updateCharacter(c => {
+                                const idx = c.conditions.findIndex(x => x.name === condName);
+                                if (idx === -1) c.conditions.push({ name: condName, level: 1 });
+                            });
+                            setModalMode(null);
+                        }}
+                        style={{
+                            background: isActive ? 'var(--bg-panel)' : '#222',
+                            border: `1px solid ${isActive ? 'var(--text-gold)' : '#444'}`,
+                            borderRadius: 4, padding: '8px 12px',
+                            cursor: 'pointer', textAlign: 'left',
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            color: isActive ? 'var(--text-gold)' : '#ccc'
+                        }}
+                    >
+                        <span style={{ fontSize: '1.2em' }}>{icon || '⚪'}</span>
+                        <span style={{ textTransform: 'capitalize' }}>{condName}</span>
+                    </button>
+                );
+            };
+
+            content = (
+                <>
+                    <h2>Add Condition</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxHeight: '60vh', overflowY: 'auto', paddingRight: 5 }}>
+                        {allConds.map(group => (
+                            <div key={group.title}>
+                                <h3 style={{ fontSize: '1em', color: '#aaa', borderBottom: '1px solid #444', marginBottom: 8 }}>{group.title}</h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8 }}>
+                                    {group.list.map(c => renderCondBtn(c))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </>
             );
         } else if (modalMode === 'edit_perception') {
@@ -4044,30 +4126,15 @@ export default function PlayerApp({ db, setDb }) {
             {/* VIEW CONTENT */}
             <div className="view-section">
                 {activeTab === 'stats' && (
-                    <>
-                        {/* TOP SECTION: HP, Conditions, Defenses */}
-                        {renderHealth()}
-                        {renderConditions()}
-                        {/* <div className="section-separator"></div> */}
-                        {renderDefenses()}
-
-                        <h3 style={{ borderBottom: '1px solid #5c4033', paddingBottom: 5, marginBottom: 15 }}>Attributes & Skills</h3>
-
-                        {/* BOTTOM SECTION: Attributes & Skills */}
-                        <div className="main-layout">
-                            <div className="left-column">
-                                {renderAttributes()}
-                                {renderSpecialStats()}
-                                {renderLanguages()}
-                            </div>
-
-                            <div className="right-column">
-                                <div className="skills-container">
-                                    {renderSkills()}
-                                </div>
-                            </div>
-                        </div>
-                    </>
+                    <StatsView
+                        character={character}
+                        updateCharacter={updateCharacter}
+                        onOpenModal={(mode, data) => {
+                            setModalMode(mode);
+                            if (data) setModalData(data);
+                        }}
+                        onLongPress={handleLongPress}
+                    />
                 )}
 
                 {activeTab === 'actions' && renderActions()}
