@@ -20,6 +20,7 @@ import ItemCatalog from './ItemCatalog';
 import ItemActionsModal from './ItemActionsModal';
 import QuickSheetModal from './QuickSheetModal';
 import { StatsView } from './views/StatsView';
+import { ActionsView } from './views/ActionsView';
 import { ConditionsModal } from './modals/ConditionsModal';
 
 
@@ -1494,203 +1495,7 @@ export default function PlayerApp({ db, setDb }) {
         });
     };
 
-    const renderActions = () => {
-        // 1. Collect Actions: Index based only (File System)
-        const allActions = getAllActionIndexItems().map(a => ({
-            ...a,
-            // Ensure fields match schema used throughout
-            type: a.userType || a.type || 'Other',
-            subtype: a.userSubtype || a.subtype || 'General',
-            // isCustom is derived from sourceFile now if needed, but not critical for Player View filtering usually
-            isCustom: a.sourceFile?.startsWith('actions/') || false
-        }));
 
-        // 2. Feat Prerequisite Filtering
-        const knownFeats = new Set((character.feats || []).map(f => (typeof f === 'string' ? f : f.name)));
-
-        // Derive categories/types for tabs from user definitions
-        // Flatten actions if they have multiple types (e.g. ["Combat", "Skills"])
-        const categorized = [];
-        allActions.forEach(a => {
-            // Feat Check
-            if (a.feat && !knownFeats.has(a.feat)) return;
-
-            const rawType = a.userType || a.type || "Other";
-            const rawSub = a.userSubtype || a.subtype || "General";
-
-            const types = Array.isArray(rawType) ? rawType : [rawType];
-            const subtypes = Array.isArray(rawSub) ? rawSub : [rawSub];
-
-            types.forEach((t, index) => {
-                // Parallel mapping: Use subtype at same index, or fallback to first/only
-                let mappedSub = subtypes[index];
-                if (!mappedSub) mappedSub = subtypes[0] || "General";
-
-                categorized.push({
-                    ...a,
-                    type: t, // flattened type
-                    subtype: mappedSub,
-                    _entityType: 'action'
-                });
-            });
-        });
-
-        // Filter based on active tab
-        const filteredActions = categorized.filter(a => a.type === actionSubTab);
-
-        // Group by Subtype/Category
-        const grouped = {};
-        filteredActions.forEach(a => {
-            const sub = a.subtype || "General";
-            if (!grouped[sub]) grouped[sub] = [];
-            grouped[sub].push(a);
-        });
-
-        // Defined order of priority for Subtypes
-        const subtypePriority = [
-            'Attack', 'Defense', 'Social', 'Assist',
-            'Ground', 'Jumping & Falling', 'Maneuver',
-            'Cloak & Dagger', 'Other', 'Downtime'
-        ];
-
-        const sortedSubtypes = Object.keys(grouped).sort((a, b) => {
-            let ia = subtypePriority.indexOf(a);
-            let ib = subtypePriority.indexOf(b);
-            if (ia === -1) ia = 99;
-            if (ib === -1) ib = 99;
-            if (ia !== ib) return ia - ib;
-            return a.localeCompare(b);
-        });
-
-        // Calculate available tabs
-        const allTypes = new Set();
-        categorized.forEach(a => allTypes.add(a.type));
-
-        // Defined order of priority for Tabs
-        const tabPriority = ['Combat', 'Movement', 'Skills', 'Other'];
-        const availableTabs = Array.from(allTypes).sort((a, b) => {
-            let ia = tabPriority.indexOf(a);
-            let ib = tabPriority.indexOf(b);
-            if (ia === -1) ia = 99;
-            if (ib === -1) ib = 99;
-            if (ia !== ib) return ia - ib;
-            return a.localeCompare(b);
-        });
-
-        // Common action sorting priority (optional, specific actions first)
-        const actionPriority = [
-            'Strike', 'Feint', 'Shove', 'Trip', 'Grapple', 'Escape', 'Raise a Shield', 'Take Cover',
-            'Stride', 'Step', 'Leap', 'Long Jump', 'High Jump', 'Arrest a Fall', 'Grab an Edge',
-            'Sense Motive', 'Make an Impression', 'Lie', 'Coerce', 'Impersonate',
-            'Sneak', 'Hide', 'Steal', 'Pick a Lock', 'Palm an Object', 'Recall Knowledge', 'Seek', 'Treat Wounds'
-        ];
-
-        return (
-            <div>
-                <div className="sub-tabs">
-                    {availableTabs.map(t => (
-                        <button key={t} className={`sub-tab-btn ${actionSubTab === t ? 'active' : ''}`} onClick={() => setActionSubTab(t)}>
-                            {t === 'Other' ? 'Exploration' : t}
-                        </button>
-                    ))}
-                </div>
-
-                {sortedSubtypes.map(sub => (
-                    <div key={sub}>
-                        {sub !== "General" && sortedSubtypes.length > 1 && <div className="action-subtype-header">{sub}</div>}
-                        {grouped[sub].sort((a, b) => { // Sort actions within subtype
-                            let ia = actionPriority.indexOf(a.name);
-                            let ib = actionPriority.indexOf(b.name);
-                            if (ia === -1) ia = 999;
-                            if (ib === -1) ib = 999;
-                            // If both unknown, sort alpha
-                            if (ia === 999 && ib === 999) return a.name.localeCompare(b.name);
-                            return ia - ib;
-                        }).map(action => {
-                            // Calculate Skill Bonus To Display
-                            // skill field can be string ("Athletics"), array (["Athletics", "Acrobatics"]), or special ("ToHit", "Perception", "Deception")
-                            let skillDisplay = null;
-                            let bonusVal = null;
-                            let bestLabel = null;
-
-                            const skillDef = action.skill;
-                            if (skillDef) {
-                                let skillsToCheck = Array.isArray(skillDef) ? skillDef : [skillDef];
-                                let best = -999;
-
-                                skillsToCheck.forEach(s => {
-                                    if (s === 'ToHit') {
-                                        // Special case for attack bonus
-                                        return;
-                                    }
-
-                                    // Fix for Seek (Perception)
-                                    if (s === 'Perception') {
-                                        const calc = calculateStat(character, "Perception", character.stats.perception);
-                                        if (calc && calc.total > best) {
-                                            best = calc.total;
-                                            bestLabel = "Perception";
-                                        }
-                                        return;
-                                    }
-
-                                    const val = character.skills[s] || 0;
-                                    const calc = calculateStat(character, s, val);
-                                    if (calc && calc.total > best) {
-                                        best = calc.total;
-                                        bestLabel = s.replace(/_/g, ' '); // simple format if needed
-                                    }
-                                });
-
-                                if (best > -999) {
-                                    bonusVal = best;
-                                }
-                            }
-
-                            // Map typeCode to Icon
-                            // typeCode: '1', '2', '3', 'R', 'F', 'P'
-                            let ActionIcon = null;
-                            if (action.typeCode === '1') ActionIcon = ACTION_ICONS['[one-action]'];
-                            else if (action.typeCode === '2') ActionIcon = ACTION_ICONS['[two-actions]'];
-                            else if (action.typeCode === '3') ActionIcon = ACTION_ICONS['[three-actions]'];
-                            else if (action.typeCode === 'R') ActionIcon = ACTION_ICONS['[reaction]'];
-                            else if (action.typeCode === 'F') ActionIcon = ACTION_ICONS['[free-action]'];
-
-                            return (
-                                <div className="item-row" key={`${action.name}-${action.type}`} onClick={() => { setModalData(action); setModalMode('item'); }}>
-                                    <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-                                        <span className="item-name" dangerouslySetInnerHTML={{ __html: formatText(action.name) }} />
-                                        {ActionIcon && (
-                                            <span style={{ marginLeft: 6, display: 'flex', alignItems: 'center' }}
-                                                title={action.typeCode === 'R' ? 'Reaction' : action.typeCode === 'F' ? 'Free Action' : `${action.typeCode} Action(s)`}
-                                                dangerouslySetInnerHTML={{ __html: ActionIcon }}
-                                            />
-                                        )}
-                                    </div>
-
-                                    {bestLabel && (
-                                        <span style={{ marginRight: 8, color: 'rgba(255,255,255,0.5)', fontSize: '0.75em', fontStyle: 'italic' }}>
-                                            ({bestLabel})
-                                        </span>
-                                    )}
-
-                                    {bonusVal !== null && (
-                                        <div style={{ color: 'var(--text-gold)', fontWeight: 'bold', fontSize: '1.1em', minWidth: '1.5em', textAlign: 'right' }}>
-                                            {bonusVal >= 0 ? '+' : ''}{bonusVal}
-                                        </div>
-                                    )}
-                                    {skillDef === 'ToHit' && (
-                                        <div style={{ color: '#888', fontSize: '0.8em', fontStyle: 'italic' }}>Attack</div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                ))}
-                {filteredActions.length === 0 && <div style={{ color: '#666', fontStyle: 'italic' }}>No actions found.</div>}
-            </div>
-        );
-    };
 
     const renderInventory = () => {
         const items = Array.isArray(character.inventory) ? character.inventory : [];
@@ -4137,7 +3942,16 @@ export default function PlayerApp({ db, setDb }) {
                     />
                 )}
 
-                {activeTab === 'actions' && renderActions()}
+                {activeTab === 'actions' && (
+                    <ActionsView
+                        character={character}
+                        onOpenModal={(mode, data) => {
+                            setModalMode(mode);
+                            setModalData(data);
+                        }}
+                        onLongPress={(item, type) => handleLongPress(item, type)}
+                    />
+                )}
 
                 {activeTab === 'magic' && renderMagic()}
                 {activeTab === 'impulses' && renderImpulses()}
