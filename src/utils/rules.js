@@ -167,25 +167,49 @@ export function getConditionEffects(character, statName, attributeName) {
     conds.forEach(c => { if (c.level > 0) active[c.name.toLowerCase()] = c.level; });
     const has = (key) => !!active[key];
     const val = (key) => active[key] || 0;
+
+    // Calculate penalties
     let statusPenalties = [];
+    let statusSource = [];
 
-    if (has("frightened")) statusPenalties.push(-val("frightened"));
-    if (has("sickened")) statusPenalties.push(-val("sickened"));
+    if (has("frightened")) { const v = -val("frightened"); statusPenalties.push(v); statusSource.push(`Frightened ${v}`); }
+    if (has("sickened")) { const v = -val("sickened"); statusPenalties.push(v); statusSource.push(`Sickened ${v}`); }
 
-    if (attributeName === "Strength") { if (has("enfeebled")) statusPenalties.push(-val("enfeebled")); }
-    else if (attributeName === "Dexterity") { if (has("clumsy")) statusPenalties.push(-val("clumsy")); if (has("encumbered")) statusPenalties.push(-1); }
-    else if (attributeName === "Constitution") { if (has("drained")) statusPenalties.push(-val("drained")); }
-    else if (["Intelligence", "Wisdom", "Charisma"].includes(attributeName)) { if (has("stupefied")) statusPenalties.push(-val("stupefied")); }
+    if (attributeName === "Strength") { if (has("enfeebled")) { const v = -val("enfeebled"); statusPenalties.push(v); statusSource.push(`Enfeebled ${v}`); } }
+    else if (attributeName === "Dexterity") { if (has("clumsy")) { const v = -val("clumsy"); statusPenalties.push(v); statusSource.push(`Clumsy ${v}`); } if (has("encumbered")) { statusPenalties.push(-1); statusSource.push("Encumbered -1"); } }
+    else if (attributeName === "Constitution") { if (has("drained")) { const v = -val("drained"); statusPenalties.push(v); statusSource.push(`Drained ${v}`); } }
+    else if (["Intelligence", "Wisdom", "Charisma"].includes(attributeName)) { if (has("stupefied")) { const v = -val("stupefied"); statusPenalties.push(v); statusSource.push(`Stupefied ${v}`); } }
 
-    if (statName === "AC" || statName === "Fortitude" || statName === "Reflex" || statName === "Will") { if (has("fatigued")) statusPenalties.push(-1); }
-    if (statName === "Perception") { if (has("blinded")) statusPenalties.push(-4); if (has("deafened")) statusPenalties.push(-2); if (has("unconscious")) statusPenalties.push(-4); }
+    if (statName === "AC" || statName === "Fortitude" || statName === "Reflex" || statName === "Will") { if (has("fatigued")) { statusPenalties.push(-1); statusSource.push("Fatigued -1"); } }
+    if (statName === "Perception") {
+        if (has("blinded")) { statusPenalties.push(-4); statusSource.push("Blinded -4"); }
+        if (has("deafened")) { statusPenalties.push(-2); statusSource.push("Deafened -2"); }
+        if (has("unconscious")) { statusPenalties.push(-4); statusSource.push("Unconscious -4"); }
+    }
 
     let circPenalties = [];
-    if (statName === "AC") { if (has("off-guard") || has("blinded") || has("grabbed") || has("paralyzed") || has("prone") || has("restrained") || has("unconscious")) circPenalties.push(-2); }
+    let circSource = [];
+    if (statName === "AC") {
+        if (has("off-guard") || has("blinded") || has("grabbed") || has("paralyzed") || has("prone") || has("restrained") || has("unconscious")) {
+            circPenalties.push(-2);
+            // Just list one reason or generic
+            circSource.push("Off-Guard (or similar) -2");
+        }
+    }
 
     const bestStatus = statusPenalties.length ? Math.min(...statusPenalties) : 0;
     const bestCirc = circPenalties.length ? Math.min(...circPenalties) : 0;
-    return { total: bestStatus + bestCirc, breakdown: (bestStatus ? `Status Penalty: ${bestStatus}\n` : "") + (bestCirc ? `Circumstance Penalty: ${bestCirc}\n` : "") };
+
+    // Construct breakdown object
+    const breakdown = {};
+    if (bestStatus !== 0) breakdown.status = bestStatus;
+    if (bestCirc !== 0) breakdown.circumstance = bestCirc;
+
+    return {
+        total: bestStatus + bestCirc,
+        breakdown,
+        meta: { statusSource, circSource }
+    };
 }
 
 export function calculateStat(character, statName, profValue) {
@@ -198,18 +222,43 @@ export function calculateStat(character, statName, profValue) {
     if (statName === "AC") attrKey = "Dexterity";
 
     // Get attribute value from character stats
-    // Note: new_db.json uses lowercase keys for attributes (strength, dexterity)
     const attrVal = parseInt(character.stats.attributes[attrKey.toLowerCase()]) || 0;
 
     let total = (prof > 0) ? prof + level + attrVal : attrVal;
+
+    // Base 10 for AC/Class DC (if we ever use this handling class dc)
+    // Actually AC base is 10. `calculateStat` is seemingly generic.
+    // If statName is AC, we should probably include base 10? 
+    // The previous code didn't explicitly add 10 here, implies 'total' is a modifier.
+    // Wait, AC usually has base 10. Let's check if this is Modifier or Score.
+    // Previous code: `total = (prof > 0) ? prof + level + attrVal : attrVal`. This is a modifier.
+    // If this is used for Checks (Skills/Saves), modifier is correct.
+
     const cond = getConditionEffects(character, statName, attrKey);
     total += cond.total;
 
-    const breakdown = (prof > 0) ? `${prof} (${PROF_NAMES[prof]})\n+ ${level} (Lvl)\n+ ${attrVal} (${attrKey.substr(0, 3)})` : `0 (Untrained)\n+ ${attrVal} (${attrKey.substr(0, 3)})`;
+    // Construct Structured Breakdown
+    const breakdown = {
+        attribute: attrVal,
+        ...cond.breakdown
+    };
+
+    // Add proficiency and level only if trained
+    if (prof > 0) {
+        breakdown.proficiency = prof;
+        breakdown.level = level;
+    }
+
+    const source = {
+        attrName: attrKey.substr(0, 3),
+        profName: PROF_NAMES[prof] || "Unknown",
+        levelVal: level
+    };
 
     return {
         total,
-        breakdown: breakdown + (cond.total !== 0 ? `\n\nConditions:\n${cond.breakdown}` : ""),
+        breakdown, // Object now
+        source,    // Metadata for labels
         rank: PROF_NAMES[prof] || "Unknown",
         penalty: cond.total
     };

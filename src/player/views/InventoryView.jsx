@@ -212,7 +212,7 @@ export function InventoryView({
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     const bonusInfo = getWeaponAttackBonus(merged, character);
-                                    onOpenModal('item_proficiencies', { item: merged, type: 'weapon_prof', ...bonusInfo });
+                                    onOpenModal('weapon_detail', { item: merged, type: 'weapon_prof', ...bonusInfo });
                                 }}
                                 style={{
                                     marginLeft: 6,

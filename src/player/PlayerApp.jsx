@@ -19,11 +19,13 @@ import bloodMagicEffects from '../../ressources/classfeatures/bloodmagic-effects
 import ItemCatalog from './ItemCatalog';
 import ItemActionsModal from './ItemActionsModal';
 import QuickSheetModal from './QuickSheetModal';
+import { StatBreakdown } from './components/StatBreakdown';
 import { StatsView } from './views/StatsView';
 import { ActionsView } from './views/ActionsView';
 import { InventoryView } from './views/InventoryView';
 import { MagicView } from './views/MagicView';
 import { FeatsView } from './views/FeatsView';
+import { ImpulsesView } from './views/ImpulsesView';
 import { isEquipableInventoryItem, getWeaponCapacity } from '../shared/utils/combatUtils';
 import { ConditionsModal } from './modals/ConditionsModal';
 
@@ -2054,6 +2056,12 @@ export default function PlayerApp({ db, setDb }) {
                         {type === 'save' && (
                             <button className="set-btn" onClick={() => setModalMode('edit_proficiency')}>Change Proficiency</button>
                         )}
+                        {(type === 'impulse_attack' || type === 'class_dc') && (
+                            <button className="set-btn" onClick={() => {
+                                setModalData({ type: 'impulse' });
+                                setModalMode('edit_proficiency');
+                            }}>Change Impulse Proficiency</button>
+                        )}
 
                         {/* AC & Defense */}
                         {type === 'ac_button' && (
@@ -2542,16 +2550,17 @@ export default function PlayerApp({ db, setDb }) {
         } else if (modalMode === 'edit_proficiency') {
             const isSkill = modalData.type === 'skill';
             const isSave = modalData.type === 'save';
+            const isImpulse = modalData.type === 'impulse';
             const key = isSkill ? modalData.item.key : (isSave ? String(modalData.item).toLowerCase() : 'class_dc');
 
-            const currentVal = isSkill ? character.skills[key] : (isSave ? (character.stats.saves?.[key] || 0) : character.stats.class_dc);
+            const currentVal = isSkill ? character.skills[key] : (isSave ? (character.stats.saves?.[key] || 0) : (isImpulse ? (character.stats.impulse_proficiency || 0) : character.stats.class_dc));
 
             // If it's a skill, values are 0,2,4,6,8 usually.
 
             content = (
                 <>
-                    <h2>Edit {modalData?.item?.name || "Proficiency"}</h2>
-                    {isSkill || isSave ? (
+                    <h2>Edit {modalData?.item?.name || (isImpulse ? "Impulse Proficiency" : "Proficiency")}</h2>
+                    {isSkill || isSave || isImpulse ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                             {ARMOR_RANKS.map(r => (
                                 <button key={r.value} className="btn-add-condition" style={{
@@ -2563,6 +2572,8 @@ export default function PlayerApp({ db, setDb }) {
                                         else if (isSave) {
                                             if (!c.stats.saves) c.stats.saves = {};
                                             c.stats.saves[key] = r.value;
+                                        } else if (isImpulse) {
+                                            c.stats.impulse_proficiency = r.value;
                                         }
                                     });
                                     setModalMode(null);
@@ -2581,6 +2592,7 @@ export default function PlayerApp({ db, setDb }) {
                     )}
                 </>
             );
+
         } else if (modalMode === 'edit_speed') {
             content = (
                 <>
@@ -2712,21 +2724,54 @@ export default function PlayerApp({ db, setDb }) {
             );
 
         } else if (modalMode === 'spell_stat_info') {
-            const magic = character.magic || {};
-            const attrName = magic.attribute || "Intelligence";
-            const attrMod = parseInt(character.stats.attributes[(attrName || "").toLowerCase()]) || 0;
-            const prof = parseFloat(magic.proficiency) || 0;
-            const level = parseInt(character.level) || 0;
+            const type = modalData?.type || 'dc';
+            let title = 'Spell Statistics';
+            let dcVal = 0;
+            let atkBonus = 0;
+            let rows = [];
 
-            // Stats Logic
-            const profBonus = prof + (prof > 0 ? level : 0);
-            const atkBonus = Math.floor(attrMod + profBonus);
-            const dcVal = 10 + atkBonus;
+            if (type === 'class_dc' || type === 'impulse_attack') {
+                // Impulse / Class DC Stats
+                title = type === 'class_dc' ? 'Class DC Breakdown' : 'Impulse Attack Breakdown';
+                const profRank = character.stats.impulse_proficiency || 0;
+                const level = parseInt(character.level) || 1;
+                const conMod = character.stats.attributes?.constitution ?? 0;
+                const rankLabel = ARMOR_RANKS.find(r => r.value === profRank)?.label.split(' ')[0] || 'Untrained';
 
-            const rankLabel = ARMOR_RANKS.find(r => r.value === prof)?.label.split(' ')[0] || 'Untrained';
-            const type = modalData?.type || 'dc'; // Default to DC if unsure, but should be passed
+                const profBonus = profRank > 0 ? (level + profRank) : 0;
+                atkBonus = profBonus + conMod;
+                dcVal = 10 + atkBonus;
 
-            const BreakdownLine = ({ label, val, isLast }) => (
+                rows = [
+                    { label: type === 'class_dc' ? "Base" : null, val: type === 'class_dc' ? 10 : null },
+                    { label: `Constitution (${conMod})`, val: conMod },
+                    { label: `Proficiency (${rankLabel})`, val: profRank },
+                    { label: profRank > 0 ? "Level" : null, val: profRank > 0 ? level : null }
+                ].filter(r => r.label !== null);
+
+            } else {
+                // Magic Stats
+                title = type === 'dc' ? 'Spell DC Breakdown' : 'Spell Attack Breakdown';
+                const magic = character.magic || {};
+                const attrName = magic.attribute || "Intelligence";
+                const attrMod = parseInt(character.stats.attributes[(attrName || "").toLowerCase()]) || 0;
+                const prof = parseFloat(magic.proficiency) || 0;
+                const level = parseInt(character.level) || 0;
+                const rankLabel = ARMOR_RANKS.find(r => r.value === prof)?.label.split(' ')[0] || 'Untrained';
+
+                const profBonus = prof + (prof > 0 ? level : 0);
+                atkBonus = Math.floor(attrMod + profBonus);
+                dcVal = 10 + atkBonus;
+
+                rows = [
+                    { label: type === 'dc' ? "Base" : null, val: type === 'dc' ? 10 : null },
+                    { label: `${attrName} (${attrMod})`, val: attrMod },
+                    { label: `Proficiency (${rankLabel})`, val: prof },
+                    { label: prof > 0 ? "Level" : null, val: prof > 0 ? level : null }
+                ].filter(r => r.label !== null);
+            }
+
+            const BreakdownLine = ({ label, val }) => (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9em', marginBottom: 5 }}>
                     <span style={{ color: '#aaa' }}>{label}</span>
                     <span style={{ color: '#fff' }}>{val >= 0 ? `+${val}` : val}</span>
@@ -2735,30 +2780,22 @@ export default function PlayerApp({ db, setDb }) {
 
             content = (
                 <>
-                    <h2>{type === 'dc' ? 'Spell DC Breakdown' : 'Spell Attack Breakdown'}</h2>
+                    <h2>{title}</h2>
 
                     <div style={{ textAlign: 'center', marginBottom: 20 }}>
                         <div style={{ fontSize: '2.5em', color: 'var(--text-gold)', fontWeight: 'bold', lineHeight: 1 }}>
-                            {type === 'dc' ? dcVal : (atkBonus >= 0 ? `+${atkBonus}` : atkBonus)}
+                            {(type === 'dc' || type === 'class_dc') ? dcVal : (atkBonus >= 0 ? `+${atkBonus}` : atkBonus)}
                         </div>
                         <div style={{ fontSize: '1em', color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
-                            {type === 'dc' ? 'Difficulty Class' : 'Attack Bonus'}
+                            {(type === 'dc' || type === 'class_dc') ? 'Difficulty Class' : 'Attack Bonus'}
                         </div>
                     </div>
 
-                    <div style={{ background: '#222', padding: 15, borderRadius: 8 }}>
-                        {type === 'dc' && <BreakdownLine label="Base" val={10} />}
-                        <BreakdownLine label={`${attrName} (${attrMod})`} val={attrMod} />
-                        <BreakdownLine label={`Proficiency (${rankLabel})`} val={prof} />
-                        {prof > 0 && <BreakdownLine label={`Level`} val={level} />}
-
-                        <div style={{ borderTop: '1px solid #444', marginTop: 5, paddingTop: 5, display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                            <span>Total</span>
-                            <span style={{ color: 'var(--text-gold)' }}>
-                                {type === 'dc' ? dcVal : (atkBonus >= 0 ? `+${atkBonus}` : atkBonus)}
-                            </span>
-                        </div>
-                    </div>
+                    <StatBreakdown
+                        rows={rows}
+                        total={(type === 'dc' || type === 'class_dc') ? dcVal : atkBonus}
+                        totalLabel="Total"
+                    />
                 </>
             );
         } else if (modalMode === 'edit_spell_proficiency') {
@@ -3188,55 +3225,57 @@ export default function PlayerApp({ db, setDb }) {
             );
         } else if (modalMode === 'weapon_detail' && modalData) {
             console.log("Rendering Weapon Detail Modal (Distinct)", modalData);
+
+            // Build Rows from Breakdown Object
+            const rows = [];
+            if (modalData.breakdown && typeof modalData.breakdown === 'object') {
+                // Attribute
+                if (modalData.breakdown.attribute !== undefined) {
+                    const label = `Attribute${modalData.source?.attrName ? ` (${modalData.source.attrName})` : ''}`;
+                    rows.push({ label, val: modalData.breakdown.attribute });
+                }
+                // Proficiency
+                if (modalData.breakdown.proficiency !== undefined) {
+                    const label = `Proficiency${modalData.source?.profName ? ` (${modalData.source.profName})` : ''}`;
+                    rows.push({ label, val: modalData.breakdown.proficiency });
+                }
+                // Level
+                if (modalData.breakdown.level !== undefined && modalData.breakdown.level !== 0) {
+                    const label = `Level${modalData.source?.levelVal ? ` (${modalData.source.levelVal})` : ''}`;
+                    rows.push({ label, val: modalData.breakdown.level });
+                }
+                // Item
+                if (modalData.breakdown.item !== undefined && modalData.breakdown.item !== 0) {
+                    rows.push({ label: 'Item Bonus', val: modalData.breakdown.item });
+                }
+                // Potency/Other
+                Object.entries(modalData.breakdown).forEach(([k, v]) => {
+                    if (['attribute', 'proficiency', 'level', 'item'].includes(k)) return;
+                    if (v === 0) return;
+                    rows.push({ label: k.charAt(0).toUpperCase() + k.slice(1), val: v });
+                });
+            }
             content = (
                 <>
-                    <h2>{modalData.title}</h2>
-                    <div style={{ fontSize: '2em', textAlign: 'center', color: 'var(--text-gold)', margin: '10px 0' }}>
-                        {modalData.total >= 0 ? '+' : ''}{modalData.total}
+                    <h2 style={{ fontSize: '1.4em', marginBottom: 20, textAlign: 'center', color: 'var(--text-gold)', fontFamily: 'Cinzel, serif', borderBottom: '1px solid #5c4033', paddingBottom: 10 }}>{modalData.title || modalData.item?.name || 'Weapon Attack'}</h2>
+
+                    <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                        <div style={{ fontSize: '2.5em', color: 'var(--text-gold)', fontWeight: 'bold', lineHeight: 1 }}>
+                            {modalData.total >= 0 ? `+${modalData.total}` : modalData.total}
+                        </div>
+                        <div style={{ fontSize: '1em', color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
+                            Attack Bonus
+                        </div>
                     </div>
-                    {/* DEBUG DATA ON SCREEN */}
-                    <div style={{ fontSize: '0.7em', color: 'orange', background: '#333', padding: 5, marginBottom: 10, wordBreak: 'break-all' }}>
-                        DEBUG: {JSON.stringify(modalData.breakdown)}
-                    </div>
+
 
                     {modalData.breakdown && typeof modalData.breakdown === 'object' ? (
-                        <div style={{ background: '#222', padding: 15, borderRadius: 8, fontSize: '0.9em' }}>
-                            <div style={{ marginBottom: 10, color: '#aaa', textTransform: 'uppercase', fontSize: '0.8em', letterSpacing: 1 }}>Calculation</div>
-
-                            {/* Attribute */}
-                            {modalData.breakdown.attribute !== undefined && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                                    <span>Attribute {modalData.source?.attrName ? `(${modalData.source.attrName})` : ''}</span>
-                                    <span>{modalData.breakdown.attribute >= 0 ? '+' : ''}{modalData.breakdown.attribute}</span>
-                                </div>
-                            )}
-
-                            {/* Proficiency */}
-                            {modalData.breakdown.proficiency !== undefined && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                                    <span>Proficiency {modalData.source?.profName ? `(${modalData.source.profName})` : ''}</span>
-                                    <span>{modalData.breakdown.proficiency >= 0 ? '+' : ''}{modalData.breakdown.proficiency}</span>
-                                </div>
-                            )}
-
-                            {/* Level */}
-                            {modalData.breakdown.level !== undefined && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                                    <span>Level {modalData.source?.levelVal ? `(${modalData.source.levelVal})` : ''}</span>
-                                    <span>{modalData.breakdown.level >= 0 ? '+' : ''}{modalData.breakdown.level}</span>
-                                </div>
-                            )}
-
-                            {/* Item */}
-                            {modalData.breakdown.item !== undefined && modalData.breakdown.item !== 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, color: 'var(--text-gold)' }}>
-                                    <span>Item Bonus</span>
-                                    <span>{modalData.breakdown.item >= 0 ? '+' : ''}{modalData.breakdown.item}</span>
-                                </div>
-                            )}
-                        </div>
+                        <StatBreakdown
+                            rows={rows}
+                            total={modalData.total}
+                        />
                     ) : (
-                        <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', color: '#ccc' }}>
+                        <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', color: '#ccc', background: '#222', padding: 10, borderRadius: 8 }}>
                             {modalData.breakdown}
                         </div>
                     )}
@@ -3245,63 +3284,69 @@ export default function PlayerApp({ db, setDb }) {
 
         } else if (modalMode === 'detail' && modalData) {
             console.log("Rendering Detail/Weapon Modal", modalMode, modalData);
+
+            // Build Rows for Skills/Saves/Perception
+            const rows = [];
+            if (modalData.breakdown && typeof modalData.breakdown === 'object') {
+                // Base 10
+                if (modalData.base === 10) {
+                    rows.push({ label: 'Base', val: 10 });
+                }
+                // Attribute
+                if (modalData.breakdown.attribute !== undefined) {
+                    const label = `Attribute${modalData.source?.attrName ? ` (${modalData.source.attrName})` : ''}`;
+                    rows.push({ label, val: modalData.breakdown.attribute });
+                }
+                // Proficiency
+                if (modalData.breakdown.proficiency !== undefined) {
+                    const label = `Proficiency${modalData.source?.profName ? ` (${modalData.source.profName})` : ''}`;
+                    rows.push({ label, val: modalData.breakdown.proficiency });
+                }
+                // Level
+                if (modalData.breakdown.level !== undefined) {
+                    const label = `Level${modalData.source?.levelVal ? ` (${modalData.source.levelVal})` : ''}`;
+                    rows.push({ label, val: modalData.breakdown.level });
+                }
+                // Item
+                if (modalData.breakdown.item !== undefined && modalData.breakdown.item !== 0) {
+                    rows.push({ label: 'Item Bonus', val: modalData.breakdown.item });
+                }
+                // Armor Penalty
+                if (modalData.breakdown.armor !== undefined && modalData.breakdown.armor !== 0) {
+                    rows.push({ label: 'Armor Penalty', val: modalData.breakdown.armor });
+                }
+                // Others
+                Object.entries(modalData.breakdown).forEach(([k, v]) => {
+                    if (['attribute', 'proficiency', 'level', 'item', 'armor'].includes(k)) return;
+                    if (v === 0) return;
+                    rows.push({ label: k.charAt(0).toUpperCase() + k.slice(1), val: v });
+                });
+            }
             content = (
                 <>
-                    <h2>{modalData.title}</h2>
-                    <div style={{ fontSize: '2em', textAlign: 'center', color: 'var(--text-gold)', margin: '10px 0' }}>
-                        {modalData.total >= 0 ? '+' : ''}{modalData.total}
+                    <h2 style={{ fontSize: '1.4em', marginBottom: 20, textAlign: 'center', color: 'var(--text-gold)', fontFamily: 'Cinzel, serif', borderBottom: '1px solid #5c4033', paddingBottom: 10 }}>{modalData.title}</h2>
+
+                    <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                        <div style={{ fontSize: '2.5em', color: 'var(--text-gold)', fontWeight: 'bold', lineHeight: 1 }}>
+                            {modalData.total >= 0 ? `+${modalData.total}` : modalData.total}
+                        </div>
+                        <div style={{ fontSize: '1em', color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
+                            Total Bonus
+                        </div>
                     </div>
 
-
-                    {/* Explicit check for object type and existence of breakdown */}
                     {modalData.breakdown && typeof modalData.breakdown === 'object' ? (
-                        <div style={{ background: '#222', padding: 15, borderRadius: 8, fontSize: '0.9em' }}>
+                        <StatBreakdown
+                            rows={rows}
+                            total={modalData.total}
+                        />
 
-                            {/* Base 10 if applicable */}
-                            {modalData.base === 10 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                                    <span>Base</span>
-                                    <span>10</span>
-                                </div>
-                            )}
-
-                            {/* Attribute */}
-                            {modalData.breakdown.attribute !== undefined && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                                    <span>Attribute {modalData.source?.attrName ? `(${modalData.source.attrName})` : ''}</span>
-                                    <span>{modalData.breakdown.attribute >= 0 ? '+' : ''}{modalData.breakdown.attribute}</span>
-                                </div>
-                            )}
-
-                            {/* Proficiency */}
-                            {modalData.breakdown.proficiency !== undefined && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                                    <span>Proficiency {modalData.source?.profName ? `(${modalData.source.profName})` : ''}</span>
-                                    <span>{modalData.breakdown.proficiency >= 0 ? '+' : ''}{modalData.breakdown.proficiency}</span>
-                                </div>
-                            )}
-
-                            {/* Level */}
-                            {modalData.breakdown.level !== undefined && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                                    <span>Level {modalData.source?.levelVal ? `(${modalData.source.levelVal})` : ''}</span>
-                                    <span>{modalData.breakdown.level >= 0 ? '+' : ''}{modalData.breakdown.level}</span>
-                                </div>
-                            )}
-
-                            {/* Item */}
-                            {modalData.breakdown.item !== undefined && modalData.breakdown.item !== 0 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, color: 'var(--text-gold)' }}>
-                                    <span>Item Bonus</span>
-                                    <span>{modalData.breakdown.item >= 0 ? '+' : ''}{modalData.breakdown.item}</span>
-                                </div>
-                            )}
-                        </div>
                     ) : (
-                        <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', color: '#ccc' }}>
-                            {modalData.breakdown}
+                        <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', color: '#ccc', background: '#222', padding: 15, borderRadius: 8, fontStyle: 'italic' }}>
+                            {modalData.breakdown || "No specific breakdown available."}
                         </div>
-                    )}
+                    )
+                    }
                 </>
             );
         } else if (modalMode === 'item' && modalData) {
@@ -3672,7 +3717,14 @@ export default function PlayerApp({ db, setDb }) {
                 )}
 
                 {activeTab === 'magic' && renderMagic()}
-                {activeTab === 'impulses' && renderImpulses()}
+                {activeTab === 'impulses' && (
+                    <ImpulsesView
+                        character={character}
+                        setModalData={setModalData}
+                        setModalMode={setModalMode}
+                        onLongPress={handleLongPress}
+                    />
+                )}
                 {activeTab === 'feats' && renderFeats()}
             </div>
 
