@@ -3773,7 +3773,10 @@ export default function PlayerApp({ db, setDb }) {
             {/* TABS */}
             <div className="tabs">
                 {['stats', 'actions', 'feats', ...(character.isCaster || character.magic?.list?.length > 0 ? ['magic'] : []), ...(character.isKineticist ? ['impulses'] : []), 'items'].map(tab => {
-                    const hasLoot = tab === 'items' && character?.inventory?.some(i => i.isLoot);
+                    const hasLoot = tab === 'items' && (
+                        character?.inventory?.some(i => i.isLoot) ||
+                        db?.lootBags?.some(b => !b.isLocked && b.items.some(i => !i.claimedBy))
+                    );
                     return (
                         <button
                             key={tab}

@@ -292,7 +292,9 @@ export function InventoryView({
         <div className="sub-tabs">
             {['Equipment', 'Consumables', 'Misc', /*hasLoot ? 'Loot' : null*/ 'Loot'].map(t => {
                 const isLoot = t === 'Loot';
-                const hasLoot = lootItems.length > 0;
+                const visibleBags = (db?.lootBags || []).filter(b => !b.isLocked);
+                const bagsWithLoot = visibleBags.filter(b => b.items.some(i => !i.claimedBy));
+                const hasLoot = lootItems.length > 0 || bagsWithLoot.length > 0;
                 if (isLoot && !hasLoot) return null; // Hide Loot tab if empty
                 return (
                     <button
@@ -339,11 +341,7 @@ export function InventoryView({
                             cursor: 'pointer'
                         }}
                         onClick={() => {
-                            // Claim Loot Logic
-                            // For now, we just remove 'isLoot' flag? Or move to inventory?
-                            // If item is in inventory but isLoot=true, it effectively is "Unclaimed Loot" in a shared sense?
-                            // Or does it mean "Loot I am carrying"?
-                            // Assuming "Claim" means convert to regular item.
+                            // Claim Loot Logic for items ALREADY in inventory but marked as loot
                             onUpdateCharacter(c => {
                                 const invItem = c.inventory[index];
                                 if (invItem) delete invItem.isLoot;
@@ -354,7 +352,76 @@ export function InventoryView({
                     </button>
                 </div>
             ))}
-            {itemSubTab === 'Loot' && lootItems.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: '#888' }}>No unclaimed loot.</div>}
+
+            {itemSubTab === 'Loot' && (
+                (() => {
+                    const visibleBags = (db?.lootBags || []).filter(b => !b.isLocked);
+                    const bagsWithLoot = visibleBags.filter(b => b.items.some(i => !i.claimedBy));
+
+                    if (bagsWithLoot.length === 0 && lootItems.length === 0) {
+                        return <div style={{ padding: 20, textAlign: 'center', color: '#888' }}>No unclaimed loot.</div>;
+                    }
+
+                    return bagsWithLoot.map(bag => {
+                        const unclaimedItems = bag.items.filter(i => !i.claimedBy);
+                        if (unclaimedItems.length === 0) return null;
+
+                        return (
+                            <div key={bag.id} style={{ background: '#222', border: '1px solid #c5a059', borderRadius: 8, padding: 10, marginBottom: 15, marginTop: 10 }}>
+                                <h3 style={{ marginTop: 0, color: '#ffecb3', borderBottom: '1px solid #444', paddingBottom: 5, fontSize: '1em' }}>💰 {bag.name}</h3>
+                                {unclaimedItems.map((item) => {
+                                    const fromIndex = item?.name ? getShopIndexItemByName(item.name) : null;
+                                    const merged = fromIndex ? { ...fromIndex, ...item } : item;
+                                    const { row1, row2 } = getShopItemRowMeta(merged);
+
+                                    return (
+                                        <div key={item.instanceId} className="item-row inventory-item-row" style={{ marginTop: 5 }} onClick={() => onInspectItem(merged)}>
+                                            {merged?.img && (
+                                                <img className="item-icon" src={`ressources/${merged.img}`} alt="" />
+                                            )}
+                                            <div className="item-row-main">
+                                                <div className="item-name">{merged?.name || 'Unknown Item'}</div>
+                                                {row1 && <div className="item-row-meta item-row-meta-1">{row1}</div>}
+                                                {row2 && <div className="item-row-meta item-row-meta-2">{row2}</div>}
+                                            </div>
+
+                                            <button
+                                                className="set-btn"
+                                                style={{ margin: '0 0 0 10px', padding: '6px 14px', fontSize: '0.9em', width: 'auto', flexShrink: 0, height: 'auto' }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    // Claim Item logic
+                                                    onUpdateCharacter(c => {
+                                                        const stackable = shouldStack(item);
+                                                        const existing = stackable ? c.inventory.find(i => i.name === item.name) : null;
+                                                        if (existing) {
+                                                            existing.qty = (existing.qty || 1) + 1;
+                                                        } else {
+                                                            // Add new item, ensure clean properties
+                                                            c.inventory.push({ ...item, qty: 1, instanceId: undefined, addedAt: undefined, claimedBy: undefined });
+                                                        }
+                                                    });
+                                                    onSetDb(prev => {
+                                                        const bags = deepClone(prev.lootBags || []);
+                                                        const b = bags.find(xb => xb.id === bag.id);
+                                                        if (b) {
+                                                            const it = b.items.find(x => x.instanceId === item.instanceId);
+                                                            if (it) it.claimedBy = character.name;
+                                                        }
+                                                        return { ...prev, lootBags: bags };
+                                                    });
+                                                }}
+                                            >
+                                                Claim
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        );
+                    });
+                })()
+            )}
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
                 <button className="btn-add-condition" style={{ flex: 1, margin: 0 }} onClick={onOpenShop}>
                     + Open Shop
