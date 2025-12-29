@@ -16,7 +16,8 @@ export function InventoryView({
     onFireWeapon,
     onLoadWeapon,
     onLongPress,
-    onOpenShop
+    onOpenShop,
+    onClaimLoot
 }) {
     const [itemSubTab, setItemSubTab] = useState('Equipment');
     const equipTapRef = useRef({ key: null, time: 0 });
@@ -390,26 +391,7 @@ export function InventoryView({
                                                 style={{ margin: '0 0 0 10px', padding: '6px 14px', fontSize: '0.9em', width: 'auto', flexShrink: 0, height: 'auto' }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    // Claim Item logic
-                                                    onUpdateCharacter(c => {
-                                                        const stackable = shouldStack(item);
-                                                        const existing = stackable ? c.inventory.find(i => i.name === item.name) : null;
-                                                        if (existing) {
-                                                            existing.qty = (existing.qty || 1) + 1;
-                                                        } else {
-                                                            // Add new item, ensure clean properties
-                                                            c.inventory.push({ ...item, qty: 1, instanceId: undefined, addedAt: undefined, claimedBy: undefined });
-                                                        }
-                                                    });
-                                                    onSetDb(prev => {
-                                                        const bags = deepClone(prev.lootBags || []);
-                                                        const b = bags.find(xb => xb.id === bag.id);
-                                                        if (b) {
-                                                            const it = b.items.find(x => x.instanceId === item.instanceId);
-                                                            if (it) it.claimedBy = character.name;
-                                                        }
-                                                        return { ...prev, lootBags: bags };
-                                                    });
+                                                    if (onClaimLoot) onClaimLoot(bag, item);
                                                 }}
                                             >
                                                 Claim

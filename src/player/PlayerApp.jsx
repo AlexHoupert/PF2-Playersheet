@@ -3841,11 +3841,51 @@ export default function PlayerApp({ db, setDb }) {
                                 setModalMode(mode);
                                 setModalData(data);
                             }}
-                            onToggleEquip={toggleInventoryEquipped}
                             onInspectItem={inspectInventoryItem}
                             onFireWeapon={fireWeapon}
                             onLoadWeapon={loadWeapon}
                             onLongPress={handleLongPress}
+                            onClaimLoot={(bag, item) => {
+                                setDb(prev => {
+                                    const next = { ...prev };
+                                    const campaignId = activeCampaign?.id;
+                                    if (!campaignId || !next.campaigns?.[campaignId]) return prev;
+
+                                    const nextChars = [...next.campaigns[campaignId].characters];
+                                    const charIndex = activeCharIndex;
+                                    const char = { ...nextChars[charIndex], inventory: [...nextChars[charIndex].inventory] };
+
+                                    // 1. Add to Inventory
+                                    const stackable = shouldStack(item);
+                                    const existing = stackable ? char.inventory.find(i => i.name === item.name) : null;
+                                    if (existing) {
+                                        existing.qty = (existing.qty || 1) + 1;
+                                    } else {
+                                        // Ensure clean properties for new owned item
+                                        const newItem = { ...item, qty: 1 };
+                                        delete newItem.instanceId; // New ID will be generated or undefined
+                                        delete newItem.addedAt;
+                                        delete newItem.claimedBy;
+                                        char.inventory.push(newItem);
+                                    }
+
+                                    nextChars[charIndex] = char;
+                                    next.campaigns[campaignId].characters = nextChars;
+
+                                    // 2. Mark in Loot Bag
+                                    if (next.lootBags) {
+                                        const bags = deepClone(next.lootBags);
+                                        const targetBag = bags.find(b => b.id === bag.id);
+                                        if (targetBag) {
+                                            const targetItem = targetBag.items.find(i => i.instanceId === item.instanceId);
+                                            if (targetItem) targetItem.claimedBy = char.name; // Use current char name for claim signature
+                                        }
+                                        next.lootBags = bags;
+                                    }
+
+                                    return next;
+                                });
+                            }}
                             onOpenShop={() => setActiveTab('shop')}
                         />
                     </div>
