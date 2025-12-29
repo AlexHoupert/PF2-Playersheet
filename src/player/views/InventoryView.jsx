@@ -59,7 +59,7 @@ export function InventoryView({
         const key = `${item?.name}-${index}`;
         const qty = item?.qty || 1;
         const fromIndex = item?.name ? getShopIndexItemByName(item.name) : null;
-        const merged = fromIndex ? { ...fromIndex, ...item } : item;
+        const merged = fromIndex ? { ...fromIndex, ...item, _index: index } : { ...item, _index: index };
         const { row1, row2 } = getShopItemRowMeta(merged);
 
         let clickHandler;
@@ -77,13 +77,13 @@ export function InventoryView({
 
                 if (isDoubleTap) {
                     equipTapRef.current = { key: null, time: 0 };
-                    onToggleEquip(item);
+                    onToggleEquip(merged);
                     return;
                 }
 
                 equipTapRef.current = { key: tapKey, time: now };
                 equipTapTimeoutRef.current = setTimeout(() => {
-                    onInspectItem(item);
+                    onInspectItem(merged);
                     equipTapTimeoutRef.current = null;
                 }, 260);
             };
@@ -126,7 +126,7 @@ export function InventoryView({
                 } else {
                     equipTapRef.current = { key: tapKey, time: now };
                     equipTapTimeoutRef.current = setTimeout(() => {
-                        onInspectItem(item);
+                        onInspectItem(merged);
                         equipTapTimeoutRef.current = null;
                     }, 260);
                 }

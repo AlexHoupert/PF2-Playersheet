@@ -6,16 +6,39 @@ import { getShopIndexItemByName } from '../catalog/shopIndex';
  * @returns {number} - The capacity (default 1).
  */
 export const getWeaponCapacity = (item) => {
-    const traits = (item?.traits?.value || []);
+    // 1. Ensure we have traits. If not on item, check shop index.
+    let traitsRaw = item.traits;
+    if (!traitsRaw) {
+        const fromIndex = item.name ? getShopIndexItemByName(item.name) : null;
+        if (fromIndex && fromIndex.traits) {
+            traitsRaw = fromIndex.traits;
+        }
+    }
+
+    // 2. Normalize traits to array of lowercase strings
+    let traits = [];
+    if (Array.isArray(traitsRaw?.value)) {
+        traits = traitsRaw.value.map(t => String(t).toLowerCase());
+    } else if (Array.isArray(traitsRaw)) {
+        traits = traitsRaw.map(t => String(t).toLowerCase());
+    } else if (typeof traitsRaw === 'string') {
+        traits = traitsRaw.split(',').map(t => t.trim().toLowerCase());
+    }
+
+    // 3. Check for specific capacity traits
     if (traits.includes('repeating')) return 5;
     if (traits.includes('double-barrel')) return 2;
-    if (traits.includes('triple-barrel')) return 3;
+    if (traits.includes('triple-barrel') || traits.includes('triple barrel')) return 3;
 
-    // Capacity-x check
-    const capTrait = traits.find(t => t.startsWith('capacity-'));
-    if (capTrait) {
-        const val = parseInt(capTrait.split('-')[1]);
-        return isNaN(val) ? 1 : val;
+    // 4. Regex for Capacity-X (handles "Capacity-3", "Capacity 3", etc.)
+    // Iterate to find the matching string
+    for (const t of traits) {
+        // Match "capacity" followed by non-digit separator (optional) then digit(s)
+        const match = t.match(/^capacity[\s-]?(\d+)$/);
+        if (match) {
+            const val = parseInt(match[1], 10);
+            return isNaN(val) ? 1 : val;
+        }
     }
 
     return 1;

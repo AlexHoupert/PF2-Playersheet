@@ -377,10 +377,15 @@ export default function PlayerApp({ db, setDb }) {
 
         let weaponIndex = weaponOrIndex;
         if (typeof weaponOrIndex === 'object') {
-            weaponIndex = char.inventory.findIndex(i =>
-                (weaponOrIndex.instanceId && i.instanceId === weaponOrIndex.instanceId) ||
-                (i.name === weaponOrIndex.name && !!i.equipped === !!weaponOrIndex.equipped)
-            );
+            // Fix: Use exact index if provided (from InventoryView injection), otherwise fallback to findIndex
+            if (typeof weaponOrIndex._index === 'number') {
+                weaponIndex = weaponOrIndex._index;
+            } else {
+                weaponIndex = char.inventory.findIndex(i =>
+                    (weaponOrIndex.instanceId && i.instanceId === weaponOrIndex.instanceId) ||
+                    (i.name === weaponOrIndex.name && !!i.equipped === !!weaponOrIndex.equipped)
+                );
+            }
         }
 
         const weapon = char.inventory[weaponIndex];
@@ -782,7 +787,11 @@ export default function PlayerApp({ db, setDb }) {
 
     const inspectInventoryItem = (item) => {
         const fromIndex = item?.name ? getShopIndexItemByName(item.name) : null;
-        const merged = fromIndex ? { ...fromIndex, ...item, qty: item.qty || 1 } : item;
+        // Ensure _index is preserved from the item object if present
+        const merged = fromIndex ? { ...fromIndex, ...item, qty: item.qty || 1 } : { ...item };
+        // If item has _index, ensure it's in the merged object (it should be since we spread item, but let's be safe)
+        if (item._index !== undefined) merged._index = item._index;
+
         setModalData(merged);
         setModalMode('item');
     };
@@ -795,6 +804,7 @@ export default function PlayerApp({ db, setDb }) {
 
         console.log("ToggleInventory Target:", {
             name: itemName,
+            index: targetItem._index, // Log index
             equipped: targetItem.equipped,
             prepared: targetItem.prepared,
             added: targetItem.addedAt
@@ -806,15 +816,18 @@ export default function PlayerApp({ db, setDb }) {
         const char = character;
         if (!char) return;
 
-        // Find specific item using equipped state AND other unique props to avoid ambiguity (e.g. split bombs, temp items)
-        const itemToToggle = typeof targetItem === 'object'
-            ? char.inventory.find(i =>
-                i.name === itemName &&
-                !!i.equipped === !!targetItem.equipped &&
-                !!i.prepared === !!targetItem.prepared &&
-                i.addedAt === targetItem.addedAt
-            )
-            : char.inventory.find(i => i.name === itemName);
+        // Find specific item using _index property if available (Most Robust)
+        // Fallback to equipped state AND unique props
+        const itemToToggle = (typeof targetItem === 'object' && targetItem._index !== undefined)
+            ? char.inventory[targetItem._index]
+            : (typeof targetItem === 'object'
+                ? char.inventory.find(i =>
+                    i.name === itemName &&
+                    !!i.equipped === !!targetItem.equipped &&
+                    !!i.prepared === !!targetItem.prepared &&
+                    i.addedAt === targetItem.addedAt
+                )
+                : char.inventory.find(i => i.name === itemName));
 
         if (itemToToggle) {
             const fromIndex = itemToToggle?.name ? getShopIndexItemByName(itemToToggle.name) : null;
@@ -836,16 +849,30 @@ export default function PlayerApp({ db, setDb }) {
         }
 
         updateCharacter(c => {
-            // Precise lookup: Match Name AND Equipped status if targetItem is an object
-            const idx = c.inventory.findIndex(i => {
-                if (i.name !== itemName) return false;
-                if (typeof targetItem === 'object') {
-                    return !!i.equipped === !!targetItem.equipped &&
-                        !!i.prepared === !!targetItem.prepared &&
-                        i.addedAt === targetItem.addedAt;
+            // Precise lookup: Match _index if available
+            let idx = -1;
+
+            if (typeof targetItem === 'object' && targetItem._index !== undefined) {
+                idx = targetItem._index;
+                // Validation: Ensure the item at this index actually matches the name
+                if (!c.inventory[idx] || c.inventory[idx].name !== itemName) {
+                    console.warn("Index mismatch in toggleInventoryEquipped, falling back to search");
+                    idx = -1;
                 }
-                return true;
-            });
+            }
+
+            if (idx === -1) {
+                idx = c.inventory.findIndex(i => {
+                    if (i.name !== itemName) return false;
+                    if (typeof targetItem === 'object') {
+                        return !!i.equipped === !!targetItem.equipped &&
+                            !!i.prepared === !!targetItem.prepared &&
+                            i.addedAt === targetItem.addedAt;
+                    }
+                    return true;
+                });
+            }
+
             if (idx === -1) return;
             const current = c.inventory[idx];
             if (!isEquipableInventoryItem(current)) return;
@@ -3269,6 +3296,8 @@ export default function PlayerApp({ db, setDb }) {
                     </div>
 
 
+
+
                     {modalData.breakdown && typeof modalData.breakdown === 'object' ? (
                         <StatBreakdown
                             rows={rows}
@@ -3421,13 +3450,25 @@ export default function PlayerApp({ db, setDb }) {
             const shopDetailError = isShopItem && expectedSourceFile && shopItemDetailError ? shopItemDetailError : null;
 
             // Fix: Prioritize matching the specific equipped/unequipped state of the viewed item
-            let inventoryMatch = isShopItem && modalData?.name
-                ? character.inventory.find(i => i.name === modalData.name && !!i.equipped === !!modalData.equipped)
-                : null;
+            // AND prioritize _index if available
+            let inventoryMatch = null;
 
-            // Fallback: If exact state match fails (e.g. status changed), find any instance
-            if (!inventoryMatch && isShopItem && modalData?.name) {
-                inventoryMatch = character.inventory.find(i => i.name === modalData.name);
+            if (isShopItem && modalData?.name) {
+                if (modalData._index !== undefined && character.inventory[modalData._index]) {
+                    const match = character.inventory[modalData._index];
+                    if (match.name === modalData.name) {
+                        inventoryMatch = match;
+                    }
+                }
+
+                if (!inventoryMatch) {
+                    inventoryMatch = character.inventory.find(i => i.name === modalData.name && !!i.equipped === !!modalData.equipped);
+                }
+
+                // Fallback
+                if (!inventoryMatch) {
+                    inventoryMatch = character.inventory.find(i => i.name === modalData.name);
+                }
             }
 
             const canToggleEquip = Boolean(inventoryMatch && isEquipableInventoryItem(inventoryMatch));
@@ -3491,6 +3532,62 @@ export default function PlayerApp({ db, setDb }) {
                             {isFeat && itemTraits.map(t => <span key={t} className="trait-badge">{t}</span>)}
                         </div>
                     )}
+
+                    {/* Ammo Slots Visualization (Moved here) */}
+                    {(() => {
+                        const isCrossbowOrFirearm = isShopItem && (
+                            ['crossbow', 'firearm'].includes((modalData.group || '').toLowerCase()) ||
+                            (modalData.traits?.value || []).includes('repeating') ||
+                            /bow|crossbow|firearm|pistol|musket|rifle|gun|pepperbox|rotary/i.test(modalData.name || '')
+                        );
+
+                        // Only show if it's an owned inventory item (we need state for loaded ammo)
+                        // inventoryMatch is already calculated above
+                        if (isCrossbowOrFirearm && inventoryMatch) {
+                            const capacity = getWeaponCapacity(inventoryMatch);
+                            if (capacity > 0) {
+                                return (
+                                    <div style={{ marginBottom: 15, padding: 10, background: '#1a1a1d', borderRadius: 8, border: '1px solid #444' }}>
+                                        <div style={{ fontSize: '0.9em', color: '#888', marginBottom: 8, textTransform: 'uppercase', textAlign: 'center', borderBottom: '1px solid #333', paddingBottom: 5 }}>
+                                            Ammunition ({capacity} Slot{capacity > 1 ? 's' : ''})
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                            {Array.from({ length: capacity }).map((_, idx) => {
+                                                const loadedAmmo = inventoryMatch.loaded && inventoryMatch.loaded[idx];
+                                                const isFilled = !!loadedAmmo;
+                                                const isSpecial = loadedAmmo?.isSpecial;
+
+                                                return (
+                                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#252528', padding: '5px 10px', borderRadius: 4 }}>
+                                                        <div
+                                                            style={{
+                                                                width: 20, height: 20,
+                                                                borderRadius: '50%',
+                                                                border: '2px solid #777',
+                                                                background: isFilled ? (isSpecial ? '#90caf9' : '#ffb74d') : 'rgba(0,0,0,0.3)',
+                                                                boxShadow: 'inset 0 0 5px rgba(0,0,0,0.5)',
+                                                                flexShrink: 0
+                                                            }}
+                                                        />
+                                                        {isFilled ? (
+                                                            <div style={{ fontSize: '0.9em', color: isSpecial ? '#90caf9' : '#ffb74d', wordBreak: 'break-word', lineHeight: 1.3 }}>
+                                                                {loadedAmmo.name}
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ fontSize: '0.9em', color: '#555', fontStyle: 'italic' }}>
+                                                                Empty Slot
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            }
+                        }
+                        return null;
+                    })()}
 
                     {meta.length > 0 && (
                         <div className="item-meta-row">
@@ -3672,8 +3769,7 @@ export default function PlayerApp({ db, setDb }) {
                 </div>
             </div>
 
-            {/* TABS */}
-            {/* TABS */}
+
             {/* TABS */}
             <div className="tabs">
                 {['stats', 'actions', 'feats', ...(character.isCaster || character.magic?.list?.length > 0 ? ['magic'] : []), ...(character.isKineticist ? ['impulses'] : []), 'items'].map(tab => {
