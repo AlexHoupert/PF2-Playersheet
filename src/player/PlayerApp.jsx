@@ -27,9 +27,7 @@ import { MagicView } from './views/MagicView';
 import { FeatsView } from './views/FeatsView';
 import { ImpulsesView } from './views/ImpulsesView';
 import { isEquipableInventoryItem, getWeaponCapacity } from '../shared/utils/combatUtils';
-import { ConditionsModal } from './modals/ConditionsModal';
-import { FormulaBookModal } from './modals/FormulaBookModal';
-import { ItemDetailModal } from './modals/ItemDetailModal';
+import { ModalManager } from './ModalManager';
 
 
 
@@ -41,23 +39,7 @@ const ARMOR_RANKS = [
     { value: 8, label: 'Legendary (+8)' }
 ];
 
-const LanguageEditor = ({ initialLanguages, onSave }) => {
-    const [langs, setLangs] = useState(initialLanguages.join(', '));
-    return (
-        <>
-            <h2>Edit Languages</h2>
-            <textarea
-                className="modal-input"
-                style={{ height: 150 }}
-                value={langs}
-                onChange={e => setLangs(e.target.value)}
-            />
-            <button className="set-btn" onClick={() => {
-                onSave(langs.split(',').map(s => s.trim()).filter(Boolean));
-            }}>Save</button>
-        </>
-    );
-};
+
 
 export default function PlayerApp({ db, setDb }) {
     const { activeCampaign, myCharacter, updateActiveCampaign, isGM } = useCampaign();
@@ -69,7 +51,7 @@ export default function PlayerApp({ db, setDb }) {
     const [activeTab, setActiveTab] = useState('stats');
     // const [actionSubTab, setActionSubTab] = useState('Combat'); // Removed
     // const [itemSubTab, setItemSubTab] = useState('Equipment'); // Removed
-    const [newAction, setNewAction] = useState({ name: '', type: 'Combat', subtype: 'Basic', skill: '', feat: '', description: '' });
+
     const [dailyPrepQueue, setDailyPrepQueue] = useState([]);
     const [modalMode, setModalMode] = useState(null);
     const [modalData, setModalData] = useState(null);
@@ -970,26 +952,25 @@ export default function PlayerApp({ db, setDb }) {
         });
     };
 
-    const saveNewAction = () => {
-        if (!newAction.name) return;
+    const saveNewAction = (actionData) => {
+        if (!actionData.name) return;
 
         // Auto-wrap name in gold as requested
-        const finalName = `[gold]${newAction.name}[/gold]`;
+        const finalName = `[gold]${actionData.name}[/gold]`;
         const id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
 
         const actionObj = {
             id,
             name: finalName,
-            type: newAction.type,
-            subtype: newAction.subtype,
-            skill: newAction.skill,
-            feat: newAction.feat,
-            description: newAction.description
+            type: actionData.type,
+            subtype: actionData.subtype,
+            skill: actionData.skill,
+            feat: actionData.feat,
+            description: actionData.description
         };
 
         setDb(prev => ({ ...prev, actions: { ...prev.actions, [finalName]: actionObj } }));
         setModalMode(null);
-        setNewAction({ name: '', type: 'Combat', subtype: 'Basic', skill: '', feat: '', description: '' });
     };
 
     // --- RENDER HELPERS ---
@@ -1952,1358 +1933,12 @@ export default function PlayerApp({ db, setDb }) {
         />
     );
 
-    // --- MODAL RENDERER ---
-    const renderEditModal = () => {
-        // Helper for HP/Gold Modals
-        const [editVal, setEditVal] = useState("");
-
-        // Condition Modal State
-        // const [condTab, setCondTab] = useState('active'); // Hoisted to PlayerApp scope
-
-        // New Collapsible State
-        const [showProficiencies, setShowProficiencies] = useState(false);
-        const [showTempHp, setShowTempHp] = useState(false);
-
-        if (!modalMode) return null;
-        const close = () => {
-            setModalMode(null);
-            setModalData(null);
-            setEditVal("");
-            setCondTab('active');
-        };
-        let content = null;
-
-        if (modalMode === 'hp') {
-            content = (
-                <>
-                    <h2>Manage Hit Points</h2>
-                    <p style={{ textAlign: 'center', color: '#888' }}>
-                        Current HP: <span style={{ color: 'var(--text-gold)', fontWeight: 'bold' }}>{character.stats.hp.current}</span>
-                        &nbsp; | &nbsp;
-                        <span
-                            onClick={() => setShowTempHp(!showTempHp)}
-                            style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 4, color: '#888' }}
-                        >
-                            Temp: <span style={{ color: 'var(--accent-blue)', fontWeight: 'bold' }}>{character.stats.hp.temp}</span>
-                        </span>
-                    </p>
-
-                    <div className="modal-form-group" style={{ textAlign: 'center' }}>
-                        <label>Hit Points</label>
-                        <div className="qty-control-box">
-                            <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.hp.current = Math.max(0, c.stats.hp.current - (parseInt(editVal) || 0)))}>-</button>
-                            <input type="number" className="modal-input" style={{ width: 100, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="0" />
-                            <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.hp.current = Math.max(0, c.stats.hp.current + (parseInt(editVal) || 0)))}>+</button>
-                        </div>
-                        <div style={{ marginTop: 10 }}>
-                            <button className="set-btn" onClick={() => { updateCharacter(c => c.stats.hp.current = parseInt(editVal) || 0); setEditVal(""); }}>Set HP</button>
-                        </div>
-                    </div>
-
-                    {showTempHp && (
-                        <div className="modal-form-group" style={{ textAlign: 'center', marginTop: 20, borderTop: '1px solid #444', paddingTop: 20 }}>
-                            <label style={{ color: 'var(--accent-blue)' }}>Temp HP</label>
-                            <div className="qty-control-box">
-                                <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.hp.temp = Math.max(0, c.stats.hp.temp - (parseInt(editVal) || 0)))}>-</button>
-                                <input type="number" className="modal-input" style={{ width: 100, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="0" />
-                                <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.hp.temp = c.stats.hp.temp + (parseInt(editVal) || 0))}>+</button>
-                            </div>
-                            <button className="set-btn" onClick={() => { updateCharacter(c => c.stats.hp.temp = parseInt(editVal) || 0); setEditVal(""); }}>Set Temp to Value</button>
-                        </div>
-                    )}
-                </>
-            );
-        } else if (modalMode === 'addAction') {
-            content = (
-                <>
-                    <h2>Create New Action</h2>
-                    <div className="modal-form-group">
-                        <label>Name</label>
-                        <input className="modal-input" value={newAction.name} onChange={e => setNewAction({ ...newAction, name: e.target.value })} placeholder="Action Name" />
-                    </div>
-                    <div className="modal-form-group">
-                        <label>Type (comma separated)</label>
-                        <input className="modal-input" value={newAction.type} onChange={e => setNewAction({ ...newAction, type: e.target.value })} placeholder="Combat, Movement" />
-                    </div>
-                    <div className="modal-form-group">
-                        <label>Subtype</label>
-                        <input className="modal-input" value={newAction.subtype} onChange={e => setNewAction({ ...newAction, subtype: e.target.value })} placeholder="Basic, Skill, Class..." />
-                    </div>
-                    <div className="modal-form-group">
-                        <label>Skill (optional)</label>
-                        <input className="modal-input" value={newAction.skill} onChange={e => setNewAction({ ...newAction, skill: e.target.value })} placeholder="Athletics" />
-                    </div>
-                    <div className="modal-form-group">
-                        <label>Feat (optional)</label>
-                        <input className="modal-input" value={newAction.feat} onChange={e => setNewAction({ ...newAction, feat: e.target.value })} placeholder="Feat Name" />
-                    </div>
-                    <div className="modal-form-group">
-                        <label>Description</label>
-                        <textarea className="modal-input" style={{ height: 100, fontFamily: 'inherit', resize: 'vertical' }} value={newAction.description} onChange={e => setNewAction({ ...newAction, description: e.target.value })} placeholder="Action description..." />
-                    </div>
-                    <button className="set-btn" onClick={saveNewAction}>Save Action</button>
-                </>
-            );
-        } else if (modalMode === 'context') {
-            const type = modalData?.type;
-            const item = modalData?.item;
-            const title = item?.name || item?.title || (type ? type.replace(/_/g, ' ').toUpperCase() : 'OPTIONS'); // From inline block logic
-
-            content = (
-                <>
-                    <h2 style={{ margin: '0 0 10px 0', color: 'var(--text-gold)', fontFamily: 'Cinzel, serif' }}>{title}</h2>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {/* Spell/Feat Actions */}
-                        {type === 'spell' && (
-                            <button className="set-btn" onClick={() => toggleBloodmagic(item)}>
-                                {item.Bloodmagic ? 'Remove Bloodmagic' : 'Add Bloodmagic'}
-                            </button>
-                        )}
-                        {(type === 'feat' || type === 'spell' || type === 'impulse') && (
-                            <button className="set-btn" style={{ background: '#d32f2f', color: '#fff' }} onClick={() => removeFromCharacter(item, type)}>
-                                Remove {type === 'feat' ? 'Feat' : type === 'spell' ? 'Spell' : 'Impulse'}
-                            </button>
-                        )}
-
-                        {/* Stat Context Options */}
-                        {type === 'attribute' && (
-                            <button className="set-btn" onClick={() => setModalMode('edit_attribute')}>Change Attribute</button>
-                        )}
-                        {type === 'skill' && (
-                            <button className="set-btn" onClick={() => setModalMode('edit_proficiency')}>Change Proficiency</button>
-                        )}
-                        {type === 'speed' && (
-                            <button className="set-btn" onClick={() => setModalMode('edit_speed')}>Change Speed</button>
-                        )}
-                        {type === 'class_dc' && (
-                            <button className="set-btn" onClick={() => setModalMode('edit_proficiency')}>Change Class DC</button>
-                        )}
-                        {type === 'language' && (
-                            <button className="set-btn" onClick={() => setModalMode('edit_languages')}>Edit Languages</button>
-                        )}
-                        {type === 'save' && (
-                            <button className="set-btn" onClick={() => setModalMode('edit_proficiency')}>Change Proficiency</button>
-                        )}
-                        {(type === 'impulse_attack' || type === 'class_dc') && (
-                            <button className="set-btn" onClick={() => {
-                                setModalData({ type: 'impulse' });
-                                setModalMode('edit_proficiency');
-                            }}>Change Impulse Proficiency</button>
-                        )}
-
-                        {/* AC & Defense */}
-                        {type === 'ac_button' && (
-                            <button className="set-btn" onClick={() => setModalMode('edit_armor_prof')}>Change Armor Proficiency</button>
-                        )}
-                        {type === 'perception' && (
-                            <button className="set-btn" onClick={() => setModalMode('edit_perception')}>Edit Perception</button>
-                        )}
-
-                        {/* HP / Level */}
-                        {(type === 'level' || type === 'hp' || type === 'max_hp') && (
-                            <button className="set-btn" onClick={() => setModalMode(type === 'hp' ? 'hp' : 'edit_max_hp')}>Change Max HP</button>
-                        )}
-                        {type === 'level' && (
-                            <>
-                                <button className="set-btn" onClick={() => setModalMode('edit_level')}>Change Character Level</button>
-                                <button className="set-btn" style={{ marginTop: 10, background: '#222', border: '1px solid #c5a059', color: '#c5a059' }} onClick={() => setModalMode('quicksheet')}>Open Quick Sheet</button>
-                            </>
-                        )}
-
-                        {/* Magic */}
-                        {type === 'spell_proficiency' && (
-                            <button className="set-btn" onClick={() => setModalMode('edit_spell_proficiency')}>Edit Spell Proficiency</button>
-                        )}
-                        {type === 'spell_slots' && (
-                            <button className="set-btn" onClick={() => setModalMode('edit_spell_slots')}>Edit Spell Slots</button>
-                        )}
-                    </div>
-                </>
-            );
-        } else if (modalMode === 'gold') {
-            content = (
-                <>
-                    <h2>Manage Gold</h2>
-                    <p style={{ textAlign: 'center', color: '#888' }}>Current: <span style={{ color: 'var(--text-gold)', fontWeight: 'bold' }}>{character.gold}</span></p>
-                    <div className="qty-control-box">
-                        <button className="qty-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }} onClick={() => updateCharacter(c => c.gold = parseFloat((c.gold - (parseFloat(editVal) || 0)).toFixed(2)))}>-</button>
-                        <input type="number" className="modal-input" style={{ width: 100, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="0" />
-                        <button className="qty-btn" style={{ borderColor: 'var(--accent-green)', color: 'var(--accent-green)' }} onClick={() => updateCharacter(c => c.gold = parseFloat((c.gold + (parseFloat(editVal) || 0)).toFixed(2)))}>+</button>
-                    </div>
-                    <button className="set-btn" onClick={() => { updateCharacter(c => c.gold = parseFloat(editVal) || 0); setEditVal(""); }}>Set to Value</button>
-                </>
-            );
-        } else if (modalMode === 'shield') {
-            // New Shield Status Modal
-            const inventory = Array.isArray(character.inventory) ? character.inventory : [];
-            // Find equipped shield directly again to be safe
-            const shields = inventory.filter(i => {
-                const fromIndex = i?.name ? getShopIndexItemByName(i.name) : null;
-                const type = String(i?.type || fromIndex?.type || '').toLowerCase();
-                return type === 'shield';
-            });
-            const equippedShield = shields.find(i => Boolean(i?.equipped));
-
-            if (!equippedShield) {
-                content = <div>No shield equipped.</div>;
-            } else {
-                const shieldHp = character.stats.ac.shield_hp || 0;
-                const fromIndex = equippedShield?.name ? getShopIndexItemByName(equippedShield.name) : null;
-                const merged = fromIndex ? { ...fromIndex, ...equippedShield } : equippedShield;
-                const shieldMax = (merged.hpMax) || (merged.system?.hp?.max) || 20;
-                const hardness = (merged.hardness) || (merged.system?.hardness) || 0;
-
-                content = (
-                    <>
-                        <h2>Shield Status</h2>
-                        <div style={{ marginBottom: 20, textAlign: 'center' }}>
-                            <div style={{ fontSize: '1.2em', fontWeight: 'bold', color: 'var(--text-gold)' }}>{equippedShield.name}</div>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 10 }}>
-                                <div style={{ background: '#333', padding: '5px 10px', borderRadius: 5 }}>
-                                    <div style={{ fontSize: '0.8em', color: '#aaa' }}>Hardness</div>
-                                    <div style={{ fontSize: '1.2em' }}>{hardness}</div>
-                                </div>
-                                <div style={{ background: '#333', padding: '5px 10px', borderRadius: 5 }}>
-                                    <div style={{ fontSize: '0.8em', color: '#aaa' }}>Max HP</div>
-                                    <div style={{ fontSize: '1.2em' }}>{shieldMax}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="modal-form-group" style={{ textAlign: 'center' }}>
-                            <label>Current Shield HP: <span style={{ color: shieldHp < shieldMax / 2 ? '#ff5252' : '#fff' }}>{shieldHp}</span></label>
-
-                            <div className="qty-control-box">
-                                <button className="qty-btn" onClick={() => updateCharacter(c => {
-                                    const oldHp = parseInt(c.stats.ac.shield_hp || 0);
-                                    const max = parseInt(shieldMax || 20);
-                                    const newHp = Math.max(0, oldHp - (parseInt(editVal) || 0));
-                                    c.stats.ac.shield_hp = newHp;
-                                    if (newHp < max / 2) {
-                                        c.stats.ac.shield_raised = false; // Auto-lower if broken
-                                    }
-                                })}>-</button>
-                                <input type="number" className="modal-input" style={{ width: 80, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="Amount" />
-                                <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.ac.shield_hp = Math.min(shieldMax, (c.stats.ac.shield_hp || 0) + (parseInt(editVal) || 0)))}>+</button>
-                            </div>
-
-                            <div style={{ marginTop: 15, display: 'flex', justifyContent: 'center' }}>
-                                <button
-                                    className="set-btn"
-                                    style={{ width: 'auto', padding: '5px 15px', fontSize: '0.9em' }}
-                                    onClick={() => {
-                                        updateCharacter(c => c.stats.ac.shield_hp = shieldMax);
-                                        setEditVal("");
-                                    }}
-                                >Full Repair</button>
-                                <button
-                                    className="set-btn"
-                                    style={{ width: 'auto', padding: '5px 15px', fontSize: '0.9em', marginLeft: 10, background: '#444' }}
-                                    onClick={() => {
-                                        updateCharacter(c => {
-                                            const max = parseInt(shieldMax || 20);
-                                            const newHp = parseInt(editVal) || 0;
-                                            c.stats.ac.shield_hp = newHp;
-                                            if (newHp < max / 2) {
-                                                c.stats.ac.shield_raised = false;
-                                            }
-                                        });
-                                        setEditVal("");
-                                    }}
-                                >Set to Value</button>
-                            </div>
-                        </div>
-                    </>
-                );
-            }
-
-        } else if (modalMode === 'ac') {
-            const acData = getArmorClassData(character);
-            console.log("DEBUG PlayerApp AC Modal Data:", acData);
-            const inventory = Array.isArray(character?.inventory) ? character.inventory : [];
-            const armorItems = inventory.filter(invItem => {
-                const fromIndex = invItem?.name ? getShopIndexItemByName(invItem.name) : null;
-                const type = String(invItem?.type || fromIndex?.type || '').toLowerCase();
-                return type === 'armor';
-            });
-            const equippedArmor = armorItems.find(i => Boolean(i?.equipped));
-
-            const shieldItems = inventory.filter(invItem => {
-                const fromIndex = invItem?.name ? getShopIndexItemByName(invItem.name) : null;
-                const type = String(invItem?.type || fromIndex?.type || '').toLowerCase();
-                return type === 'shield';
-            });
-            const equippedShield = shieldItems.find(i => Boolean(i?.equipped));
-
-            const ARMOR_PROF_KEYS = ['Unarmored', 'Light', 'Medium', 'Heavy'];
-            const ARMOR_RANKS = [
-                { value: 0, label: 'Untrained (+0)' },
-                { value: 2, label: 'Trained (+2)' },
-                { value: 4, label: 'Expert (+4)' },
-                { value: 6, label: 'Master (+6)' },
-                { value: 8, label: 'Legendary (+8)' }
-            ];
-
-            const toggleInventoryEquipped = (item) => {
-                updateCharacter(c => {
-                    const inventory = c.inventory || [];
-                    const match = inventory.find(i => i.name === item.name && i.type === item.type && i.addedAt === item.addedAt) || inventory.find(i => i.name === item.name);
-                    if (match) {
-                        match.equipped = !match.equipped;
-                    }
-                });
-            };
-
-            const toggleArmorEquipped = (e) => {
-                if (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-                console.log("Toggling Armor...", { activeCharIndex, charName: character?.name });
-                updateCharacter(c => {
-                    try {
-                        console.log("Inside updater. Inventory len:", c.inventory?.length);
-                        if (!Array.isArray(c.inventory)) c.inventory = [];
-                        if (!c.stats) c.stats = {};
-                        if (!c.stats.ac) c.stats.ac = {};
-
-                        const isArmor = (invItem) => {
-                            const fromIndex = invItem?.name ? getShopIndexItemByName(invItem.name) : null;
-                            const type = String(invItem?.type || fromIndex?.type || '').toLowerCase();
-                            const category = String(invItem?.category || fromIndex?.category || '').toLowerCase();
-                            return type === 'armor' || category === 'armor';
-                        };
-
-                        const armorIndices = [];
-                        c.inventory.forEach((item, idx) => {
-                            if (isArmor(item)) armorIndices.push(idx);
-                        });
-
-                        // Check if any armor is currently equipped
-                        const currentlyEquippedIndex = armorIndices.find(idx => !!c.inventory[idx].equipped);
-
-                        if (currentlyEquippedIndex !== undefined) {
-                            // Unequip it
-                            c.stats.ac.last_armor = c.inventory[currentlyEquippedIndex].name;
-                            c.inventory[currentlyEquippedIndex].equipped = false;
-                            c.stats.ac.armor_equipped = false;
-                            return;
-                        }
-
-                        // Nothing equipped, so equip something
-                        let targetIndex = -1;
-                        const last = c.stats.ac.last_armor;
-
-                        if (last) {
-                            targetIndex = armorIndices.find(idx => c.inventory[idx].name === last);
-                        }
-
-                        // If not found, use first available armor
-                        if ((targetIndex === undefined || targetIndex === -1) && armorIndices.length > 0) {
-                            targetIndex = armorIndices[0];
-                        }
-
-                        if (targetIndex !== undefined && targetIndex !== -1) {
-                            // Unequip others first to be safe
-                            armorIndices.forEach(idx => c.inventory[idx].equipped = false);
-
-                            c.inventory[targetIndex].equipped = true;
-                            c.stats.ac.last_armor = c.inventory[targetIndex].name;
-                            c.stats.ac.armor_equipped = true;
-                        } else {
-                            c.stats.ac.armor_equipped = false;
-                        }
-                    } catch (e) {
-                        console.error("Error in toggleArmorEquipped updater:", e);
-                    }
-                });
-            };
-
-
-
-            const toggleShieldEquipped = (e) => {
-                if (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-                console.log("Toggling Shield...");
-                updateCharacter(c => {
-                    if (!Array.isArray(c.inventory)) c.inventory = [];
-
-                    const isShield = (invItem) => {
-                        const fromIndex = invItem?.name ? getShopIndexItemByName(invItem.name) : null;
-                        const type = String(invItem?.type || fromIndex?.type || '').toLowerCase();
-                        return type === 'shield';
-                    };
-
-                    const shieldIndices = [];
-                    c.inventory.forEach((item, idx) => {
-                        if (isShield(item)) shieldIndices.push(idx);
-                    });
-
-                    console.log("Found Shield Indices:", shieldIndices);
-
-                    // Check if any shield is currently equipped
-                    const currentlyEquippedIndex = shieldIndices.find(idx => !!c.inventory[idx].equipped);
-
-                    if (currentlyEquippedIndex !== undefined) {
-                        console.log("Unequipping shield index:", currentlyEquippedIndex);
-                        c.inventory[currentlyEquippedIndex].equipped = false;
-                        return;
-                    }
-
-                    // Nothing equipped, equip first available
-                    if (shieldIndices.length > 0) {
-                        const targetIndex = shieldIndices[0];
-                        console.log("Equipping shield index:", targetIndex);
-                        c.inventory[targetIndex].equipped = true;
-                    }
-                });
-            };
-
-            content = (
-                <>
-                    <h2>Armor & Shield</h2>
-                    <div className="modal-toggle-row" onClick={toggleArmorEquipped}>
-                        <span>Armor Equipped</span>
-                        <label className="switch">
-                            <input type="checkbox" checked={Boolean(equippedArmor)} readOnly />
-                            <span className="slider"></span>
-                        </label>
-                    </div>
-                    {armorItems.length > 0 && (
-                        <div style={{ marginTop: -2, marginBottom: 10, color: '#888', fontSize: '0.85em' }}>
-                            {equippedArmor ? `Equipped: ${equippedArmor.name}` : 'No armor equipped.'}
-                        </div>
-                    )}
-                    {armorItems.length === 0 && (
-                        <div style={{ marginTop: -2, marginBottom: 10, color: '#666', fontStyle: 'italic', fontSize: '0.85em' }}>
-                            No armor found in inventory.
-                        </div>
-                    )}
-                    <div className="modal-toggle-row" onClick={toggleShieldEquipped}>
-                        <span>Shield Equipped</span>
-                        <label className="switch">
-                            <input type="checkbox" checked={Boolean(inventory.some(i => {
-                                const fromIndex = i?.name ? getShopIndexItemByName(i.name) : null;
-                                const type = String(i?.type || fromIndex?.type || '').toLowerCase();
-                                return type === 'shield' && i.equipped;
-                            }))} readOnly />
-                            <span className="slider"></span>
-                        </label>
-                    </div>
-                    {/* Shield HP is now managed in the dedicated shield modal */}
-
-                    <div style={{
-                        marginTop: 15,
-                        paddingTop: 12,
-                        borderTop: '1px solid #444',
-                        fontSize: '0.85em',
-                        color: '#aaa',
-                        lineHeight: 1.5
-                    }}>
-                        <div style={{ textTransform: 'uppercase', letterSpacing: 0.6, fontSize: '0.75em', color: '#888', marginBottom: 6 }}>
-                            AC Breakdown
-                        </div>
-                        <div>
-                            <strong>Total:</strong> {acData.totalAC}
-                            {acData.acPenalty < 0 ? <span style={{ color: 'var(--accent-red)' }}> ({acData.acPenalty})</span> : null}
-                            <span style={{ color: '#888' }}> — Base {acData.baseAC}</span>
-                        </div>
-                        <div style={{ marginTop: 6 }}>
-                            <strong>Armor:</strong> {acData.armorName ? `${acData.armorName} (${acData.armorCategory || 'untyped'})` : 'None (Unarmored)'}
-                            {acData.armorItemBonus ? <span style={{ color: '#888' }}> — Item +{acData.armorItemBonus} AC</span> : null}
-                        </div>
-                        {acData.shieldName && (
-                            <div style={{ marginTop: 6 }}>
-                                <strong>Shield:</strong> {acData.shieldName} {acData.shieldRaised ? '(Raised)' : '(Lowered)'}
-                                <span style={{ color: '#888' }}> — Item +{acData.shieldItemBonus} AC {acData.shieldRaised ? '' : '(Inactive)'}</span>
-                            </div>
-                        )}
-                        <div>
-                            <strong>Dex:</strong> {acData.dexMod >= 0 ? `+${acData.dexMod}` : acData.dexMod}
-                            {typeof acData.dexCap === 'number'
-                                ? <span style={{ color: '#888' }}> (cap {acData.dexCap}, used {acData.dexUsed >= 0 ? `+${acData.dexUsed}` : acData.dexUsed})</span>
-                                : <span style={{ color: '#888' }}> (used {acData.dexUsed >= 0 ? `+${acData.dexUsed}` : acData.dexUsed})</span>}
-                        </div>
-                        <div>
-                            <strong>Proficiency:</strong> {acData.profKey} {acData.profRank}
-                            {acData.profRank > 0
-                                ? <span style={{ color: '#888' }}> + lvl {acData.level} = {acData.profBonus}</span>
-                                : <span style={{ color: '#888' }}> (untrained, no level)</span>}
-                        </div>
-                        <div>
-                            <strong>Formula:</strong> 10 + {acData.dexUsed} + {acData.profBonus} + {acData.armorItemBonus} {acData.activeShieldBonus ? `+ ${acData.activeShieldBonus} (Shield)` : ''} = {acData.baseAC}
-                        </div>
-                        {acData.acPenalty !== 0 && (
-                            <div>
-                                <strong>Penalties:</strong> status {acData.statusPenalty}, circumstance {acData.circPenalty}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Armor Proficiencies (Removed and moved to Context Menu) */}
-
-
-
-                    <div style={{ marginTop: 15, borderTop: '1px solid #444', paddingTop: 10 }}>
-                        <div style={{ fontSize: '0.9em', color: '#aaa', marginBottom: 5, textAlign: 'center' }}>Trained Proficiencies</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-                            {['Unarmored', 'Light', 'Medium', 'Heavy'].map(key => {
-                                const val = character?.stats?.proficiencies?.[key.toLowerCase()] || 0;
-                                if (val < 2) return null;
-                                const rankLabel = ARMOR_RANKS.find(r => r.value === val)?.label.split(' ')[0] || 'Trained'; // Get 'Trained', 'Expert' etc
-                                return (
-                                    <div key={key} style={{ background: '#333', padding: '2px 8px', borderRadius: 4, fontSize: '0.85em' }}>
-                                        <span style={{ color: '#ccc' }}>{key}</span> <span style={{ color: 'var(--text-gold)' }}>{rankLabel}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </>
-            );
-        } else if (modalMode === 'condition') {
-            const allConditions = Object.keys(conditionsCatalog).sort();
-            const activeConditions = character.conditions.filter(c => c.level > 0).map(c => c.name);
-
-            const adjustCondition = (condName, delta) => {
-                const valued = isConditionValued(condName);
-                updateCharacter(c => {
-                    const idx = c.conditions.findIndex(x => x.name === condName);
-                    if (!valued) {
-                        if (delta > 0) {
-                            if (idx > -1) c.conditions[idx].level = 1;
-                            else c.conditions.push({ name: condName, level: 1 });
-                        } else if (idx > -1) {
-                            c.conditions.splice(idx, 1);
-                        }
-                        return;
-                    }
-
-                    if (delta > 0) {
-                        if (idx > -1) c.conditions[idx].level = (c.conditions[idx].level || 0) + 1;
-                        else c.conditions.push({ name: condName, level: 1 });
-                    } else if (idx > -1) {
-                        const nextLevel = (c.conditions[idx].level || 0) - 1;
-                        if (nextLevel <= 0) c.conditions.splice(idx, 1);
-                        else c.conditions[idx].level = nextLevel;
-                    }
-                });
-            };
-
-            let listToRender = [];
-            if (condTab === 'active') {
-                listToRender = activeConditions;
-            } else {
-                // Filter all conditions by category
-                let catList = [];
-                if (condTab === 'negative') catList = NEG_CONDS;
-                else if (condTab === 'positive') catList = POS_CONDS;
-                else if (condTab === 'visibility') catList = VIS_CONDS;
-
-                // Match case-insensitive
-                catList = catList.map(s => s.toLowerCase());
-                listToRender = allConditions.filter(c => catList.includes(c.toLowerCase()));
-            }
-
-            content = (
-                <>
-                    <h2>Conditions</h2>
-                    <div className="modal-tabs">
-                        {activeConditions.length > 0 && (
-                            <button className={`tab-btn ${condTab === 'active' ? 'active' : ''}`} onClick={() => setCondTab('active')}>Active</button>
-                        )}
-                        <button className={`tab-btn ${condTab === 'negative' ? 'active' : ''}`} onClick={() => setCondTab('negative')}>Negative</button>
-                        <button className={`tab-btn ${condTab === 'positive' ? 'active' : ''}`} onClick={() => setCondTab('positive')}>Positive</button>
-                        <button className={`tab-btn ${condTab === 'visibility' ? 'active' : ''}`} onClick={() => setCondTab('visibility')}>Visibility</button>
-                    </div>
-                    <div style={{ maxHeight: '50vh', overflowY: 'auto' }}>
-                        {listToRender.length === 0 && <div style={{ padding: 10, color: '#666' }}>No conditions found.</div>}
-                        {listToRender.map(condName => {
-                            const active = character.conditions.find(c => c.name === condName);
-                            const level = active ? active.level : 0;
-                            const iconSrc = getConditionImgSrc(condName);
-                            return (
-                                <div key={condName} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', borderBottom: '1px solid #333' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => { setModalData(condName); setModalMode('conditionInfo'); }}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 8,
-                                            background: 'transparent',
-                                            border: 'none',
-                                            color: 'inherit',
-                                            padding: 0,
-                                            cursor: 'pointer',
-                                            font: 'inherit',
-                                            textAlign: 'left'
-                                        }}
-                                        title="View description"
-                                    >
-                                        {iconSrc ? (
-                                            <img src={iconSrc} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
-                                        ) : (
-                                            <span style={{ width: 20, display: 'inline-flex', justifyContent: 'center' }}>{getConditionIcon(condName) || "⚪"}</span>
-                                        )}
-                                        <span>{condName}</span>
-                                    </button>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                        <button className="qty-btn" style={{ width: 30, height: 30, fontSize: '1em' }} onClick={() => adjustCondition(condName, -1)}>-</button>
-                                        <span style={{ width: 20, textAlign: 'center', fontWeight: 'bold' }}>{level}</span>
-                                        <button className="qty-btn" style={{ width: 30, height: 30, fontSize: '1em' }} onClick={() => adjustCondition(condName, 1)}>+</button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </>
-            );
-        } else if (modalMode === 'edit_attribute') {
-            const key = modalData.item.key;
-            const val = character.stats.attributes[key];
-            const label = modalData.item.label;
-            content = (
-                <>
-                    <h2>Edit {label}</h2>
-                    <div className="qty-control-box">
-                        <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.attributes[key] = (c.stats.attributes[key] || 0) - 1)}>-</button>
-                        <span style={{ fontSize: '2em', width: 60, textAlign: 'center' }}>{val >= 0 ? `+${val}` : val}</span>
-                        <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.attributes[key] = (c.stats.attributes[key] || 0) + 1)}>+</button>
-                    </div>
-                </>
-            );
-        } else if (modalMode === 'edit_proficiency') {
-            const isSkill = modalData.type === 'skill';
-            const isSave = modalData.type === 'save';
-            const isImpulse = modalData.type === 'impulse';
-            const key = isSkill ? modalData.item.key : (isSave ? String(modalData.item).toLowerCase() : 'class_dc');
-
-            const currentVal = isSkill ? character.skills[key] : (isSave ? (character.stats.saves?.[key] || 0) : (isImpulse ? (character.stats.impulse_proficiency || 0) : character.stats.class_dc));
-
-            // If it's a skill, values are 0,2,4,6,8 usually.
-
-            content = (
-                <>
-                    <h2>Edit {modalData?.item?.name || (isImpulse ? "Impulse Proficiency" : "Proficiency")}</h2>
-                    {isSkill || isSave || isImpulse ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {ARMOR_RANKS.map(r => (
-                                <button key={r.value} className="btn-add-condition" style={{
-                                    borderColor: currentVal === r.value ? 'var(--text-gold)' : '#555',
-                                    color: currentVal === r.value ? 'var(--text-gold)' : '#ccc'
-                                }} onClick={() => {
-                                    updateCharacter(c => {
-                                        if (isSkill) c.skills[key] = r.value;
-                                        else if (isSave) {
-                                            if (!c.stats.saves) c.stats.saves = {};
-                                            c.stats.saves[key] = r.value;
-                                        } else if (isImpulse) {
-                                            c.stats.impulse_proficiency = r.value;
-                                        }
-                                    });
-                                    setModalMode(null);
-                                }}>
-                                    {r.label}
-                                </button>
-                            ))}
-                        </div>
-                    ) : (
-                        // Class DC might just be a number edit if no prof structure
-                        <div className="qty-control-box">
-                            <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.class_dc = (c.stats.class_dc || 10) - 1)}>-</button>
-                            <span style={{ fontSize: '2em', width: 60, textAlign: 'center' }}>{currentVal}</span>
-                            <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.class_dc = (c.stats.class_dc || 10) + 1)}>+</button>
-                        </div>
-                    )}
-                </>
-            );
-
-        } else if (modalMode === 'edit_speed') {
-            content = (
-                <>
-                    <h2>Edit Speed</h2>
-                    {Object.entries(character.stats.speed).map(([k, v]) => (
-                        <div key={k} className="modal-form-group">
-                            <label style={{ textTransform: 'capitalize' }}>{k}</label>
-                            <div className="qty-control-box">
-                                <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.speed[k] = Math.max(0, (c.stats.speed[k] || 0) - 5))}>-5</button>
-                                <span style={{ fontSize: '1.5em', width: 60, textAlign: 'center' }}>{v}</span>
-                                <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.speed[k] = (c.stats.speed[k] || 0) + 5)}>+5</button>
-                            </div>
-                        </div>
-                    ))}
-                </>
-            );
-        } else if (modalMode === 'item_proficiencies') {
-            const item = modalData.item;
-            const keys = [];
-            if (item.category) keys.push(item.category.charAt(0).toUpperCase() + item.category.slice(1));
-            if (item.group) keys.push(item.group.charAt(0).toUpperCase() + item.group.slice(1));
-
-            // Deduplicate
-            const uniqueKeys = [...new Set(keys)];
-
-            content = (
-                <>
-                    <h2>Weapon Proficiencies</h2>
-                    <div style={{ color: '#888', marginBottom: 15, textAlign: 'center' }}>{item.name}</div>
-                    {uniqueKeys.length === 0 && <div>No proficiency categories found for this item.</div>}
-                    {uniqueKeys.map(key => {
-                        const currentVal = (character.proficiencies && character.proficiencies[key]) || 0;
-                        return (
-                            <div key={key} style={{ marginBottom: 15 }}>
-                                <div style={{ fontSize: '0.9em', color: '#aaa', marginBottom: 5 }}>{key}</div>
-                                <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
-                                    {ARMOR_RANKS.map(r => (
-                                        <button key={r.value} className="btn-add-condition" style={{
-                                            padding: '5px 10px',
-                                            borderColor: currentVal === r.value ? 'var(--text-gold)' : '#555',
-                                            color: currentVal === r.value ? 'var(--text-gold)' : '#ccc',
-                                            flex: 1
-                                        }} onClick={() => {
-                                            updateCharacter(c => {
-                                                if (!c.proficiencies) c.proficiencies = {};
-                                                c.proficiencies[key] = r.value;
-                                            });
-                                        }}>
-                                            {r.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        );
-                    })}
-                    <div style={{ marginTop: 20, textAlign: 'center', fontSize: '0.8em', color: '#666' }}>
-                        Proficiency is usually derived from your Class. Editing this overrides derived values if implemented in stats.
-                    </div>
-                </>
-            );
-        } else if (modalMode === 'edit_languages') {
-            content = (
-                <LanguageEditor
-                    initialLanguages={character.languages}
-                    onSave={(newLangs) => {
-                        updateCharacter(c => c.languages = newLangs);
-                        setModalMode(null);
-                    }}
-                />
-            );
-        } else if (modalMode === 'edit_armor_prof') {
-            const ARMOR_PROF_KEYS = ['Unarmored', 'Light', 'Medium', 'Heavy'];
-            const ARMOR_RANKS = [
-                { value: 0, label: 'Untrained (+0)' },
-                { value: 2, label: 'Trained (+2)' },
-                { value: 4, label: 'Expert (+4)' },
-                { value: 6, label: 'Master (+6)' },
-                { value: 8, label: 'Legendary (+8)' }
-            ];
-            content = (
-                <>
-                    <h2>Armor Proficiencies</h2>
-                    <div className="prof-list" style={{ marginTop: 20 }}>
-                        {ARMOR_PROF_KEYS.map(key => {
-                            const rawVal = character?.stats?.proficiencies?.[key.toLowerCase()] || 0;
-                            return (
-                                <div className="prof-row" key={key}>
-                                    <span className="prof-label">{key}</span>
-                                    <select
-                                        className="prof-select"
-                                        value={rawVal}
-                                        onChange={(e) => updateCharacter(c => {
-                                            if (!c.stats) c.stats = {};
-                                            if (!c.stats.proficiencies) c.stats.proficiencies = {};
-                                            c.stats.proficiencies[key.toLowerCase()] = parseInt(e.target.value);
-                                        })}
-                                    >
-                                        {ARMOR_RANKS.map(r => (
-                                            <option key={r.value} value={r.value}>{r.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </>
-            );
-        } else if (modalMode === 'edit_max_hp') {
-            content = (
-                <>
-                    <h2>Edit Max HP</h2>
-                    <div className="qty-control-box">
-                        <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.hp.max = Math.max(1, (c.stats.hp.max || 10) - 1))}>-</button>
-                        <span style={{ fontSize: '2em', width: 80, textAlign: 'center' }}>{character.stats.hp.max}</span>
-                        <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.hp.max = (c.stats.hp.max || 10) + 1)}>+</button>
-                    </div>
-                </>
-            );
-        } else if (modalMode === 'edit_level') {
-            content = (
-                <>
-                    <h2>Edit Level</h2>
-                    <div className="qty-control-box">
-                        <button className="qty-btn" onClick={() => updateCharacter(c => c.level = Math.max(1, (c.level || 1) - 1))}>-</button>
-                        <span style={{ fontSize: '2em', width: 60, textAlign: 'center' }}>{character.level}</span>
-                        <button className="qty-btn" onClick={() => updateCharacter(c => c.level = (c.level || 1) + 1)}>+</button>
-                    </div>
-                </>
-            );
-
-        } else if (modalMode === 'spell_stat_info') {
-            const type = modalData?.type || 'dc';
-            let title = 'Spell Statistics';
-            let dcVal = 0;
-            let atkBonus = 0;
-            let rows = [];
-
-            if (type === 'class_dc' || type === 'impulse_attack') {
-                // Impulse / Class DC Stats
-                title = type === 'class_dc' ? 'Class DC Breakdown' : 'Impulse Attack Breakdown';
-                const profRank = character.stats.impulse_proficiency || 0;
-                const level = parseInt(character.level) || 1;
-                const conMod = character.stats.attributes?.constitution ?? 0;
-                const rankLabel = ARMOR_RANKS.find(r => r.value === profRank)?.label.split(' ')[0] || 'Untrained';
-
-                const profBonus = profRank > 0 ? (level + profRank) : 0;
-                atkBonus = profBonus + conMod;
-                dcVal = 10 + atkBonus;
-
-                rows = [
-                    { label: type === 'class_dc' ? "Base" : null, val: type === 'class_dc' ? 10 : null },
-                    { label: `Constitution (${conMod})`, val: conMod },
-                    { label: `Proficiency (${rankLabel})`, val: profRank },
-                    { label: profRank > 0 ? "Level" : null, val: profRank > 0 ? level : null }
-                ].filter(r => r.label !== null);
-
-            } else {
-                // Magic Stats
-                title = type === 'dc' ? 'Spell DC Breakdown' : 'Spell Attack Breakdown';
-                const magic = character.magic || {};
-                const attrName = magic.attribute || "Intelligence";
-                const attrMod = parseInt(character.stats.attributes[(attrName || "").toLowerCase()]) || 0;
-                const prof = parseFloat(magic.proficiency) || 0;
-                const level = parseInt(character.level) || 0;
-                const rankLabel = ARMOR_RANKS.find(r => r.value === prof)?.label.split(' ')[0] || 'Untrained';
-
-                const profBonus = prof + (prof > 0 ? level : 0);
-                atkBonus = Math.floor(attrMod + profBonus);
-                dcVal = 10 + atkBonus;
-
-                rows = [
-                    { label: type === 'dc' ? "Base" : null, val: type === 'dc' ? 10 : null },
-                    { label: `${attrName} (${attrMod})`, val: attrMod },
-                    { label: `Proficiency (${rankLabel})`, val: prof },
-                    { label: prof > 0 ? "Level" : null, val: prof > 0 ? level : null }
-                ].filter(r => r.label !== null);
-            }
-
-            const BreakdownLine = ({ label, val }) => (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9em', marginBottom: 5 }}>
-                    <span style={{ color: '#aaa' }}>{label}</span>
-                    <span style={{ color: '#fff' }}>{val >= 0 ? `+${val}` : val}</span>
-                </div>
-            );
-
-            content = (
-                <>
-                    <h2>{title}</h2>
-
-                    <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                        <div style={{ fontSize: '2.5em', color: 'var(--text-gold)', fontWeight: 'bold', lineHeight: 1 }}>
-                            {(type === 'dc' || type === 'class_dc') ? dcVal : (atkBonus >= 0 ? `+${atkBonus}` : atkBonus)}
-                        </div>
-                        <div style={{ fontSize: '1em', color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
-                            {(type === 'dc' || type === 'class_dc') ? 'Difficulty Class' : 'Attack Bonus'}
-                        </div>
-                    </div>
-
-                    <StatBreakdown
-                        rows={rows}
-                        total={(type === 'dc' || type === 'class_dc') ? dcVal : atkBonus}
-                        totalLabel="Total"
-                    />
-                </>
-            );
-        } else if (modalMode === 'edit_spell_proficiency') {
-            const magic = character.magic || {};
-            const currentAttr = magic.attribute || "Intelligence";
-            const currentProf = magic.proficiency || 0;
-
-            content = (
-                <>
-                    <h2>Edit Spell Proficiency</h2>
-                    <div style={{ marginBottom: 20 }}>
-                        <label style={{ display: 'block', marginBottom: 5, color: '#aaa' }}>Key Attribute</label>
-                        <select
-                            className="prof-select"
-                            value={currentAttr}
-                            onChange={(e) => updateCharacter(c => {
-                                if (!c.magic) c.magic = {};
-                                c.magic.attribute = e.target.value;
-                            })}
-                        >
-                            {['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'].map(attr => (
-                                <option key={attr} value={attr}>{attr}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label style={{ display: 'block', marginBottom: 5, color: '#aaa' }}>Proficiency Rank</label>
-                        <select
-                            className="prof-select"
-                            value={currentProf}
-                            onChange={(e) => updateCharacter(c => {
-                                if (!c.magic) c.magic = {};
-                                c.magic.proficiency = parseInt(e.target.value);
-                            })}
-                        >
-                            {ARMOR_RANKS.map(r => (
-                                <option key={r.value} value={r.value}>{r.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                </>
-            );
-        } else if (modalMode === 'edit_spell_slots') {
-            const item = modalData?.item || {};
-            const levelKey = item.level || '1';
-            const slotKey = levelKey + "_max";
-
-            const SLOT_LEVELS = ['f', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-
-            content = (
-                <>
-                    <h2>Edit Spell Slots</h2>
-                    <div style={{ marginBottom: 20 }}>
-                        <label style={{ display: 'block', marginBottom: 5, color: '#aaa' }}>Slot Level</label>
-                        <select
-                            className="prof-select"
-                            value={levelKey}
-                            onChange={(e) => setModalData({
-                                ...modalData,
-                                item: { ...item, level: e.target.value }
-                            })}
-                        >
-                            <option value="f">Focus Points</option>
-                            {SLOT_LEVELS.filter(l => l !== 'f').map(l => (
-                                <option key={l} value={l}>Level {l}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="qty-control-box">
-                        <button className="qty-btn" onClick={() => updateCharacter(c => {
-                            if (!c.magic) c.magic = { slots: {} };
-                            if (!c.magic.slots) c.magic.slots = {};
-                            const cur = c.magic.slots[slotKey] || 0;
-                            c.magic.slots[slotKey] = Math.max(0, cur - 1);
-                        })}>-</button>
-                        <span style={{ fontSize: '2em', width: 60, textAlign: 'center' }}>
-                            {character?.magic?.slots?.[slotKey] || 0}
-                        </span>
-                        <button className="qty-btn" onClick={() => updateCharacter(c => {
-                            if (!c.magic) c.magic = { slots: {} };
-                            if (!c.magic.slots) c.magic.slots = {};
-                            const cur = c.magic.slots[slotKey] || 0;
-                            c.magic.slots[slotKey] = cur + 1;
-                        })}>+</button>
-                    </div>
-                </>
-            );
-        } else if (modalMode === 'quicksheet') {
-            return (
-                <QuickSheetModal
-                    character={character}
-                    updateCharacter={updateCharacter}
-                    onClose={close}
-                />
-            );
-        } else if (modalMode === 'conditionInfo') {
-            const condName = typeof modalData === 'string' ? modalData : modalData?.name;
-            console.log("DEBUG InfoModal:", { modalData, condName });
-
-            const entry = getConditionCatalogEntry(condName);
-            console.log("DEBUG Entry:", entry);
-
-            const iconSrc = getConditionImgSrc(condName);
-            const active = character.conditions.find(c => c.name === condName);
-            const level = active ? active.level : 0;
-            const valued = isConditionValued(condName);
-
-            const adjustCondition = (delta) => {
-                if (!condName) return;
-                updateCharacter(c => {
-                    const idx = c.conditions.findIndex(x => x.name === condName);
-                    if (!valued) {
-                        if (delta > 0) {
-                            if (idx > -1) c.conditions[idx].level = 1;
-                            else c.conditions.push({ name: condName, level: 1 });
-                        } else if (idx > -1) {
-                            c.conditions.splice(idx, 1);
-                        }
-                        return;
-                    }
-
-                    if (delta > 0) {
-                        if (idx > -1) c.conditions[idx].level = (c.conditions[idx].level || 0) + 1;
-                        else c.conditions.push({ name: condName, level: 1 });
-                    } else if (idx > -1) {
-                        const nextLevel = (c.conditions[idx].level || 0) - 1;
-                        if (nextLevel <= 0) c.conditions.splice(idx, 1);
-                        else c.conditions[idx].level = nextLevel;
-                    }
-                });
-            };
-
-            content = (
-                <>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                        <button
-                            type="button"
-                            className="set-btn"
-                            style={{
-                                width: 'auto', padding: '8px 12px', marginTop: 0,
-                                ...(modalHistory.length > 0 ? { background: '#c5a059', color: '#1a1a1d', borderColor: '#c5a059' } : {})
-                            }}
-                            onClick={(e) => {
-                                if (modalHistory.length > 0) {
-                                    e.stopPropagation();
-                                    handleBack();
-                                } else {
-                                    setModalMode('condition');
-                                    setModalData(null);
-                                }
-                            }}
-                        >
-                            ← Back
-                        </button>
-                        <h2 style={{ margin: 0, flex: 1, textAlign: 'center' }}>{condName}</h2>
-                        <div style={{ width: 72 }} />
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 12 }}>
-                        {iconSrc ? (
-                            <img src={iconSrc} alt="" style={{ width: 36, height: 36, objectFit: 'contain' }} />
-                        ) : (
-                            <span style={{ fontSize: '1.8em' }}>{getConditionIcon(condName) || "⚪"}</span>
-                        )}
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <button onClick={() => adjustCondition(-1)}>-</button>
-                            <span style={{ minWidth: 24, textAlign: 'center' }}>{level}</span>
-                            <button onClick={() => adjustCondition(1)}>+</button>
-                        </div>
-                    </div>
-
-                    <div
-                        className="formatted-content"
-                        dangerouslySetInnerHTML={{ __html: formatText(entry?.description || "No description.") }}
-                        style={{ marginTop: 12 }}
-                    />
-                </>
-            );
-        } else if (modalMode === 'conditions') {
-            return (
-                <ConditionsModal
-                    character={character}
-                    updateCharacter={updateCharacter}
-                    onClose={() => setModalMode(null)}
-                    onOpenInfo={(condName) => {
-                        setModalMode('conditionInfo');
-                        setModalData({ name: condName });
-                    }}
-                />
-            );
-            const allConds = [
-                { title: 'Negative', list: NEG_CONDS },
-                { title: 'Positive', list: POS_CONDS },
-                { title: 'Visibility', list: VIS_CONDS },
-                { title: 'Binary', list: BINARY_CONDS.filter(c => !NEG_CONDS.includes(c) && !POS_CONDS.includes(c) && !VIS_CONDS.includes(c)) } // Fallback
-            ];
-
-            const renderCondBtn = (condName) => {
-                const isActive = character.conditions.some(c => c.name === condName);
-                const icon = getConditionIcon(condName);
-                return (
-                    <button key={condName}
-                        onClick={() => {
-                            updateCharacter(c => {
-                                const idx = c.conditions.findIndex(x => x.name === condName);
-                                if (idx === -1) c.conditions.push({ name: condName, level: 1 });
-                            });
-                            setModalMode(null);
-                        }}
-                        style={{
-                            background: isActive ? 'var(--bg-panel)' : '#222',
-                            border: `1px solid ${isActive ? 'var(--text-gold)' : '#444'}`,
-                            borderRadius: 4, padding: '8px 12px',
-                            cursor: 'pointer', textAlign: 'left',
-                            display: 'flex', alignItems: 'center', gap: 8,
-                            color: isActive ? 'var(--text-gold)' : '#ccc'
-                        }}
-                    >
-                        <span style={{ fontSize: '1.2em' }}>{icon || '⚪'}</span>
-                        <span style={{ textTransform: 'capitalize' }}>{condName}</span>
-                    </button>
-                );
-            };
-
-            content = (
-                <>
-                    <h2>Add Condition</h2>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxHeight: '60vh', overflowY: 'auto', paddingRight: 5 }}>
-                        {allConds.map(group => (
-                            <div key={group.title}>
-                                <h3 style={{ fontSize: '1em', color: '#aaa', borderBottom: '1px solid #444', marginBottom: 8 }}>{group.title}</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8 }}>
-                                    {group.list.map(c => renderCondBtn(c))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </>
-            );
-        } else if (modalMode === 'edit_perception') {
-            const currentVal = character.stats.perception || 0;
-            content = (
-                <>
-                    <h2>Edit Perception</h2>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {ARMOR_RANKS.map(r => (
-                            <button key={r.value} className="btn-add-condition" style={{
-                                borderColor: currentVal === r.value ? 'var(--text-gold)' : '#555',
-                                color: currentVal === r.value ? 'var(--text-gold)' : '#ccc'
-                            }} onClick={() => {
-                                updateCharacter(c => c.stats.perception = r.value);
-                                setModalMode(null);
-                            }}>
-                                {r.label}
-                            </button>
-                        ))}
-                    </div>
-                </>
-            );
-        } else if (modalMode === 'formula_book') {
-            return (
-                <FormulaBookModal
-                    character={character}
-                    updateCharacter={updateCharacter}
-                    dailyPrepQueue={dailyPrepQueue}
-                    setDailyPrepQueue={setDailyPrepQueue}
-                    setModalData={setModalData}
-                    setModalMode={setModalMode}
-                    onClose={() => setModalMode(null)}
-                />
-            );
-        } else if (modalMode === 'weapon_detail' && modalData) {
-            console.log("Rendering Weapon Detail Modal (Distinct)", modalData);
-
-            // Build Rows from Breakdown Object
-            const rows = [];
-            if (modalData.breakdown && typeof modalData.breakdown === 'object') {
-                // Attribute
-                if (modalData.breakdown.attribute !== undefined) {
-                    const label = `Attribute${modalData.source?.attrName ? ` (${modalData.source.attrName})` : ''}`;
-                    rows.push({ label, val: modalData.breakdown.attribute });
-                }
-                // Proficiency
-                if (modalData.breakdown.proficiency !== undefined) {
-                    const label = `Proficiency${modalData.source?.profName ? ` (${modalData.source.profName})` : ''}`;
-                    rows.push({ label, val: modalData.breakdown.proficiency });
-                }
-                // Level
-                if (modalData.breakdown.level !== undefined && modalData.breakdown.level !== 0) {
-                    const label = `Level${modalData.source?.levelVal ? ` (${modalData.source.levelVal})` : ''}`;
-                    rows.push({ label, val: modalData.breakdown.level });
-                }
-                // Item
-                if (modalData.breakdown.item !== undefined && modalData.breakdown.item !== 0) {
-                    rows.push({ label: 'Item Bonus', val: modalData.breakdown.item });
-                }
-                // Potency/Other
-                Object.entries(modalData.breakdown).forEach(([k, v]) => {
-                    if (['attribute', 'proficiency', 'level', 'item'].includes(k)) return;
-                    if (v === 0) return;
-                    rows.push({ label: k.charAt(0).toUpperCase() + k.slice(1), val: v });
-                });
-            }
-            content = (
-                <>
-                    <h2 style={{ fontSize: '1.4em', marginBottom: 20, textAlign: 'center', color: 'var(--text-gold)', fontFamily: 'Cinzel, serif', borderBottom: '1px solid #5c4033', paddingBottom: 10 }}>{modalData.title || modalData.item?.name || 'Weapon Attack'}</h2>
-
-                    <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                        <div style={{ fontSize: '2.5em', color: 'var(--text-gold)', fontWeight: 'bold', lineHeight: 1 }}>
-                            {modalData.total >= 0 ? `+${modalData.total}` : modalData.total}
-                        </div>
-                        <div style={{ fontSize: '1em', color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
-                            Attack Bonus
-                        </div>
-                    </div>
-
-
-
-
-                    {modalData.breakdown && typeof modalData.breakdown === 'object' ? (
-                        <StatBreakdown
-                            rows={rows}
-                            total={modalData.total}
-                        />
-                    ) : (
-                        <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', color: '#ccc', background: '#222', padding: 10, borderRadius: 8 }}>
-                            {modalData.breakdown}
-                        </div>
-                    )}
-                </>
-            );
-
-        } else if (modalMode === 'detail' && modalData) {
-            console.log("Rendering Detail/Weapon Modal", modalMode, modalData);
-
-            // Build Rows for Skills/Saves/Perception
-            const rows = [];
-            if (modalData.breakdown && typeof modalData.breakdown === 'object') {
-                // Base 10
-                if (modalData.base === 10) {
-                    rows.push({ label: 'Base', val: 10 });
-                }
-                // Attribute
-                if (modalData.breakdown.attribute !== undefined) {
-                    const label = `Attribute${modalData.source?.attrName ? ` (${modalData.source.attrName})` : ''}`;
-                    rows.push({ label, val: modalData.breakdown.attribute });
-                }
-                // Proficiency
-                if (modalData.breakdown.proficiency !== undefined) {
-                    const label = `Proficiency${modalData.source?.profName ? ` (${modalData.source.profName})` : ''}`;
-                    rows.push({ label, val: modalData.breakdown.proficiency });
-                }
-                // Level
-                if (modalData.breakdown.level !== undefined) {
-                    const label = `Level${modalData.source?.levelVal ? ` (${modalData.source.levelVal})` : ''}`;
-                    rows.push({ label, val: modalData.breakdown.level });
-                }
-                // Item
-                if (modalData.breakdown.item !== undefined && modalData.breakdown.item !== 0) {
-                    rows.push({ label: 'Item Bonus', val: modalData.breakdown.item });
-                }
-                // Armor Penalty
-                if (modalData.breakdown.armor !== undefined && modalData.breakdown.armor !== 0) {
-                    rows.push({ label: 'Armor Penalty', val: modalData.breakdown.armor });
-                }
-                // Others
-                Object.entries(modalData.breakdown).forEach(([k, v]) => {
-                    if (['attribute', 'proficiency', 'level', 'item', 'armor'].includes(k)) return;
-                    if (v === 0) return;
-                    rows.push({ label: k.charAt(0).toUpperCase() + k.slice(1), val: v });
-                });
-            }
-            content = (
-                <>
-                    <h2 style={{ fontSize: '1.4em', marginBottom: 20, textAlign: 'center', color: 'var(--text-gold)', fontFamily: 'Cinzel, serif', borderBottom: '1px solid #5c4033', paddingBottom: 10 }}>{modalData.title}</h2>
-
-                    <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                        <div style={{ fontSize: '2.5em', color: 'var(--text-gold)', fontWeight: 'bold', lineHeight: 1 }}>
-                            {modalData.total >= 0 ? `+${modalData.total}` : modalData.total}
-                        </div>
-                        <div style={{ fontSize: '1em', color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
-                            Total Bonus
-                        </div>
-                    </div>
-
-                    {modalData.breakdown && typeof modalData.breakdown === 'object' ? (
-                        <StatBreakdown
-                            rows={rows}
-                            total={modalData.total}
-                        />
-
-                    ) : (
-                        <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', color: '#ccc', background: '#222', padding: 15, borderRadius: 8, fontStyle: 'italic' }}>
-                            {modalData.breakdown || "No specific breakdown available."}
-                        </div>
-                    )
-                    }
-                </>
-            );
-
-        } else if (modalMode === 'item' && modalData) {
-            // Re-calculate loading state props
-            const isSpell = modalData._entityType === 'spell' || (typeof modalData.casttime === 'string' && typeof modalData.tradition === 'string');
-            const isAction = modalData._entityType === 'action' || (typeof modalData.subtype === 'string' && typeof modalData.type === 'string');
-            const isFeatFromCatalog = modalData._entityType === 'feat';
-
-            const matchesShopItemProps = (
-                modalData.price != null ||
-                modalData.bulk != null ||
-                modalData.rarity != null ||
-                modalData.traits?.rarity != null ||
-                Array.isArray(modalData?.traits?.value)
-            );
-            const isShopItem = !isSpell && !isAction && !isFeatFromCatalog && matchesShopItemProps;
-
-            const expectedSourceFile =
-                modalData.sourceFile ||
-                (modalData?.name ? getShopIndexItemByName(modalData.name)?.sourceFile : null);
-
-            const isLoadingShopDetail = Boolean(isShopItem && expectedSourceFile && shopItemDetailLoading && !modalData.description);
-            const shopDetailError = isShopItem && expectedSourceFile && shopItemDetailError ? shopItemDetailError : null;
-
-            return (
-                <ItemDetailModal
-                    character={character}
-                    modalData={modalData}
-                    toggleInventoryEquipped={toggleInventoryEquipped}
-                    onBack={handleBack}
-                    onClose={() => setModalMode(null)}
-                    hasHistory={modalHistory && modalHistory.length > 0}
-                    isLoadingShopDetail={isLoadingShopDetail}
-                    shopDetailError={shopDetailError}
-                    onContentLinkClick={handleContentLinkClick}
-                />
-            );
-        }
-
-        return (
-            <div style={{
-                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000,
-                display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-            }} onClick={close}>
-                <div style={{
-                    backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                    padding: '20px', borderRadius: '8px', maxWidth: '500px', width: '100%',
-                    color: '#e0e0e0',
-                    maxHeight: '85vh',
-                    overflowY: 'auto',
-                    display: 'flex',
-                    flexDirection: 'column'
-                }} onClick={e => { e.stopPropagation(); handleContentLinkClick(e); }}>
-                    <style>{`
-                        .formatted-content p { margin: 0.5em 0; }
-                        .formatted-content ul, .formatted-content ol { margin: 0.5em 0; padding-left: 20px; }
-                        .formatted-content { line-height: 1.6; }
-                        .content-link { transition: opacity 0.2s; }
-                        .gold-link { color: var(--text-gold); cursor: pointer; text-decoration: none; }
-                        .gold-link:hover { text-decoration: underline; opacity: 1; }
-                    `}</style>
-                    {content}
-                    <button onClick={close} style={{
-                        marginTop: 20, width: '100%', padding: '10px', background: '#c5a059',
-                        border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', color: '#1a1a1d',
-                        flexShrink: 0
-                    }}>Close</button>
-                </div>
-            </div>
-        );
-    };
-
-    // --- MAIN RENDER ---
-
-    return (
-        <div className="app-container">
-            {/* HEADER */}
-            <style>{`
+// --- MAIN RENDER ---
+
+return (
+    <div className="app-container">
+        {/* HEADER */}
+        <style>{`
                 /* MAGIC TAB CSS */
                 .magic-split { display: grid; grid-template-columns: 80px 1fr; gap: 15px; align-items: start; }
                 .magic-stat-block { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 15px; }
@@ -3378,227 +2013,250 @@ export default function PlayerApp({ db, setDb }) {
                     text-overflow: ellipsis;
                 }
             `}</style>
-            <div className="header-bar">
-                <div className="header-title">
-                    <h1 {...pressEvents(null, 'level')}>{character.name}</h1>
-                    <small>Level {character.level} | XP: {character.xp.current}</small>
-                </div>
-                <div className="header-controls">
-                    {isGM && <button className="btn-char-switch" onClick={() => {
-                        setActiveCharIndex((prev) => (prev + 1) % characters.length);
-                    }}>👥</button>}
-                    <div className="gold-display" onClick={() => setModalMode('gold')}>
-                        <span>💰</span> {parseFloat(character.gold).toFixed(2)} <span className="gold-unit">gp</span>
-                    </div>
-                    {isGM && <button className="btn-char-switch" onClick={() => window.location.search = '?admin=true'} title="GM Screen">GM</button>}
-                </div>
+        <div className="header-bar">
+            <div className="header-title">
+                <h1 {...pressEvents(null, 'level')}>{character.name}</h1>
+                <small>Level {character.level} | XP: {character.xp.current}</small>
             </div>
-
-
-            {/* TABS */}
-            <div className="tabs">
-                {['stats', 'actions', 'feats', ...(character.isCaster || character.magic?.list?.length > 0 ? ['magic'] : []), ...(character.isKineticist ? ['impulses'] : []), 'items'].map(tab => {
-                    const hasLoot = tab === 'items' && (
-                        character?.inventory?.some(i => i.isLoot) ||
-                        db?.lootBags?.some(b => !b.isLocked && b.items.some(i => !i.claimedBy))
-                    );
-                    return (
-                        <button
-                            key={tab}
-                            className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
-                            onClick={() => setActiveTab(tab)}
-                        >
-                            {tab === 'magic' ? 'Magic' : tab === 'impulses' ? 'Impulses' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                            {hasLoot && <span style={{ color: '#d32f2f', marginLeft: 5, fontWeight: 'bold' }}>!</span>}
-                        </button>
-                    );
-                })}
+            <div className="header-controls">
+                {isGM && <button className="btn-char-switch" onClick={() => {
+                    setActiveCharIndex((prev) => (prev + 1) % characters.length);
+                }}>👥</button>}
+                <div className="gold-display" onClick={() => setModalMode('gold')}>
+                    <span>💰</span> {parseFloat(character.gold).toFixed(2)} <span className="gold-unit">gp</span>
+                </div>
+                {isGM && <button className="btn-char-switch" onClick={() => window.location.search = '?admin=true'} title="GM Screen">GM</button>}
             </div>
+        </div>
 
-            {/* VIEW CONTENT */}
-            <div className="view-section">
-                {activeTab === 'stats' && (
-                    <StatsView
-                        character={character}
-                        updateCharacter={updateCharacter}
-                        onOpenModal={(mode, data) => {
-                            setModalMode(mode);
-                            if (data) setModalData(data);
-                        }}
-                        onLongPress={handleLongPress}
-                    />
-                )}
 
-                {activeTab === 'actions' && (
-                    <ActionsView
+        {/* TABS */}
+        <div className="tabs">
+            {['stats', 'actions', 'feats', ...(character.isCaster || character.magic?.list?.length > 0 ? ['magic'] : []), ...(character.isKineticist ? ['impulses'] : []), 'items'].map(tab => {
+                const hasLoot = tab === 'items' && (
+                    character?.inventory?.some(i => i.isLoot) ||
+                    db?.lootBags?.some(b => !b.isLocked && b.items.some(i => !i.claimedBy))
+                );
+                return (
+                    <button
+                        key={tab}
+                        className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
+                        onClick={() => setActiveTab(tab)}
+                    >
+                        {tab === 'magic' ? 'Magic' : tab === 'impulses' ? 'Impulses' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                        {hasLoot && <span style={{ color: '#d32f2f', marginLeft: 5, fontWeight: 'bold' }}>!</span>}
+                    </button>
+                );
+            })}
+        </div>
+
+        {/* VIEW CONTENT */}
+        <div className="view-section">
+            {activeTab === 'stats' && (
+                <StatsView
+                    character={character}
+                    updateCharacter={updateCharacter}
+                    onOpenModal={(mode, data) => {
+                        setModalMode(mode);
+                        if (data) setModalData(data);
+                    }}
+                    onLongPress={handleLongPress}
+                />
+            )}
+
+            {activeTab === 'actions' && (
+                <ActionsView
+                    character={character}
+                    onOpenModal={(mode, data) => {
+                        setModalMode(mode);
+                        setModalData(data);
+                    }}
+                    onLongPress={(item, type) => handleLongPress(item, type)}
+                />
+            )}
+
+            {activeTab === 'magic' && renderMagic()}
+            {activeTab === 'impulses' && (
+                <ImpulsesView
+                    character={character}
+                    setModalData={setModalData}
+                    setModalMode={setModalMode}
+                    onLongPress={handleLongPress}
+                />
+            )}
+            {activeTab === 'feats' && renderFeats()}
+        </div>
+
+        {/* MODALS / FULL PAGE VIEWS */}
+
+        {
+            activeTab === 'items' && (
+                <div>
+                    <InventoryView
                         character={character}
+                        db={db}
+                        onUpdateCharacter={updateCharacter}
+                        onSetDb={setDb}
                         onOpenModal={(mode, data) => {
                             setModalMode(mode);
                             setModalData(data);
                         }}
-                        onLongPress={(item, type) => handleLongPress(item, type)}
-                    />
-                )}
-
-                {activeTab === 'magic' && renderMagic()}
-                {activeTab === 'impulses' && (
-                    <ImpulsesView
-                        character={character}
-                        setModalData={setModalData}
-                        setModalMode={setModalMode}
+                        onInspectItem={inspectInventoryItem}
+                        onToggleEquip={toggleInventoryEquipped}
+                        onFireWeapon={fireWeapon}
+                        onLoadWeapon={loadWeapon}
                         onLongPress={handleLongPress}
-                    />
-                )}
-                {activeTab === 'feats' && renderFeats()}
-            </div>
+                        onClaimLoot={(bag, item) => {
+                            setDb(prev => {
+                                const next = { ...prev };
+                                const campaignId = activeCampaign?.id;
+                                if (!campaignId || !next.campaigns?.[campaignId]) return prev;
 
-            {/* MODALS / FULL PAGE VIEWS */}
+                                const nextChars = [...next.campaigns[campaignId].characters];
+                                const charIndex = activeCharIndex;
+                                const char = { ...nextChars[charIndex], inventory: [...nextChars[charIndex].inventory] };
 
-            {
-                activeTab === 'items' && (
-                    <div>
-                        <InventoryView
-                            character={character}
-                            db={db}
-                            onUpdateCharacter={updateCharacter}
-                            onSetDb={setDb}
-                            onOpenModal={(mode, data) => {
-                                setModalMode(mode);
-                                setModalData(data);
-                            }}
-                            onInspectItem={inspectInventoryItem}
-                            onToggleEquip={toggleInventoryEquipped}
-                            onFireWeapon={fireWeapon}
-                            onLoadWeapon={loadWeapon}
-                            onLongPress={handleLongPress}
-                            onClaimLoot={(bag, item) => {
-                                setDb(prev => {
-                                    const next = { ...prev };
-                                    const campaignId = activeCampaign?.id;
-                                    if (!campaignId || !next.campaigns?.[campaignId]) return prev;
+                                // 1. Add to Inventory
+                                const stackable = shouldStack(item);
+                                const existing = stackable ? char.inventory.find(i => i.name === item.name) : null;
+                                if (existing) {
+                                    existing.qty = (existing.qty || 1) + 1;
+                                } else {
+                                    // Ensure clean properties for new owned item
+                                    const newItem = { ...item, qty: 1 };
+                                    delete newItem.instanceId; // New ID will be generated or undefined
+                                    delete newItem.addedAt;
+                                    delete newItem.claimedBy;
+                                    char.inventory.push(newItem);
+                                }
 
-                                    const nextChars = [...next.campaigns[campaignId].characters];
-                                    const charIndex = activeCharIndex;
-                                    const char = { ...nextChars[charIndex], inventory: [...nextChars[charIndex].inventory] };
+                                nextChars[charIndex] = char;
+                                next.campaigns[campaignId].characters = nextChars;
 
-                                    // 1. Add to Inventory
-                                    const stackable = shouldStack(item);
-                                    const existing = stackable ? char.inventory.find(i => i.name === item.name) : null;
-                                    if (existing) {
-                                        existing.qty = (existing.qty || 1) + 1;
-                                    } else {
-                                        // Ensure clean properties for new owned item
-                                        const newItem = { ...item, qty: 1 };
-                                        delete newItem.instanceId; // New ID will be generated or undefined
-                                        delete newItem.addedAt;
-                                        delete newItem.claimedBy;
-                                        char.inventory.push(newItem);
+                                // 2. Mark in Loot Bag
+                                if (next.lootBags) {
+                                    const bags = deepClone(next.lootBags);
+                                    const targetBag = bags.find(b => b.id === bag.id);
+                                    if (targetBag) {
+                                        const targetItem = targetBag.items.find(i => i.instanceId === item.instanceId);
+                                        if (targetItem) targetItem.claimedBy = char.name; // Use current char name for claim signature
                                     }
+                                    next.lootBags = bags;
+                                }
 
-                                    nextChars[charIndex] = char;
-                                    next.campaigns[campaignId].characters = nextChars;
-
-                                    // 2. Mark in Loot Bag
-                                    if (next.lootBags) {
-                                        const bags = deepClone(next.lootBags);
-                                        const targetBag = bags.find(b => b.id === bag.id);
-                                        if (targetBag) {
-                                            const targetItem = targetBag.items.find(i => i.instanceId === item.instanceId);
-                                            if (targetItem) targetItem.claimedBy = char.name; // Use current char name for claim signature
-                                        }
-                                        next.lootBags = bags;
-                                    }
-
-                                    return next;
-                                });
-                            }}
-                            onOpenShop={() => setActiveTab('shop')}
-                        />
-                    </div>
-                )
-            }
-
-            {
-                activeTab === 'shop' && (
-                    <ShopView
-                        db={db}
-                        onInspectItem={(item) => {
-                            setModalData(item);
-                            setModalMode('item');
-                        }}
-                        onBuyItem={(item) => setActionModal({ mode: 'BUY_RESTOCK', item })}
-                        onBuyFormula={handleBuyFormula}
-                        knownFormulas={character.formulaBook || []}
-                    />
-                )
-            }
-
-            {/* Item Actions Modal */}
-            <ItemActionsModal
-                mode={actionModal.mode}
-                item={actionModal.item}
-                characters={characters}
-                activeCharIndex={activeCharIndex}
-                onClose={() => setActionModal({ mode: null, item: null })}
-                onOpenMode={(m, i) => setActionModal({ mode: m, item: i })}
-                onBuy={executeBuy}
-                onChangeQty={executeQty}
-                onTransfer={executeTransfer}
-                onUnstack={executeUnstack}
-                onLoadSpecial={handleLoadSpecial}
-                onUnloadAll={handleUnloadAll}
-                onEditProficiency={(item) => {
-                    setActionModal({ mode: null, item: null });
-                    setModalData({ item, type: 'weapon_prof' }); // Reuse modalData to pass item
-                    setModalMode('item_proficiencies');
-                }}
-            />
-
-            {/* Catalog Overlay */}
-            {
-                catalogMode === 'feat' && (
-                    <ItemCatalog
-                        title="Add Feat"
-                        items={FEAT_INDEX_ITEMS}
-                        filterOptions={FEAT_INDEX_FILTER_OPTIONS}
-                        onSelect={(item) => addToCharacter(item, 'feat')}
-                        onClose={() => setCatalogMode(null)}
-                    />
-                )
-            }
-
-            {
-                catalogMode === 'impulse' && (
-                    <ItemCatalog
-                        title="Add Impulse"
-                        items={IMPULSE_INDEX_ITEMS}
-                        filterOptions={IMPULSE_INDEX_FILTER_OPTIONS}
-                        onClose={() => setCatalogMode(null)}
-                        onSelect={(impulseData) => {
-                            updateCharacter(c => {
-                                if (!c.impulses) c.impulses = [];
-                                c.impulses.push(impulseData);
+                                return next;
                             });
-                            setCatalogMode(null);
                         }}
+                        onOpenShop={() => setActiveTab('shop')}
                     />
-                )
-            }
+                </div>
+            )
+        }
 
-            {
-                catalogMode === 'spell' && (
-                    <ItemCatalog
-                        title="Add Spell"
-                        items={SPELL_INDEX_ITEMS}
-                        filterOptions={SPELL_INDEX_FILTER_OPTIONS}
-                        onSelect={(item) => addToCharacter(item, 'spell')}
-                        onClose={() => setCatalogMode(null)}
-                    />
-                )
-            }
+        {
+            activeTab === 'shop' && (
+                <ShopView
+                    db={db}
+                    onInspectItem={(item) => {
+                        setModalData(item);
+                        setModalMode('item');
+                    }}
+                    onBuyItem={(item) => setActionModal({ mode: 'BUY_RESTOCK', item })}
+                    onBuyFormula={handleBuyFormula}
+                    knownFormulas={character.formulaBook || []}
+                />
+            )
+        }
 
-            {/* General Modals */}
-            {renderEditModal()}
-        </div>
-    );
+        {/* Item Actions Modal */}
+        <ItemActionsModal
+            mode={actionModal.mode}
+            item={actionModal.item}
+            characters={characters}
+            activeCharIndex={activeCharIndex}
+            onClose={() => setActionModal({ mode: null, item: null })}
+            onOpenMode={(m, i) => setActionModal({ mode: m, item: i })}
+            onBuy={executeBuy}
+            onChangeQty={executeQty}
+            onTransfer={executeTransfer}
+            onUnstack={executeUnstack}
+            onLoadSpecial={handleLoadSpecial}
+            onUnloadAll={handleUnloadAll}
+            onEditProficiency={(item) => {
+                setActionModal({ mode: null, item: null });
+                setModalData({ item, type: 'weapon_prof' }); // Reuse modalData to pass item
+                setModalMode('item_proficiencies');
+            }}
+        />
+
+        {/* Catalog Overlay */}
+        {
+            catalogMode === 'feat' && (
+                <ItemCatalog
+                    title="Add Feat"
+                    items={FEAT_INDEX_ITEMS}
+                    filterOptions={FEAT_INDEX_FILTER_OPTIONS}
+                    onSelect={(item) => addToCharacter(item, 'feat')}
+                    onClose={() => setCatalogMode(null)}
+                />
+            )
+        }
+
+        {
+            catalogMode === 'impulse' && (
+                <ItemCatalog
+                    title="Add Impulse"
+                    items={IMPULSE_INDEX_ITEMS}
+                    filterOptions={IMPULSE_INDEX_FILTER_OPTIONS}
+                    onClose={() => setCatalogMode(null)}
+                    onSelect={(impulseData) => {
+                        updateCharacter(c => {
+                            if (!c.impulses) c.impulses = [];
+                            c.impulses.push(impulseData);
+                        });
+                        setCatalogMode(null);
+                    }}
+                />
+            )
+        }
+
+        {
+            catalogMode === 'spell' && (
+                <ItemCatalog
+                    title="Add Spell"
+                    items={SPELL_INDEX_ITEMS}
+                    filterOptions={SPELL_INDEX_FILTER_OPTIONS}
+                    onSelect={(item) => addToCharacter(item, 'spell')}
+                    onClose={() => setCatalogMode(null)}
+                />
+            )
+        }
+
+        {/* General Modals */}
+        <ModalManager
+            modalMode={modalMode}
+            setModalMode={setModalMode}
+            modalData={modalData}
+            setModalData={setModalData}
+            character={character}
+            updateCharacter={updateCharacter}
+            onClose={() => setModalMode(null)}
+            onBack={handleBack}
+            hasHistory={modalHistory.length > 0}
+            onContentLinkClick={handleContentLinkClick}
+
+            // Features
+            dailyPrepQueue={dailyPrepQueue}
+            setDailyPrepQueue={setDailyPrepQueue}
+            toggleInventoryEquipped={toggleInventoryEquipped}
+            isLoadingShopDetail={shopItemDetailLoading}
+            shopDetailError={shopItemDetailError}
+
+            // Callbacks
+            toggleBloodmagic={toggleBloodmagic}
+            removeFromCharacter={removeFromCharacter}
+            saveNewAction={saveNewAction}
+        />
+    </div>
+);
 }
