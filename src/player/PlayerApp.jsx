@@ -28,6 +28,8 @@ import { FeatsView } from './views/FeatsView';
 import { ImpulsesView } from './views/ImpulsesView';
 import { isEquipableInventoryItem, getWeaponCapacity } from '../shared/utils/combatUtils';
 import { ConditionsModal } from './modals/ConditionsModal';
+import { FormulaBookModal } from './modals/FormulaBookModal';
+import { ItemDetailModal } from './modals/ItemDetailModal';
 
 
 
@@ -3085,170 +3087,16 @@ export default function PlayerApp({ db, setDb }) {
                 </>
             );
         } else if (modalMode === 'formula_book') {
-            const formulas = character.formulaBook || [];
-
-            // Daily Crafting Logic
-            const hasMunitionsCrafter = (character.feats || []).includes("Munitions Crafter");
-            const hasAdvAlchemy = character.classes?.some(c => c.name.toLowerCase() === 'alchemist') || (character.feats || []).includes("Advanced Alchemy");
-            const canDailyCraft = hasMunitionsCrafter || hasAdvAlchemy;
-
-            // Max Batches (Stored in character or default)
-            // Default: Alchemist = Level + Int? actually rules say 4 + Int usually, or just batches.
-            // We follow user request: "make this maximum a value in the character sheet"
-            // If undefined, default to 0 for now so they notice they need to set it, or maybe 4?
-            // Let's rely on stored value `character.dailyCraftingMax`.
-            const maxBatches = character.dailyCraftingMax || 5;
-            const currentBatches = dailyPrepQueue.reduce((acc, i) => acc + (i.batches || 1), 0);
-
-            content = (
-                <>
-                    <h2>Formula Book ({formulas.length})</h2>
-                    {formulas.length === 0 && <div style={{ color: '#888', fontStyle: 'italic' }}>No known formulas. Buy them effectively from the shop.</div>}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 15, maxHeight: '40vh', overflowY: 'auto' }}>
-                        {formulas.map(fName => {
-                            const item = getShopIndexItemByName(fName) || { name: fName };
-                            // Check if craftable via daily prep (Consumable? Alchemical?)
-                            // Munitions Crafter: Alchemical Bombs/Ammu level <= level.
-                            // Adv Alchemy: Alchemical Consumables level <= level.
-                            // For simplicity, we enable "Prepare" for all if they have the feature, relying on user honesty/game rules, 
-                            // OR we check traits if possible. Let's start with basic enabled.
-
-                            return (
-                                <div key={fName}
-                                    style={{ background: '#333', padding: 8, borderRadius: 4, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
-                                    onClick={() => { setModalData(item); setModalMode('item'); }}
-                                >
-                                    {item.img ? (
-                                        <img src={`ressources/${item.img}`} style={{ width: 32, height: 32, objectFit: 'contain' }} alt="" />
-                                    ) : (
-                                        <div style={{ width: 32, height: 32, background: '#444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2em' }}>📜</div>
-                                    )}
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 'bold' }}>{item.name}</div>
-                                        <div style={{ fontSize: '0.8em', color: '#aaa' }}>Level {item.level || '?'} • {item.price || '?'} gp</div>
-                                    </div>
-
-                                    {/* Prepare Button */}
-                                    {canDailyCraft && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const isAmmo = (item.type || '').toLowerCase() === 'ammunition' ||
-                                                    (item.group || '').toLowerCase() === 'ammunition' ||
-                                                    /arrow|bolt|round|cartridge|shot/i.test(item.name);
-                                                const batchSize = isAmmo ? 4 : 1;
-
-                                                // Add to queue logic
-                                                setDailyPrepQueue(prev => {
-                                                    const existing = prev.find(p => p.name === item.name);
-                                                    if (existing) {
-                                                        return prev.map(p => p.name === item.name ? { ...p, batches: p.batches + 1 } : p);
-                                                    }
-                                                    return [...prev, { ...item, batches: 1, batchSize }];
-                                                });
-                                            }}
-                                            style={{
-                                                background: '#673ab7',
-                                                border: 'none',
-                                                borderRadius: 4,
-                                                padding: '4px 10px',
-                                                cursor: 'pointer',
-                                                color: '#fff',
-                                                fontSize: '0.9em',
-                                                display: 'flex', alignItems: 'center', gap: 5
-                                            }}
-                                            title="Prepare Batch (Use Daily Crafting)"
-                                        >
-                                            <span style={{ fontSize: '1.1em' }}>⚡</span>
-                                            Prep +{((item.type || '').toLowerCase() === 'ammunition' || (item.group || '').toLowerCase() === 'ammunition' || /arrow|bolt|round|cartridge|shot/i.test(item.name)) ? 4 : 1}
-                                        </button>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Daily Preparation Section */}
-                    {canDailyCraft && (
-                        <div style={{ marginTop: 20, borderTop: '2px dashed #555', paddingTop: 15 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                                <h3 style={{ margin: 0, color: '#b39ddb' }}>Daily Preparation</h3>
-                                <div
-                                    style={{ background: '#222', padding: '4px 8px', borderRadius: 4, fontSize: '0.9em', cursor: 'pointer' }}
-                                    onClick={() => {
-                                        const newMax = prompt("Set Maximum Batches:", maxBatches);
-                                        if (newMax !== null && !isNaN(newMax)) {
-                                            updateCharacter(c => c.dailyCraftingMax = parseInt(newMax));
-                                        }
-                                    }}
-                                    title="Click to edit Max Batches"
-                                >
-                                    <span style={{ color: currentBatches > maxBatches ? '#ff5252' : '#fff', fontWeight: 'bold' }}>{currentBatches}</span>
-                                    <span style={{ color: '#888' }}> / {maxBatches} Batches</span>
-                                </div>
-                            </div>
-
-                            {dailyPrepQueue.length === 0 ? (
-                                <div style={{ color: '#666', fontStyle: 'italic', textAlign: 'center', padding: 10 }}>
-                                    No items queued. Click "Prep" on formulas above.
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                    {dailyPrepQueue.map((qItem, idx) => (
-                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#30204a', padding: '5px 8px', borderRadius: 4 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                {qItem.img && <img src={`ressources/${qItem.img}`} style={{ width: 24, height: 24 }} alt="" />}
-                                                <div>
-                                                    <div style={{ fontSize: '0.95em' }}>{qItem.name}</div>
-                                                    <div style={{ fontSize: '0.75em', color: '#bbb' }}>{qItem.batches} batch(es) x {qItem.batchSize || 1} = <span style={{ color: '#fff' }}>{qItem.batches * (qItem.batchSize || 1)} items</span></div>
-                                                </div>
-                                            </div>
-                                            <div style={{ display: 'flex', gap: 5 }}>
-                                                <button
-                                                    onClick={() => setDailyPrepQueue(prev => {
-                                                        const p = prev[idx];
-                                                        if (p.batches > 1) return prev.map((item, i) => i === idx ? { ...item, batches: item.batches - 1 } : item);
-                                                        return prev.filter((_, i) => i !== idx);
-                                                    })}
-                                                    style={{ background: '#ff5252', border: 'none', color: '#fff', borderRadius: 3, width: 24, height: 24, cursor: 'pointer' }}
-                                                >
-                                                    -
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    <button
-                                        className="btn-buy"
-                                        style={{ marginTop: 10, background: '#673ab7', width: '100%' }}
-                                        onClick={() => {
-                                            if (confirm(`Create ${currentBatches} batches of items?`)) {
-                                                updateCharacter(c => {
-                                                    dailyPrepQueue.forEach(qItem => {
-                                                        const totalQty = qItem.batches * (qItem.batchSize || 1);
-                                                        // Check for existing PREPARED stack? Usually separate.
-                                                        // We just push new stack marked as prepared.
-                                                        c.inventory.push({
-                                                            ...qItem,
-                                                            qty: totalQty,
-                                                            prepared: true,
-                                                            addedAt: Date.now()
-                                                        });
-                                                    });
-                                                });
-                                                setDailyPrepQueue([]);
-                                                alert("Daily preparation complete! Items added to inventory.");
-                                                setModalMode(null);
-                                            }
-                                        }}
-                                    >
-                                        Finish Preparation
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </>
+            return (
+                <FormulaBookModal
+                    character={character}
+                    updateCharacter={updateCharacter}
+                    dailyPrepQueue={dailyPrepQueue}
+                    setDailyPrepQueue={setDailyPrepQueue}
+                    setModalData={setModalData}
+                    setModalMode={setModalMode}
+                    onClose={() => setModalMode(null)}
+                />
             );
         } else if (modalMode === 'weapon_detail' && modalData) {
             console.log("Rendering Weapon Detail Modal (Distinct)", modalData);
@@ -3378,11 +3226,11 @@ export default function PlayerApp({ db, setDb }) {
                     }
                 </>
             );
+
         } else if (modalMode === 'item' && modalData) {
+            // Re-calculate loading state props
             const isSpell = modalData._entityType === 'spell' || (typeof modalData.casttime === 'string' && typeof modalData.tradition === 'string');
             const isAction = modalData._entityType === 'action' || (typeof modalData.subtype === 'string' && typeof modalData.type === 'string');
-
-            // Explicit check first
             const isFeatFromCatalog = modalData._entityType === 'feat';
 
             const matchesShopItemProps = (
@@ -3392,250 +3240,27 @@ export default function PlayerApp({ db, setDb }) {
                 modalData.traits?.rarity != null ||
                 Array.isArray(modalData?.traits?.value)
             );
-
-            // If it identifies as a feat explicitly, it's not a shop item
             const isShopItem = !isSpell && !isAction && !isFeatFromCatalog && matchesShopItemProps;
-
-            // Final feat check (explicit or fallback)
-            const isFeat = isFeatFromCatalog || (!isShopItem && !isSpell && !isAction && typeof modalData.type === 'string');
-
-            const titleText = modalData.name || modalData.title || 'Details';
-
-            const itemTraits = Array.isArray(modalData?.traits?.value) ? modalData.traits.value : (Array.isArray(modalData.traits) ? modalData.traits : []);
-            const rarity = modalData.rarity || modalData?.traits?.rarity || null;
-
-            const bulk = modalData.bulk?.value ?? modalData.bulk;
-            const damage = modalData.damage
-                ? (typeof modalData.damage === 'string'
-                    ? modalData.damage
-                    : `${modalData.damage.dice}${modalData.damage.die} ${modalData.damage.damageType}`)
-                : null;
-
-            // Action specific data
-            const actionCost = modalData.actionCost ? (modalData.actionType === 'reaction' ? 'Reaction' : modalData.actionType === 'free' ? 'Free Action' : modalData.actionType === 'passive' ? 'Passive' : `${modalData.actionCost} Action${modalData.actionCost > 1 ? 's' : ''}`) : null;
-
-            const meta = [];
-            if (isShopItem) {
-                if (modalData.price != null) meta.push(['Price', `${modalData.price} gp`]);
-                if (modalData.level != null) meta.push(['Level', modalData.level]);
-                if (bulk != null) meta.push(['Bulk', bulk]);
-                if (damage) meta.push(['Damage', damage]);
-                if (modalData.range != null) meta.push(['Range', modalData.range]);
-            } else if (isSpell) {
-                if (modalData.level != null) meta.push(['Level', modalData.level]);
-                if (modalData.tradition) meta.push(['Tradition', modalData.tradition]);
-                if (modalData.casttime) meta.push(['Cast', modalData.casttime]);
-                if (modalData.range) meta.push(['Range', modalData.range]);
-                if (modalData.target) meta.push(['Target', modalData.target]);
-                if (modalData.tags) meta.push(['Tags', modalData.tags]);
-            } else if (isAction) {
-                if (modalData.type) meta.push(['Type', modalData.type]);
-                if (modalData.subtype) meta.push(['Subtype', modalData.subtype]);
-                if (actionCost) meta.push(['Cost', actionCost]);
-                if (modalData.category) meta.push(['Category', modalData.category]);
-                if (modalData.skill) meta.push(['Skill', modalData.skill]);
-                if (modalData.feat) meta.push(['Feat', modalData.feat]);
-            } else if (isFeat) {
-                if (modalData.type) meta.push(['Type', modalData.type]);
-            }
-
-            const tagBadges = typeof modalData.tags === 'string'
-                ? modalData.tags.split(',').map(t => t.trim()).filter(Boolean)
-                : [];
 
             const expectedSourceFile =
                 modalData.sourceFile ||
                 (modalData?.name ? getShopIndexItemByName(modalData.name)?.sourceFile : null);
+
             const isLoadingShopDetail = Boolean(isShopItem && expectedSourceFile && shopItemDetailLoading && !modalData.description);
             const shopDetailError = isShopItem && expectedSourceFile && shopItemDetailError ? shopItemDetailError : null;
 
-            // Fix: Prioritize matching the specific equipped/unequipped state of the viewed item
-            // AND prioritize _index if available
-            let inventoryMatch = null;
-
-            if (isShopItem && modalData?.name) {
-                if (modalData._index !== undefined && character.inventory[modalData._index]) {
-                    const match = character.inventory[modalData._index];
-                    if (match.name === modalData.name) {
-                        inventoryMatch = match;
-                    }
-                }
-
-                if (!inventoryMatch) {
-                    inventoryMatch = character.inventory.find(i => i.name === modalData.name && !!i.equipped === !!modalData.equipped);
-                }
-
-                // Fallback
-                if (!inventoryMatch) {
-                    inventoryMatch = character.inventory.find(i => i.name === modalData.name);
-                }
-            }
-
-            const canToggleEquip = Boolean(inventoryMatch && isEquipableInventoryItem(inventoryMatch));
-            const isEquipped = Boolean(inventoryMatch?.equipped);
-
-            const equipButton = canToggleEquip ? (
-                <button
-                    type="button"
-                    onClick={() => toggleInventoryEquipped(inventoryMatch)}
-                    style={{
-                        background: 'var(--bg-dark)',
-                        color: 'var(--text-gold)',
-                        border: '1px solid var(--text-gold)',
-                        borderRadius: 6,
-                        padding: '6px 10px',
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                        fontWeight: 'bold',
-                        textTransform: 'uppercase',
-                        fontSize: '0.75em',
-                        whiteSpace: 'nowrap'
-                    }}
-                    title={isEquipped ? 'Unequip item' : 'Equip item'}
-                >
-                    {isEquipped ? 'Unequip' : 'Equip'}
-                </button>
-            ) : null;
-
-            content = (
-                <>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-                        <h2 style={{ margin: 0, flex: 1 }} dangerouslySetInnerHTML={{ __html: formatText(String(titleText), { actor: character }) }} />
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                            {modalHistory.length > 0 && (
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleBack(); }}
-                                    style={{
-                                        background: '#c5a059', border: 'none', borderRadius: 4,
-                                        padding: '6px 12px', cursor: 'pointer', fontWeight: 'bold', color: '#1a1a1d',
-                                        fontSize: '0.8em', whiteSpace: 'nowrap', textTransform: 'uppercase'
-                                    }}
-                                >
-                                    Back
-                                </button>
-                            )}
-                            {equipButton}
-                        </div>
-                    </div>
-
-                    {(isShopItem || isSpell || isAction || isFeat) && (
-                        <div style={{ marginBottom: 10 }}>
-                            {isShopItem && rarity && rarity !== 'common' && (
-                                <span className="trait-badge" style={{ borderColor: 'var(--text-gold)', color: 'var(--text-gold)' }}>
-                                    {rarity}
-                                </span>
-                            )}
-                            {isShopItem && itemTraits.map(t => <span key={t} className="trait-badge">{t}</span>)}
-                            {isSpell && modalData.tradition && <span className="trait-badge">{modalData.tradition}</span>}
-                            {isSpell && tagBadges.map(t => <span key={t} className="trait-badge">{t}</span>)}
-                            {isAction && itemTraits.map(t => <span key={t} className="trait-badge">{t}</span>)}
-                            {isFeat && itemTraits.map(t => <span key={t} className="trait-badge">{t}</span>)}
-                        </div>
-                    )}
-
-                    {/* Ammo Slots Visualization (Moved here) */}
-                    {(() => {
-                        const isCrossbowOrFirearm = isShopItem && (
-                            ['crossbow', 'firearm'].includes((modalData.group || '').toLowerCase()) ||
-                            (modalData.traits?.value || []).includes('repeating') ||
-                            /bow|crossbow|firearm|pistol|musket|rifle|gun|pepperbox|rotary/i.test(modalData.name || '')
-                        );
-
-                        // Only show if it's an owned inventory item (we need state for loaded ammo)
-                        // inventoryMatch is already calculated above
-                        if (isCrossbowOrFirearm && inventoryMatch) {
-                            const capacity = getWeaponCapacity(inventoryMatch);
-                            if (capacity > 0) {
-                                return (
-                                    <div style={{ marginBottom: 15, padding: 10, background: '#1a1a1d', borderRadius: 8, border: '1px solid #444' }}>
-                                        <div style={{ fontSize: '0.9em', color: '#888', marginBottom: 8, textTransform: 'uppercase', textAlign: 'center', borderBottom: '1px solid #333', paddingBottom: 5 }}>
-                                            Ammunition ({capacity} Slot{capacity > 1 ? 's' : ''})
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                            {Array.from({ length: capacity }).map((_, idx) => {
-                                                const loadedAmmo = inventoryMatch.loaded && inventoryMatch.loaded[idx];
-                                                const isFilled = !!loadedAmmo;
-                                                const isSpecial = loadedAmmo?.isSpecial;
-
-                                                return (
-                                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#252528', padding: '5px 10px', borderRadius: 4 }}>
-                                                        <div
-                                                            style={{
-                                                                width: 20, height: 20,
-                                                                borderRadius: '50%',
-                                                                border: '2px solid #777',
-                                                                background: isFilled ? (isSpecial ? '#90caf9' : '#ffb74d') : 'rgba(0,0,0,0.3)',
-                                                                boxShadow: 'inset 0 0 5px rgba(0,0,0,0.5)',
-                                                                flexShrink: 0
-                                                            }}
-                                                        />
-                                                        {isFilled ? (
-                                                            <div style={{ fontSize: '0.9em', color: isSpecial ? '#90caf9' : '#ffb74d', wordBreak: 'break-word', lineHeight: 1.3 }}>
-                                                                {loadedAmmo.name}
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{ fontSize: '0.9em', color: '#555', fontStyle: 'italic' }}>
-                                                                Empty Slot
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                );
-                            }
-                        }
-                        return null;
-                    })()}
-
-                    {meta.length > 0 && (
-                        <div className="item-meta-row">
-                            {meta.map(([label, value], idx) => (
-                                <div key={`${label}-${idx}`}><strong>{label}:</strong> {value}</div>
-                            ))}
-                        </div>
-                    )}
-
-                    <div
-                        className="formatted-content"
-                        dangerouslySetInnerHTML={{
-                            __html: formatText(
-                                modalData.description ||
-                                (isLoadingShopDetail ? 'Loading item details…' : shopDetailError ? `Failed to load item details: ${shopDetailError}` : 'No description.'),
-                                { actor: character }
-                            )
-                        }}
-                    />
-
-                    {/* Blood Magic Display */}
-                    {isSpell && modalData.Bloodmagic && (
-                        <div style={{ marginTop: 20, borderTop: '1px solid #444', paddingTop: 10 }}>
-                            <h3 style={{ color: '#8B0000', margin: '0 0 5px 0', fontFamily: 'Cinzel, serif' }}>Blood Magic</h3>
-
-                            {!character.magic?.bloodmagic ? (
-                                <div style={{ color: '#aaa', fontStyle: 'italic' }}>
-                                    (Character has no active Blood Magic)
-                                </div>
-                            ) : !bloodMagicEffects.Effects[character.magic.bloodmagic] ? (
-                                <div style={{ color: 'orange' }}>
-                                    Effect "{character.magic.bloodmagic}" not found in library.
-                                    (Available: {Object.keys(bloodMagicEffects.Effects || {}).join(', ')})
-                                </div>
-                            ) : (
-                                <>
-                                    <strong style={{ color: '#D22B2B', display: 'block', marginBottom: 5 }}>
-                                        {character.magic.bloodmagic}
-                                    </strong>
-                                    <div
-                                        className="formatted-content"
-                                        dangerouslySetInnerHTML={{ __html: formatText(bloodMagicEffects.Effects[character.magic.bloodmagic].description || "") }}
-                                    />
-                                </>
-                            )}
-                        </div>
-                    )}
-                </>
+            return (
+                <ItemDetailModal
+                    character={character}
+                    modalData={modalData}
+                    toggleInventoryEquipped={toggleInventoryEquipped}
+                    onBack={handleBack}
+                    onClose={() => setModalMode(null)}
+                    hasHistory={modalHistory && modalHistory.length > 0}
+                    isLoadingShopDetail={isLoadingShopDetail}
+                    shopDetailError={shopDetailError}
+                    onContentLinkClick={handleContentLinkClick}
+                />
             );
         }
 
@@ -3842,6 +3467,7 @@ export default function PlayerApp({ db, setDb }) {
                                 setModalData(data);
                             }}
                             onInspectItem={inspectInventoryItem}
+                            onToggleEquip={toggleInventoryEquipped}
                             onFireWeapon={fireWeapon}
                             onLoadWeapon={loadWeapon}
                             onLongPress={handleLongPress}
