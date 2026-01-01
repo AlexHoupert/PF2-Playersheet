@@ -1,4 +1,5 @@
 import React from 'react';
+import { getCondLevel } from '../../utils/rules';
 import { HealthBar } from '../../shared/components/HealthBar';
 import { ConditionList } from '../../shared/components/ConditionList';
 import { DefensesSection } from '../sections/DefensesSection';
@@ -8,8 +9,16 @@ import { SkillsSection } from '../sections/SkillsSection';
 export function StatsView({ character, updateCharacter, onOpenModal, onLongPress }) {
     if (!character) return null;
 
+    const condDrained = getCondLevel('drained', character);
+    // Drained reduces max HP by level * value
+    const drainedPenalty = (condDrained || 0) * (character.level || 1);
+
+    // Original Max
+    const baseMaxHP = character.stats.hp.max;
+    // Effective Max
+    const maxHP = Math.max(1, baseMaxHP - drainedPenalty);
+
     const hp = character.stats.hp.current;
-    const maxHP = character.stats.hp.max;
     const tempHP = character.stats.hp.temp;
 
     return (

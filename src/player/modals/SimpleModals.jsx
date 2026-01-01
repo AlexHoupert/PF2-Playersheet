@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getCondLevel } from '../../utils/rules';
 
 const ARMOR_RANKS = [
     { value: 0, label: 'Untrained (+0)' },
@@ -473,6 +474,7 @@ export function ManageHPModal({ character, updateCharacter, onClose }) {
                 <h2>Manage Hit Points</h2>
                 <p style={{ textAlign: 'center', color: '#888' }}>
                     Current HP: <span style={{ color: 'var(--text-gold)', fontWeight: 'bold' }}>{character.stats.hp.current}</span>
+                    <span style={{ fontSize: '0.8em', color: '#666' }}> / {Math.max(1, character.stats.hp.max - (getCondLevel('drained', character) * character.level))}</span>
                     &nbsp; | &nbsp;
                     <span
                         onClick={() => setShowTempHp(!showTempHp)}
@@ -625,8 +627,12 @@ export function ContextModal({ character, modalData, updateCharacter, onClose, s
                     )}
 
                     {/* HP / Level */}
+                    {/* HP / Level */}
                     {(type === 'level' || type === 'hp' || type === 'max_hp') && (
-                        <button className="set-btn" onClick={() => setModalMode(type === 'hp' ? 'hp' : 'edit_max_hp')}>Change Max HP</button>
+                        <button className="set-btn" onClick={() => setModalMode('edit_max_hp')}>Change Max HP</button>
+                    )}
+                    {type === 'save' && (
+                        <button className="set-btn" onClick={() => setModalMode('edit_proficiency')}>Change Proficiency</button>
                     )}
                     {type === 'level' && (
                         <>

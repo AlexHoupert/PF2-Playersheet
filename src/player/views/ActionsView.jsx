@@ -139,7 +139,7 @@ export function ActionsView({ character, onOpenModal, onLongPress }) {
                                     }
                                     return;
                                 }
-                                const val = character.skills[s] || 0;
+                                const val = character.skills[s] || (s === 'Intimidation' ? character.skills['Intimidate'] : 0) || 0;
                                 const calc = calculateStat(character, s, val);
                                 if (calc && calc.total > best) {
                                     best = calc.total;

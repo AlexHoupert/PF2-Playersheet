@@ -68,6 +68,25 @@ export default function PlayerApp({ db, setDb }) {
         }
     }, [myCharacter, activeCampaign]);
 
+    // Migration: Intimidate -> Intimidation
+    useEffect(() => {
+        if (!activeCampaign || !activeCampaign.characters) return;
+        const index = activeCampaign.characters.findIndex(c => c.id === myCharacter?.id);
+        if (index === -1) return;
+
+        const char = activeCampaign.characters[index];
+        if (char.skills && char.skills.hasOwnProperty('Intimidate')) {
+            console.log("Migrating Intimidate to Intimidation for", char.name);
+            updateCharacter(c => {
+                if (c.skills.hasOwnProperty('Intimidate')) {
+                    const val = c.skills.Intimidate;
+                    delete c.skills.Intimidate;
+                    c.skills.Intimidation = val;
+                }
+            });
+        }
+    }, [activeCampaign, myCharacter]);
+
 
 
     // Fallback if no campaign
@@ -1933,12 +1952,12 @@ export default function PlayerApp({ db, setDb }) {
         />
     );
 
-// --- MAIN RENDER ---
+    // --- MAIN RENDER ---
 
-return (
-    <div className="app-container">
-        {/* HEADER */}
-        <style>{`
+    return (
+        <div className="app-container">
+            {/* HEADER */}
+            <style>{`
                 /* MAGIC TAB CSS */
                 .magic-split { display: grid; grid-template-columns: 80px 1fr; gap: 15px; align-items: start; }
                 .magic-stat-block { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 15px; }
@@ -2013,250 +2032,250 @@ return (
                     text-overflow: ellipsis;
                 }
             `}</style>
-        <div className="header-bar">
-            <div className="header-title">
-                <h1 {...pressEvents(null, 'level')}>{character.name}</h1>
-                <small>Level {character.level} | XP: {character.xp.current}</small>
-            </div>
-            <div className="header-controls">
-                {isGM && <button className="btn-char-switch" onClick={() => {
-                    setActiveCharIndex((prev) => (prev + 1) % characters.length);
-                }}>👥</button>}
-                <div className="gold-display" onClick={() => setModalMode('gold')}>
-                    <span>💰</span> {parseFloat(character.gold).toFixed(2)} <span className="gold-unit">gp</span>
+            <div className="header-bar">
+                <div className="header-title">
+                    <h1 {...pressEvents(null, 'level')}>{character.name}</h1>
+                    <small>Level {character.level} | XP: {character.xp.current}</small>
                 </div>
-                {isGM && <button className="btn-char-switch" onClick={() => window.location.search = '?admin=true'} title="GM Screen">GM</button>}
+                <div className="header-controls">
+                    {isGM && <button className="btn-char-switch" onClick={() => {
+                        setActiveCharIndex((prev) => (prev + 1) % characters.length);
+                    }}>👥</button>}
+                    <div className="gold-display" onClick={() => setModalMode('gold')}>
+                        <span>💰</span> {parseFloat(character.gold).toFixed(2)} <span className="gold-unit">gp</span>
+                    </div>
+                    {isGM && <button className="btn-char-switch" onClick={() => window.location.search = '?admin=true'} title="GM Screen">GM</button>}
+                </div>
             </div>
-        </div>
 
 
-        {/* TABS */}
-        <div className="tabs">
-            {['stats', 'actions', 'feats', ...(character.isCaster || character.magic?.list?.length > 0 ? ['magic'] : []), ...(character.isKineticist ? ['impulses'] : []), 'items'].map(tab => {
-                const hasLoot = tab === 'items' && (
-                    character?.inventory?.some(i => i.isLoot) ||
-                    db?.lootBags?.some(b => !b.isLocked && b.items.some(i => !i.claimedBy))
-                );
-                return (
-                    <button
-                        key={tab}
-                        className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
-                        onClick={() => setActiveTab(tab)}
-                    >
-                        {tab === 'magic' ? 'Magic' : tab === 'impulses' ? 'Impulses' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                        {hasLoot && <span style={{ color: '#d32f2f', marginLeft: 5, fontWeight: 'bold' }}>!</span>}
-                    </button>
-                );
-            })}
-        </div>
+            {/* TABS */}
+            <div className="tabs">
+                {['stats', 'actions', 'feats', ...(character.isCaster || character.magic?.list?.length > 0 ? ['magic'] : []), ...(character.isKineticist ? ['impulses'] : []), 'items'].map(tab => {
+                    const hasLoot = tab === 'items' && (
+                        character?.inventory?.some(i => i.isLoot) ||
+                        db?.lootBags?.some(b => !b.isLocked && b.items.some(i => !i.claimedBy))
+                    );
+                    return (
+                        <button
+                            key={tab}
+                            className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
+                            onClick={() => setActiveTab(tab)}
+                        >
+                            {tab === 'magic' ? 'Magic' : tab === 'impulses' ? 'Impulses' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {hasLoot && <span style={{ color: '#d32f2f', marginLeft: 5, fontWeight: 'bold' }}>!</span>}
+                        </button>
+                    );
+                })}
+            </div>
 
-        {/* VIEW CONTENT */}
-        <div className="view-section">
-            {activeTab === 'stats' && (
-                <StatsView
-                    character={character}
-                    updateCharacter={updateCharacter}
-                    onOpenModal={(mode, data) => {
-                        setModalMode(mode);
-                        if (data) setModalData(data);
-                    }}
-                    onLongPress={handleLongPress}
-                />
-            )}
-
-            {activeTab === 'actions' && (
-                <ActionsView
-                    character={character}
-                    onOpenModal={(mode, data) => {
-                        setModalMode(mode);
-                        setModalData(data);
-                    }}
-                    onLongPress={(item, type) => handleLongPress(item, type)}
-                />
-            )}
-
-            {activeTab === 'magic' && renderMagic()}
-            {activeTab === 'impulses' && (
-                <ImpulsesView
-                    character={character}
-                    setModalData={setModalData}
-                    setModalMode={setModalMode}
-                    onLongPress={handleLongPress}
-                />
-            )}
-            {activeTab === 'feats' && renderFeats()}
-        </div>
-
-        {/* MODALS / FULL PAGE VIEWS */}
-
-        {
-            activeTab === 'items' && (
-                <div>
-                    <InventoryView
+            {/* VIEW CONTENT */}
+            <div className="view-section">
+                {activeTab === 'stats' && (
+                    <StatsView
                         character={character}
-                        db={db}
-                        onUpdateCharacter={updateCharacter}
-                        onSetDb={setDb}
+                        updateCharacter={updateCharacter}
+                        onOpenModal={(mode, data) => {
+                            setModalMode(mode);
+                            if (data) setModalData(data);
+                        }}
+                        onLongPress={handleLongPress}
+                    />
+                )}
+
+                {activeTab === 'actions' && (
+                    <ActionsView
+                        character={character}
                         onOpenModal={(mode, data) => {
                             setModalMode(mode);
                             setModalData(data);
                         }}
-                        onInspectItem={inspectInventoryItem}
-                        onToggleEquip={toggleInventoryEquipped}
-                        onFireWeapon={fireWeapon}
-                        onLoadWeapon={loadWeapon}
-                        onLongPress={handleLongPress}
-                        onClaimLoot={(bag, item) => {
-                            setDb(prev => {
-                                const next = { ...prev };
-                                const campaignId = activeCampaign?.id;
-                                if (!campaignId || !next.campaigns?.[campaignId]) return prev;
-
-                                const nextChars = [...next.campaigns[campaignId].characters];
-                                const charIndex = activeCharIndex;
-                                const char = { ...nextChars[charIndex], inventory: [...nextChars[charIndex].inventory] };
-
-                                // 1. Add to Inventory
-                                const stackable = shouldStack(item);
-                                const existing = stackable ? char.inventory.find(i => i.name === item.name) : null;
-                                if (existing) {
-                                    existing.qty = (existing.qty || 1) + 1;
-                                } else {
-                                    // Ensure clean properties for new owned item
-                                    const newItem = { ...item, qty: 1 };
-                                    delete newItem.instanceId; // New ID will be generated or undefined
-                                    delete newItem.addedAt;
-                                    delete newItem.claimedBy;
-                                    char.inventory.push(newItem);
-                                }
-
-                                nextChars[charIndex] = char;
-                                next.campaigns[campaignId].characters = nextChars;
-
-                                // 2. Mark in Loot Bag
-                                if (next.lootBags) {
-                                    const bags = deepClone(next.lootBags);
-                                    const targetBag = bags.find(b => b.id === bag.id);
-                                    if (targetBag) {
-                                        const targetItem = targetBag.items.find(i => i.instanceId === item.instanceId);
-                                        if (targetItem) targetItem.claimedBy = char.name; // Use current char name for claim signature
-                                    }
-                                    next.lootBags = bags;
-                                }
-
-                                return next;
-                            });
-                        }}
-                        onOpenShop={() => setActiveTab('shop')}
+                        onLongPress={(item, type) => handleLongPress(item, type)}
                     />
-                </div>
-            )
-        }
+                )}
 
-        {
-            activeTab === 'shop' && (
-                <ShopView
-                    db={db}
-                    onInspectItem={(item) => {
-                        setModalData(item);
-                        setModalMode('item');
-                    }}
-                    onBuyItem={(item) => setActionModal({ mode: 'BUY_RESTOCK', item })}
-                    onBuyFormula={handleBuyFormula}
-                    knownFormulas={character.formulaBook || []}
-                />
-            )
-        }
+                {activeTab === 'magic' && renderMagic()}
+                {activeTab === 'impulses' && (
+                    <ImpulsesView
+                        character={character}
+                        setModalData={setModalData}
+                        setModalMode={setModalMode}
+                        onLongPress={handleLongPress}
+                    />
+                )}
+                {activeTab === 'feats' && renderFeats()}
+            </div>
 
-        {/* Item Actions Modal */}
-        <ItemActionsModal
-            mode={actionModal.mode}
-            item={actionModal.item}
-            characters={characters}
-            activeCharIndex={activeCharIndex}
-            onClose={() => setActionModal({ mode: null, item: null })}
-            onOpenMode={(m, i) => setActionModal({ mode: m, item: i })}
-            onBuy={executeBuy}
-            onChangeQty={executeQty}
-            onTransfer={executeTransfer}
-            onUnstack={executeUnstack}
-            onLoadSpecial={handleLoadSpecial}
-            onUnloadAll={handleUnloadAll}
-            onEditProficiency={(item) => {
-                setActionModal({ mode: null, item: null });
-                setModalData({ item, type: 'weapon_prof' }); // Reuse modalData to pass item
-                setModalMode('item_proficiencies');
-            }}
-        />
+            {/* MODALS / FULL PAGE VIEWS */}
 
-        {/* Catalog Overlay */}
-        {
-            catalogMode === 'feat' && (
-                <ItemCatalog
-                    title="Add Feat"
-                    items={FEAT_INDEX_ITEMS}
-                    filterOptions={FEAT_INDEX_FILTER_OPTIONS}
-                    onSelect={(item) => addToCharacter(item, 'feat')}
-                    onClose={() => setCatalogMode(null)}
-                />
-            )
-        }
+            {
+                activeTab === 'items' && (
+                    <div>
+                        <InventoryView
+                            character={character}
+                            db={db}
+                            onUpdateCharacter={updateCharacter}
+                            onSetDb={setDb}
+                            onOpenModal={(mode, data) => {
+                                setModalMode(mode);
+                                setModalData(data);
+                            }}
+                            onInspectItem={inspectInventoryItem}
+                            onToggleEquip={toggleInventoryEquipped}
+                            onFireWeapon={fireWeapon}
+                            onLoadWeapon={loadWeapon}
+                            onLongPress={handleLongPress}
+                            onClaimLoot={(bag, item) => {
+                                setDb(prev => {
+                                    const next = { ...prev };
+                                    const campaignId = activeCampaign?.id;
+                                    if (!campaignId || !next.campaigns?.[campaignId]) return prev;
 
-        {
-            catalogMode === 'impulse' && (
-                <ItemCatalog
-                    title="Add Impulse"
-                    items={IMPULSE_INDEX_ITEMS}
-                    filterOptions={IMPULSE_INDEX_FILTER_OPTIONS}
-                    onClose={() => setCatalogMode(null)}
-                    onSelect={(impulseData) => {
-                        updateCharacter(c => {
-                            if (!c.impulses) c.impulses = [];
-                            c.impulses.push(impulseData);
-                        });
-                        setCatalogMode(null);
-                    }}
-                />
-            )
-        }
+                                    const nextChars = [...next.campaigns[campaignId].characters];
+                                    const charIndex = activeCharIndex;
+                                    const char = { ...nextChars[charIndex], inventory: [...nextChars[charIndex].inventory] };
 
-        {
-            catalogMode === 'spell' && (
-                <ItemCatalog
-                    title="Add Spell"
-                    items={SPELL_INDEX_ITEMS}
-                    filterOptions={SPELL_INDEX_FILTER_OPTIONS}
-                    onSelect={(item) => addToCharacter(item, 'spell')}
-                    onClose={() => setCatalogMode(null)}
-                />
-            )
-        }
+                                    // 1. Add to Inventory
+                                    const stackable = shouldStack(item);
+                                    const existing = stackable ? char.inventory.find(i => i.name === item.name) : null;
+                                    if (existing) {
+                                        existing.qty = (existing.qty || 1) + 1;
+                                    } else {
+                                        // Ensure clean properties for new owned item
+                                        const newItem = { ...item, qty: 1 };
+                                        delete newItem.instanceId; // New ID will be generated or undefined
+                                        delete newItem.addedAt;
+                                        delete newItem.claimedBy;
+                                        char.inventory.push(newItem);
+                                    }
 
-        {/* General Modals */}
-        <ModalManager
-            modalMode={modalMode}
-            setModalMode={setModalMode}
-            modalData={modalData}
-            setModalData={setModalData}
-            character={character}
-            updateCharacter={updateCharacter}
-            onClose={() => setModalMode(null)}
-            onBack={handleBack}
-            hasHistory={modalHistory.length > 0}
-            onContentLinkClick={handleContentLinkClick}
+                                    nextChars[charIndex] = char;
+                                    next.campaigns[campaignId].characters = nextChars;
 
-            // Features
-            dailyPrepQueue={dailyPrepQueue}
-            setDailyPrepQueue={setDailyPrepQueue}
-            toggleInventoryEquipped={toggleInventoryEquipped}
-            isLoadingShopDetail={shopItemDetailLoading}
-            shopDetailError={shopItemDetailError}
+                                    // 2. Mark in Loot Bag
+                                    if (next.lootBags) {
+                                        const bags = deepClone(next.lootBags);
+                                        const targetBag = bags.find(b => b.id === bag.id);
+                                        if (targetBag) {
+                                            const targetItem = targetBag.items.find(i => i.instanceId === item.instanceId);
+                                            if (targetItem) targetItem.claimedBy = char.name; // Use current char name for claim signature
+                                        }
+                                        next.lootBags = bags;
+                                    }
 
-            // Callbacks
-            toggleBloodmagic={toggleBloodmagic}
-            removeFromCharacter={removeFromCharacter}
-            saveNewAction={saveNewAction}
-        />
-    </div>
-);
+                                    return next;
+                                });
+                            }}
+                            onOpenShop={() => setActiveTab('shop')}
+                        />
+                    </div>
+                )
+            }
+
+            {
+                activeTab === 'shop' && (
+                    <ShopView
+                        db={db}
+                        onInspectItem={(item) => {
+                            setModalData(item);
+                            setModalMode('item');
+                        }}
+                        onBuyItem={(item) => setActionModal({ mode: 'BUY_RESTOCK', item })}
+                        onBuyFormula={handleBuyFormula}
+                        knownFormulas={character.formulaBook || []}
+                    />
+                )
+            }
+
+            {/* Item Actions Modal */}
+            <ItemActionsModal
+                mode={actionModal.mode}
+                item={actionModal.item}
+                characters={characters}
+                activeCharIndex={activeCharIndex}
+                onClose={() => setActionModal({ mode: null, item: null })}
+                onOpenMode={(m, i) => setActionModal({ mode: m, item: i })}
+                onBuy={executeBuy}
+                onChangeQty={executeQty}
+                onTransfer={executeTransfer}
+                onUnstack={executeUnstack}
+                onLoadSpecial={handleLoadSpecial}
+                onUnloadAll={handleUnloadAll}
+                onEditProficiency={(item) => {
+                    setActionModal({ mode: null, item: null });
+                    setModalData({ item, type: 'weapon_prof' }); // Reuse modalData to pass item
+                    setModalMode('item_proficiencies');
+                }}
+            />
+
+            {/* Catalog Overlay */}
+            {
+                catalogMode === 'feat' && (
+                    <ItemCatalog
+                        title="Add Feat"
+                        items={FEAT_INDEX_ITEMS}
+                        filterOptions={FEAT_INDEX_FILTER_OPTIONS}
+                        onSelect={(item) => addToCharacter(item, 'feat')}
+                        onClose={() => setCatalogMode(null)}
+                    />
+                )
+            }
+
+            {
+                catalogMode === 'impulse' && (
+                    <ItemCatalog
+                        title="Add Impulse"
+                        items={IMPULSE_INDEX_ITEMS}
+                        filterOptions={IMPULSE_INDEX_FILTER_OPTIONS}
+                        onClose={() => setCatalogMode(null)}
+                        onSelect={(impulseData) => {
+                            updateCharacter(c => {
+                                if (!c.impulses) c.impulses = [];
+                                c.impulses.push(impulseData);
+                            });
+                            setCatalogMode(null);
+                        }}
+                    />
+                )
+            }
+
+            {
+                catalogMode === 'spell' && (
+                    <ItemCatalog
+                        title="Add Spell"
+                        items={SPELL_INDEX_ITEMS}
+                        filterOptions={SPELL_INDEX_FILTER_OPTIONS}
+                        onSelect={(item) => addToCharacter(item, 'spell')}
+                        onClose={() => setCatalogMode(null)}
+                    />
+                )
+            }
+
+            {/* General Modals */}
+            <ModalManager
+                modalMode={modalMode}
+                setModalMode={setModalMode}
+                modalData={modalData}
+                setModalData={setModalData}
+                character={character}
+                updateCharacter={updateCharacter}
+                onClose={() => setModalMode(null)}
+                onBack={handleBack}
+                hasHistory={modalHistory.length > 0}
+                onContentLinkClick={handleContentLinkClick}
+
+                // Features
+                dailyPrepQueue={dailyPrepQueue}
+                setDailyPrepQueue={setDailyPrepQueue}
+                toggleInventoryEquipped={toggleInventoryEquipped}
+                isLoadingShopDetail={shopItemDetailLoading}
+                shopDetailError={shopItemDetailError}
+
+                // Callbacks
+                toggleBloodmagic={toggleBloodmagic}
+                removeFromCharacter={removeFromCharacter}
+                saveNewAction={saveNewAction}
+            />
+        </div>
+    );
 }

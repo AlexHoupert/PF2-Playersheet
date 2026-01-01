@@ -3,11 +3,10 @@
 export const STAT_MAP = {
     "Fortitude": "Constitution", "Reflex": "Dexterity", "Will": "Wisdom", "Perception": "Wisdom",
     "Acrobatics": "Dexterity", "Arcana": "Intelligence", "Athletics": "Strength", "Crafting": "Intelligence",
-    "Deception": "Charisma", "Diplomacy": "Charisma", "Intimidate": "Charisma", "Medicine": "Wisdom",
-    "Nature": "Wisdom", "Occultism": "Intelligence", "Perform": "Charisma", "Religion": "Wisdom",
+    "Deception": "Charisma", "Diplomacy": "Charisma", "Intimidation": "Charisma", "Medicine": "Wisdom",
+    "Nature": "Wisdom", "Occultism": "Intelligence", "Performance": "Charisma", "Religion": "Wisdom",
     "Society": "Intelligence", "Stealth": "Dexterity", "Survival": "Wisdom", "Thievery": "Dexterity",
-    // Expanded mappings for user inputs
-    "Intimidation": "Charisma", "Performance": "Charisma"
+    "Intimidate": "Charisma"
 };
 
 export const PROF_NAMES = { 0: "Untrained", 2: "Trained", 4: "Expert", 6: "Master", 8: "Legendary" };
@@ -159,6 +158,12 @@ export function formatText(text, context = {}) {
     formatted = formatted.replace(/\n/g, '<br />');
 
     return formatted;
+}
+
+export function getCondLevel(condName, character) {
+    if (!character || !character.conditions) return 0;
+    const c = character.conditions.find(cond => String(cond.name || '').toLowerCase() === String(condName).toLowerCase());
+    return c ? (c.level || 1) : 0;
 }
 
 export function getConditionEffects(character, statName, attributeName) {

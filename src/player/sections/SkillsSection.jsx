@@ -11,17 +11,16 @@ export function SkillsSection({ character, onOpenModal, onLongPress }) {
         deception: 'Cha',
         diplomacy: 'Cha',
         intimidation: 'Cha',
-        intimidate: 'Cha',
         medicine: 'Wis',
         nature: 'Wis',
         occultism: 'Int',
         performance: 'Cha',
-        perform: 'Cha',
         religion: 'Wis',
         society: 'Int',
         stealth: 'Dex',
         survival: 'Wis',
-        thievery: 'Dex'
+        thievery: 'Dex',
+        intimidate: 'Cha'
     };
 
     const renderSkills = () => {
@@ -33,7 +32,8 @@ export function SkillsSection({ character, onOpenModal, onLongPress }) {
             const baseSkill = name.split('_')[0].toLowerCase();
             const ability = baseSkill === 'lore' ? 'Int' : skillAbility[baseSkill];
             const rawName = name.replace('_', ' ');
-            const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+            let displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+            if (displayName === 'Intimidate') displayName = 'Intimidation';
             const label = ability ? `${displayName} (${ability})` : displayName;
 
             return (
