@@ -789,7 +789,10 @@ export default function PlayerApp({ db, setDb }) {
     };
 
     const inspectInventoryItem = (item) => {
-        const fromIndex = item?.name ? getShopIndexItemByName(item.name) : null;
+        let fromIndex = item?.name ? getShopIndexItemByName(item.name) : null;
+        if (!fromIndex && item.system?.originalName) {
+            fromIndex = getShopIndexItemByName(item.system.originalName);
+        }
         // Ensure _index is preserved from the item object if present
         const merged = fromIndex ? { ...fromIndex, ...item, qty: item.qty || 1 } : { ...item };
         // If item has _index, ensure it's in the merged object (it should be since we spread item, but let's be safe)

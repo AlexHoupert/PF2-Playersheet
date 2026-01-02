@@ -9,7 +9,10 @@ export const getWeaponCapacity = (item) => {
     // 1. Ensure we have traits. If not on item, check shop index.
     let traitsRaw = item.traits;
     if (!traitsRaw) {
-        const fromIndex = item.name ? getShopIndexItemByName(item.name) : null;
+        let fromIndex = item.name ? getShopIndexItemByName(item.name) : null;
+        if (!fromIndex && item.system?.originalName) {
+            fromIndex = getShopIndexItemByName(item.system.originalName);
+        }
         if (fromIndex && fromIndex.traits) {
             traitsRaw = fromIndex.traits;
         }
@@ -148,7 +151,11 @@ export const getWeaponAttackBonus = (item, character) => {
  * @returns {string} - 'equipment', 'consumables', or 'misc'.
  */
 export const getInventoryBucket = (item) => {
-    const fromIndex = item?.name ? getShopIndexItemByName(item.name) : null;
+    let fromIndex = item?.name ? getShopIndexItemByName(item.name) : null;
+    if (!fromIndex && item.system?.originalName) {
+        fromIndex = getShopIndexItemByName(item.system.originalName);
+    }
+
     const type = String(item?.type || fromIndex?.type || '').toLowerCase();
     const category = String(item?.category || fromIndex?.category || '').toLowerCase();
 
@@ -164,7 +171,10 @@ export const getInventoryBucket = (item) => {
  * @returns {boolean} - True if equipable.
  */
 export const isEquipableInventoryItem = (item) => {
-    const fromIndex = item?.name ? getShopIndexItemByName(item.name) : null;
+    let fromIndex = item?.name ? getShopIndexItemByName(item.name) : null;
+    if (!fromIndex && item.system?.originalName) {
+        fromIndex = getShopIndexItemByName(item.system.originalName);
+    }
     const type = String(item?.type || fromIndex?.type || '').toLowerCase();
     return ['armor', 'shield', 'weapon'].includes(type);
 };

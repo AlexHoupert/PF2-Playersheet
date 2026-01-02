@@ -225,6 +225,7 @@ export function ModalManager({
         return (
             <ItemDetailModal
                 character={character}
+                updateCharacter={updateCharacter}
                 modalData={modalData}
                 toggleInventoryEquipped={toggleInventoryEquipped}
                 onBack={onBack}

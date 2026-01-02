@@ -2,10 +2,13 @@ import React from 'react';
 import { formatText } from '../../utils/rules';
 import { isEquipableInventoryItem, getWeaponCapacity } from '../../shared/utils/combatUtils';
 import { calculateWeaponDamage } from '../../utils/rules/damage';
+import { applyRune, removeRune, getRunes } from '../../utils/rules/runes';
 import bloodMagicEffects from '../../../ressources/classfeatures/bloodmagic-effects.json';
+import { useState } from 'react';
 
 export function ItemDetailModal({
     character,
+    updateCharacter,
     modalData,
     toggleInventoryEquipped,
     onBack,
@@ -15,6 +18,9 @@ export function ItemDetailModal({
     shopDetailError,
     onContentLinkClick
 }) {
+    // Local state for Rune Picker
+    const [showRunePicker, setShowRunePicker] = useState(false);
+
     if (!modalData) return null;
 
     // --- LOGIC EXTRACTED FROM PlayerApp ---
@@ -37,24 +43,135 @@ export function ItemDetailModal({
 
     // --- INVENTORY MATCHING & EQUIP LOGIC ---
     let inventoryMatch = null;
+    let inventoryIndex = -1;
     if (isShopItem && modalData.name) {
         if (modalData._index !== undefined && character.inventory[modalData._index]) {
             const match = character.inventory[modalData._index];
             if (match.name === modalData.name) {
                 inventoryMatch = match;
+                inventoryIndex = modalData._index;
             }
         }
         if (!inventoryMatch) {
-            inventoryMatch = character.inventory.find(i => i.name === modalData.name && !!i.equipped === !!modalData.equipped);
+            inventoryIndex = character.inventory.findIndex(i => i.name === modalData.name && !!i.equipped === !!modalData.equipped);
+            if (inventoryIndex > -1) inventoryMatch = character.inventory[inventoryIndex];
         }
         // Fallback
         if (!inventoryMatch) {
-            inventoryMatch = character.inventory.find(i => i.name === modalData.name);
+            inventoryIndex = character.inventory.findIndex(i => i.name === modalData.name);
+            if (inventoryIndex > -1) inventoryMatch = character.inventory[inventoryIndex];
         }
     }
 
     const canToggleEquip = Boolean(inventoryMatch && isEquipableInventoryItem(inventoryMatch));
     const isEquipped = Boolean(inventoryMatch?.equipped);
+
+    // --- RUNE LOGIC ---
+    const isWeapon = modalData.type === 'Weapon' || modalData.group;
+    const isArmor = modalData.type === 'Armor' || modalData.type === 'Shield';
+
+    // Only allow modification if we have the item in inventory (inventoryMatch)
+    const canModifyRunes = (isWeapon || isArmor) && inventoryMatch && updateCharacter;
+
+    const availableRunes = canModifyRunes ? character.inventory.filter(i => {
+        const type = i.type || "Equipment";
+        const category = i.category || "";
+        const name = i.name.toLowerCase();
+        const usage = i.system?.usage?.value || "";
+
+        // 1. Check if it looks like a rune
+        const isRuneLike = type === 'Rune'
+            || category.includes('rune')
+            || usage.includes('etched')
+            || name.includes('potency')
+            || name.includes('striking')
+            || name.includes('resilient')
+            || name.includes('rune');
+
+        if (!isRuneLike) return false;
+
+        // 2. Compatibility Check
+        // Explicit Category
+        if (isWeapon && category === 'rune_weapon') return true;
+        if (isArmor && category === 'rune_armor') return true;
+
+        // Usage Fallback
+        if (usage) {
+            if (isWeapon && (usage.includes('weapon') || usage.includes('melee'))) return true;
+            if (isArmor && (usage.includes('armor') || usage.includes('shield'))) return true;
+        }
+
+        // Name Fallback
+        if (isWeapon && (name.includes('weapon') || name.includes('fanged'))) return true;
+        if (isArmor && name.includes('armor')) return true;
+
+        // General Property Runes (harder to distinguish without data, assume weapon if unknown?)
+        // Let's be safe: if type is explicitly Rune and we haven't filtered it out yet, maybe show it?
+        // But if we show Armor rune for Weapon it will error on apply.
+        // Let's rely on the loose checks above. If it's "Flaming", it usually doesn't say "Weapon" in name.
+        // "Flaming" usually has usage "etched-onto-melee-weapon".
+
+        // Final catch-all for explicit Rune type if we haven't rejected it
+        if (type === 'Rune') {
+            // If we are here, we didn't match specific category/usage. 
+            // Maybe it's a property rune without "weapon" in name?
+            // Allow it, applyRune will validate final compatibility.
+            return true;
+        }
+
+        return false;
+    }) : [];
+
+    const handleApplyRune = (runeItem) => {
+        if (!inventoryMatch) return;
+
+        const { newItem, consumed, error } = applyRune(inventoryMatch, runeItem, { isWeapon, isArmor });
+
+        if (error) {
+            alert(error);
+            return;
+        }
+
+        updateCharacter(c => {
+            // 1. Update the item
+            c.inventory[inventoryIndex] = newItem;
+
+            // 2. Consume rune
+            if (consumed) {
+                const rIdx = c.inventory.findIndex(i => i === runeItem || (i.name === runeItem.name && i.qty > 0));
+                // Note: passing runeItem directly might be risky if ref changed, use index or name match
+                // Better: find by exact ref if possible or name.
+                if (rIdx > -1) {
+                    if (c.inventory[rIdx].qty > 1) c.inventory[rIdx].qty--;
+                    else c.inventory.splice(rIdx, 1);
+                }
+            }
+        });
+        setShowRunePicker(false);
+        // ModalData will need to refresh? 
+        // Since modalData is often a copy, we might need to rely on the parent updating or re-finding the item.
+        // ModalManager passes 'modalData' which is state.
+        // When we updateCharacter, PlayerApp re-renders. 
+        // But ItemDetailModal 'modalData' prop might stay stale until closed/reopened?
+        // Actually, PlayerApp doesn't auto-refresh 'modalData' unless we specifically logic it.
+        // For now, let's trust we need to close or manually update modalData.
+        // Or simpler: We know the new item state, we can't easily force-update the prop from here.
+        // We will notify user "Rune Applied" and close? Or just close.
+        onClose();
+    };
+
+    const handleRemoveRune = (type, propName = null) => {
+        if (!inventoryMatch) return;
+        const { newItem, runeRecovered } = removeRune(inventoryMatch, type, propName);
+
+        updateCharacter(c => {
+            c.inventory[inventoryIndex] = newItem;
+            if (runeRecovered) {
+                c.inventory.push({ ...runeRecovered, qty: 1 });
+            }
+        });
+        onClose();
+    };
 
     // --- META DATA PREP ---
     const metaParts = [];
@@ -179,6 +296,25 @@ export function ItemDetailModal({
                          color: #e0e0e0;
                          font-weight: bold;
                     }
+                    .rune-tag {
+                        background: #3e2723;
+                        border: 1px solid #8d6e63;
+                        color: #ffccbc;
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                        font-size: 0.8em;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 5px;
+                        margin-right: 5px;
+                        margin-bottom: 5px;
+                    }
+                    .rune-remove {
+                        cursor: pointer;
+                        color: #ef9a9a;
+                        font-weight: bold;
+                    }
+                    .rune-remove:hover { color: #ff5252; }
                 `}</style>
 
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
@@ -352,6 +488,87 @@ export function ItemDetailModal({
                     }
                     return null;
                 })()}
+
+                {/* RUNES SECTION */}
+                {canModifyRunes && (
+                    <div style={{ marginBottom: 15, borderTop: '1px solid #444', paddingTop: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                            <h3 style={{ margin: 0, fontSize: '1em', color: '#bcaaa4' }}>Runes</h3>
+                            <button
+                                onClick={() => setShowRunePicker(!showRunePicker)}
+                                style={{
+                                    background: '#3e2723', color: '#ffccbc', border: '1px solid #8d6e63',
+                                    borderRadius: 4, padding: '4px 8px', fontSize: '0.8em', cursor: 'pointer'
+                                }}
+                            >
+                                {showRunePicker ? "Cancel" : "Add Rune"}
+                            </button>
+                        </div>
+
+                        {/* Current Runes List */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                            {inventoryMatch.system?.runes?.potency ? (
+                                <span className="rune-tag">
+                                    Potency +{inventoryMatch.system.runes.potency}
+                                    <span className="rune-remove" onClick={() => handleRemoveRune('potency')}>×</span>
+                                </span>
+                            ) : null}
+
+                            {inventoryMatch.system?.runes?.striking ? (
+                                <span className="rune-tag">
+                                    {inventoryMatch.system.runes.striking.replace(/([A-Z])/g, ' $1').trim().replace(/^./, str => str.toUpperCase())}
+                                    <span className="rune-remove" onClick={() => handleRemoveRune('striking')}>×</span>
+                                </span>
+                            ) : null}
+
+                            {/* Resilient for Armor */}
+                            {inventoryMatch.system?.runes?.resilient ? (
+                                <span className="rune-tag">
+                                    Resilient +{inventoryMatch.system.runes.resilient}
+                                    <span className="rune-remove" onClick={() => handleRemoveRune('resilient')}>×</span>
+                                </span>
+                            ) : null}
+
+                            {(inventoryMatch.system?.runes?.property || []).map((prop, idx) => (
+                                <span key={idx} className="rune-tag">
+                                    {prop}
+                                    <span className="rune-remove" onClick={() => handleRemoveRune('property', prop)}>×</span>
+                                </span>
+                            ))}
+
+                            {/* Empty state */}
+                            {!inventoryMatch.system?.runes?.potency && !inventoryMatch.system?.runes?.striking && (!inventoryMatch.system?.runes?.property?.length) && !inventoryMatch.system?.runes?.resilient && (
+                                <div style={{ fontSize: '0.9em', color: '#777', fontStyle: 'italic' }}>No runes applied.</div>
+                            )}
+                        </div>
+
+                        {/* RUNE PICKER */}
+                        {showRunePicker && (
+                            <div style={{ marginTop: 10, background: '#1a1a1d', padding: 10, borderRadius: 6, border: '1px solid #555' }}>
+                                <div style={{ fontSize: '0.8em', color: '#aaa', marginBottom: 5, textTransform: 'uppercase' }}>Available Runes in Inventory</div>
+                                {availableRunes.length === 0 ? (
+                                    <div style={{ color: '#777', fontStyle: 'italic' }}>No compatible runes found in inventory.</div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                        {availableRunes.map(r => (
+                                            <div key={r.instanceId || r.name}
+                                                onClick={() => handleApplyRune(r)}
+                                                style={{
+                                                    padding: '5px 8px', background: '#333', borderRadius: 4, cursor: 'pointer',
+                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                                }}
+                                            >
+                                                <span>{r.name}</span>
+                                                <span style={{ fontSize: '0.8em', color: '#888' }}>Apply</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
 
                 <div
                     className="formatted-content"

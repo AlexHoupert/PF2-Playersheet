@@ -42,7 +42,10 @@ export function InventoryView({
             // 2. Type Priority (Weapon < Armor < Shield < Other)
             // Use merged data lookup if type missing on item instance
             const getType = (i) => {
-                const fromIdx = getShopIndexItemByName(i.name);
+                let fromIdx = getShopIndexItemByName(i.name);
+                if (!fromIdx && i.system?.originalName) {
+                    fromIdx = getShopIndexItemByName(i.system.originalName);
+                }
                 return (i.type || fromIdx?.type || '').toLowerCase();
             };
             const typePriority = { weapon: 1, armor: 2, shield: 3 };
@@ -60,7 +63,10 @@ export function InventoryView({
     const renderRow = (item, index, { enableEquipTap = false } = {}) => {
         const key = `${item?.name}-${index}`;
         const qty = item?.qty || 1;
-        const fromIndex = item?.name ? getShopIndexItemByName(item.name) : null;
+        let fromIndex = item?.name ? getShopIndexItemByName(item.name) : null;
+        if (!fromIndex && item.system?.originalName) {
+            fromIndex = getShopIndexItemByName(item.system.originalName);
+        }
         const merged = fromIndex ? { ...fromIndex, ...item, _index: index } : { ...item, _index: index };
         const { row1, row2 } = getShopItemRowMeta(merged);
 
