@@ -1,0 +1,29 @@
+{
+    "name": "[gold]Twin Feint[/gold]",
+    "type": "action",
+    "img": "systems/pf2e/icons/actions/OneAction.webp",
+    "system": {
+        "description": {
+            "value": "<p><strong>Requirements</strong> You are wielding two melee weapons, each in a different hand.</p><hr /><p>You use an attack with one weapon to distract your foe from a second attack coming at a different angle. Make one Strike with each of your two melee weapons, both against the same target. The target is automatically @UUID[Compendium.pf2e.conditionitems.Item.Off-Guard] against the second attack. Apply your multiple attack penalty to the Strikes normally.</p>"
+        },
+        "actionType": {
+            "value": "action"
+        },
+        "actions": {
+            "value": 2
+        },
+        "category": "interaction",
+        "traits": {
+            "value": [
+                "attack"
+            ],
+            "rarity": "common"
+        },
+        "classification": {
+            "type": "Combat",
+            "subtype": "Attack",
+            "skill": "ToHit",
+            "feat": "Twin Feint"
+        }
+    }
+}

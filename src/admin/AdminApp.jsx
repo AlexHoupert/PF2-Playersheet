@@ -1032,6 +1032,7 @@ export default function AdminApp({ db, setDb }) {
                                 <button className="set-btn" onClick={() => handleRebuild('impulses')}>Rebuild Impulses</button>
                                 <button className="set-btn" onClick={() => handleRebuild('items')}>Rebuild Items</button>
                                 <button className="set-btn" onClick={() => handleRebuild('feats')}>Rebuild Feats</button>
+                                <button className="set-btn" onClick={() => handleRebuild('actions')}>Rebuild Actions</button>
                                 <button className="set-btn" style={{ background: '#d32f2f' }} onClick={() => handleRebuild('all')}>Rebuild ALL</button>
                             </div>
 

@@ -4,6 +4,7 @@ import { getShopItemRowMeta } from '../../shared/catalog/shopRowMeta';
 import { shouldStack } from '../../shared/utils/inventoryUtils';
 import { deepClone } from '../../shared/utils/deepClone';
 import { getWeaponCapacity, getWeaponAttackBonus, isEquipableInventoryItem, getInventoryBucket } from '../../shared/utils/combatUtils';
+import { calculateWeaponDamage } from '../../utils/rules/damage';
 
 export function InventoryView({
     character,
@@ -138,6 +139,11 @@ export function InventoryView({
         // These are likely complex. I should look up getWeaponCapacity implementation in PlayerApp or Utils.
         // Assuming they are imported from `combatUtils` which I need to check existence of.
 
+        // Logic for Item Row
+        const damageData = (merged.type?.toLowerCase() === 'weapon' || isEquipableInventoryItem(item)) && (merged.damage || merged.system?.damage)
+            ? calculateWeaponDamage(merged, character)
+            : null;
+
         return (
             <div className="item-row inventory-item-row" key={key}
                 onClick={clickHandler}
@@ -145,10 +151,7 @@ export function InventoryView({
                     e.preventDefault();
                     if (onLongPress) onLongPress(merged, 'item');
                 }}
-            /* Need touch event handlers also for long press? PlayerApp uses {...itemPressEvents(merged)} */
-            /* I should import useLongPress or LongPressable */
             >
-                {/* ... Render Logic Same as PlayerApp ... */}
                 {merged?.img && (
                     <img className="item-icon" src={`ressources/${merged.img}`} alt="" />
                 )}
@@ -192,7 +195,7 @@ export function InventoryView({
                                                         }
                                                     }}
                                                     style={{
-                                                        width: 18, height: 18, // Bigger
+                                                        width: 18, height: 18,
                                                         borderRadius: '50%',
                                                         border: '1px solid #777',
                                                         background: isFilled ? (isSpecial ? '#90caf9' : '#ffb74d') : 'rgba(0,0,0,0.3)',
@@ -217,7 +220,7 @@ export function InventoryView({
                                 }}
                                 style={{
                                     marginLeft: 6,
-                                    fontSize: '1.2em', // Matches actions/skills size roughly
+                                    fontSize: '1.2em',
                                     fontWeight: 'bold',
                                     color: (getWeaponAttackBonus(merged, character).total >= 0) ? 'var(--text-gold)' : '#f44336',
                                     cursor: 'pointer',
@@ -229,15 +232,39 @@ export function InventoryView({
                             </div>
                         )}
                     </div>
+
                     {row1 && <div className="item-row-meta item-row-meta-1">{row1}</div>}
+
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: row2 ? 0 : 4 }}>
                         <div className="item-row-meta item-row-meta-2" style={{ flex: 1, marginRight: 10 }}>
-                            {row2}
+                            {/* Override Damage Display if available */}
+                            {/* Override Damage Display if available */}
+                            {damageData ? (
+                                <span>
+                                    <span style={{ color: '#ddd', fontWeight: 'bold' }}>
+                                        {damageData.normal.parts ? (
+                                            damageData.normal.parts.map((p, i) => (
+                                                <span key={i} style={p.style === 'purple' ? { color: '#b39ddb' } : {}}>
+                                                    {p.text}{i < damageData.normal.parts.length - 1 ? ' ' : ''}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            damageData.normal.text
+                                        )}
+                                    </span>
+                                    <span style={{ fontSize: '0.85em', color: '#666', marginLeft: 8 }}>
+                                        {/* Show Bulk if present */}
+                                        {merged.bulk ? `Bulk ${merged.bulk}` : ''}
+                                    </span>
+                                </span>
+                            ) : (
+                                row2
+                            )}
                         </div>
-                        {/* Ammo Counts (Equipped Weapons) */}
+
+                        {/* Stack/Ammo Counters */}
                         {isEquipableInventoryItem(item) && (
                             (() => {
-                                // 1. If item itself stacks (e.g. Bombs), show its quantity
                                 if (shouldStack(item)) {
                                     return (
                                         <div style={{ fontSize: '0.75em', color: '#888', fontStyle: 'italic', whiteSpace: 'nowrap', paddingTop: 2, marginLeft: 'auto' }}>
@@ -245,24 +272,15 @@ export function InventoryView({
                                         </div>
                                     );
                                 }
-
-                                // 2. If item is a weapon that uses ammo, show available ammo count
                                 const isGun = /firearm|crossbow|pistol|musket|rifle|gun|pepperbox|rotary/i.test(merged.name) ||
                                     ['crossbow', 'firearm'].includes((merged.group || '').toLowerCase()) ||
                                     (merged.traits?.value || []).includes('repeating');
                                 const isBow = /bow/i.test(merged.name) && !/crossbow/i.test(merged.name);
 
                                 if (isGun || isBow) {
-                                    // Count "Rounds (universal)" or "Arrows"
-                                    // User said: "all firearms accept 'Rounds (Universal)'"
-                                    // For Bows, assume "Arrows"? Or generic check? 
-                                    // Let's look for "Rounds (universal)" for guns.
-                                    // For Bows, maybe "Arrow"?
-
                                     const totalAmmo = items.reduce((acc, i) => {
                                         const n = (i.name || '').toLowerCase();
                                         if (isGun) {
-                                            // Case-insensitive check for Rounds (Universal) or just "Rounds" if simple
                                             if (n === 'rounds (universal)' || n.includes('rounds (universal)')) return acc + (i.qty || 1);
                                         } else if (isBow) {
                                             if (n.includes('arrow')) return acc + (i.qty || 1);
@@ -276,7 +294,6 @@ export function InventoryView({
                                         </div>
                                     );
                                 }
-
                                 return null;
                             })()
                         )}

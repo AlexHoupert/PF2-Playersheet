@@ -1,6 +1,7 @@
 import React from 'react';
 import { formatText } from '../../utils/rules';
 import { isEquipableInventoryItem, getWeaponCapacity } from '../../shared/utils/combatUtils';
+import { calculateWeaponDamage } from '../../utils/rules/damage';
 import bloodMagicEffects from '../../../ressources/classfeatures/bloodmagic-effects.json';
 
 export function ItemDetailModal({
@@ -304,6 +305,53 @@ export function ItemDetailModal({
                     </div>
                 )}
 
+
+                {/* Weapon Damage Box (Dynamic) */}
+                {(() => {
+                    const damageData = (isShopItem && (modalData.type === 'Weapon' || modalData.group) && character)
+                        ? calculateWeaponDamage(modalData, character)
+                        : null;
+
+                    if (damageData) {
+                        return (
+                            <div className="weapon-damage-container" style={{ marginBottom: 15, background: '#1e1e20', border: '1px solid #c5a059', borderRadius: 6, padding: 10 }}>
+
+                                {/* Normal Damage */}
+                                <div style={{ marginBottom: 10 }}>
+                                    <div style={{ color: '#e0e0e0', fontWeight: 'bold', fontSize: '0.7em', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Normal Damage</div>
+                                    <div style={{ color: '#ffb74d', fontSize: '0.9em', fontWeight: 'bold' }}>
+                                        {damageData.normal.parts ? (
+                                            damageData.normal.parts.map((p, i) => (
+                                                <span key={i} style={p.style === 'purple' ? { color: '#b39ddb' } : {}}>
+                                                    {p.text}{i < damageData.normal.parts.length - 1 ? ' ' : ''}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            damageData.normal.text
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Critical Damage */}
+                                <div style={{ borderTop: '1px solid #444', paddingTop: 10 }}>
+                                    <div style={{ color: '#e0e0e0', fontWeight: 'bold', fontSize: '0.7em', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Critical Damage</div>
+                                    <div style={{ color: '#ff5252', fontSize: '0.9em', fontWeight: 'bold' }}>
+                                        {damageData.crit.parts ? (
+                                            damageData.crit.parts.map((p, i) => (
+                                                <span key={i} style={p.style === 'purple' ? { color: '#b39ddb' } : {}}>
+                                                    {p.text}{i < damageData.crit.parts.length - 1 ? ' ' : ''}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            damageData.crit.text
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    }
+                    return null;
+                })()}
 
                 <div
                     className="formatted-content"

@@ -65,14 +65,37 @@ if (fs.existsSync(SOURCE_DIR)) {
                 else hands = sys.usage.value;
             }
 
+            // Rune Detection Logic
+            let itemType = data.type ? (data.type.charAt(0).toUpperCase() + data.type.slice(1)) : "Equipment";
+            let itemCategory = sys.category || null;
+
+            const isRuneFolder = file.includes('runes');
+            if (isRuneFolder) {
+                itemType = "Rune";
+
+                const usage = sys.usage?.value;
+                if (usage === 'etched-onto-armor') {
+                    itemCategory = 'rune_armor';
+                } else if (usage === 'etched-onto-weapon' || usage === 'etched-onto-melee-weapon') {
+                    itemCategory = 'rune_weapon';
+                } else if (usage === 'etched-onto-shield') {
+                    itemCategory = 'rune_shield';
+                } else {
+                    // Fallback to folder name
+                    if (file.includes('armor_runes')) itemCategory = 'rune_armor';
+                    else if (file.includes('weapon_runes')) itemCategory = 'rune_weapon';
+                    else if (file.includes('shield_runes')) itemCategory = 'rune_shield';
+                }
+            }
+
             const item = {
                 sourceFile: path.relative(SOURCE_DIR, file).replace(/\\/g, '/'),
                 // Remove 'systems/pf2e/' from the image path to match local folder structure
                 img: data.img ? data.img.replace('systems/pf2e/', '') : null,
                 name: data.name,
-                type: data.type ? (data.type.charAt(0).toUpperCase() + data.type.slice(1)) : "Equipment",
+                type: itemType,
                 group: sys.group || null,
-                category: sys.category || null,
+                category: itemCategory,
                 ammo: sys.ammo || null,
                 hands: hands,
                 bulk: sys.bulk || null,
@@ -112,6 +135,7 @@ if (fs.existsSync(SOURCE_DIR)) {
                 price,
                 level: sys.level ? sys.level.value : 0,
                 damage: sys.damage || null,
+                splashDamage: sys.splashDamage || null,
                 range: typeof sys.range === 'number' ? sys.range : null,
                 armor: {
                     acBonus: sys.acBonus ?? null,
@@ -142,11 +166,15 @@ const categoryDict = buildDictionary(indexEntries.map(e => e.category));
 const groupDict = buildDictionary(indexEntries.map(e => e.group));
 const rarityDict = buildDictionary(indexEntries.map(e => e.rarity));
 const traitDict = buildDictionary(indexEntries.flatMap(e => e.traits || []));
-const damageTypeDict = buildDictionary(
-    indexEntries
-        .map(e => e.damage && typeof e.damage === 'object' ? e.damage.damageType : '')
-        .filter(Boolean)
-);
+
+// Collect all damage types (primary and persistent)
+const allDamageTypes = new Set();
+indexEntries.forEach(e => {
+    if (e.damage?.damageType) allDamageTypes.add(e.damage.damageType);
+    if (e.damage?.persistent?.type) allDamageTypes.add(e.damage.persistent.type);
+});
+const damageTypeDict = buildDictionary(Array.from(allDamageTypes));
+
 
 const items = [];
 const weapons = {};
@@ -172,11 +200,25 @@ indexEntries.forEach((entry, index) => {
         const dice = entry.damage.dice ?? null;
         const die = entry.damage.die ?? null;
         const damageType = entry.damage.damageType ?? "";
+
+        // Splash
+        const splash = entry.splashDamage?.value ?? 0;
+
+        // Persistent
+        const persist = entry.damage.persistent || {};
+        const pDice = persist.number ?? 0;
+        const pDie = persist.faces ? `d${persist.faces}` : null;
+        const pType = persist.type ?? "";
+
         weapons[index] = [
             dice,
             die,
             damageTypeDict.map.get(damageType) ?? 0,
-            entry.range ?? 0
+            entry.range ?? 0,
+            splash,
+            pDice,
+            pDie,
+            damageTypeDict.map.get(pType) ?? 0
         ];
     }
 

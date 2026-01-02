@@ -45,8 +45,27 @@ function decodeRow(row, index) {
 
     const weapon = weaponsByIndex[index];
     if (Array.isArray(weapon)) {
-        const [dice, die, damageTypeIdx, range] = weapon;
-        item.damage = { dice, die, damageType: damageTypeDict[damageTypeIdx] || '' };
+        const [dice, die, damageTypeIdx, range, splash, pDice, pDie, pTypeIdx] = weapon;
+
+        const persistent = pDice ? {
+            number: pDice,
+            faces: pDie ? parseInt(pDie.replace('d', '')) : null,
+            type: damageTypeDict[pTypeIdx] || ''
+        } : null;
+
+        item.damage = {
+            dice,
+            die,
+            damageType: damageTypeDict[damageTypeIdx] || '',
+            persistent
+        };
+
+        if (splash) {
+            item.splashDamage = { value: splash };
+        } else {
+            item.splashDamage = null;
+        }
+
         item.range = typeof range === 'number' && range > 0 ? range : null;
     }
 
