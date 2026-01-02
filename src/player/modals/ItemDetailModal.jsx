@@ -122,6 +122,52 @@ export function ItemDetailModal({
         return false;
     }) : [];
 
+    // --- STAFF LOGIC ---
+    const traits = (modalData.traits?.value || modalData.traits || []); // Normalized array or string? Usually array of strings if parsed.
+    // Ensure traits is array
+    const traitsList = Array.isArray(traits) ? traits.map(t => String(t).toLowerCase()) : [];
+    const isStaff = traitsList.includes('staff') || (modalData.name || "").toLowerCase().includes("staff");
+
+    let staffMaxCharges = 0;
+    if (isStaff && character.magic?.slots) {
+        for (let i = 10; i >= 1; i--) {
+            if ((character.magic.slots[`${i}_max`] || 0) > 0) {
+                staffMaxCharges = i;
+                break;
+            }
+        }
+    }
+
+    const currentStaffCharges = inventoryMatch?.system?.staff?.charges || 0;
+
+    const handlePrepareStaff = () => {
+        if (!inventoryMatch) return;
+        updateCharacter(c => {
+            const item = c.inventory[inventoryIndex];
+            if (!item.system) item.system = {};
+            if (!item.system.staff) item.system.staff = {};
+            item.system.staff.charges = staffMaxCharges;
+            item.system.staff.max = staffMaxCharges;
+        });
+    };
+
+    const toggleStaffCharge = (idx) => {
+        if (!inventoryMatch) return;
+        // Logic: specific box click or strictly consume? 
+        // Standard slot toggle: click 1 sets to 1. Click 1 again sets to 0?
+        // Let's match Spell Slot UX: clicking N sets current to N. If current is N, set to N-1.
+
+        let newVal = idx;
+        if (currentStaffCharges === idx) newVal = idx - 1;
+
+        updateCharacter(c => {
+            const item = c.inventory[inventoryIndex];
+            if (!item.system) item.system = {};
+            if (!item.system.staff) item.system.staff = {};
+            item.system.staff.charges = newVal;
+        });
+    };
+
     const handleApplyRune = (runeItem) => {
         if (!inventoryMatch) return;
 
@@ -569,6 +615,55 @@ export function ItemDetailModal({
                     </div>
                 )}
 
+
+
+                {/* STAFF CHARGES UI */}
+                {isStaff && (
+                    <div style={{ marginBottom: 15, padding: 10, background: '#1a1a1d', borderRadius: 8, border: '1px solid #444' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, borderBottom: '1px solid #333', paddingBottom: 5 }}>
+                            <span style={{ fontSize: '0.9em', color: '#888', textTransform: 'uppercase' }}>
+                                Staff Charges ({currentStaffCharges}/{staffMaxCharges})
+                            </span>
+                            <button
+                                onClick={handlePrepareStaff}
+                                style={{
+                                    background: 'var(--text-gold)', color: '#000', border: 'none', borderRadius: 4,
+                                    padding: '2px 8px', fontSize: '0.7em', fontWeight: 'bold', cursor: 'pointer'
+                                }}
+                            >
+                                Prepare
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 5 }}>
+                            {staffMaxCharges > 0 ? Array.from({ length: staffMaxCharges }).map((_, i) => {
+                                const idx = i + 1;
+                                const isActive = idx <= currentStaffCharges;
+                                return (
+                                    <div
+                                        key={idx}
+                                        onClick={() => toggleStaffCharge(idx)}
+                                        style={{
+                                            width: 24, height: 24,
+                                            background: isActive ? 'var(--text-gold)' : '#111',
+                                            border: '1px solid var(--text-gold)',
+                                            transform: 'rotate(45deg)',
+                                            margin: 6,
+                                            cursor: 'pointer',
+                                            boxShadow: isActive ? '0 0 5px var(--text-gold)' : 'none',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        title={`Charge ${idx}`}
+                                    />
+                                );
+                            }) : (
+                                <div style={{ fontSize: '0.8em', color: '#666', fontStyle: 'italic' }}>
+                                    No spell slots available to charge staff.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 <div
                     className="formatted-content"

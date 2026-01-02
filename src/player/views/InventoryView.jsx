@@ -165,6 +165,11 @@ export function InventoryView({
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div className="item-name">
                             {merged?.name || 'Unknown Item'}
+                            {item.system?.staff?.max > 0 && (
+                                <span style={{ color: '#aaa', marginLeft: 6, fontSize: '0.85em', fontWeight: 'normal' }}>
+                                    ({item.system.staff.charges || 0}/{item.system.staff.max})
+                                </span>
+                            )}
                             {item.prepared && (
                                 <span style={{
                                     marginLeft: 8, fontSize: '0.7em', background: '#30204a', color: '#b39ddb',
