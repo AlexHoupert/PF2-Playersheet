@@ -168,6 +168,57 @@ export function ItemDetailModal({
         });
     };
 
+    // --- WAND & SCROLL LOGIC ---
+    const isWand = !!inventoryMatch?.system?.wand || traitsList.includes('wand') || (modalData.name || "").toLowerCase().includes("wand");
+    const wandCharges = inventoryMatch?.system?.wand?.charges ?? 0;
+    const wandMax = inventoryMatch?.system?.wand?.max ?? 1;
+
+    // Spell Data from System (if imbued)
+    const imbuedSpell = inventoryMatch?.system?.spell || modalData.system?.spell;
+
+    const toggleWandCharge = (idx) => {
+        if (!inventoryMatch) return;
+        let newVal = idx;
+        if (wandCharges === idx) newVal = idx - 1;
+
+        updateCharacter(c => {
+            const item = c.inventory[inventoryIndex];
+            if (!item.system) item.system = {};
+            if (!item.system.wand) item.system.wand = {};
+            item.system.wand.charges = newVal;
+        });
+    };
+
+    const handleCastSpell = () => {
+        if (!inventoryMatch) return;
+
+        if (isWand) {
+            // Consume Charge
+            if (wandCharges > 0) {
+                updateCharacter(c => {
+                    const item = c.inventory[inventoryIndex];
+                    if (item.system?.wand?.charges > 0) {
+                        item.system.wand.charges--;
+                    }
+                });
+            }
+        } else {
+            // Scroll: Consume Item
+            updateCharacter(c => {
+                const item = c.inventory[inventoryIndex];
+                if (item.qty > 1) {
+                    item.qty--;
+                } else {
+                    c.inventory.splice(inventoryIndex, 1);
+                }
+            });
+            // If completely consumed, close modal
+            if (inventoryMatch.qty <= 1) {
+                onClose();
+            }
+        }
+    };
+
     const handleApplyRune = (runeItem) => {
         if (!inventoryMatch) return;
 
@@ -662,6 +713,73 @@ export function ItemDetailModal({
                                 </div>
                             )}
                         </div>
+                    </div>
+                )}
+
+                {/* WAND CHARGES UI */}
+                {isWand && (
+                    <div style={{ marginBottom: 15, padding: 10, background: '#1a1a1d', borderRadius: 8, border: '1px solid #444' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, borderBottom: '1px solid #333', paddingBottom: 5 }}>
+                            <span style={{ fontSize: '0.9em', color: '#888', textTransform: 'uppercase' }}>
+                                Wand Charges ({wandCharges}/{wandMax})
+                            </span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 5 }}>
+                            {Array.from({ length: wandMax }).map((_, i) => {
+                                const idx = i + 1;
+                                const isActive = idx <= wandCharges;
+                                return (
+                                    <div
+                                        key={idx}
+                                        onClick={() => toggleWandCharge(idx)}
+                                        style={{
+                                            width: 24, height: 24,
+                                            background: isActive ? 'var(--text-gold)' : '#111',
+                                            border: '1px solid var(--text-gold)',
+                                            transform: 'rotate(45deg)',
+                                            margin: 6,
+                                            cursor: 'pointer',
+                                            boxShadow: isActive ? '0 0 5px var(--text-gold)' : 'none',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        title={`Charge ${idx}`}
+                                    />
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* IMBUED SPELL UI */}
+                {imbuedSpell && (
+                    <div style={{ marginBottom: 15, padding: 10, background: '#251b38', borderRadius: 8, border: '1px solid #673ab7' }}>
+                        <h3 style={{ marginTop: 0, color: '#b39ddb', fontSize: '1.1em', display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <img src={imbuedSpell.img ? `ressources/${imbuedSpell.img}` : 'icons/svg/mystery-man.svg'} style={{ width: 24, height: 24 }} alt="" />
+                            {imbuedSpell.name}
+                            <span style={{ fontSize: '0.8em', color: '#888', fontWeight: 'normal' }}>(Rank {imbuedSpell.level})</span>
+                        </h3>
+
+                        <div style={{ fontSize: '0.9em', color: '#ddd', marginBottom: 10 }}>
+                            {imbuedSpell.traditions && <div><strong>Traditions:</strong> {imbuedSpell.traditions.join(', ')}</div>}
+                        </div>
+
+                        {inventoryMatch && (
+                            <button
+                                onClick={handleCastSpell}
+                                disabled={isWand && wandCharges <= 0}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    background: (isWand && wandCharges <= 0) ? '#444' : '#673ab7',
+                                    color: (isWand && wandCharges <= 0) ? '#888' : '#fff',
+                                    border: 'none', borderRadius: 4, cursor: (isWand && wandCharges <= 0) ? 'not-allowed' : 'pointer',
+                                    fontWeight: 'bold', textTransform: 'uppercase'
+                                }}
+                            >
+                                Cast Spell {isWand ? (wandCharges <= 0 ? '(Empty)' : '(Consume Charge)') : '(Consume Item)'}
+                            </button>
+                        )}
                     </div>
                 )}
 

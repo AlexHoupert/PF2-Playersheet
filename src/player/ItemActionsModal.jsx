@@ -23,7 +23,7 @@ export default function ItemActionsModal({ mode, item, characters, activeCharInd
         return characters.map((c, i) => ({ name: c.name, index: i })).filter((c, i) => i !== activeCharIndex);
     }, [characters, activeCharIndex]);
 
-    if (!mode) return null;
+    if (!mode || !item) return null;
 
     // --- CONTEXT MENU ---
     if (mode === 'CONTEXT') {

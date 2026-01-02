@@ -75,7 +75,9 @@
                 "concentrate",
                 "manipulate"
             ]
-        }
+        },
+        "scroll_available": true,
+        "wand_available": true
     },
     "type": "spell"
 }

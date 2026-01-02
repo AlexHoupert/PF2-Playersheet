@@ -59,6 +59,8 @@ if (fs.existsSync(SOURCE_DIR)) {
                 time: sys.time ? sys.time.value : null,
                 defense: sys.defense?.save?.statistic || (isAttack ? 'ac' : null),
                 area: sys.area || null,
+                scroll_available: !!sys.scroll_available,
+                wand_available: !!sys.wand_available,
             };
 
             catalog.push(spell);
@@ -76,6 +78,8 @@ if (fs.existsSync(SOURCE_DIR)) {
                 time: spell.time,
                 range: spell.range,
                 defense: spell.defense,
+                scroll_available: spell.scroll_available,
+                wand_available: spell.wand_available,
             });
         } catch (err) {
             console.error(`Error parsing ${file}:`, err);
@@ -118,6 +122,8 @@ indexEntries.forEach((entry) => {
         timeDict.map.get(entry.time) ?? 0,
         rangeDict.map.get(entry.range) ?? 0,
         defenseDict.map.get(entry.defense) ?? 0,
+        entry.scroll_available ? 1 : 0,
+        entry.wand_available ? 1 : 0,
     ]);
 });
 

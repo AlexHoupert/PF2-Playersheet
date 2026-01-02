@@ -17,6 +17,7 @@ import { getShopItemRowMeta } from '../shared/catalog/shopRowMeta';
 import { shouldStack } from '../shared/utils/inventoryUtils';
 import bloodMagicEffects from '../../ressources/classfeatures/bloodmagic-effects.json';
 import ItemCatalog from './ItemCatalog';
+import SpellScrollSelectorModal from './modals/SpellScrollSelectorModal';
 import ItemActionsModal from './ItemActionsModal';
 import QuickSheetModal from './QuickSheetModal';
 import { StatBreakdown } from './components/StatBreakdown';
@@ -1242,7 +1243,18 @@ export default function PlayerApp({ db, setDb }) {
                             setModalData(item);
                             setModalMode('item');
                         }}
-                        onBuyItem={(item) => setActionModal({ mode: 'BUY_RESTOCK', item })}
+                        onBuyItem={(item) => {
+                            const scrollMatch = item.name.match(/(?:Scroll of Rank (\d+)|Scroll of (\d+)(?:st|nd|rd|th)?-rank Spell)/i);
+                            const wandMatch = item.name.match(/(?:Wand of Rank (\d+)|Magic Wand \((\d+)(?:st|nd|rd|th)?-Rank Spell\))/i);
+
+                            if (scrollMatch) {
+                                setActionModal({ mode: 'SELECT_SPELL', rank: parseInt(scrollMatch[1] || scrollMatch[2]), type: 'scroll', baseItem: item });
+                            } else if (wandMatch) {
+                                setActionModal({ mode: 'SELECT_SPELL', rank: parseInt(wandMatch[1] || wandMatch[2]), type: 'wand', baseItem: item });
+                            } else {
+                                setActionModal({ mode: 'BUY_RESTOCK', item });
+                            }
+                        }}
                         onBuyFormula={handleBuyFormula}
                         knownFormulas={character.formulaBook || []}
                     />
@@ -1250,25 +1262,27 @@ export default function PlayerApp({ db, setDb }) {
             }
 
             {/* Item Actions Modal */}
-            <ItemActionsModal
-                mode={actionModal.mode}
-                item={actionModal.item}
-                characters={characters}
-                activeCharIndex={activeCharIndex}
-                onClose={() => setActionModal({ mode: null, item: null })}
-                onOpenMode={(m, i) => setActionModal({ mode: m, item: i })}
-                onBuy={executeBuy}
-                onChangeQty={executeQty}
-                onTransfer={executeTransfer}
-                onUnstack={executeUnstack}
-                onLoadSpecial={handleLoadSpecial}
-                onUnloadAll={handleUnloadAll}
-                onEditProficiency={(item) => {
-                    setActionModal({ mode: null, item: null });
-                    setModalData({ item, type: 'weapon_prof' }); // Reuse modalData to pass item
-                    setModalMode('item_proficiencies');
-                }}
-            />
+            {actionModal.mode !== 'SELECT_SPELL' && (
+                <ItemActionsModal
+                    mode={actionModal.mode}
+                    item={actionModal.item}
+                    characters={characters}
+                    activeCharIndex={activeCharIndex}
+                    onClose={() => setActionModal({ mode: null, item: null })}
+                    onOpenMode={(m, i) => setActionModal({ mode: m, item: i })}
+                    onBuy={executeBuy}
+                    onChangeQty={executeQty}
+                    onTransfer={executeTransfer}
+                    onUnstack={executeUnstack}
+                    onLoadSpecial={handleLoadSpecial}
+                    onUnloadAll={handleUnloadAll}
+                    onEditProficiency={(item) => {
+                        setActionModal({ mode: null, item: null });
+                        setModalData({ item, type: 'weapon_prof' }); // Reuse modalData to pass item
+                        setModalMode('item_proficiencies');
+                    }}
+                />
+            )}
 
             {/* Catalog Overlay */}
             {
@@ -1309,6 +1323,40 @@ export default function PlayerApp({ db, setDb }) {
                         filterOptions={SPELL_INDEX_FILTER_OPTIONS}
                         onSelect={(item) => addToCharacter(item, 'spell')}
                         onClose={() => setCatalogMode(null)}
+                    />
+                )
+            }
+
+            {/* Spell Scroll/Wand Selector */}
+            {
+                actionModal.mode === 'SELECT_SPELL' && (
+                    <SpellScrollSelectorModal
+                        rank={actionModal.rank}
+                        type={actionModal.type}
+                        onCancel={() => setActionModal({ mode: null, item: null })}
+                        onSelect={(spell) => {
+                            const { baseItem, type, rank } = actionModal;
+                            const newItem = { ...baseItem };
+                            // Clone system to avoid mutation
+                            newItem.system = baseItem.system ? JSON.parse(JSON.stringify(baseItem.system)) : {};
+
+                            // Preserve linkage to Shop Index for properties lookup
+                            newItem.system.originalName = baseItem.name;
+
+                            // Set Name
+                            newItem.name = `${type === 'scroll' ? 'Scroll' : 'Wand'} of ${spell.name} (Rank ${rank})`;
+
+                            // Embed Spell Index Entry
+                            newItem.system.spell = spell;
+
+                            // Initialize Wand Charges
+                            if (type === 'wand') {
+                                newItem.system.wand = { charges: 1, max: 1 };
+                            }
+
+                            // Continue to Buy Flow
+                            setActionModal({ mode: 'BUY_RESTOCK', item: newItem });
+                        }}
                     />
                 )
             }

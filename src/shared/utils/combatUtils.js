@@ -159,9 +159,11 @@ export const getInventoryBucket = (item) => {
     const type = String(item?.type || fromIndex?.type || '').toLowerCase();
     const category = String(item?.category || fromIndex?.category || '').toLowerCase();
 
-    if (['armor', 'shield', 'weapon'].includes(type)) return 'equipment';
-    if (type === 'ammo') return 'consumables';
-    if (['potion', 'poison', 'mutagen', 'ammo', 'gadget'].includes(category)) return 'consumables';
+    if (['armor', 'shield', 'weapon', 'equipment'].includes(type)) return 'equipment';
+    if (['wand', 'staff', 'rod'].includes(category)) return 'equipment';
+
+    if (type === 'consumable' || type === 'ammo') return 'consumables';
+    if (['potion', 'poison', 'mutagen', 'ammo', 'gadget', 'scroll', 'oil', 'consumable', 'talisman', 'snare'].includes(category)) return 'consumables';
     return 'misc';
 };
 

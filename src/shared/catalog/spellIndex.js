@@ -37,6 +37,8 @@ function decodeRow(row) {
     const time = timeDict[row?.[9]] || null;
     const range = rangeDict[row?.[10]] || null;
     const defense = defenseDict[row?.[11]] || null;
+    const scroll_available = row?.[12] === 1;
+    const wand_available = row?.[13] === 1;
 
     return {
         name,
@@ -51,6 +53,8 @@ function decodeRow(row) {
         time,
         range,
         defense,
+        scroll_available,
+        wand_available,
     };
 }
 

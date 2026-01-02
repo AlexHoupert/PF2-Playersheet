@@ -18,7 +18,7 @@ export default function SpellsView({ onInspectItem }) {
     const [filterSchool, setFilterSchool] = useState([]);
     const [itemPage, setItemPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(50);
-    const [visibleColumns, setVisibleColumns] = useState(['name', 'level', 'traditions', 'school', 'rarity']);
+    const [visibleColumns, setVisibleColumns] = useState(['name', 'level', 'traditions', 'school', 'rarity', 'scroll', 'wand']);
     const [showColSelector, setShowColSelector] = useState(false);
 
     const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
@@ -72,7 +72,7 @@ export default function SpellsView({ onInspectItem }) {
     }, [currentPage, itemPage]);
 
     const allColumns = useMemo(
-        () => ['name', 'level', 'type', 'traditions', 'school', 'rarity', 'traits'],
+        () => ['name', 'level', 'type', 'traditions', 'school', 'rarity', 'traits', 'scroll', 'wand'],
         []
     );
 
@@ -80,6 +80,50 @@ export default function SpellsView({ onInspectItem }) {
         let direction = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
         setSortConfig({ key, direction });
+    };
+
+    const handleToggleProperty = async (e, item, property, currentVal) => {
+        e.stopPropagation();
+        const newVal = !currentVal;
+
+        try {
+            if (!item.sourceFile) {
+                console.error("No source file for spell", item);
+                alert("Cannot modify this spell: Source file not found.");
+                return;
+            }
+
+            // 1. Fetch RAW JSON
+            const rawRes = await fetch(`/ressources/${item.sourceFile}`);
+            if (!rawRes.ok) throw new Error("Failed to load raw spell file");
+            const spellJson = await rawRes.json();
+
+            // 2. Modify
+            if (!spellJson.system) spellJson.system = {};
+            spellJson.system[property] = newVal;
+
+            // 3. Save
+            const saveRes = await fetch('/api/files/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    filePath: `ressources/${item.sourceFile}`,
+                    content: spellJson
+                })
+            });
+            const saveData = await saveRes.json();
+            if (!saveData.success) throw new Error(saveData.error);
+
+            // 4. Rebuild Index
+            await fetch('/api/admin/rebuild-index/spells', { method: 'POST' });
+
+            // 5. Reload (Optimistic update hard with static index)
+            window.location.reload();
+
+        } catch (err) {
+            console.error(err);
+            alert(`Error updating spell: ${err.message}`);
+        }
     };
 
     const handleContextMenu = (e, item, index) => {
@@ -233,8 +277,15 @@ export default function SpellsView({ onInspectItem }) {
                                         <td key={c} style={{ padding: 8 }}>
                                             {c === 'traditions' ? (item.traditions?.join(', ') || '-') :
                                                 c === 'traits' ? (item.traits?.join(', ') || '-') :
-                                                    item[c] || '-'
-                                            }
+                                                    (c === 'scroll' || c === 'wand') ? (
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={item[c === 'scroll' ? 'scroll_available' : 'wand_available'] || false}
+                                                            onClick={e => e.stopPropagation()}
+                                                            onChange={e => handleToggleProperty(e, item, c === 'scroll' ? 'scroll_available' : 'wand_available', item[c === 'scroll' ? 'scroll_available' : 'wand_available'])}
+                                                            title={`Toggle ${c} availability`}
+                                                        />
+                                                    ) : item[c] || '-'}
                                         </td>
                                     ))}
                                 </tr>

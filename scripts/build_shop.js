@@ -153,6 +153,83 @@ if (fs.existsSync(SOURCE_DIR)) {
     });
 }
 
+// --- INJECT GENERIC SCROLLS AND WANDS ---
+const scrollPrices = [4, 12, 30, 70, 150, 300, 600, 1300, 3000, 8000];
+const wandPrices = [60, 160, 360, 700, 1500, 3000, 6500, 15000, 40000];
+
+// Scrolls
+scrollPrices.forEach((price, i) => {
+    const rank = i + 1;
+    const name = `Scroll of Rank ${rank}`;
+    const item = {
+        sourceFile: `virtual/scroll_rank_${rank}`,
+        img: 'icons/sundries/scrolls/scroll-runed-blue.webp', // Generic icon
+        name: name,
+        type: 'Consumable',
+        category: 'Scroll',
+        group: 'Scroll',
+        price: price,
+        level: rank, // Item level is usually typically Rank * 2 - 1 for scrolls? Or just Rank? PF2e Items usually have level. Let's use Rank for simplicity or lookup. Rank 1 scroll is Item Level 1. Rank 2 is 3. Rank 3 is 5. Formula: Rank*2 - 1.
+        // Wait, PF2e Item Level for scrolls: Level 1 spell = Item 1. Level 2 spell = Item 3. Level 3 = 5.
+        // Let's use implicit level: Rank * 2 - 1. But for Rank 1 it's 1. Rank 2 (3rd level chars) access level 3 items. Yes.
+        level: Math.max(1, rank * 2 - 1),
+        rarity: 'common',
+        traits: ['magical', 'scroll', 'consumable'],
+        description: `A scroll containing a level ${rank} spell.`
+    };
+    catalog.push(item);
+    indexEntries.push({
+        name: item.name,
+        img: item.img,
+        sourceFile: item.sourceFile,
+        type: item.type,
+        group: item.group,
+        category: item.category,
+        rarity: item.rarity,
+        traits: item.traits,
+        price: item.price,
+        level: item.level,
+        damage: null, splashDamage: null, range: null, armor: {}
+    });
+});
+
+// Wands
+wandPrices.forEach((price, i) => {
+    const rank = i + 1;
+    const name = `Wand of Rank ${rank}`;
+    // Item Level for Wands: Rank 1 = Level 3. Rank 2 = Level 5. Rank 3 = 7. Formula: Rank * 2 + 1.
+    const itemLevel = rank * 2 + 1;
+
+    const item = {
+        sourceFile: `virtual/wand_rank_${rank}`,
+        img: 'icons/weapons/staves/staff-simple.webp', // Generic icon, verify existence or use fallback
+        name: name,
+        type: 'Equipment', // Wands are held items
+        category: 'Wand',
+        group: 'Wand',
+        price: price,
+        level: itemLevel,
+        rarity: 'common',
+        traits: ['magical', 'wand', 'necromancy'], // Traits?
+        description: `A wand containing a level ${rank} spell.`
+    };
+    catalog.push(item);
+    indexEntries.push({
+        name: item.name,
+        img: item.img,
+        sourceFile: item.sourceFile,
+        type: item.type,
+        group: item.group,
+        category: item.category,
+        rarity: item.rarity,
+        traits: item.traits,
+        price: item.price,
+        level: item.level,
+        damage: null, splashDamage: null, range: null, armor: {}
+    });
+});
+
+
 // Ensure directory exists
 const dir = path.dirname(OUTPUT_FILE);
 if (!fs.existsSync(dir)) {
