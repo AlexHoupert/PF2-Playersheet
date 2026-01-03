@@ -1025,7 +1025,8 @@ export default function PlayerApp({ db, setDb }) {
                 setActiveTab(mainTabs[idx - 1]);
             }
         },
-        threshold: 60 // Slightly higher threshold to avoid scroll interference
+        threshold: 60, // Slightly higher threshold to avoid scroll interference
+        disabled: Boolean(modalMode) // Prevent swipe/scroll shield from interfering with modal scrolling
     });
 
     // --- MAIN RENDER ---
