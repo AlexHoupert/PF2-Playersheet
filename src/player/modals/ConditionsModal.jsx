@@ -48,7 +48,11 @@ export function ConditionsModal({
 
     // Tab state for the list view
     const safeConds = character?.conditions || [];
-    const hasActive = safeConds.some(c => isConditionValued(c.name) ? c.level > 0 : true);
+    const hasActive = safeConds.some(c => {
+        const name = (typeof c === 'string') ? c : c?.name;
+        const level = (typeof c === 'string') ? 1 : (c?.level || 0);
+        return isConditionValued(name) ? level > 0 : true;
+    });
     const [activeTab, setActiveTab] = useState(hasActive ? 'ACTIVE' : 'NEGATIVE');
 
     // --- EFFECT ---
@@ -59,6 +63,35 @@ export function ConditionsModal({
             setSelectedCondition(initialCondition);
         }
     }, [initialCondition]);
+
+    // Lock background scroll while this modal is open (prevents the page behind from scrolling on mobile).
+    useEffect(() => {
+        const body = document.body;
+        const html = document.documentElement;
+
+        const prevBodyOverflow = body.style.overflow;
+        const prevBodyPosition = body.style.position;
+        const prevBodyTop = body.style.top;
+        const prevBodyWidth = body.style.width;
+        const prevHtmlOverflow = html.style.overflow;
+
+        const scrollY = window.scrollY || 0;
+
+        html.style.overflow = 'hidden';
+        body.style.overflow = 'hidden';
+        body.style.position = 'fixed';
+        body.style.top = `-${scrollY}px`;
+        body.style.width = '100%';
+
+        return () => {
+            html.style.overflow = prevHtmlOverflow;
+            body.style.overflow = prevBodyOverflow;
+            body.style.position = prevBodyPosition;
+            body.style.top = prevBodyTop;
+            body.style.width = prevBodyWidth;
+            window.scrollTo(0, scrollY);
+        };
+    }, []);
 
 
     // --- HELPERS ---
@@ -91,18 +124,31 @@ export function ConditionsModal({
      */
     const adjustCondition = (condName, delta) => {
         if (!condName) return;
+        const targetKey = String(condName).toLowerCase();
+        const canonicalName = getConditionCatalogEntry(condName)?.name || condName;
+
         updateCharacter(c => {
             if (!c.conditions) c.conditions = [];
-            const idx = c.conditions.findIndex(x => x.name === condName);
+            const idx = c.conditions.findIndex(x => {
+                const name = (typeof x === 'string') ? x : x?.name;
+                return String(name || '').toLowerCase() === targetKey;
+            });
             const valued = isConditionValued(condName);
 
-            const isDrained = String(condName).toLowerCase() === 'drained';
+            if (idx > -1 && typeof c.conditions[idx] === 'string') {
+                c.conditions[idx] = { name: c.conditions[idx], level: 1 };
+            }
+            if (idx > -1 && c.conditions[idx] && typeof c.conditions[idx] === 'object') {
+                c.conditions[idx].name = canonicalName;
+            }
+
+            const isDrained = targetKey === 'drained';
             const prevDrained = isDrained && idx > -1 ? (parseInt(c.conditions[idx].level) || 0) : 0;
 
             if (!valued) {
                 // Binary conditions (toggle)
                 if (delta > 0) {
-                    if (idx === -1) c.conditions.push({ name: condName, level: 1 });
+                    if (idx === -1) c.conditions.push({ name: canonicalName, level: 1 });
                 } else {
                     if (idx > -1) c.conditions.splice(idx, 1);
                 }
@@ -112,7 +158,7 @@ export function ConditionsModal({
             // Valued conditions (Frightened 1, 2, etc.)
             if (delta > 0) {
                 if (idx > -1) c.conditions[idx].level = (c.conditions[idx].level || 0) + 1;
-                else c.conditions.push({ name: condName, level: 1 });
+                else c.conditions.push({ name: canonicalName, level: 1 });
             } else if (idx > -1) {
                 const nextLevel = (c.conditions[idx].level || 0) - 1;
                 if (nextLevel <= 0) c.conditions.splice(idx, 1);
@@ -121,7 +167,10 @@ export function ConditionsModal({
 
             // Drained: lose HP equal to (level * increase), without counting as damage.
             if (isDrained && delta > 0) {
-                const newIdx = c.conditions.findIndex(x => x.name === condName);
+                const newIdx = c.conditions.findIndex(x => {
+                    const name = (typeof x === 'string') ? x : x?.name;
+                    return String(name || '').toLowerCase() === targetKey;
+                });
                 const nextDrained = newIdx > -1 ? (parseInt(c.conditions[newIdx].level) || 0) : 0;
                 const diff = Math.max(0, nextDrained - prevDrained);
                 if (diff > 0) {
@@ -146,8 +195,9 @@ export function ConditionsModal({
         const condName = selectedCondition;
         const entry = getConditionCatalogEntry(condName);
         const iconSrc = getConditionImgSrc(condName);
-        const active = safeConds.find(c => c.name === condName);
-        const level = active ? active.level : 0;
+        const active = safeConds.find(c => String((typeof c === 'string') ? c : c?.name || '').toLowerCase() === String(condName).toLowerCase());
+        const level = (active && typeof active === 'object') ? active.level : (active ? 1 : 0);
+        const displayName = entry?.name || condName;
 
         return (
             <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -174,7 +224,7 @@ export function ConditionsModal({
                     >
                         ← Back
                     </button>
-                    <h2 style={{ margin: 0, flex: 1, textAlign: 'center' }}>{condName}</h2>
+                    <h2 style={{ margin: 0, flex: 1, textAlign: 'center' }}>{displayName}</h2>
                     <div style={{ width: 72 }} /> {/* Spacer for centering */}
                 </div>
 
@@ -197,7 +247,7 @@ export function ConditionsModal({
                 <div
                     className="formatted-content"
                     dangerouslySetInnerHTML={{ __html: formatText(entry?.description || "No description.", { actor: character }) }}
-                    style={{ flex: 1, overflowY: 'auto' }}
+                    style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
                 />
             </div>
         );
@@ -207,7 +257,58 @@ export function ConditionsModal({
      * Renders the List/Grid View of available conditions.
      */
     const renderListView = () => {
-        const sortedList = getListForTab(activeTab).sort();
+        const rawList = Array.isArray(getListForTab(activeTab)) ? [...getListForTab(activeTab)] : [];
+
+        const getDisplayName = (name) => {
+            const entry = getConditionCatalogEntry(name);
+            return entry?.name || String(name || '');
+        };
+
+        let sortedList = rawList.sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b)));
+
+        if (activeTab === 'NEGATIVE') {
+            const NEGATIVE_GROUPS = [
+                {
+                    title: 'Control & Positioning',
+                    items: ['off-guard', 'prone', 'grabbed', 'restrained', 'immobilized', 'paralyzed', 'petrified']
+                },
+                {
+                    title: 'Lowered Abilities',
+                    items: ['frightened', 'clumsy', 'drained', 'enfeebled', 'stupefied', 'sickened', 'slowed']
+                },
+                { title: 'Senses', items: ['blinded', 'dazzled', 'deafened'] },
+                { title: 'Mental', items: ['confused', 'controlled', 'fascinated'] },
+                {
+                    title: 'Death and Injury',
+                    items: ['doomed', 'dying', 'unconscious', 'wounded', 'persistent damage']
+                }
+            ];
+
+            const allKeys = new Set(rawList.map(x => String(x).toLowerCase()));
+            const included = new Set();
+            const grouped = [];
+
+            NEGATIVE_GROUPS.forEach(group => {
+                const present = group.items.filter(k => allKeys.has(k));
+                if (present.length === 0) return;
+                grouped.push(`__group:${group.title}`);
+                present.forEach(k => {
+                    grouped.push(k);
+                    included.add(k);
+                });
+            });
+
+            const other = rawList
+                .filter(k => !included.has(String(k).toLowerCase()))
+                .sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b)));
+
+            if (other.length > 0) {
+                grouped.push(`__group:Other`);
+                grouped.push(...other);
+            }
+
+            sortedList = grouped;
+        }
 
         return (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -235,17 +336,35 @@ export function ConditionsModal({
                 </div>
 
                 {/* LIST */}
-                <div style={{ overflowY: 'auto', flex: 1, padding: '0 20px 20px 20px' }}>
+                <div style={{ overflowY: 'auto', flex: 1, padding: '0 20px 20px 20px', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
                     {sortedList.length === 0 && (
                         <div style={{ textAlign: 'center', color: '#888', marginTop: 20 }}>
                             No conditions found.
                         </div>
                     )}
 
-                    {sortedList.map(condName => {
-                        const activeEntry = safeConds.find(c => c.name === condName);
+                    {sortedList.map((condName, idx) => {
+                        if (typeof condName === 'string' && condName.startsWith('__group:')) {
+                            const title = condName.slice('__group:'.length);
+                            return (
+                                <div key={condName} style={{ marginTop: idx === 0 ? 0 : 12 }}>
+                                    <div style={{
+                                        fontSize: '0.75em',
+                                        color: '#aaa',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 1,
+                                        borderBottom: '1px solid #333',
+                                        padding: '6px 0 4px 0'
+                                    }}>
+                                        {title}
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        const activeEntry = safeConds.find(c => String((typeof c === 'string') ? c : c?.name || '').toLowerCase() === String(condName).toLowerCase());
                         const isActive = !!activeEntry;
-                        const level = activeEntry ? activeEntry.level : 0;
+                        const level = (activeEntry && typeof activeEntry === 'object') ? activeEntry.level : (activeEntry ? 1 : 0);
                         const iconSrc = getConditionImgSrc(condName);
                         const emojiIcon = getConditionIcon(condName);
 
@@ -272,7 +391,7 @@ export function ConditionsModal({
                                         color: isActive ? '#c5a059' : '#e0e0e0',
                                         fontSize: '1em'
                                     }}>
-                                        {condName}
+                                        {getDisplayName(condName)}
                                     </span>
                                 </div>
 
@@ -317,9 +436,12 @@ export function ConditionsModal({
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
+            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 11000,
+            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20,
+            overscrollBehavior: 'none'
+        }} onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+        }}>
             <div style={{
                 backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
                 borderRadius: '8px', maxWidth: '500px', width: '100%',
