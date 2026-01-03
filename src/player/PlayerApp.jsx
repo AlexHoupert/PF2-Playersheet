@@ -1,5 +1,6 @@
 /* d:\Repositories\PF2-Playersheet-1\src\player\PlayerApp.jsx */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { useSwipe } from '../shared/hooks/useSwipe';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { calculateStat, formatText, ACTION_ICONS } from '../utils/rules';
 import { deepClone } from '../shared/utils/deepClone';
@@ -197,7 +198,7 @@ export default function PlayerApp({ db, setDb }) {
         };
         return {
             onMouseDown: start, onMouseUp: cancel, onMouseLeave: cancel,
-            onTouchStart: start, onTouchEnd: cancel
+            onTouchStart: start, onTouchEnd: cancel, onTouchMove: cancel
         };
     };
 
@@ -998,10 +999,39 @@ export default function PlayerApp({ db, setDb }) {
 
     // --- RENDER HELPERS ---
 
+    // --- SWIPE LOGIC ---
+    const mainTabs = useMemo(() => {
+        const tabs = ['stats', 'actions', 'feats'];
+        if (character.isCaster || character.magic?.list?.length > 0) tabs.push('magic');
+        if (character.isKineticist) tabs.push('impulses');
+        tabs.push('items');
+        return tabs;
+    }, [character.isCaster, character.magic, character.isKineticist]);
+
+    const { handlers: swipeHandlers, ref: swipeRef } = useSwipe({
+        // Swipe Left -> Next Tab
+        onSwipeLeft: () => {
+            if (modalMode) return; // Disable swipe if modal open
+            const idx = mainTabs.indexOf(activeTab);
+            if (idx > -1 && idx < mainTabs.length - 1) {
+                setActiveTab(mainTabs[idx + 1]);
+            }
+        },
+        // Swipe Right -> Prev Tab
+        onSwipeRight: () => {
+            if (modalMode) return;
+            const idx = mainTabs.indexOf(activeTab);
+            if (idx > 0) {
+                setActiveTab(mainTabs[idx - 1]);
+            }
+        },
+        threshold: 60 // Slightly higher threshold to avoid scroll interference
+    });
+
     // --- MAIN RENDER ---
 
     return (
-        <div className="app-container">
+        <div className="app-container" ref={swipeRef} {...swipeHandlers}>
             {/* HEADER */}
             <style>{`
                 /* MAGIC TAB CSS */

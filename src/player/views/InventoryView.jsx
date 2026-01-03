@@ -152,8 +152,20 @@ export function InventoryView({
 
         return (
             <div className="item-row inventory-item-row" key={key}
-                onClick={clickHandler}
+                onClick={(e) => {
+                    if (document.body.classList.contains('swiping-active')) {
+                        e.stopPropagation();
+                        return;
+                    }
+                    clickHandler(); // clickHandler expects no args usually, or ignores them? 
+                    // defined as () => {...} in previous view. Yes.
+                }}
                 onContextMenu={(e) => {
+                    if (document.body.classList.contains('swiping-active')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
                     e.preventDefault();
                     if (onLongPress) onLongPress(merged, 'item');
                 }}
