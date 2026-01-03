@@ -55,7 +55,7 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false }) {
     const myCharacter = activeCampaign?.characters?.find(c => c.id === myCharacterId || c.name === myCharacterId); // Support ID or Name match
 
     // Actions
-    const updateActiveCampaign = (updater) => {
+    const updateActiveCampaign = React.useCallback((updater) => {
         if (!activeCampaign || !targetCampaignId) return;
         setDb(prev => {
             const next = { ...prev };
@@ -67,9 +67,9 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false }) {
             next.campaigns[targetCampaignId] = { ...currentCamp, ...updatedCamp };
             return next;
         });
-    };
+    }, [activeCampaign, targetCampaignId, setDb]);
 
-    const createCampaign = (name) => {
+    const createCampaign = React.useCallback((name) => {
         const id = 'campaign_' + Date.now();
         setDb(prev => ({
             ...prev,
@@ -79,19 +79,18 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false }) {
             }
         }));
         return id;
-    };
+    }, [setDb]);
 
-    const deleteCampaign = (id) => {
+    const deleteCampaign = React.useCallback((id) => {
         setDb(prev => {
             const next = { ...prev };
             delete next.campaigns[id];
             return next;
         });
-        if (selectedCampaignId === id) setSelectedCampaignId(null);
-    };
+        if (selectedCampaignId === id) setSelectedCampaignIdState(null);
+    }, [setDb, selectedCampaignId]);
 
-    // Admin: Assign User
-    const assignUser = (email, campaignId, characterId, role = 'player') => {
+    const assignUser = React.useCallback((email, campaignId, characterId, role = 'player') => {
         setDb(prev => ({
             ...prev,
             users: {
@@ -99,9 +98,9 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false }) {
                 [email]: { role, campaignId, characterId }
             }
         }));
-    };
+    }, [setDb]);
 
-    const value = {
+    const value = useMemo(() => ({
         campaigns,
         activeCampaign,
         activeCampaignId: targetCampaignId,
@@ -115,7 +114,7 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false }) {
         assignUser,
         // Data Actions
         updateActiveCampaign
-    };
+    }), [campaigns, activeCampaign, targetCampaignId, myCharacter, isGM, userInfo, createCampaign, deleteCampaign, assignUser, updateActiveCampaign]);
 
     return (
         <CampaignContext.Provider value={value}>

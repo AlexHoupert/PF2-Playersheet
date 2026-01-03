@@ -139,7 +139,11 @@ export function ActionsView({ character, onOpenModal, onLongPress }) {
                                     }
                                     return;
                                 }
-                                const val = character.skills[s] || (s === 'Intimidation' ? character.skills['Intimidate'] : 0) || 0;
+                                const val = character.skills[s] ||
+                                    (s === 'Intimidation' ? character.skills['Intimidate'] : 0) ||
+                                    (s === 'Performance' ? character.skills['Perform'] : 0) ||
+                                    (s === 'Perform' ? character.skills['Performance'] : 0) ||
+                                    0;
                                 const calc = calculateStat(character, s, val);
                                 if (calc && calc.total > best) {
                                     best = calc.total;

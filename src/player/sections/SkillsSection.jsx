@@ -15,6 +15,7 @@ export function SkillsSection({ character, onOpenModal, onLongPress }) {
         nature: 'Wis',
         occultism: 'Int',
         performance: 'Cha',
+        perform: 'Cha',
         religion: 'Wis',
         society: 'Int',
         stealth: 'Dex',
@@ -34,6 +35,7 @@ export function SkillsSection({ character, onOpenModal, onLongPress }) {
             const rawName = name.replace('_', ' ');
             let displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
             if (displayName === 'Intimidate') displayName = 'Intimidation';
+            if (displayName === 'Perform') displayName = 'Performance';
             const label = ability ? `${displayName} (${ability})` : displayName;
 
             return (

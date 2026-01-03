@@ -196,7 +196,7 @@ export function EditProficiencyModal({ character, updateCharacter, onClose, moda
     const isImpulse = modalData.type === 'impulse';
     const key = isSkill ? modalData.item.key : (isSave ? String(modalData.item).toLowerCase() : 'class_dc');
 
-    const currentVal = isSkill ? character.skills[key] : (isSave ? (character.stats.saves?.[key] || 0) : (isImpulse ? (character.stats.impulse_proficiency || 0) : character.stats.class_dc));
+    const currentVal = isSkill ? (character.skills[key] || (key === 'Performance' ? character.skills['Perform'] : 0)) : (isSave ? (character.stats.saves?.[key] || 0) : (isImpulse ? (character.stats.impulse_proficiency || 0) : character.stats.class_dc));
 
     return (
         <div style={{

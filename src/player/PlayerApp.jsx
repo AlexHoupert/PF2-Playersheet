@@ -72,38 +72,62 @@ export default function PlayerApp({ db, setDb }) {
 
     // Migration: Intimidate -> Intimidation, Perform -> Performance
     useEffect(() => {
-        if (!activeCampaign || !activeCampaign.characters) return;
-        const index = activeCampaign.characters.findIndex(c => c.id === myCharacter?.id);
-        if (index === -1) return;
+        if (!activeCampaign || !activeCampaign.characters || !myCharacter?.id) return;
 
-        const char = activeCampaign.characters[index];
-        let needsUpdate = false;
+        // Check availability first to avoid unnecessary state updates
+        const charToCheck = activeCampaign.characters.find(c => c.id === myCharacter.id);
+        if (!charToCheck || !charToCheck.skills) return;
 
-        // Check Intimidate
-        if (char.skills && char.skills.hasOwnProperty('Intimidate')) {
-            needsUpdate = true;
-        }
-        // Check Perform
-        if (char.skills && char.skills.hasOwnProperty('Perform')) {
-            needsUpdate = true;
-        }
+        const needsIntimidate = charToCheck.skills.hasOwnProperty('Intimidate') || charToCheck.skills.hasOwnProperty('intimidate');
+        const needsPerform = charToCheck.skills.hasOwnProperty('Perform') || charToCheck.skills.hasOwnProperty('perform');
 
-        if (needsUpdate) {
-            console.log("Running Skill Migrations for", char.name);
-            updateCharacter(c => {
+        if (needsIntimidate || needsPerform) {
+            console.log("Running Skill Migrations for", charToCheck.name);
+
+            updateActiveCampaign(camp => {
+                const chars = [...(camp.characters || [])];
+                const idx = chars.findIndex(c => c.id === myCharacter.id);
+                if (idx === -1) return camp;
+
+                const c = deepClone(chars[idx]);
+                let changed = false;
+
+                // Intimidate
                 if (c.skills.hasOwnProperty('Intimidate')) {
                     const val = c.skills.Intimidate;
                     delete c.skills.Intimidate;
                     c.skills.Intimidation = val;
+                    changed = true;
                 }
+                if (c.skills.hasOwnProperty('intimidate')) {
+                    const val = c.skills.intimidate;
+                    delete c.skills.intimidate;
+                    c.skills.Intimidation = val;
+                    changed = true;
+                }
+
+                // Performance
                 if (c.skills.hasOwnProperty('Perform')) {
                     const val = c.skills.Perform;
                     delete c.skills.Perform;
                     c.skills.Performance = val;
+                    changed = true;
                 }
+                if (c.skills.hasOwnProperty('perform')) {
+                    const val = c.skills.perform;
+                    delete c.skills.perform;
+                    c.skills.Performance = val;
+                    changed = true;
+                }
+
+                if (changed) {
+                    chars[idx] = c;
+                    return { ...camp, characters: chars };
+                }
+                return camp;
             });
         }
-    }, [activeCampaign, myCharacter]);
+    }, [activeCampaign, myCharacter, updateActiveCampaign]);
 
 
 
