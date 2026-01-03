@@ -162,14 +162,31 @@ export function formatText(text, context = {}) {
 
 export function getCondLevel(condName, character) {
     if (!character || !character.conditions) return 0;
-    const c = character.conditions.find(cond => String(cond.name || '').toLowerCase() === String(condName).toLowerCase());
-    return c ? (c.level || 1) : 0;
+    const target = String(condName).toLowerCase();
+    const found = character.conditions.find(cond => {
+        if (typeof cond === 'string') return cond.toLowerCase() === target;
+        return String(cond?.name || '').toLowerCase() === target;
+    });
+
+    if (!found) return 0;
+    if (typeof found === 'string') return 1;
+
+    const lvl = Number(found.level);
+    if (Number.isFinite(lvl)) return lvl;
+    return 1;
 }
 
 export function getConditionEffects(character, statName, attributeName) {
     const conds = character.conditions || [];
     const active = {};
-    conds.forEach(c => { if (c.level > 0) active[c.name.toLowerCase()] = c.level; });
+    conds.forEach(c => {
+        if (!c) return;
+        const name = (typeof c === 'string') ? c : c.name;
+        if (!name) return;
+        const rawLevel = (typeof c === 'string') ? 1 : c.level;
+        const level = Number.isFinite(Number(rawLevel)) ? Number(rawLevel) : 1;
+        if (level > 0) active[String(name).toLowerCase()] = level;
+    });
     const has = (key) => !!active[key];
     const val = (key) => active[key] || 0;
 
@@ -266,5 +283,79 @@ export function calculateStat(character, statName, profValue) {
         source,    // Metadata for labels
         rank: PROF_NAMES[prof] || "Unknown",
         penalty: cond.total
+    };
+}
+
+export function calculateSpellAttackAndDC(character) {
+    if (!character) {
+        return {
+            attack: { total: 0, breakdown: {}, source: {}, penalty: 0 },
+            dc: { total: 10, base: 10, breakdown: {}, source: {}, penalty: 0 }
+        };
+    }
+
+    const magic = character.magic || {};
+    const attrName = magic.attribute || "Intelligence";
+    const attrMod = parseInt(character.stats?.attributes?.[(attrName || "").toLowerCase()]) || 0;
+    const prof = parseInt(magic.proficiency) || 0;
+    const level = parseInt(character.level) || 0;
+
+    const baseAttack = Math.floor(attrMod + prof + (prof > 0 ? level : 0));
+    const cond = getConditionEffects(character, "Spell", attrName);
+    const totalAttack = baseAttack + cond.total;
+
+    const breakdown = {
+        attribute: attrMod,
+        proficiency: prof,
+        ...(prof > 0 ? { level } : {}),
+        ...cond.breakdown
+    };
+
+    const source = {
+        attrName: attrName.substr(0, 3),
+        attrFull: attrName,
+        profName: PROF_NAMES[prof] || "Unknown",
+        levelVal: level
+    };
+
+    return {
+        attack: { total: totalAttack, breakdown, source, penalty: cond.total },
+        dc: { total: 10 + totalAttack, base: 10, breakdown, source, penalty: cond.total }
+    };
+}
+
+export function calculateImpulseAttackAndClassDC(character) {
+    if (!character) {
+        return {
+            attack: { total: 0, breakdown: {}, source: {}, penalty: 0 },
+            classDC: { total: 10, base: 10, breakdown: {}, source: {}, penalty: 0 }
+        };
+    }
+
+    const prof = parseInt(character.stats?.impulse_proficiency) || 0;
+    const level = Math.max(1, parseInt(character.level) || 1);
+    const conMod = parseInt(character.stats?.attributes?.constitution) || 0;
+
+    const baseAttack = conMod + (prof > 0 ? (level + prof) : 0);
+    const cond = getConditionEffects(character, "Impulse", "Constitution");
+    const totalAttack = baseAttack + cond.total;
+
+    const breakdown = {
+        attribute: conMod,
+        proficiency: prof,
+        ...(prof > 0 ? { level } : {}),
+        ...cond.breakdown
+    };
+
+    const source = {
+        attrName: "Con",
+        attrFull: "Constitution",
+        profName: PROF_NAMES[prof] || "Unknown",
+        levelVal: level
+    };
+
+    return {
+        attack: { total: totalAttack, breakdown, source, penalty: cond.total },
+        classDC: { total: 10 + totalAttack, base: 10, breakdown, source, penalty: cond.total }
     };
 }

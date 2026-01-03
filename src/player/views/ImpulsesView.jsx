@@ -1,18 +1,14 @@
 import React from 'react';
-import { calculateStat, formatText, ACTION_ICONS } from '../../utils/rules';
+import { formatText, ACTION_ICONS, calculateImpulseAttackAndClassDC } from '../../utils/rules';
 import { LongPressable } from '../../shared/components/LongPressable';
 
 export const ImpulsesView = ({ character, setModalData, setModalMode, onLongPress }) => {
     const impulses = character.impulses || [];
 
     // Stats Calculation
-    const profRank = character.stats.impulse_proficiency || 0;
-    const level = parseInt(character.level) || 1;
-    const conMod = character.stats.attributes?.constitution ?? 0;
-
-    const profBonus = profRank > 0 ? (level + profRank) : 0;
-    const classDC = 10 + profBonus + conMod;
-    const impulseAttack = profBonus + conMod;
+    const { attack: impulseAttack, classDC } = calculateImpulseAttackAndClassDC(character);
+    const impulseAttackHasPenalty = (impulseAttack?.penalty || 0) < 0;
+    const classDCHasPenalty = (classDC?.penalty || 0) < 0;
 
     return (
         <div className="magic-container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -24,7 +20,10 @@ export const ImpulsesView = ({ character, setModalData, setModalMode, onLongPres
                     onLongPress={() => onLongPress(null, 'class_dc')}
                 >
                     <div className="hex-content">
-                        <div className="stat-val" style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>{classDC}</div>
+                        <div className={`stat-val ${classDCHasPenalty ? 'stat-penalty' : ''}`} style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>
+                            {classDC.total}
+                            {classDCHasPenalty && <span className="stat-penalty-inline">({classDC.penalty})</span>}
+                        </div>
                         <div className="stat-label" style={{ fontSize: '0.6em', textTransform: 'uppercase', color: '#888', marginTop: 2 }}>CLASS DC</div>
                     </div>
                 </LongPressable>
@@ -39,7 +38,10 @@ export const ImpulsesView = ({ character, setModalData, setModalMode, onLongPres
                     onClick={() => { setModalData({ type: 'impulse_attack' }); setModalMode('spell_stat_info'); }}
                     onLongPress={() => onLongPress(null, 'impulse_attack')}
                 >
-                    <div className="stat-val" style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>+{impulseAttack}</div>
+                    <div className={`stat-val ${impulseAttackHasPenalty ? 'stat-penalty' : ''}`} style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>
+                        {impulseAttack.total >= 0 ? '+' : ''}{impulseAttack.total}
+                        {impulseAttackHasPenalty && <span className="stat-penalty-inline">({impulseAttack.penalty})</span>}
+                    </div>
                     <div className="stat-label" style={{ fontSize: '0.6em', textTransform: 'uppercase', color: '#888', marginTop: 2 }}>ATTACK</div>
                 </LongPressable>
             </div>

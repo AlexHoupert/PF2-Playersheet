@@ -1,4 +1,4 @@
-import { calculateStat, formatText, ACTION_ICONS } from '../../utils/rules';
+import { formatText, ACTION_ICONS, calculateSpellAttackAndDC } from '../../utils/rules';
 import { getSpellIndexItemByName } from '../../shared/catalog/spellIndex';
 import { LongPressable } from '../../shared/components/LongPressable';
 
@@ -7,16 +7,10 @@ export const MagicView = ({ character, updateCharacter, setModalData, setModalMo
     const magic = character.magic || { slots: {}, list: [] };
 
     // --- 1. SLOTS & STATS COLUMN (LEFT) ---
-    // Calc Attack & DC: 10 + Attr + Prof + Level
-    const attrName = magic.attribute || "Intelligence";
-    const attrMod = parseInt(character.stats.attributes[(attrName || "").toLowerCase()]) || 0;
-    const prof = parseFloat(magic.proficiency) || 0;
-    const level = parseInt(character.level) || 0;
-
-    // Stats Fix: Only add level if proficiency > 0
-    const atkBonus = Math.floor(attrMod + prof + (prof > 0 ? level : 0));
-    const dcVal = 10 + atkBonus;
-    const atkStr = (atkBonus >= 0 ? "+" : "") + atkBonus;
+    const { attack: spellAttack, dc: spellDC } = calculateSpellAttackAndDC(character);
+    const spellAttackHasPenalty = (spellAttack?.penalty || 0) < 0;
+    const spellDCHasPenalty = (spellDC?.penalty || 0) < 0;
+    const atkStr = (spellAttack.total >= 0 ? "+" : "") + spellAttack.total;
 
     const slotKeys = ['f', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
     const slots = magic.slots || {};
@@ -162,7 +156,10 @@ export const MagicView = ({ character, updateCharacter, setModalData, setModalMo
                         onLongPress={() => onLongPress(null, 'spell_proficiency')}
                     >
                         <div className="hex-content">
-                            <div className="stat-val" style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>{dcVal}</div>
+                            <div className={`stat-val ${spellDCHasPenalty ? 'stat-penalty' : ''}`} style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>
+                                {spellDC.total}
+                                {spellDCHasPenalty && <span className="stat-penalty-inline">({spellDC.penalty})</span>}
+                            </div>
                             <div className="stat-label" style={{ fontSize: '0.6em', textTransform: 'uppercase', color: '#888', marginTop: 2 }}>SPELL DC</div>
                         </div>
                     </LongPressable>
@@ -172,7 +169,10 @@ export const MagicView = ({ character, updateCharacter, setModalData, setModalMo
                         onClick={() => { setModalData({ type: 'attack' }); setModalMode('spell_stat_info'); }}
                         onLongPress={() => onLongPress(null, 'spell_proficiency')}
                     >
-                        <div className="stat-val" style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>{atkStr}</div>
+                        <div className={`stat-val ${spellAttackHasPenalty ? 'stat-penalty' : ''}`} style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>
+                            {atkStr}
+                            {spellAttackHasPenalty && <span className="stat-penalty-inline">({spellAttack.penalty})</span>}
+                        </div>
                         <div className="stat-label" style={{ fontSize: '0.6em', textTransform: 'uppercase', color: '#888', marginTop: 2 }}>ATTACK</div>
                     </LongPressable>
                 </div>

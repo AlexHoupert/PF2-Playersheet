@@ -1,4 +1,5 @@
 import { getShopIndexItemByName } from '../catalog/shopIndex';
+import { getConditionEffects } from '../../utils/rules';
 
 /**
  * Calculates the ammunition capacity of a weapon based on its traits.
@@ -58,7 +59,12 @@ export const getWeaponAttackBonus = (item, character) => {
 
     const grp = (item.group || '').toLowerCase();
     const cat = (item.category || '').toLowerCase(); // Simple, Martial, Advanced
-    const traits = (item.traits?.value || []);
+
+    // Normalize traits to an array of lowercase strings
+    const traitsRaw = (item.traits?.value ?? item.traits ?? []);
+    let traits = [];
+    if (Array.isArray(traitsRaw)) traits = traitsRaw.map(t => String(t).toLowerCase());
+    else if (typeof traitsRaw === 'string') traits = traitsRaw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
 
     // 1. Proficiency Rank (0=Untrained, 2=Trained, 4=Expert, 6=Master, 8=Legendary)
     // Check Group Score (e.g. "Firearms") vs Category Score (e.g. "Martial")
@@ -102,20 +108,11 @@ export const getWeaponAttackBonus = (item, character) => {
     // Melee -> STR
     // Thrown -> DEX (Attack), STR (Damage). Attack is DEX.
 
-    let attrMod = 0;
     const str = parseInt(character.stats?.attributes?.strength) || 0;
     const dex = parseInt(character.stats?.attributes?.dexterity) || 0;
 
     const isRanged = /ranged|firearm|crossbow|bow|bomb/.test(grp) || traits.includes('thrown');
     const isFinesse = traits.includes('finesse');
-
-    if (isRanged) {
-        attrMod = dex;
-    } else if (isFinesse) {
-        attrMod = Math.max(str, dex);
-    } else {
-        attrMod = str;
-    }
 
     // 3. Level (If Trained+)
     const level = (profScore > 0) ? (parseInt(character.level) || 0) : 0;
@@ -128,20 +125,54 @@ export const getWeaponAttackBonus = (item, character) => {
     else if (item.name.includes('+2')) itemBonus = 2;
     else if (item.name.includes('+3')) itemBonus = 3;
 
+    const baseWithoutAttribute = profScore + level + itemBonus;
+
+    const getOption = (attributeName, attributeMod, attrLabel) => {
+        const cond = getConditionEffects(character, "Attack", attributeName);
+        return {
+            attributeName,
+            attributeMod,
+            attrLabel,
+            cond,
+            total: baseWithoutAttribute + attributeMod + cond.total
+        };
+    };
+
+    // For finesse weapons, allow picking the better of STR/DEX after condition modifiers.
+    let options = [];
+    if (isRanged) {
+        options = [getOption("Dexterity", dex, "Dex")];
+    } else if (isFinesse) {
+        options = [
+            getOption("Strength", str, "Str"),
+            getOption("Dexterity", dex, "Dex (Finesse)")
+        ];
+    } else {
+        options = [getOption("Strength", str, "Str")];
+    }
+
+    const best = options.reduce((acc, cur) => {
+        if (!acc) return cur;
+        if (cur.total !== acc.total) return cur.total > acc.total ? cur : acc;
+        return cur.attributeMod > acc.attributeMod ? cur : acc;
+    }, null);
+
     return {
-        total: profScore + level + attrMod + itemBonus,
+        total: best.total,
         breakdown: {
             proficiency: profScore,
             level: level,
-            attribute: attrMod,
-            item: itemBonus
+            attribute: best.attributeMod,
+            item: itemBonus,
+            ...best.cond.breakdown
         },
         source: {
             profRaw: profScore,
             profName: profScore === 2 ? 'Trained' : profScore === 4 ? 'Expert' : profScore === 6 ? 'Master' : profScore === 8 ? 'Legendary' : 'Untrained',
-            attrName: isRanged ? 'Dex' : isFinesse && dex > str ? 'Dex (Finesse)' : 'Str',
+            attrName: best.attrLabel,
             levelVal: character.level
-        }
+        },
+        penalty: best.cond.total
     };
 };
 

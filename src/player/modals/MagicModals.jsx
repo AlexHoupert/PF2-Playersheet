@@ -1,5 +1,6 @@
 import React from 'react';
 import { StatBreakdown } from '../components/StatBreakdown';
+import { calculateImpulseAttackAndClassDC, calculateSpellAttackAndDC } from '../../utils/rules';
 
 const ARMOR_RANKS = [
     { value: 0, label: 'Untrained (+0)' },
@@ -153,51 +154,29 @@ export function EditSpellSlotsModal({ character, updateCharacter, onClose, modal
  */
 export function SpellStatInfoModal({ character, modalData, onClose }) {
     const type = modalData?.type || 'dc';
-    let title = 'Spell Statistics';
-    let dcVal = 0;
-    let atkBonus = 0;
-    let rows = [];
 
-    if (type === 'class_dc' || type === 'impulse_attack') {
-        // Impulse / Class DC Stats
-        title = type === 'class_dc' ? 'Class DC Breakdown' : 'Impulse Attack Breakdown';
-        const profRank = character.stats.impulse_proficiency || 0;
-        const level = parseInt(character.level) || 1;
-        const conMod = character.stats.attributes?.constitution ?? 0;
-        const rankLabel = ARMOR_RANKS.find(r => r.value === profRank)?.label.split(' ')[0] || 'Untrained';
+    const isImpulse = type === 'class_dc' || type === 'impulse_attack';
+    const isDc = type === 'dc' || type === 'class_dc';
 
-        const profBonus = profRank > 0 ? (level + profRank) : 0;
-        atkBonus = profBonus + conMod;
-        dcVal = 10 + atkBonus;
+    const spellStats = !isImpulse ? calculateSpellAttackAndDC(character) : null;
+    const impulseStats = isImpulse ? calculateImpulseAttackAndClassDC(character) : null;
 
-        rows = [
-            { label: type === 'class_dc' ? "Base" : null, val: type === 'class_dc' ? 10 : null },
-            { label: `Constitution (${conMod})`, val: conMod },
-            { label: `Proficiency (${rankLabel})`, val: profRank },
-            { label: profRank > 0 ? "Level" : null, val: profRank > 0 ? level : null }
-        ].filter(r => r.label !== null);
+    const attackCalc = isImpulse ? impulseStats.attack : spellStats.attack;
+    const dcCalc = isImpulse ? impulseStats.classDC : spellStats.dc;
+    const activeCalc = isDc ? dcCalc : attackCalc;
 
-    } else {
-        // Magic Stats
-        title = type === 'dc' ? 'Spell DC Breakdown' : 'Spell Attack Breakdown';
-        const magic = character.magic || {};
-        const attrName = magic.attribute || "Intelligence";
-        const attrMod = parseInt(character.stats.attributes[(attrName || "").toLowerCase()]) || 0;
-        const prof = parseFloat(magic.proficiency) || 0;
-        const level = parseInt(character.level) || 0;
-        const rankLabel = ARMOR_RANKS.find(r => r.value === prof)?.label.split(' ')[0] || 'Untrained';
+    const title = isImpulse
+        ? (isDc ? 'Class DC Breakdown' : 'Impulse Attack Breakdown')
+        : (isDc ? 'Spell DC Breakdown' : 'Spell Attack Breakdown');
 
-        const profBonus = prof + (prof > 0 ? level : 0);
-        atkBonus = Math.floor(attrMod + profBonus);
-        dcVal = 10 + atkBonus;
-
-        rows = [
-            { label: type === 'dc' ? "Base" : null, val: type === 'dc' ? 10 : null },
-            { label: `${attrName} (${attrMod})`, val: attrMod },
-            { label: `Proficiency (${rankLabel})`, val: prof },
-            { label: prof > 0 ? "Level" : null, val: prof > 0 ? level : null }
-        ].filter(r => r.label !== null);
-    }
+    const rows = [
+        { label: isDc ? 'Base' : null, val: isDc ? 10 : null },
+        { label: `${activeCalc.source?.attrFull || 'Attribute'} (${activeCalc.breakdown?.attribute ?? 0})`, val: activeCalc.breakdown?.attribute ?? 0 },
+        { label: `Proficiency (${activeCalc.source?.profName || 'Unknown'})`, val: activeCalc.breakdown?.proficiency ?? 0 },
+        { label: activeCalc.breakdown?.level !== undefined ? 'Level' : null, val: activeCalc.breakdown?.level },
+        { label: activeCalc.breakdown?.status !== undefined ? 'Status' : null, val: activeCalc.breakdown?.status },
+        { label: activeCalc.breakdown?.circumstance !== undefined ? 'Circumstance' : null, val: activeCalc.breakdown?.circumstance }
+    ].filter(r => r.label !== null);
 
     return (
         <div style={{
@@ -216,16 +195,16 @@ export function SpellStatInfoModal({ character, modalData, onClose }) {
 
                 <div style={{ textAlign: 'center', marginBottom: 20 }}>
                     <div style={{ fontSize: '2.5em', color: 'var(--text-gold)', fontWeight: 'bold', lineHeight: 1 }}>
-                        {(type === 'dc' || type === 'class_dc') ? dcVal : (atkBonus >= 0 ? `+${atkBonus}` : atkBonus)}
+                        {isDc ? activeCalc.total : (activeCalc.total >= 0 ? `+${activeCalc.total}` : activeCalc.total)}
                     </div>
                     <div style={{ fontSize: '1em', color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
-                        {(type === 'dc' || type === 'class_dc') ? 'Difficulty Class' : 'Attack Bonus'}
+                        {isDc ? 'Difficulty Class' : 'Attack Bonus'}
                     </div>
                 </div>
 
                 <StatBreakdown
                     rows={rows}
-                    total={(type === 'dc' || type === 'class_dc') ? dcVal : atkBonus}
+                    total={activeCalc.total}
                     totalLabel="Total"
                 />
 

@@ -9,6 +9,9 @@ export function AttributesSection({ character, onOpenModal, onLongPress }) {
         "intelligence": "INT", "wisdom": "WIS", "charisma": "CHA"
     };
 
+    const perceptionCalc = calculateStat(character, "Perception", character.stats.perception);
+    const perceptionHasPenalty = (perceptionCalc?.penalty || 0) < 0;
+
     const renderAttributes = () => {
         const orderedKeys = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"];
         return (
@@ -37,13 +40,15 @@ export function AttributesSection({ character, onOpenModal, onLongPress }) {
             <div className="special-stat-group">
                 <LongPressable className="eye-box"
                     onClick={() => {
-                        const calc = calculateStat(character, "Perception", character.stats.perception);
-                        onOpenModal('detail', { title: "Perception", ...calc });
+                        onOpenModal('detail', { title: "Perception", ...perceptionCalc });
                     }}
                     onLongPress={() => onLongPress && onLongPress(character.stats.perception, 'perception')}
                 >
                     <div className="eye-content">
-                        <span>+{calculateStat(character, "Perception", character.stats.perception).total}</span>
+                        <span className={perceptionHasPenalty ? 'stat-penalty' : ''}>
+                            {perceptionCalc.total >= 0 ? '+' : ''}{perceptionCalc.total}
+                            {perceptionHasPenalty && <span className="stat-penalty-inline">({perceptionCalc.penalty})</span>}
+                        </span>
                         <span style={{ fontSize: '0.4em', textTransform: 'uppercase' }}>Perception</span>
                     </div>
                 </LongPressable>

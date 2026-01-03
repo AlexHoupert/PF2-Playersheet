@@ -96,6 +96,9 @@ export function ConditionsModal({
             const idx = c.conditions.findIndex(x => x.name === condName);
             const valued = isConditionValued(condName);
 
+            const isDrained = String(condName).toLowerCase() === 'drained';
+            const prevDrained = isDrained && idx > -1 ? (parseInt(c.conditions[idx].level) || 0) : 0;
+
             if (!valued) {
                 // Binary conditions (toggle)
                 if (delta > 0) {
@@ -114,6 +117,21 @@ export function ConditionsModal({
                 const nextLevel = (c.conditions[idx].level || 0) - 1;
                 if (nextLevel <= 0) c.conditions.splice(idx, 1);
                 else c.conditions[idx].level = nextLevel;
+            }
+
+            // Drained: lose HP equal to (level * increase), without counting as damage.
+            if (isDrained && delta > 0) {
+                const newIdx = c.conditions.findIndex(x => x.name === condName);
+                const nextDrained = newIdx > -1 ? (parseInt(c.conditions[newIdx].level) || 0) : 0;
+                const diff = Math.max(0, nextDrained - prevDrained);
+                if (diff > 0) {
+                    const charLevel = Math.max(1, parseInt(c.level) || 1);
+                    const hpLoss = charLevel * diff;
+                    if (!c.stats) c.stats = {};
+                    if (!c.stats.hp) c.stats.hp = { current: 0, max: 0, temp: 0 };
+                    const currentHp = parseInt(c.stats.hp.current) || 0;
+                    c.stats.hp.current = Math.max(0, currentHp - hpLoss);
+                }
             }
         });
     };

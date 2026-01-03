@@ -70,6 +70,10 @@ export function InventoryView({
         const merged = fromIndex ? { ...fromIndex, ...item, _index: index } : { ...item, _index: index };
         const { row1, row2 } = getShopItemRowMeta(merged);
 
+        const isWeapon = isEquipableInventoryItem(item) && String(merged.type || '').toLowerCase() === 'weapon';
+        const weaponAttackBonus = isWeapon ? getWeaponAttackBonus(merged, character) : null;
+        const weaponHasPenalty = (weaponAttackBonus?.penalty || 0) < 0;
+
         let clickHandler;
         if (enableEquipTap && isEquipableInventoryItem(item)) {
             clickHandler = () => {
@@ -234,24 +238,25 @@ export function InventoryView({
                             )}
 
                         {/* Weapon Bonus */}
-                        {isEquipableInventoryItem(item) && (merged.type || '').toLowerCase() === 'weapon' && (
+                        {isWeapon && weaponAttackBonus && (
                             <div
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    const bonusInfo = getWeaponAttackBonus(merged, character);
-                                    onOpenModal('weapon_detail', { item: merged, type: 'weapon_prof', ...bonusInfo });
+                                    onOpenModal('weapon_detail', { item: merged, type: 'weapon_prof', ...weaponAttackBonus });
                                 }}
+                                className={weaponHasPenalty ? 'stat-penalty' : ''}
                                 style={{
                                     marginLeft: 6,
                                     fontSize: '1.2em',
                                     fontWeight: 'bold',
-                                    color: (getWeaponAttackBonus(merged, character).total >= 0) ? 'var(--text-gold)' : '#f44336',
+                                    color: 'var(--text-gold)',
                                     cursor: 'pointer',
                                     minWidth: 24,
                                     textAlign: 'right'
                                 }}
                             >
-                                {getWeaponAttackBonus(merged, character).total >= 0 ? '+' : ''}{getWeaponAttackBonus(merged, character).total}
+                                {weaponAttackBonus.total >= 0 ? '+' : ''}{weaponAttackBonus.total}
+                                {weaponHasPenalty && <span className="stat-penalty-inline">({weaponAttackBonus.penalty})</span>}
                             </div>
                         )}
                     </div>
