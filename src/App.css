@@ -48,6 +48,7 @@ h3 {
     min-height: 100vh;
     margin-left: auto;
     margin-right: auto;
+    touch-action: pan-y pinch-zoom;
 }
 
 body.swiping-active .app-container * {
