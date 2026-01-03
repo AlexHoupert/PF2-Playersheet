@@ -70,20 +70,36 @@ export default function PlayerApp({ db, setDb }) {
         }
     }, [myCharacter, activeCampaign]);
 
-    // Migration: Intimidate -> Intimidation
+    // Migration: Intimidate -> Intimidation, Perform -> Performance
     useEffect(() => {
         if (!activeCampaign || !activeCampaign.characters) return;
         const index = activeCampaign.characters.findIndex(c => c.id === myCharacter?.id);
         if (index === -1) return;
 
         const char = activeCampaign.characters[index];
+        let needsUpdate = false;
+
+        // Check Intimidate
         if (char.skills && char.skills.hasOwnProperty('Intimidate')) {
-            console.log("Migrating Intimidate to Intimidation for", char.name);
+            needsUpdate = true;
+        }
+        // Check Perform
+        if (char.skills && char.skills.hasOwnProperty('Perform')) {
+            needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+            console.log("Running Skill Migrations for", char.name);
             updateCharacter(c => {
                 if (c.skills.hasOwnProperty('Intimidate')) {
                     const val = c.skills.Intimidate;
                     delete c.skills.Intimidate;
                     c.skills.Intimidation = val;
+                }
+                if (c.skills.hasOwnProperty('Perform')) {
+                    const val = c.skills.Perform;
+                    delete c.skills.Perform;
+                    c.skills.Performance = val;
                 }
             });
         }
@@ -272,33 +288,58 @@ export default function PlayerApp({ db, setDb }) {
 
             if (!w.loaded) w.loaded = [];
 
-            // If explicit ammo not provided, try to find "Rounds (universal)" or best match
+            // Determine Required Ammo Type
+            const tags = (w.tags || []).map(t => t.toLowerCase());
+            const traits = (w.traits?.value || []).map(t => t.toLowerCase());
+            const allTags = [...tags, ...traits];
+
+            let requiredKeyword = null;
+            if (allTags.includes('crossbow') || w.name.toLowerCase().includes('crossbow')) {
+                requiredKeyword = 'bolt';
+            } else if (allTags.includes('bow') || w.name.toLowerCase().includes('bow') || allTags.includes('shortbow') || allTags.includes('longbow')) {
+                requiredKeyword = 'arrow';
+            } else if (allTags.includes('firearm') || w.name.toLowerCase().includes('gun') || w.name.toLowerCase().includes('pistol') || w.name.toLowerCase().includes('musket')) {
+                requiredKeyword = 'round'; // Covers "Round (universal)" or "Paper Cartridge" etc if they contain 'round'
+                // Actually firearm ammo is tricky, but "Rounds (Universal)" is standard.
+                // Let's stick to 'round' for now, but also allow specific firearm matches if needed.
+            }
+
+            // If explicit ammo provided, just use it (assuming user knows best, or add check?)
+            // Let's add a check if explicit ammo is provided but wrong type? No, trust manual selection for now.
             let ammoToLoad = ammoItem;
 
             if (!ammoToLoad) {
-                // Find standard ammo
-                // Logic: Look for "Rounds (universal)" (case insensitive) or any item with "rounds" in name and type/category ammo
-                const universal = c.inventory.find(i => i.name.toLowerCase() === "rounds (universal)" && i.qty > 0);
-                if (universal) {
-                    ammoToLoad = universal;
-                } else {
-                    // Fallback to any "rounds"
-                    const compatible = c.inventory.find(i =>
-                        i.name.toLowerCase().includes('round') &&
+                if (requiredKeyword) {
+                    // Search for specific ammo
+                    ammoToLoad = c.inventory.find(i =>
                         i.qty > 0 &&
-                        (i.category === 'ammo' || i.type === 'ammunition' || (i.traits?.value || []).includes('ammunition') || i.name.toLowerCase().includes('rounds'))
+                        (i.category === 'ammo' || i.type === 'ammunition' || (i.traits?.value || []).includes('ammunition') || i.name.toLowerCase().includes('ammo')) &&
+                        i.name.toLowerCase().includes(requiredKeyword)
                     );
-                    if (compatible) ammoToLoad = compatible;
+                }
+
+                // If not found or no specific requirement, try generic fallback (original logic)
+                if (!ammoToLoad && !requiredKeyword) {
+                    const universal = c.inventory.find(i => i.name.toLowerCase() === "rounds (universal)" && i.qty > 0);
+                    if (universal) {
+                        ammoToLoad = universal;
+                    } else {
+                        const compatible = c.inventory.find(i =>
+                            i.name.toLowerCase().includes('round') &&
+                            i.qty > 0 &&
+                            (i.category === 'ammo' || i.type === 'ammunition' || (i.traits?.value || []).includes('ammunition'))
+                        );
+                        if (compatible) ammoToLoad = compatible;
+                    }
                 }
             }
 
             if (!ammoToLoad) {
-                alert("No ammunition found!");
+                alert(requiredKeyword ? `No ammunition found! Required: ${requiredKeyword}s` : "No ammunition found!");
                 return;
             }
 
             // Deduct
-            // Use findIndex to ensure safe removal
             const ammoIdx = c.inventory.findIndex(i => (ammoToLoad.instanceId ? i.instanceId === ammoToLoad.instanceId : i.name === ammoToLoad.name) && i.qty > 0);
             if (ammoIdx > -1) {
                 const invAmmo = c.inventory[ammoIdx];
@@ -306,12 +347,15 @@ export default function PlayerApp({ db, setDb }) {
                 if (invAmmo.qty <= 0) c.inventory.splice(ammoIdx, 1);
 
                 // Load
-                // Load
-                const isStandard = /^(rounds \(universal\)|rounds?|bolts?|arrows?)/i.test(ammoToLoad.name);
+                // Check if it's standard based on requirement
+                const isStandard = requiredKeyword
+                    ? ammoToLoad.name.toLowerCase().includes(requiredKeyword)
+                    : /^(rounds \(universal\)|rounds?|bolts?|arrows?)/i.test(ammoToLoad.name);
+
                 w.loaded[slotIndex] = {
                     name: ammoToLoad.name,
                     id: ammoToLoad.instanceId || "std",
-                    isSpecial: !isStandard // Only special if NOT matches standard patterns
+                    isSpecial: !isStandard
                 };
             } else {
                 alert("Ammo not found in inventory.");
