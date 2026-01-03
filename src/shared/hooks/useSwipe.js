@@ -4,13 +4,14 @@ import { useRef, useEffect } from 'react';
  * Custom hook to detect swipe gestures and prevent accidental clicks.
  * Uses Touch and Mouse events for broad compatibility.
  */
-export function useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, threshold = 50 }) {
+export function useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, threshold = 50, disabled = false }) {
     const startObj = useRef(null); // {x, y}
     const currentObj = useRef(null); // {x, y}
     const isDragging = useRef(false);
     const containerRef = useRef(null);
     const endTimeout = useRef(null);
     const isMouseDown = useRef(false);
+    const disabledRef = useRef(Boolean(disabled));
 
     // Toggle body class
     const setSwipingState = (active) => {
@@ -28,9 +29,16 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, th
         if (endTimeout.current) clearTimeout(endTimeout.current);
     };
 
+    // Keep latest disabled flag + clear any swipe shield when disabling.
+    useEffect(() => {
+        disabledRef.current = Boolean(disabled);
+        if (disabledRef.current) cleanup();
+    }, [disabled]);
+
     // Native Click/Context Guard
     useEffect(() => {
         const handleEvent = (e) => {
+            if (disabledRef.current) return;
             // If dragging or swiping class active, block everything
             if (isDragging.current || document.body.classList.contains('swiping-active')) {
                 e.preventDefault();
@@ -40,6 +48,7 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, th
         };
 
         const handleScroll = () => {
+            if (disabledRef.current) return;
             // Scroll implies drag
             if (!document.body.classList.contains('swiping-active')) {
                 setSwipingState(true);
@@ -71,6 +80,7 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, th
 
     // --- LOGIC ---
     const start = (x, y) => {
+        if (disabledRef.current) return;
         if (endTimeout.current) clearTimeout(endTimeout.current);
         setSwipingState(false);
         isDragging.current = false;
@@ -79,6 +89,7 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, th
     };
 
     const move = (x, y) => {
+        if (disabledRef.current) return;
         currentObj.current = { x, y };
         if (startObj.current) {
             const dx = x - startObj.current.x;
@@ -92,6 +103,7 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, th
     };
 
     const end = () => {
+        if (disabledRef.current) return;
         // Keep shield up for 300ms
         endTimeout.current = setTimeout(cleanup, 300);
 
@@ -122,29 +134,43 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, th
     };
 
     // --- HANDLERS ---
-    const onTouchStart = (e) => start(e.targetTouches[0].clientX, e.targetTouches[0].clientY);
-    const onTouchMove = (e) => move(e.targetTouches[0].clientX, e.targetTouches[0].clientY);
-    const onTouchEnd = () => end();
+    const onTouchStart = (e) => {
+        if (disabledRef.current) return;
+        start(e.targetTouches[0].clientX, e.targetTouches[0].clientY);
+    };
+    const onTouchMove = (e) => {
+        if (disabledRef.current) return;
+        move(e.targetTouches[0].clientX, e.targetTouches[0].clientY);
+    };
+    const onTouchEnd = () => {
+        if (disabledRef.current) return;
+        end();
+    };
     const onTouchCancel = () => {
+        if (disabledRef.current) return;
         isDragging.current = true;
         setSwipingState(true);
         endTimeout.current = setTimeout(cleanup, 300);
     };
 
     const onMouseDown = (e) => {
+        if (disabledRef.current) return;
         isMouseDown.current = true;
         start(e.clientX, e.clientY);
     };
     const onMouseMove = (e) => {
+        if (disabledRef.current) return;
         if (!isMouseDown.current) return;
         move(e.clientX, e.clientY);
     };
     const onMouseUp = (e) => {
+        if (disabledRef.current) return;
         if (!isMouseDown.current) return;
         end();
         isMouseDown.current = false;
     };
     const onMouseLeave = (e) => {
+        if (disabledRef.current) return;
         if (isMouseDown.current) {
             end();
             isMouseDown.current = false;

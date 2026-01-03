@@ -270,14 +270,14 @@ export function ConditionsModal({
             const NEGATIVE_GROUPS = [
                 {
                     title: 'Control & Positioning',
-                    items: ['off-guard', 'prone', 'grabbed', 'restrained', 'immobilized', 'paralyzed', 'petrified']
+                    items: ['off-guard', 'prone', 'grabbed', 'restrained', 'immobilized', 'stunned', 'paralyzed', 'petrified']
                 },
                 {
                     title: 'Lowered Abilities',
-                    items: ['frightened', 'clumsy', 'drained', 'enfeebled', 'stupefied', 'sickened', 'slowed']
+                    items: ['frightened', 'clumsy', 'drained', 'enfeebled', 'stupefied', 'sickened', 'fatigued', 'encumbered', 'slowed']
                 },
                 { title: 'Senses', items: ['blinded', 'dazzled', 'deafened'] },
-                { title: 'Mental', items: ['confused', 'controlled', 'fascinated'] },
+                { title: 'Mental', items: ['confused', 'controlled', 'fascinated','fleeing'] },
                 {
                     title: 'Death and Injury',
                     items: ['doomed', 'dying', 'unconscious', 'wounded', 'persistent damage']
