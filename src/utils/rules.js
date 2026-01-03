@@ -1,5 +1,7 @@
 // Game Rules and Calculation Logic
 
+import { getMutagenEffects } from './rules/mutagens';
+
 export const STAT_MAP = {
     "Fortitude": "Constitution", "Reflex": "Dexterity", "Will": "Wisdom", "Perception": "Wisdom",
     "Acrobatics": "Dexterity", "Arcana": "Intelligence", "Athletics": "Strength", "Crafting": "Intelligence",
@@ -92,28 +94,17 @@ export function formatText(text, context = {}) {
 
     // Replace Damage
     formatted = formatted.replace(/@Damage\[((?:[^\[\]]|\[[^\[\]]*\])+)\]/gi, (match, content) => {
-        // Content examples:
-        // 1. (floor((@actor.level -1)/2)+1)d6
-        // 2. (floor((@actor.level -1)/2)+1)d6[slashing]|options:area-damage
-
         let parsed = content;
-
-        // 1. Replace Variables
         if (context.actor) {
             parsed = parsed.replace(/@actor\.level/g, (context.actor.level || 0));
         }
 
-        // 2. Parse Components: Formula + Die + (Type)? + (Rest)?
-        // Regex: (Formula)(Die)(Type)?(Rest)?
-        // We assume Formula ends at the 'd' of the die.
         const parts = parsed.match(/^([\d\s\(\)\+\-\*\/\.Mathfloorceil]+)(d\d+)(?:\[([^\]]+)\])?.*$/);
 
         if (parts) {
             let formula = parts[1];
             const die = parts[2];
-            const type = parts[3] || ""; // e.g. "slashing"
-
-            // Replace math functions strings with JS Math
+            const type = parts[3] || "";
             formula = formula.replace(/floor/g, 'Math.floor')
                 .replace(/ceil/g, 'Math.ceil')
                 .replace(/round/g, 'Math.round')
@@ -122,10 +113,8 @@ export function formatText(text, context = {}) {
                 .replace(/max/g, 'Math.max');
 
             try {
-                // Safe-ish Evaluation
                 if (/^[0-9\s\(\)\+\-\*\/\.Mathfloorceil]+$/.test(formula.replace(/Math\.(floor|ceil|round|abs|min|max)/g, ''))) {
                     const result = new Function(`return ${formula}`)();
-                    // Output: "2d6 slashing" (2d6 gold)
                     let out = `<span style="color:var(--text-gold)">${result}${die}</span>`;
                     if (type) out += ` ${type}`;
                     return out;
@@ -134,27 +123,14 @@ export function formatText(text, context = {}) {
                 console.warn("Failed to eval damage formula:", formula, e);
             }
         }
-
-        // Fallback: Return cleanly stripped content if eval failed but looks like structure
         return parsed.replace(/\[/g, ' ').replace(/\]/g, '').replace(/\|.*/, '');
     });
 
-    // Highlight Degrees of Success
     formatted = formatted.replace(/<strong>(Critical\s+Success|Success|Critical\s+Failure|Failure)<\/strong>/gi, '<strong style="color:var(--text-gold)">$1</strong>');
-
-    // Replace Horizontal Rules (--- or *** or ___)
     formatted = formatted.replace(/^(\*{3,}|-{3,}|_{3,})$/gm, '<hr />');
-
-    // Replace Markdown Bold **text**
     formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-    // Replace Markdown Italic *text*
     formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-    // Restore Gold Tag (Correctly Added Now)
     formatted = formatted.replace(/\[gold\](.*?)\[\/gold\]/gi, '<span style="color:var(--text-gold)">$1</span>');
-
-    // Replace Newlines with <br>
     formatted = formatted.replace(/\n/g, '<br />');
 
     return formatted;
@@ -178,59 +154,136 @@ export function getCondLevel(condName, character) {
 
 export function getConditionEffects(character, statName, attributeName) {
     const conds = character.conditions || [];
-    const active = {};
+    const modifiers = [];
+
+    // 1. Collect all modifiers (Standard + Mutagens)
     conds.forEach(c => {
         if (!c) return;
         const name = (typeof c === 'string') ? c : c.name;
         if (!name) return;
+        const lowerName = name.toLowerCase();
+
         const rawLevel = (typeof c === 'string') ? 1 : c.level;
         const level = Number.isFinite(Number(rawLevel)) ? Number(rawLevel) : 1;
-        if (level > 0) active[String(name).toLowerCase()] = level;
-    });
-    const has = (key) => !!active[key];
-    const val = (key) => active[key] || 0;
+        const val = level; // Magnitude usually equals level for things like Frightened
 
-    // Calculate penalties
-    let statusPenalties = [];
-    let statusSource = [];
+        // --- Standard Conditions (Status / Circumstance) ---
+        if (lowerName === "frightened") { modifiers.push({ type: 'status', value: -val, source: `Frightened ${val}` }); }
+        if (lowerName === "sickened") { modifiers.push({ type: 'status', value: -val, source: `Sickened ${val}` }); }
 
-    if (has("frightened")) { const v = -val("frightened"); statusPenalties.push(v); statusSource.push(`Frightened ${v}`); }
-    if (has("sickened")) { const v = -val("sickened"); statusPenalties.push(v); statusSource.push(`Sickened ${v}`); }
-
-    if (attributeName === "Strength") { if (has("enfeebled")) { const v = -val("enfeebled"); statusPenalties.push(v); statusSource.push(`Enfeebled ${v}`); } }
-    else if (attributeName === "Dexterity") { if (has("clumsy")) { const v = -val("clumsy"); statusPenalties.push(v); statusSource.push(`Clumsy ${v}`); } if (has("encumbered")) { statusPenalties.push(-1); statusSource.push("Encumbered -1"); } }
-    else if (attributeName === "Constitution") { if (has("drained")) { const v = -val("drained"); statusPenalties.push(v); statusSource.push(`Drained ${v}`); } }
-    else if (["Intelligence", "Wisdom", "Charisma"].includes(attributeName)) { if (has("stupefied")) { const v = -val("stupefied"); statusPenalties.push(v); statusSource.push(`Stupefied ${v}`); } }
-
-    if (statName === "AC" || statName === "Fortitude" || statName === "Reflex" || statName === "Will") { if (has("fatigued")) { statusPenalties.push(-1); statusSource.push("Fatigued -1"); } }
-    if (statName === "Perception") {
-        if (has("blinded")) { statusPenalties.push(-4); statusSource.push("Blinded -4"); }
-        if (has("deafened")) { statusPenalties.push(-2); statusSource.push("Deafened -2"); }
-        if (has("unconscious")) { statusPenalties.push(-4); statusSource.push("Unconscious -4"); }
-    }
-
-    let circPenalties = [];
-    let circSource = [];
-    if (statName === "AC") {
-        if (has("off-guard") || has("blinded") || has("grabbed") || has("paralyzed") || has("prone") || has("restrained") || has("unconscious")) {
-            circPenalties.push(-2);
-            // Just list one reason or generic
-            circSource.push("Off-Guard (or similar) -2");
+        // Attribute Penalties
+        if (attributeName) {
+            if (attributeName === "Strength" && lowerName === "enfeebled") modifiers.push({ type: 'status', value: -val, source: `Enfeebled ${val}` });
+            if (attributeName === "Dexterity") {
+                if (lowerName === "clumsy") modifiers.push({ type: 'status', value: -val, source: `Clumsy ${val}` });
+                if (lowerName === "encumbered") modifiers.push({ type: 'status', value: -1, source: "Encumbered" }); // Clumsy is status, Encumbered is also status usually? Actually Encumbered is Clumsy 1 + Speed penalty.
+            }
+            if (attributeName === "Constitution" && lowerName === "drained") modifiers.push({ type: 'status', value: -val, source: `Drained ${val}` });
+            if (["Intelligence", "Wisdom", "Charisma"].includes(attributeName) && lowerName === "stupefied") modifiers.push({ type: 'status', value: -val, source: `Stupefied ${val}` });
         }
-    }
 
-    const bestStatus = statusPenalties.length ? Math.min(...statusPenalties) : 0;
-    const bestCirc = circPenalties.length ? Math.min(...circPenalties) : 0;
+        // AC/Save Penalties
+        if (["AC", "Fortitude", "Reflex", "Will"].includes(statName)) {
+            if (lowerName === "fatigued") modifiers.push({ type: 'status', value: -1, source: "Fatigued" });
+        }
 
-    // Construct breakdown object
+        // Perception Penalties
+        if (statName === "Perception") {
+            if (lowerName === "blinded") modifiers.push({ type: 'status', value: -4, source: "Blinded" });
+            if (lowerName === "deafened") modifiers.push({ type: 'status', value: -2, source: "Deafened" });
+            if (lowerName === "unconscious") modifiers.push({ type: 'status', value: -4, source: "Unconscious" });
+        }
+
+        // AC Circumstance
+        if (statName === "AC") {
+            if (["off-guard", "blinded", "grabbed", "paralyzed", "prone", "restrained", "unconscious"].includes(lowerName)) {
+                modifiers.push({ type: 'circumstance', value: -2, source: "Off-Guard (or similar)" });
+            }
+        }
+
+        // --- Mutagen Effects (Item) ---
+        // Check if condition name matches a known mutagen
+        const mutagen = getMutagenEffects(name, level);
+        if (mutagen) {
+            // Check Bonuses
+            mutagen.bonuses.forEach(eff => {
+                // lenient match: "Athletics", "Unarmed Attack", "Attack", "Specific Skill"
+                const match = eff.stat === statName || eff.stat === attributeName ||
+                    (eff.stat === "Attack" && statName.includes("Attack")) || // e.g. "Melee Attack"
+                    (eff.stat === "Damage" && statName.includes("Damage"));
+
+                if (match) {
+                    modifiers.push({ type: eff.type || 'item', value: eff.value, source: name });
+                }
+            });
+            // Check Penalties
+            mutagen.penalties.forEach(eff => {
+                const match = eff.stat === statName || eff.stat === attributeName ||
+                    (eff.stat === "Attack" && statName.includes("Attack"));
+                if (match) {
+                    modifiers.push({ type: eff.type || 'item', value: eff.value, source: name });
+                }
+            });
+        }
+    });
+
+    // 2. Stacking Logic (Group by Type)
+    const grouped = { status: [], item: [], circumstance: [], untyped: [] };
+    modifiers.forEach(m => {
+        const t = m.type || 'untyped';
+        if (grouped[t]) grouped[t].push(m);
+        else grouped.untyped.push(m);
+    });
+
     const breakdown = {};
-    if (bestStatus !== 0) breakdown.status = bestStatus;
-    if (bestCirc !== 0) breakdown.circumstance = bestCirc;
+    const meta = { statusSource: [], itemSource: [], circSource: [] };
+    let finalTotal = 0;
+
+    // Process Types
+    ['status', 'item', 'circumstance'].forEach(type => {
+        const mods = grouped[type];
+        if (mods.length === 0) return;
+
+        // Max Positive
+        const bonuses = mods.filter(m => m.value > 0).map(m => m.value);
+        const maxBonus = bonuses.length ? Math.max(...bonuses) : 0;
+
+        // Min Negative (Worst Penalty) -> Min of { -1, -2 } is -2 (the smallest number)
+        const penalties = mods.filter(m => m.value < 0).map(m => m.value);
+        const minPenalty = penalties.length ? Math.min(...penalties) : 0;
+
+        const net = maxBonus + minPenalty;
+        if (net !== 0) {
+            breakdown[type] = net;
+            finalTotal += net;
+        }
+
+        // Metadata for tooltip
+        mods.forEach(m => {
+            if ((m.value > 0 && m.value === maxBonus) || (m.value < 0 && m.value === minPenalty)) {
+                if (type === 'status') meta.statusSource.push(`${m.source} ${m.value > 0 ? '+' : ''}${m.value}`);
+                if (type === 'item') meta.itemSource.push(`${m.source} ${m.value > 0 ? '+' : ''}${m.value}`);
+                if (type === 'circumstance') meta.circSource.push(`${m.source} ${m.value > 0 ? '+' : ''}${m.value}`);
+            }
+        });
+    });
+
+    // Untyped (Stacking)
+    grouped.untyped.forEach(m => {
+        finalTotal += m.value;
+        // Add to breakdown? Untyped usually merge into Base or Misc
+        if (!breakdown.misc) breakdown.misc = 0;
+        breakdown.misc += m.value;
+    });
 
     return {
-        total: bestStatus + bestCirc,
+        total: finalTotal,
         breakdown,
-        meta: { statusSource, circSource }
+        meta: {
+            statusSource: [...new Set(meta.statusSource)], // Dedupe
+            itemSource: [...new Set(meta.itemSource)],
+            circSource: [...new Set(meta.circSource)]
+        }
     };
 }
 
@@ -239,33 +292,20 @@ export function calculateStat(character, statName, profValue) {
     const prof = parseInt(profValue) || 0;
     let attrKey = "Intelligence";
 
-    // Map stat name to attribute
     if (!statName.startsWith("Lore")) attrKey = STAT_MAP[statName] || "Strength";
     if (statName === "AC") attrKey = "Dexterity";
 
-    // Get attribute value from character stats
     const attrVal = parseInt(character.stats.attributes[attrKey.toLowerCase()]) || 0;
+    const cond = getConditionEffects(character, statName, attrKey);
 
     let total = (prof > 0) ? prof + level + attrVal : attrVal;
+    total += cond.total; // Add net condition modifiers
 
-    // Base 10 for AC/Class DC (if we ever use this handling class dc)
-    // Actually AC base is 10. `calculateStat` is seemingly generic.
-    // If statName is AC, we should probably include base 10? 
-    // The previous code didn't explicitly add 10 here, implies 'total' is a modifier.
-    // Wait, AC usually has base 10. Let's check if this is Modifier or Score.
-    // Previous code: `total = (prof > 0) ? prof + level + attrVal : attrVal`. This is a modifier.
-    // If this is used for Checks (Skills/Saves), modifier is correct.
-
-    const cond = getConditionEffects(character, statName, attrKey);
-    total += cond.total;
-
-    // Construct Structured Breakdown
     const breakdown = {
         attribute: attrVal,
         ...cond.breakdown
     };
 
-    // Add proficiency and level only if trained
     if (prof > 0) {
         breakdown.proficiency = prof;
         breakdown.level = level;
@@ -279,10 +319,11 @@ export function calculateStat(character, statName, profValue) {
 
     return {
         total,
-        breakdown, // Object now
-        source,    // Metadata for labels
+        breakdown,
+        source,
         rank: PROF_NAMES[prof] || "Unknown",
-        penalty: cond.total
+        penalty: cond.total < 0 ? cond.total : 0,
+        bonus: cond.total > 0 ? cond.total : 0 // Expose pure bonus for Green text
     };
 }
 

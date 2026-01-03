@@ -42,9 +42,10 @@ export function DefensesSection({ character, updateCharacter, onOpenModal, onLon
                         onLongPress={() => onLongPress && onLongPress(null, 'ac_button')}
                     >
                         <div className="shield-shape">
-                            <div className={`shield-val ${acData.totalConditionPenalty > 0 ? 'stat-penalty' : ''}`}>
+                            <div className={`shield-val ${acData.acPenalty < 0 ? 'stat-penalty' : (acData.acBonus > 0 ? 'stat-bonus' : '')}`}>
                                 {totalAC}
-                                {acData.totalConditionPenalty > 0 && <span className="stat-penalty-inline">(-{acData.totalConditionPenalty})</span>}
+                                {acData.acPenalty < 0 && <span className="stat-penalty-inline">({acData.acPenalty})</span>}
+                                {acData.acBonus > 0 && <span className="stat-bonus-inline">(+{acData.acBonus})</span>}
                             </div>
                             <div className="shield-label">AC</div>
                         </div>
@@ -103,9 +104,10 @@ export function DefensesSection({ character, updateCharacter, onOpenModal, onLon
                             onClick={() => onOpenModal('detail', { title: save, ...calc })}
                             onLongPress={() => onLongPress && onLongPress(save, 'save')}
                         >
-                            <div className={`save-val ${calc.penalty < 0 ? 'stat-penalty' : ''}`}>
+                            <div className={`save-val ${calc.penalty < 0 ? 'stat-penalty' : (calc.bonus > 0 ? 'stat-bonus' : '')}`}>
                                 {calc.total >= 0 ? '+' : ''}{calc.total}
                                 {calc.penalty < 0 && <span className="stat-penalty-inline">({calc.penalty})</span>}
+                                {calc.bonus > 0 && <span className="stat-bonus-inline">(+{calc.bonus})</span>}
                             </div>
                             <div className="save-label">{save}</div>
                         </LongPressable>

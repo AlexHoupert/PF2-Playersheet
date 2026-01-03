@@ -127,8 +127,8 @@ export const getWeaponAttackBonus = (item, character) => {
 
     const baseWithoutAttribute = profScore + level + itemBonus;
 
-    const getOption = (attributeName, attributeMod, attrLabel) => {
-        const cond = getConditionEffects(character, "Attack", attributeName);
+    const getOption = (attributeName, attributeMod, attrLabel, specificAttackType = "Attack") => {
+        const cond = getConditionEffects(character, specificAttackType, attributeName);
         return {
             attributeName,
             attributeMod,
@@ -141,14 +141,14 @@ export const getWeaponAttackBonus = (item, character) => {
     // For finesse weapons, allow picking the better of STR/DEX after condition modifiers.
     let options = [];
     if (isRanged) {
-        options = [getOption("Dexterity", dex, "Dex")];
+        options = [getOption("Dexterity", dex, "Dex", "Ranged Attack")];
     } else if (isFinesse) {
         options = [
-            getOption("Strength", str, "Str"),
-            getOption("Dexterity", dex, "Dex (Finesse)")
+            getOption("Strength", str, "Str", "Melee Attack"),
+            getOption("Dexterity", dex, "Dex (Finesse)", "Melee Attack")
         ];
     } else {
-        options = [getOption("Strength", str, "Str")];
+        options = [getOption("Strength", str, "Str", "Melee Attack")];
     }
 
     const best = options.reduce((acc, cur) => {

@@ -45,9 +45,10 @@ export function AttributesSection({ character, onOpenModal, onLongPress }) {
                     onLongPress={() => onLongPress && onLongPress(character.stats.perception, 'perception')}
                 >
                     <div className="eye-content">
-                        <span className={perceptionHasPenalty ? 'stat-penalty' : ''}>
+                        <span className={perceptionHasPenalty ? 'stat-penalty' : (perceptionCalc.bonus > 0 ? 'stat-bonus' : '')}>
                             {perceptionCalc.total >= 0 ? '+' : ''}{perceptionCalc.total}
                             {perceptionHasPenalty && <span className="stat-penalty-inline">({perceptionCalc.penalty})</span>}
+                            {perceptionCalc.bonus > 0 && <span className="stat-bonus-inline">(+{perceptionCalc.bonus})</span>}
                         </span>
                         <span style={{ fontSize: '0.4em', textTransform: 'uppercase' }}>Perception</span>
                     </div>

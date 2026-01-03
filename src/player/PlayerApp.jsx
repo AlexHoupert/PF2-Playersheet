@@ -175,27 +175,69 @@ export default function PlayerApp({ db, setDb }) {
     }
 
 
+    const handleConsumeItem = (item) => {
+        const name = item.name;
+        updateCharacter(c => {
+            let invIdx = -1;
+            // Robust find
+            if (item._index !== undefined) {
+                invIdx = item._index;
+                // verify
+                if (!c.inventory[invIdx] || c.inventory[invIdx].name !== name) invIdx = -1;
+            }
+
+            if (invIdx === -1) {
+                invIdx = c.inventory.findIndex(i => i.name === name);
+            }
+
+            if (invIdx > -1) {
+                const invItem = c.inventory[invIdx];
+                if (invItem && invItem.qty > 0) {
+                    invItem.qty--;
+                    if (invItem.qty === 0) c.inventory.splice(invIdx, 1);
+
+                    // --- Mutagen / Elixir Logic ---
+                    const lowerName = name.toLowerCase();
+                    const level = parseInt(item.level) || 1;
+
+                    if (lowerName.includes("mutagen")) {
+                        if (!c.conditions) c.conditions = [];
+
+                        // Add Condition
+                        c.conditions.push({ name: name, level: level, type: 'item_effect' });
+
+                        // Side Effects (Immediate)
+                        // Juggernaut: Temp HP
+                        if (lowerName.includes("juggernaut")) {
+                            let thp = 5;
+                            if (level >= 17) thp = 40;
+                            else if (level >= 11) thp = 30;
+                            else if (level >= 3) thp = 10;
+                            c.stats.hp.temp = Math.max(c.stats.hp.temp || 0, thp);
+                        }
+                        // Quicksilver: Damage (2 * Level)
+                        if (lowerName.includes("quicksilver")) {
+                            const charLevel = parseInt(c.level) || 1;
+                            const dmg = charLevel * 2;
+                            c.stats.hp.current = Math.max(0, (c.stats.hp.current || 0) - dmg);
+                        }
+                    }
+                }
+            }
+        });
+        // We can add a toast here later
+        // console.log(`Consumed ${name}`);
+    };
+
     const handleItemClick = (item) => {
         const now = Date.now();
-        const isSame = tapRef.current.id === item.name; // Simple ID check
+        const isSame = tapRef.current.id === item.name;
         const isDouble = isSame && (now - tapRef.current.time < 300);
 
         if (tapTimeout.current) clearTimeout(tapTimeout.current);
 
         if (isDouble && (item.type === 'Consumable' || item.consumable)) {
-            // Execute Consume
-            updateCharacter(c => {
-                const invIdx = c.inventory.findIndex(i => i.name === item.name);
-                if (invIdx > -1) {
-                    const invItem = c.inventory[invIdx];
-                    if (invItem && invItem.qty > 0) {
-                        invItem.qty--;
-                        if (invItem.qty === 0) c.inventory.splice(invIdx, 1);
-                    }
-                }
-            });
-            // Toast?
-            alert(`Used ${item.name}`); // Placeholder for Toast
+            handleConsumeItem(item);
             tapRef.current = { id: null, time: 0 };
         } else {
             tapRef.current = { id: item.name, time: now };
@@ -1283,6 +1325,7 @@ export default function PlayerApp({ db, setDb }) {
                                 setModalData(data);
                             }}
                             onInspectItem={inspectInventoryItem}
+                            onConsumeItem={handleConsumeItem}
                             onToggleEquip={toggleInventoryEquipped}
                             onFireWeapon={fireWeapon}
                             onLoadWeapon={loadWeapon}

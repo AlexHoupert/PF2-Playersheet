@@ -18,7 +18,8 @@ export function InventoryView({
     onLoadWeapon,
     onLongPress,
     onOpenShop,
-    onClaimLoot
+    onClaimLoot,
+    onConsumeItem
 }) {
     const [itemSubTab, setItemSubTab] = useState('Equipment');
     const equipTapRef = useRef({ key: null, time: 0 });
@@ -73,6 +74,7 @@ export function InventoryView({
         const isWeapon = isEquipableInventoryItem(item) && String(merged.type || '').toLowerCase() === 'weapon';
         const weaponAttackBonus = isWeapon ? getWeaponAttackBonus(merged, character) : null;
         const weaponHasPenalty = (weaponAttackBonus?.penalty || 0) < 0;
+        const weaponHasBonus = (weaponAttackBonus?.penalty || 0) > 0;
 
         let clickHandler;
         if (enableEquipTap && isEquipableInventoryItem(item)) {
@@ -123,16 +125,17 @@ export function InventoryView({
                 if (isDoubleTap && (item.type === 'Consumable' || item.consumable || item.type === 'consumable')) {
                     // Consumption Confirmation
                     if (window.confirm(`Consume 1 ${item.name}?`)) {
-                        onUpdateCharacter(c => {
-                            // Find precise item index or object if passed safely.
-                            // We are using closure 'item' and 'index'.
-                            // BUT strict index usage is better.
-                            const invItem = c.inventory[index];
-                            if (invItem && invItem.qty > 0) {
-                                invItem.qty--;
-                                if (invItem.qty === 0) c.inventory.splice(index, 1);
-                            }
-                        });
+                        if (onConsumeItem) {
+                            onConsumeItem(merged);
+                        } else {
+                            onUpdateCharacter(c => {
+                                const invItem = c.inventory[index];
+                                if (invItem && invItem.qty > 0) {
+                                    invItem.qty--;
+                                    if (invItem.qty === 0) c.inventory.splice(index, 1);
+                                }
+                            });
+                        }
                     }
                     equipTapRef.current = { key: null, time: 0 };
                 } else {
@@ -244,7 +247,7 @@ export function InventoryView({
                                     e.stopPropagation();
                                     onOpenModal('weapon_detail', { item: merged, type: 'weapon_prof', ...weaponAttackBonus });
                                 }}
-                                className={weaponHasPenalty ? 'stat-penalty' : ''}
+                                className={weaponHasPenalty ? 'stat-penalty' : (weaponHasBonus ? 'stat-bonus' : '')}
                                 style={{
                                     marginLeft: 6,
                                     fontSize: '1.2em',
@@ -257,6 +260,7 @@ export function InventoryView({
                             >
                                 {weaponAttackBonus.total >= 0 ? '+' : ''}{weaponAttackBonus.total}
                                 {weaponHasPenalty && <span className="stat-penalty-inline">({weaponAttackBonus.penalty})</span>}
+                                {weaponHasBonus && <span className="stat-bonus-inline">(+{weaponAttackBonus.penalty})</span>}
                             </div>
                         )}
                     </div>

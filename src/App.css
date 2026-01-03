@@ -302,17 +302,39 @@ body.swiping-active .app-container * {
     text-overflow: ellipsis;
 }
 
+.stat-penalty {
+    color: var(--accent-red) !important;
+}
+
+.stat-bonus {
+    color: var(--accent-green) !important;
+}
+
 .stat-penalty-sub {
-    font-size: 0.6em;
+    font-size: 0.8em;
     color: var(--accent-red);
-    vertical-align: middle;
+    margin-left: 5px;
+}
+
+.stat-bonus-sub {
+    font-size: 0.8em;
+    color: var(--accent-green);
+    margin-left: 5px;
 }
 
 .stat-penalty-inline {
     font-size: 0.6em;
     color: var(--accent-red);
+    vertical-align: middle;
     margin-left: 3px;
     font-weight: 700;
+}
+
+.stat-bonus-inline {
+    font-size: 0.6em;
+    color: var(--accent-green);
+    vertical-align: middle;
+    margin-left: 3px;
 }
 
 .shield-container {

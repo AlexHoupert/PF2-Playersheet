@@ -46,8 +46,9 @@ export function SkillsSection({ character, onOpenModal, onLongPress }) {
                 >
                     <span className="item-name" style={{ color: isTrained ? 'var(--text-gold)' : '#ccc' }}>
                         {label} {calc.penalty < 0 && <span className="stat-penalty-sub">({calc.penalty})</span>}
+                        {calc.bonus > 0 && <span className="stat-bonus-sub">(+{calc.bonus})</span>}
                     </span>
-                    <span className={`skill-val ${calc.penalty < 0 ? 'stat-penalty' : ''}`} style={{ color: isTrained && calc.penalty >= 0 ? 'var(--text-gold)' : '' }}>
+                    <span className={`skill-val ${calc.penalty < 0 ? 'stat-penalty' : (calc.bonus > 0 ? 'stat-bonus' : '')}`} style={{ color: isTrained && calc.penalty >= 0 && calc.bonus === 0 ? 'var(--text-gold)' : '' }}>
                         {calc.total >= 0 ? '+' : ''}{calc.total}
                     </span>
                 </LongPressable>

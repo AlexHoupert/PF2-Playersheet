@@ -1,4 +1,4 @@
-import { calculateStat } from '../../utils/rules';
+import { getConditionEffects } from '../../utils/rules';
 import { getShopIndexItemByName } from '../catalog/shopIndex';
 
 export const getArmorClassData = (char) => {
@@ -8,7 +8,7 @@ export const getArmorClassData = (char) => {
     const level = Math.max(0, Math.trunc(Number(char?.level) || 0));
 
     const getProfValue = (key) => {
-        const profs = char?.stats?.proficiencies; // Hook uses char.stats
+        const profs = char?.stats?.proficiencies;
         if (profs && typeof profs === 'object' && !Array.isArray(profs)) {
             const k = String(key).toLowerCase();
             const val = profs[k] || profs[key];
@@ -48,9 +48,8 @@ export const getArmorClassData = (char) => {
 
     const armorCategory = equippedArmor?.category || null;
 
-    // AC Bonus: Priority to 'acBonus' (Legacy/Simple) -> 'system.ac.value' (Foundry) -> 'ac'
+    // AC Bonus
     const baseItemAC = Number(equippedArmor?.acBonus ?? equippedArmor?.system?.ac?.value ?? equippedArmor?.ac ?? 0);
-    // Potency: System (potencyRune.value) vs old (runes.potency) vs default 0
     const potency = Number(equippedArmor?.system?.potencyRune?.value ?? equippedArmor?.system?.runes?.potency ?? 0);
     const armorItemBonus = baseItemAC + potency;
 
@@ -78,7 +77,6 @@ export const getArmorClassData = (char) => {
     }
 
     const shieldRaised = Boolean(char.stats?.ac?.shield_raised);
-    // Default steel shield has 2 AC bonus usually
     const shieldBase = Number(equippedShield?.system?.ac_bonus ?? equippedShield?.acBonus ?? 2);
     const shieldPotency = Number(equippedShield?.system?.runes?.potency ?? 0);
     const shieldItemBonus = shieldBase + shieldPotency;
@@ -86,35 +84,23 @@ export const getArmorClassData = (char) => {
 
     const baseAC = 10 + dexUsed + profBonus + armorItemBonus + activeShieldBonus;
 
-    const getCondLevel = (n) => {
-        const c = (char?.conditions || []).find(x => String(x?.name || '').toLowerCase() === String(n).toLowerCase());
-        return c ? c.level : 0;
-    };
-
-    let statusPenalty = 0;
-    const frightened = getCondLevel('frightened');
-    const clumsy = getCondLevel('clumsy');
-    const sickened = getCondLevel('sickened');
-    // const drained = getCondLevel('drained'); 
-
-    if (frightened > 0) statusPenalty = Math.min(statusPenalty, -frightened);
-    if (clumsy > 0) statusPenalty = Math.min(statusPenalty, -clumsy);
-    if (sickened > 0) statusPenalty = Math.min(statusPenalty, -sickened);
-
-    let circPenalty = 0;
-    const offGuardSources = ['off-guard', 'prone', 'grabbed', 'restrained', 'paralyzed', 'unconscious', 'blinded'];
-    const isOffGuard = (char?.conditions || []).some(c => offGuardSources.includes(String(c?.name || '').toLowerCase()) && c.level > 0);
-    if (isOffGuard) circPenalty = -2;
-
-    const acPenalty = statusPenalty + circPenalty;
+    // Calculate Condition Effects (Status/Circ/Item from Mutagens)
+    // Note: Mutagen Item modifiers will separate here. Ideally separate Item vs Status.
+    // getConditionEffects handles Stacking (Max Bonus + Min Penalty).
+    // If we have Mutagen (+2 Item AC), it should theoretically not stack with Armor (+Item AC).
+    // But Mutagens usually give Item Penalties (stacking issues irrelevant) or Item Bonuses (e.g. Drakeheart).
+    // The current rules engine doesn't know about `armorItemBonus`.
+    // We accept `condEffects.total` as the condition-based modifier.
+    const condEffects = getConditionEffects(char, "AC", "Dexterity");
+    const acPenalty = condEffects.total;
     const totalAC = baseAC + acPenalty;
 
     return {
         totalAC,
         baseAC,
         acPenalty,
-        // Expose as positive number for UI badge
-        totalConditionPenalty: Math.abs(acPenalty),
+        totalConditionPenalty: acPenalty < 0 ? Math.abs(acPenalty) : 0,
+        acBonus: acPenalty > 0 ? acPenalty : 0,
         shieldRaised,
         shieldName: equippedShield?.name || null,
         shieldItemBonus,
@@ -129,7 +115,7 @@ export const getArmorClassData = (char) => {
         armorName: equippedArmor?.name || null,
         armorCategory,
         armorItemBonus,
-        equippedShield // Exported for use in Shield Status logic if needed, but mainly AC
+        equippedShield
     };
 };
 
