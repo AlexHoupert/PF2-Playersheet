@@ -156,6 +156,10 @@ export default function ItemEditor({ initialItem, onSave, onCancel }) {
                         {SHOP_INDEX_FILTER_OPTIONS.rarities.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                 </div>
+                <div className="form-group">
+                    <label>Group</label>
+                    <input className="modal-input" value={formData.group} onChange={e => handleChange('group', e.target.value)} placeholder="e.g. Sword, Bomb" />
+                </div>
             </div>
 
             <div className="form-group" style={{ marginBottom: 20 }}>

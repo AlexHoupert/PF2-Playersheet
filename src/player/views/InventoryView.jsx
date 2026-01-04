@@ -19,7 +19,9 @@ export function InventoryView({
     onLongPress,
     onOpenShop,
     onClaimLoot,
-    onConsumeItem
+    onConsumeItem,
+    onClaimGold,
+    onSplitGold
 }) {
     const [itemSubTab, setItemSubTab] = useState('Equipment');
     const equipTapRef = useRef({ key: null, time: 0 });
@@ -343,7 +345,8 @@ export function InventoryView({
             {['Equipment', 'Consumables', 'Misc', /*hasLoot ? 'Loot' : null*/ 'Loot'].map(t => {
                 const isLoot = t === 'Loot';
                 const visibleBags = (db?.lootBags || []).filter(b => !b.isLocked);
-                const bagsWithLoot = visibleBags.filter(b => b.items.some(i => !i.claimedBy));
+                // Check items AND gold for visibility
+                const bagsWithLoot = visibleBags.filter(b => (b.items && b.items.some(i => !i.claimedBy)) || (b.goldValue || 0) > 0);
                 const hasLoot = lootItems.length > 0 || bagsWithLoot.length > 0;
                 if (isLoot && !hasLoot) return null; // Hide Loot tab if empty
                 return (
@@ -406,19 +409,54 @@ export function InventoryView({
             {itemSubTab === 'Loot' && (
                 (() => {
                     const visibleBags = (db?.lootBags || []).filter(b => !b.isLocked);
-                    const bagsWithLoot = visibleBags.filter(b => b.items.some(i => !i.claimedBy));
+                    const bagsWithLoot = visibleBags.filter(b => (b.items && b.items.some(i => !i.claimedBy)) || b.goldValue > 0);
 
                     if (bagsWithLoot.length === 0 && lootItems.length === 0) {
                         return <div style={{ padding: 20, textAlign: 'center', color: '#888' }}>No unclaimed loot.</div>;
                     }
 
                     return bagsWithLoot.map(bag => {
-                        const unclaimedItems = bag.items.filter(i => !i.claimedBy);
-                        if (unclaimedItems.length === 0) return null;
+                        const unclaimedItems = bag.items ? bag.items.filter(i => !i.claimedBy) : [];
 
                         return (
                             <div key={bag.id} style={{ background: '#222', border: '1px solid #c5a059', borderRadius: 8, padding: 10, marginBottom: 15, marginTop: 10 }}>
-                                <h3 style={{ marginTop: 0, color: '#ffecb3', borderBottom: '1px solid #444', paddingBottom: 5, fontSize: '1em' }}>💰 {bag.name}</h3>
+                                <div style={{ borderBottom: '1px solid #444', paddingBottom: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <h3 style={{ margin: 0, color: '#ffecb3', fontSize: '1em' }}>💰 {bag.name}</h3>
+                                </div>
+
+                                {/* Gold Section */}
+                                {(bag.goldValue > 0) && (
+                                    <div style={{ background: 'rgba(255, 215, 0, 0.1)', padding: 10, margin: '10px 0', borderRadius: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ color: '#ffd700', fontWeight: 'bold' }}>{bag.goldValue} GP</span>
+                                        <div style={{ display: 'flex', gap: 5 }}>
+                                            <button
+                                                className="set-btn"
+                                                style={{ fontSize: '0.8em', padding: '4px 8px' }}
+                                                onClick={() => {
+                                                    const amount = prompt(`Take how much gold? (Max: ${bag.goldValue})`, bag.goldValue);
+                                                    if (!amount) return;
+                                                    const val = parseFloat(amount);
+                                                    if (isNaN(val) || val <= 0 || val > bag.goldValue) return;
+
+                                                    if (onClaimGold) onClaimGold(bag.id, val);
+                                                }}
+                                            >
+                                                Take
+                                            </button>
+                                            <button
+                                                className="set-btn"
+                                                style={{ fontSize: '0.8em', padding: '4px 8px', background: '#e65100' }}
+                                                onClick={() => {
+                                                    if (!confirm(`Split ${bag.goldValue} GP evenly among all party members?`)) return;
+                                                    if (onSplitGold) onSplitGold(bag.id);
+                                                }}
+                                            >
+                                                Split Party
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {unclaimedItems.map((item) => {
                                     const fromIndex = item?.name ? getShopIndexItemByName(item.name) : null;
                                     const merged = fromIndex ? { ...fromIndex, ...item } : item;
@@ -430,7 +468,10 @@ export function InventoryView({
                                                 <img className="item-icon" src={`ressources/${merged.img}`} alt="" />
                                             )}
                                             <div className="item-row-main">
-                                                <div className="item-name">{merged?.name || 'Unknown Item'}</div>
+                                                <div className="item-name">
+                                                    {merged?.name || 'Unknown Item'}
+                                                    {(merged.qty > 1) && <span style={{ color: '#888', fontSize: '0.8em', marginLeft: 8 }}>x{merged.qty}</span>}
+                                                </div>
                                                 {row1 && <div className="item-row-meta item-row-meta-1">{row1}</div>}
                                                 {row2 && <div className="item-row-meta item-row-meta-2">{row2}</div>}
                                             </div>
@@ -440,7 +481,19 @@ export function InventoryView({
                                                 style={{ margin: '0 0 0 10px', padding: '6px 14px', fontSize: '0.9em', width: 'auto', flexShrink: 0, height: 'auto' }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (onClaimLoot) onClaimLoot(bag, item);
+                                                    if (onClaimLoot) {
+                                                        // QTY Prompt only if stack > 1
+                                                        if ((item.qty || 1) > 1) {
+                                                            const res = prompt(`Claim how many ${item.name}? (Max: ${item.qty})`, item.qty);
+                                                            if (res === null) return;
+                                                            const val = parseInt(res);
+                                                            if (isNaN(val) || val <= 0 || val > item.qty) return;
+                                                            // Clone item with new qty for claim logic
+                                                            onClaimLoot(bag, { ...item, qty: val });
+                                                        } else {
+                                                            onClaimLoot(bag, item);
+                                                        }
+                                                    }
                                                 }}
                                             >
                                                 Claim

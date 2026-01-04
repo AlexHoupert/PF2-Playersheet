@@ -44,7 +44,7 @@ export function ItemDetailModal({
     // --- INVENTORY MATCHING & EQUIP LOGIC ---
     let inventoryMatch = null;
     let inventoryIndex = -1;
-    if (isShopItem && modalData.name) {
+    if (isShopItem && modalData.name && character?.inventory) {
         if (modalData._index !== undefined && character.inventory[modalData._index]) {
             const match = character.inventory[modalData._index];
             if (match.name === modalData.name) {
@@ -73,7 +73,7 @@ export function ItemDetailModal({
     // Only allow modification if we have the item in inventory (inventoryMatch)
     const canModifyRunes = (isWeapon || isArmor) && inventoryMatch && updateCharacter;
 
-    const availableRunes = canModifyRunes ? character.inventory.filter(i => {
+    const availableRunes = canModifyRunes && character?.inventory ? character.inventory.filter(i => {
         const type = i.type || "Equipment";
         const category = i.category || "";
         const name = i.name.toLowerCase();
@@ -129,7 +129,7 @@ export function ItemDetailModal({
     const isStaff = traitsList.includes('staff') || (modalData.name || "").toLowerCase().includes("staff");
 
     let staffMaxCharges = 0;
-    if (isStaff && character.magic?.slots) {
+    if (isStaff && character?.magic?.slots) {
         for (let i = 10; i >= 1; i--) {
             if ((character.magic.slots[`${i}_max`] || 0) > 0) {
                 staffMaxCharges = i;

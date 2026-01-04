@@ -1,0 +1,36 @@
+{
+    "name": "__Test",
+    "type": "weapon",
+    "img": "systems/pf2e/icons/default-icons/mystery-man.svg",
+    "system": {
+        "description": {
+            "value": "<b>Lorem </b>Ipsum\nTest <i>Test </i>test\n---\n@UUID[Compendium.pf2e.conditionitems.Item.Broken] is this a tree? or a @UUID[Compendium.pf2e.equipment-srd.Item.Dwarven Scattergun]\n<span style=\"color: #c5a059\">more test</span>\n@UUID[Compendium.pf2e.spells-srd.Item.Aberrant Whispers]@UUID[Compendium.pf2e.actionspf2e.Item.Aid]\nhow much damage are we doing? @Damage[(floor((@actor.level -1)/2)+1)d6]"
+        },
+        "level": {
+            "value": 0
+        },
+        "price": {
+            "value": {
+                "gp": 0
+            }
+        },
+        "traits": {
+            "value": [],
+            "rarity": "common"
+        },
+        "bulk": {
+            "value": "L"
+        },
+        "usage": {
+            "value": ""
+        },
+        "damage": {
+            "dice": 1,
+            "die": "d6",
+            "damageType": "slashing"
+        },
+        "range": "",
+        "category": "other",
+        "group": ""
+    }
+}

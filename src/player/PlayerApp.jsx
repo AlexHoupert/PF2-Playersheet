@@ -1341,13 +1341,14 @@ export default function PlayerApp({ db, setDb }) {
                                     const char = { ...nextChars[charIndex], inventory: [...nextChars[charIndex].inventory] };
 
                                     // 1. Add to Inventory
+                                    const qtyToClaim = item.qty || 1;
                                     const stackable = shouldStack(item);
                                     const existing = stackable ? char.inventory.find(i => i.name === item.name) : null;
                                     if (existing) {
-                                        existing.qty = (existing.qty || 1) + 1;
+                                        existing.qty = (existing.qty || 1) + qtyToClaim;
                                     } else {
                                         // Ensure clean properties for new owned item
-                                        const newItem = { ...item, qty: 1 };
+                                        const newItem = { ...item, qty: qtyToClaim };
                                         delete newItem.instanceId; // New ID will be generated or undefined
                                         delete newItem.addedAt;
                                         delete newItem.claimedBy;
@@ -1368,6 +1369,67 @@ export default function PlayerApp({ db, setDb }) {
                                         next.lootBags = bags;
                                     }
 
+                                    return next;
+                                });
+                            }}
+                            onClaimGold={(bagId, amount) => {
+                                setDb(prev => {
+                                    const next = { ...prev };
+                                    const campaignId = activeCampaign?.id;
+                                    if (!campaignId || !next.campaigns?.[campaignId]) return prev;
+
+                                    // Update Bag
+                                    const bags = deepClone(next.lootBags || []);
+                                    const bag = bags.find(b => b.id === bagId);
+                                    if (!bag || (bag.goldValue || 0) < amount) return prev;
+
+                                    bag.goldValue = Math.max(0, (bag.goldValue || 0) - amount);
+                                    next.lootBags = bags;
+
+                                    // Update Character
+                                    const nextChars = [...next.campaigns[campaignId].characters];
+                                    const charIndex = activeCharIndex;
+                                    const char = { ...nextChars[charIndex] };
+
+                                    char.gold = (parseFloat(char.gold || 0) + parseFloat(amount)).toFixed(2);
+
+                                    nextChars[charIndex] = char;
+                                    next.campaigns[campaignId].characters = nextChars;
+
+                                    return next;
+                                });
+                            }}
+                            onSplitGold={(bagId) => {
+                                setDb(prev => {
+                                    const next = { ...prev };
+                                    const campaignId = activeCampaign?.id;
+                                    if (!campaignId || !next.campaigns?.[campaignId]) return prev;
+
+                                    // Update Bag
+                                    const bags = deepClone(next.lootBags || []);
+                                    const bag = bags.find(b => b.id === bagId);
+                                    if (!bag || (bag.goldValue || 0) <= 0) return prev;
+
+                                    const totalGold = bag.goldValue;
+                                    bag.goldValue = 0;
+                                    next.lootBags = bags;
+
+                                    // Distribute to characters
+                                    const nextChars = [...next.campaigns[campaignId].characters];
+                                    const count = nextChars.length;
+                                    if (count === 0) return prev;
+
+                                    const share = Math.floor((totalGold / count) * 100) / 100; // Round down to 2 decimals
+                                    // Remainder lost or could be given to first player. Let's discard for simplicity or add to first?
+                                    // Let's just give share.
+
+                                    nextChars.forEach((c, i) => {
+                                        const newC = { ...c };
+                                        newC.gold = (parseFloat(newC.gold || 0) + share).toFixed(2);
+                                        nextChars[i] = newC;
+                                    });
+
+                                    next.campaigns[campaignId].characters = nextChars;
                                     return next;
                                 });
                             }}
