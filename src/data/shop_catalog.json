@@ -53398,6 +53398,44 @@
     "rarity": "uncommon"
   },
   {
+    "sourceFile": "custom/mask_of_the_deceiver.json",
+    "img": "icons/equipment/head/mask-carved-gargoyle-grey.webp",
+    "name": "Mask of the Deceiver",
+    "type": "Equipment",
+    "group": "Headwear",
+    "category": null,
+    "ammo": null,
+    "hands": null,
+    "bulk": {
+      "value": "L"
+    },
+    "damage": null,
+    "splashDamage": null,
+    "range": null,
+    "reload": null,
+    "traits": {
+      "value": [
+        "invested",
+        "magical"
+      ],
+      "rarity": "uncommon"
+    },
+    "bonus": null,
+    "bonusDamage": null,
+    "runes": null,
+    "acBonus": null,
+    "dexCap": null,
+    "checkPenalty": null,
+    "speedPenalty": null,
+    "strength": null,
+    "hardness": null,
+    "hp": null,
+    "price": 20,
+    "level": 2,
+    "description": "This mask is made of iron, though more potent versions crafted by powerful Razmiran priests can be made of silver, gold, or even porcelain. The wearer of this mask gains a +1 item bonus to Deception checks to Lie or Feint.",
+    "rarity": "uncommon"
+  },
+  {
     "sourceFile": "custom/mirror_cloak.json",
     "img": "icons/equipment/back/cloak-collared-blue-iron.webp",
     "name": "Mirror Cloak",

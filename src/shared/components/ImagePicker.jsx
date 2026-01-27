@@ -24,8 +24,78 @@ export default function ImagePicker({ isOpen, onClose, onSelect, initialPath = '
             setSelectedItem(null);
 
             try {
-                const res = await fetch(`/api/files/list?directory=${encodeURIComponent(currentPath)}`);
-                const data = await res.json();
+                // Try API first
+                let data = { success: false };
+                try {
+                    const res = await fetch(`/api/files/list?directory=${encodeURIComponent(currentPath)}`);
+                    if (res.ok) {
+                        data = await res.json();
+                    }
+                } catch (e) {
+                    // API failed, likely offline/prod
+                }
+
+                // Fallback to static catalog if API fails
+                if (!data.success) {
+                    try {
+                        // Dynamic import to avoid bundling large JSON if not needed? 
+                        // Or just import at top? Dynamic is safer for splitting.
+                        // But Vite handles JSON imports well. Let's assume standard import or dynamic.
+                        // For simplicity in this edit, let's use a dynamic import or assume it's available.
+                        // Actually, let's just fetch the JSON file if it's in public? 
+                        // No, it's in src/data. We need to import it.
+                        // Since replace_file_content can't easily add top-level imports without context,
+                        // I will add the import in a separate step or try to use `import()` here if possible.
+                        // But `import` inside function needs to be async.
+                        const catalogModule = await import('../../data/icon_catalog.json');
+                        const allPaths = catalogModule.default || catalogModule;
+
+                        // Simulate directory listing from paths
+                        // currentPath is e.g. "ressources/icons"
+                        // We want items starting with currentPath + '/' 
+                        // direct children only
+                        const targetPrefix = currentPath.endsWith('/') ? currentPath : currentPath + '/';
+
+                        const folderSet = new Set();
+                        const fileSet = new Set();
+
+                        allPaths.forEach(p => {
+                            // p is like "ressources/icons/armor/file.webp"
+                            if (p.startsWith(targetPrefix)) {
+                                const remainder = p.slice(targetPrefix.length);
+                                const parts = remainder.split('/');
+                                if (parts.length > 1) {
+                                    // It's a subfolder
+                                    folderSet.add(targetPrefix + parts[0]);
+                                } else {
+                                    // It's a file
+                                    fileSet.add(p);
+                                }
+                            }
+                        });
+
+                        const folderItems = Array.from(folderSet).map(path => {
+                            const name = path.split('/').pop();
+                            return { name, path, isDirectory: true, extension: '' };
+                        });
+
+                        const fileItems = Array.from(fileSet).map(path => {
+                            const name = path.split('/').pop();
+                            const ext = '.' + name.split('.').pop();
+                            return { name, path, isDirectory: false, extension: ext };
+                        });
+
+                        // Sort folders first, then files
+                        folderItems.sort((a, b) => a.name.localeCompare(b.name));
+                        fileItems.sort((a, b) => a.name.localeCompare(b.name));
+
+                        data = { success: true, items: [...folderItems, ...fileItems] };
+
+                    } catch (staticErr) {
+                        console.error('Frontend catalog load failed', staticErr);
+                        throw new Error('Failed to load directory (API & Static Fallback failed)');
+                    }
+                }
 
                 if (!data.success) {
                     throw new Error(data.error || 'Failed to load directory');

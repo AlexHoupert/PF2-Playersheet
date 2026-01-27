@@ -1,0 +1,34 @@
+{
+    "name": "Mask of the Deceiver",
+    "type": "equipment",
+    "img": "icons/equipment/head/mask-carved-gargoyle-grey.webp",
+    "system": {
+        "description": {
+            "value": "This mask is made of iron, though more potent versions crafted by powerful Razmiran priests can be made of silver, gold, or even porcelain. The wearer of this mask gains a +1 item bonus to Deception checks to Lie or Feint."
+        },
+        "level": {
+            "value": 2
+        },
+        "price": {
+            "value": {
+                "gp": 20
+            }
+        },
+        "traits": {
+            "value": [
+                "invested",
+                "magical"
+            ],
+            "rarity": "uncommon"
+        },
+        "bulk": {
+            "value": "L"
+        },
+        "usage": {
+            "value": ""
+        },
+        "range": null,
+        "category": "",
+        "group": "Headwear"
+    }
+}
