@@ -968,6 +968,7 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                 <SpellScrollSelectorModal
                     rank={scrollSelectorData.rank}
                     type={scrollSelectorData.type}
+                    ignoreAvailability={true}
                     onCancel={() => setScrollSelectorData(null)}
                     onSelect={(spell) => {
                         const { baseItem, type, rank, action, payload } = scrollSelectorData;

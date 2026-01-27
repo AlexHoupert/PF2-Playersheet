@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { SPELL_INDEX_ITEMS } from '../../shared/catalog/spellIndex';
 
-export default function SpellScrollSelectorModal({ rank, type, onSelect, onCancel }) {
+export default function SpellScrollSelectorModal({ rank, type, onSelect, onCancel, ignoreAvailability = false }) {
     const [search, setSearch] = useState('');
 
     const availableSpells = useMemo(() => {
@@ -10,12 +10,14 @@ export default function SpellScrollSelectorModal({ rank, type, onSelect, onCance
             if (spell.level !== rank) return false;
 
             // Availability Check
-            if (type === 'scroll' && !spell.scroll_available) return false;
-            if (type === 'wand' && !spell.wand_available) return false;
+            if (!ignoreAvailability) {
+                if (type === 'scroll' && !spell.scroll_available) return false;
+                if (type === 'wand' && !spell.wand_available) return false;
+            }
 
             return spell.name.toLowerCase().includes(lowerSearch);
         });
-    }, [rank, type, search]);
+    }, [rank, type, search, ignoreAvailability]);
 
     return (
         <div style={{
