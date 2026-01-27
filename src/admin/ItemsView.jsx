@@ -293,6 +293,25 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
             return;
         }
 
+        if (action === 'delete') {
+            if (!confirm(`Are you sure you want to delete ${targets.length} items? This cannot be undone.`)) return;
+
+            setDb(prev => {
+                const next = deepClone(prev);
+                if (!next.shop) next.shop = { customItems: {} };
+
+                targets.forEach(name => {
+                    // Only delete from customItems
+                    if (next.shop.customItems && next.shop.customItems[name]) {
+                        delete next.shop.customItems[name];
+                    }
+                });
+                return next;
+            });
+            setContextMenu(null);
+            return;
+        }
+
         setDb(prev => {
             const next = deepClone(prev);
             if (!next.shop) next.shop = { availableItems: [], traders: [], availableFormulas: [] };
@@ -825,6 +844,7 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                     <div style={{ borderTop: '1px solid #444', margin: '2px 0' }}></div>
                     <div className="ctx-item" onClick={() => performContextAction('edit')}>✏️ Edit Item</div>
                     <div className="ctx-item" onClick={() => performContextAction('clone')}>📋 Clone Item</div>
+                    <div className="ctx-item" style={{ color: '#ef9a9a' }} onClick={() => performContextAction('delete')}>🗑️ Delete Item</div>
                     <div style={{ borderTop: '1px solid #444', margin: '2px 0' }}></div>
 
                     {/* SUBMENUS */}

@@ -53398,6 +53398,45 @@
     "rarity": "uncommon"
   },
   {
+    "sourceFile": "custom/living_flame.json",
+    "img": "icons/equipment/treasure/gems/lesser-semiprecious-stones/rhodochrosite.webp",
+    "name": "Living Flame",
+    "type": "Treasure",
+    "group": null,
+    "category": null,
+    "ammo": null,
+    "hands": null,
+    "bulk": {
+      "value": ""
+    },
+    "damage": {
+      "dice": 1,
+      "die": "d6",
+      "damageType": "slashing"
+    },
+    "splashDamage": null,
+    "range": null,
+    "reload": null,
+    "traits": {
+      "value": [],
+      "rarity": "rare"
+    },
+    "bonus": null,
+    "bonusDamage": null,
+    "runes": null,
+    "acBonus": null,
+    "dexCap": null,
+    "checkPenalty": null,
+    "speedPenalty": null,
+    "strength": null,
+    "hardness": null,
+    "hp": null,
+    "price": 500,
+    "level": 3,
+    "description": "This lustrous, pyrite stone is 20 cm tall. When activated, the statuette transforms into a tiny flame familiar. You can use the following action when you hold the living flame.\n---\n<span style=\"color: #c5a059\">Awaken Flame</span> [two-actions] (concentrate, manipulate)\n<b>Effect </b>You place the stone on solid ground and speak the flame's secret name, causing the statuette to transform into a living fire familiar.\n\n---\nIn creature form, the fire familiar acts on your turn. It gets 2 actions and can't use reactions. You have to spend an action each turn to tell it what to do; otherwise, it tries to run away from danger or cowers where it is.\n\nIf the flame is slain while in familiar form, it reverts to its stone shape and can't be transformed again for the rest of the day. If the figurine is destroyed while in its stone form, it's shattered and its magical properties are lost forever.",
+    "rarity": "rare"
+  },
+  {
     "sourceFile": "custom/mask_of_the_deceiver.json",
     "img": "icons/equipment/head/mask-carved-gargoyle-grey.webp",
     "name": "Mask of the Deceiver",
