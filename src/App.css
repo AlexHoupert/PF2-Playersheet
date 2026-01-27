@@ -29,6 +29,17 @@ body {
     padding-bottom: 80px;
 }
 
+@media (max-width: 600px) {
+    body {
+        padding: 5px;
+        padding-bottom: 80px;
+    }
+
+    .header-bar {
+        margin-bottom: 5px;
+    }
+}
+
 h1,
 h2,
 h3 {

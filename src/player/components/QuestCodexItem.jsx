@@ -8,7 +8,7 @@ export default function QuestCodexItem({ quest, onToggleObjective }) {
     const completedObj = visibleObjectives.filter(o => o.completed).length;
     const progress = totalObj > 0 ? (completedObj / totalObj) * 100 : 0;
 
-    const [expanded, setExpanded] = React.useState(quest.status === 'Active');
+    const [expanded, setExpanded] = React.useState(false);
 
     // Status Badge Helper
     const getBadgeClass = (status) => {

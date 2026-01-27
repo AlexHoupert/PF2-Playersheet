@@ -1166,7 +1166,7 @@ export default function PlayerApp({ db, setDb }) {
         },
         threshold: 60, // Slightly higher threshold to avoid scroll interference
         disabled: Boolean(modalMode), // Prevent swipe/scroll shield from interfering with modal scrolling
-        excludeSelectors: ['.tabs', '.modal-tabs', '.scroll-x'] // Allow native horizontal scrolling
+        excludeSelectors: ['.tabs', '.modal-tabs', '.scroll-x', '.no-swipe'] // Allow native horizontal scrolling
     });
 
     // --- MAIN RENDER ---
@@ -1286,7 +1286,7 @@ export default function PlayerApp({ db, setDb }) {
 
 
             {/* TABS */}
-            <div className="tabs">
+            <div className="tabs no-swipe">
                 {mainTabs.map(tab => {
                     const hasLoot = tab === 'items' && (
                         character?.inventory?.some(i => i.isLoot) ||
