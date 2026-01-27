@@ -298,6 +298,20 @@ export function InventoryView({
                         )}
                     </div>
 
+                    {/* Linked Spell (Scrolls/Wands) */}
+                    {merged.system?.spell && (
+                        <div
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenModal('item', { ...merged.system.spell, _entityType: 'spell' });
+                            }}
+                            style={{ fontSize: '0.85em', color: '#b39ddb', cursor: 'pointer', marginTop: 2, display: 'inline-block' }}
+                        >
+                            <span style={{ marginRight: 4 }}>✨</span>
+                            <span style={{ textDecoration: 'underline' }}>{merged.system.spell.name}</span>
+                        </div>
+                    )}
+
                     {row1 && <div className="item-row-meta item-row-meta-1">{row1}</div>}
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: row2 ? 0 : 4 }}>

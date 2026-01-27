@@ -758,7 +758,14 @@ export function ItemDetailModal({
                     <div style={{ marginBottom: 15, padding: 10, background: '#251b38', borderRadius: 8, border: '1px solid #673ab7' }}>
                         <h3 style={{ marginTop: 0, color: '#b39ddb', fontSize: '1.1em', display: 'flex', alignItems: 'center', gap: 10 }}>
                             <img src={imbuedSpell.img ? `ressources/${imbuedSpell.img}` : 'icons/svg/mystery-man.svg'} style={{ width: 24, height: 24 }} alt="" />
-                            {imbuedSpell.name}
+                            <span
+                                className="content-link"
+                                data-type="spell"
+                                data-name={imbuedSpell.name}
+                                style={{ textDecoration: 'underline', cursor: 'pointer' }}
+                            >
+                                {imbuedSpell.name}
+                            </span>
                             <span style={{ fontSize: '0.8em', color: '#888', fontWeight: 'normal' }}>(Rank {imbuedSpell.level})</span>
                         </h3>
 

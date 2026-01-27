@@ -36,6 +36,7 @@ import { isEquipableInventoryItem, getWeaponCapacity } from '../shared/utils/com
 import { ModalManager } from './ModalManager';
 // Top of file
 import NotificationOverlay from './components/NotificationOverlay';
+import XpOverlay from './components/XpOverlay';
 
 
 
@@ -1654,6 +1655,9 @@ export default function PlayerApp({ db, setDb }) {
 
             {/* Notification Overlay */}
             <NotificationOverlay queue={db.notificationQueue || []} onClear={handleClearNotification} />
+
+            {/* XP Overlay */}
+            <XpOverlay xpNotification={activeCampaign?.xpNotification} />
         </div>
     );
 }

@@ -37,6 +37,7 @@ import SessionManager from './views/SessionManager';
 
 import { CharacterCard } from './components/CharacterCard';
 import { ModalManager } from '../player/ModalManager';
+import XpOverlay from '../player/components/XpOverlay';
 
 import '../App.css';
 import './AdminApp.css'; // Ensure this exists or I might mock it. It was imported in original.
@@ -377,6 +378,9 @@ export default function AdminApp({ db, setDb }) {
                 setDailyPrepQueue={() => { }}
             // Admin specific helpers could be added here
             />
+
+            {/* XP Overlay */}
+            <XpOverlay xpNotification={activeCampaign?.xpNotification} />
         </div>
     );
 }
