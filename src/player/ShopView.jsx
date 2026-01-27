@@ -56,13 +56,32 @@ export default function ShopView({ db, onInspectItem, onBuyItem, onBuyFormula, k
             });
         }
 
-        let items = Array.from(itemNames).map(name => SHOP_INDEX_BY_NAME.get(name)).filter(Boolean);
+        let items = Array.from(itemNames).map(name => {
+            const indexItem = SHOP_INDEX_BY_NAME.get(name);
+            if (indexItem) return indexItem;
+
+            const customItem = db.shop?.customItems?.[name];
+            if (customItem) {
+                // Map full item to index-like structure for ShopView
+                return {
+                    ...customItem,
+                    level: customItem.system?.level?.value ?? 0,
+                    price: customItem.system?.price?.value?.gp ?? 0,
+                    category: customItem.system?.category,
+                    group: customItem.system?.group,
+                    rarity: customItem.system?.traits?.rarity,
+                    traits: customItem.system?.traits // Ensures .traits.value access works
+                };
+            }
+            return null;
+        }).filter(Boolean);
+
         if (enforceAvailability && shopCategory !== SHOP_ALL_AVAILABLE_KEY) {
             items = items.filter(item => availableSet.has(item.name));
         }
 
         return { traders, items, availableCount: availableItems.length };
-    }, [allTraders, db.shop?.availableItems, shopCategory, shopTrader]);
+    }, [allTraders, db.shop?.availableItems, db.shop?.customItems, shopCategory, shopTrader]);
 
     const shopFilterData = useMemo(() => {
         if (!shopCategory) {

@@ -1257,7 +1257,7 @@ export default function PlayerApp({ db, setDb }) {
                     <h1 {...pressEvents(null, 'level')}>{character.name}</h1>
                     <small>Level {character.level} | XP: {character.xp.current}</small>
                 </div>
-                <div className="header-controls" style={{ flexShrink: 0, gap: 5 }}>
+                <div className="header-controls" style={{ flexShrink: 0, gap: 5, marginRight: -5 }}>
                     {/* MODE TOGGLE */}
                     <button
                         className="btn-char-switch"

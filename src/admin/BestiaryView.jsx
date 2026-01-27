@@ -59,13 +59,22 @@ export default function BestiaryView({ db, setDb }) {
             setLoadedCreatureData(null);
             return;
         }
+
+        if (previewCreature.isCustom) {
+            const customData = db.bestiary?.customCreatures?.[previewCreature.id]?.data;
+            if (customData) {
+                setLoadedCreatureData(customData);
+                return;
+            }
+        }
+
         // Fetch the full creature data
         fetchCreatureData(previewCreature.id).then(data => {
             if (data) {
                 setLoadedCreatureData(data);
             }
         });
-    }, [previewCreature?.id]);
+    }, [previewCreature?.id, db.bestiary?.customCreatures]);
 
     // Fetch full creature data when editing creature changes
     useEffect(() => {
@@ -73,24 +82,55 @@ export default function BestiaryView({ db, setDb }) {
             // Already has data or no creature selected
             return;
         }
+
+        // If it's a custom creature in DB, we already have the data in db.bestiary.customCreatures
+        // But editingCreature object might be lightweight.
+        // If it was clicked from list, it has 'isCustom'.
+
+        if (editingCreature.isCustom) {
+            const customData = db.bestiary?.customCreatures?.[editingCreature.id]?.data;
+            if (customData) {
+                setEditingCreature(prev => ({ ...prev, data: customData }));
+                return;
+            }
+        }
+
         // Fetch the full creature data for editing
         fetchCreatureData(editingCreature.id).then(data => {
             if (data) {
                 setEditingCreature(prev => ({ ...prev, data }));
             }
         });
-    }, [editingCreature?.id]);
+    }, [editingCreature?.id, db.bestiary?.customCreatures]);
 
     // Get all creatures from INDEX (lightweight), merged with db METADATA
     // Full creature data is fetched on-demand when editing/previewing
     const creatures = useMemo(() => {
         const indexItems = getAllCreatures(); // Returns lightweight index items
+
+        // Merge in custom creatures from DB
+        const customCreatures = Object.values(db.bestiary?.customCreatures || {}).map(cData => {
+            const sys = cData.data?.system || {};
+            // If it's a full creature object, extract lightweight props for list
+            return {
+                id: cData.id,
+                sourceFile: null, // Custom DB creatures have no sourceFile
+                type: cData.type || 'npc',
+                name: cData.name || 'Unnamed',
+                level: sys.details?.level?.value ?? 0,
+                rarity: sys.traits?.rarity || 'common',
+                traits: sys.traits?.value || [],
+                isCustom: true // Flag to identify DB creatures
+            };
+        });
+
+        const distinctItems = [...customCreatures, ...indexItems];
         const dbMetadata = db.bestiary?.creatures || {};
 
         // Deduplicate by ID (some catalog sources may have duplicates)
         const seenIds = new Set();
 
-        return indexItems
+        return distinctItems
             .filter(item => {
                 if (seenIds.has(item.id)) return false;
                 seenIds.add(item.id);
@@ -107,6 +147,7 @@ export default function BestiaryView({ db, setDb }) {
                     level: item.level ?? 0,
                     rarity: item.rarity || 'common',
                     traits: item.traits || [],
+                    isCustom: item.isCustom || false,
                     // From db metadata
                     group: meta.group || 'Uncategorized',
                     bestiary: meta.bestiary || false,
@@ -114,7 +155,7 @@ export default function BestiaryView({ db, setDb }) {
                     falseData: meta.falseData
                 };
             });
-    }, [db.bestiary?.creatures]);
+    }, [db.bestiary?.creatures, db.bestiary?.customCreatures]);
 
     // Extract unique filter options
     const uniqueTypes = useMemo(() => ['creature', 'hazard'], []);
@@ -378,6 +419,23 @@ export default function BestiaryView({ db, setDb }) {
                     window.location.reload();
                 }}
                 onCancel={() => setEditingCreature(null)}
+                onSaveToDb={(creatureData) => {
+                    setDb(prev => ({
+                        ...prev,
+                        bestiary: {
+                            ...prev.bestiary,
+                            customCreatures: {
+                                ...prev.bestiary?.customCreatures,
+                                [creatureData._id]: {
+                                    id: creatureData._id,
+                                    type: creatureData.type,
+                                    name: creatureData.name,
+                                    data: creatureData
+                                }
+                            }
+                        }
+                    }));
+                }}
             />
         );
     }

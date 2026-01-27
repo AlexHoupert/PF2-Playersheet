@@ -5,7 +5,7 @@ import ItemDetailContent from '../../shared/components/ItemDetailContent';
 import ImagePicker from '../../shared/components/ImagePicker';
 import { SHOP_INDEX_FILTER_OPTIONS } from '../../shared/catalog/shopIndex';
 
-export default function ItemEditor({ initialItem, onSave, onCancel }) {
+export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb }) {
     const [formData, setFormData] = useState({
         name: '',
         level: 0,
@@ -119,19 +119,55 @@ export default function ItemEditor({ initialItem, onSave, onCancel }) {
                 ? { directory: 'ressources/equipment/custom', filename: `${formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`, content: itemJson }
                 : { filePath, content: itemJson };
 
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-            const data = await res.json();
-            if (!data.success) throw new Error(data.error);
+                if (!res.ok) {
+                    // Start of fallback trigger - throw to enter catch block
+                    throw new Error(`Server responded with ${res.status}`);
+                }
 
-            // Rebuild Index
-            await fetch('/api/admin/rebuild-index/shop', { method: 'POST' });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
 
-            onSave(data);
+                // Rebuild Index
+                await fetch('/api/admin/rebuild-index/shop', { method: 'POST' });
+
+                onSave(data);
+            } catch (apiErr) {
+                console.warn("API Save failed, attempting DB fallback:", apiErr);
+                if (onSaveToDb) {
+                    // Add an ID if not present (simulate FS process)
+                    const safeId = itemJson.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    const dbItem = {
+                        ...itemJson,
+                        _id: safeId,
+                        sourceFile: null,
+                        isCustom: true,
+                        // Ensure system data structure is complete
+                        system: {
+                            ...itemJson.system,
+                            // Ensure these are present for display
+                            level: { value: parseInt(formData.level) },
+                            price: { value: { gp: parseFloat(formData.price) } },
+                        }
+                    };
+
+                    try {
+                        await onSaveToDb(dbItem);
+                        onSave({ success: true, message: 'Saved to Database', data: dbItem });
+                    } catch (dbErr) {
+                        console.error("DB Fallback failed:", dbErr);
+                        throw new Error(`Failed to save to Server AND Database. Server: ${apiErr.message}. DB: ${dbErr.message}`);
+                    }
+                } else {
+                    throw apiErr;
+                }
+            }
         } catch (err) {
             setError(err.message);
         } finally {

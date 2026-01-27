@@ -84,7 +84,31 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
 
     // Global List
     const filteredGlobalItems = useMemo(() => {
-        return getFilteredItems(SHOP_INDEX_ITEMS);
+        // Merge custom items from DB
+        const customItemsRaw = Object.values(db.shop?.customItems || {});
+        const flatCustomItems = customItemsRaw.map(i => ({
+            name: i.name,
+            level: i.system?.level?.value ?? 0,
+            price: i.system?.price?.value?.gp ?? 0,
+            type: i.type ? (i.type.charAt(0).toUpperCase() + i.type.slice(1)) : 'Item',
+            category: i.system?.category || '',
+            group: i.system?.group || '',
+            rarity: i.system?.traits?.rarity || 'common',
+            traits: { value: i.system?.traits?.value || [] }, // Index usually has traits object or direct array? Checked ShopView: i.traits.value
+            img: i.img,
+            sourceFile: null,
+            isCustom: true,
+            // Store full data for editing
+            data: i
+        }));
+
+        // Combine with static index
+        // Prefer custom items if names collide? Or show both? Name collision issues.
+        // Set deduplication preferred specific to this view?
+        // Let's just concat for now.
+        const combined = [...flatCustomItems, ...SHOP_INDEX_ITEMS];
+
+        return getFilteredItems(combined);
     }, [itemFilterCategory, itemFilterRarity, itemFilterTraits, itemFilterType, itemFilterGroup, itemSearch, itemFilterAvailable, itemFilterFormulaAvailable, db.shop]);
 
     const sortedGlobalItems = useMemo(() => {
@@ -246,7 +270,11 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                         setEditingItem(item); // Fallback to index data
                     });
             } else if (item) {
-                setEditingItem(item);
+                if (item.isCustom && item.data) {
+                    setEditingItem(item.data); // Load full custom data
+                } else {
+                    setEditingItem(item);
+                }
             }
             setContextMenu(null);
             return;
@@ -536,6 +564,19 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                 initialItem={Object.keys(editingItem).length === 0 ? null : editingItem}
                 onSave={() => window.location.reload()}
                 onCancel={() => setEditingItem(null)}
+                onSaveToDb={(itemData) => {
+                    setDb(prev => ({
+                        ...prev,
+                        shop: {
+                            ...prev.shop,
+                            customItems: {
+                                ...prev.shop?.customItems,
+                                [itemData.name]: itemData // Key by Name for ShopView lookup compatibility (or ID)
+                                // If we key by Name, we assume distinct names. ItemEditor 'safeId' was name-based.
+                            }
+                        }
+                    }));
+                }}
             />
         );
     }

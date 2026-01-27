@@ -36,7 +36,7 @@ const SKILL_LIST = [
     'religion', 'society', 'stealth', 'survival', 'thievery'
 ];
 
-export default function CreatureEditor({ initialCreature, onSave, onCancel }) {
+export default function CreatureEditor({ initialCreature, onSave, onCancel, onSaveToDb }) {
     // Form state - basic info
     const [name, setName] = useState('');
     const [level, setLevel] = useState(0);
@@ -190,19 +190,44 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel }) {
                 ? { directory: 'ressources/bestiary/custom', filename: `${name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`, content: creatureJson }
                 : { filePath: filePath.startsWith('ressources/') ? filePath : `ressources/${filePath}`, content: creatureJson };
 
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-            const data = await res.json();
-            if (!data.success) throw new Error(data.error);
+                if (!res.ok) {
+                    throw new Error(`Server responded with ${res.status}`);
+                }
 
-            // Rebuild Creature Index
-            await fetch('/api/admin/rebuild-index/creatures', { method: 'POST' });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
 
-            onSave(data);
+                // Rebuild Creature Index
+                await fetch('/api/admin/rebuild-index/creatures', { method: 'POST' });
+
+                onSave(data);
+            } catch (apiErr) {
+                console.warn("API Save failed, attempting DB fallback:", apiErr);
+                // Fallback to DB if provided
+                if (onSaveToDb) {
+                    const dbCreature = {
+                        ...creatureJson,
+                        sourceFile: null,
+                        isCustom: true
+                    };
+                    try {
+                        await onSaveToDb(dbCreature);
+                        onSave({ success: true, message: 'Saved to Database', data: dbCreature });
+                    } catch (dbErr) {
+                        console.error("DB Fallback failed:", dbErr);
+                        throw new Error(`Failed to save to Server AND Database. Server: ${apiErr.message}. DB: ${dbErr.message}`);
+                    }
+                } else {
+                    throw apiErr;
+                }
+            }
         } catch (err) {
             setError(err.message);
         } finally {
