@@ -143,6 +143,8 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb }
                 if (onSaveToDb) {
                     // Add an ID if not present (simulate FS process)
                     const safeId = itemJson.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    const hasDamage = formData.damages && formData.damages.length > 0 && formData.damages.some(d => d.dice > 0);
+
                     const dbItem = {
                         ...itemJson,
                         _id: safeId,
@@ -154,6 +156,8 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb }
                             // Ensure these are present for display
                             level: { value: parseInt(formData.level) },
                             price: { value: { gp: parseFloat(formData.price) } },
+                            // Fix: Explicitly clear damage if removed in editor
+                            damage: hasDamage ? itemJson.system.damage : null,
                         }
                     };
 
