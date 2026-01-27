@@ -67,8 +67,10 @@ export function ItemDetailModal({
     const isEquipped = Boolean(inventoryMatch?.equipped);
 
     // --- RUNE LOGIC ---
-    const isWeapon = modalData.type === 'Weapon' || modalData.group;
-    const isArmor = modalData.type === 'Armor' || modalData.type === 'Shield';
+    // --- RUNE LOGIC ---
+    const typeLower = (modalData.type || '').toLowerCase();
+    const isWeapon = typeLower === 'weapon';
+    const isArmor = typeLower === 'armor' || typeLower === 'shield';
 
     // Only allow modification if we have the item in inventory (inventoryMatch)
     const canModifyRunes = (isWeapon || isArmor) && inventoryMatch && updateCharacter;
