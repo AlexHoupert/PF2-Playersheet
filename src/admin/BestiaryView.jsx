@@ -269,9 +269,19 @@ export default function BestiaryView({ db, setDb }) {
         setDb(prev => {
             const newCreatures = { ...prev.bestiary?.creatures };
             delete newCreatures[id];
+
+            const newCustomCreatures = { ...prev.bestiary?.customCreatures };
+            if (newCustomCreatures[id]) {
+                delete newCustomCreatures[id];
+            }
+
             return {
                 ...prev,
-                bestiary: { ...prev.bestiary, creatures: newCreatures }
+                bestiary: {
+                    ...prev.bestiary,
+                    creatures: newCreatures,
+                    customCreatures: newCustomCreatures
+                }
             };
         });
         setContextMenu(null);
