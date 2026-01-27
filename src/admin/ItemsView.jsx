@@ -4,7 +4,7 @@ import ItemEditor from './editors/ItemEditor';
 import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
 import { SHOP_CATEGORIES } from '../shared/constants/shop';
 import { deepClone } from '../shared/utils/deepClone';
-import { SHOP_INDEX_FILTER_OPTIONS, SHOP_INDEX_ITEMS } from '../shared/catalog/shopIndex';
+import { SHOP_INDEX_FILTER_OPTIONS, SHOP_INDEX_ITEMS, fetchShopItemDetailBySourceFile } from '../shared/catalog/shopIndex';
 import { shouldStack } from '../shared/utils/inventoryUtils';
 
 const uniqueTypes = SHOP_INDEX_FILTER_OPTIONS.types;
@@ -237,7 +237,28 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
         if (action === 'edit') {
             const itemName = targets[0]; // Edit single item
             const item = sortedGlobalItems.find(i => i.name === itemName) || SHOP_INDEX_ITEMS.find(i => i.name === itemName); // Fallback search
-            if (item) setEditingItem(item);
+            if (item && item.sourceFile) {
+                // Fetch full item data including description
+                fetchShopItemDetailBySourceFile(item.sourceFile)
+                    .then(fullItem => setEditingItem(fullItem))
+                    .catch(err => {
+                        console.error('Failed to fetch item details:', err);
+                        setEditingItem(item); // Fallback to index data
+                    });
+            } else if (item) {
+                setEditingItem(item);
+            }
+            setContextMenu(null);
+            return;
+        }
+
+        if (action === 'clone') {
+            const itemName = targets[0];
+            const item = sortedGlobalItems.find(i => i.name === itemName) || SHOP_INDEX_ITEMS.find(i => i.name === itemName);
+            if (item) {
+                const cloned = { ...item, name: item.name + ' (Copy)' };
+                setEditingItem(cloned);
+            }
             setContextMenu(null);
             return;
         }
@@ -759,7 +780,8 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                     <div className="ctx-item" onClick={() => performContextAction('availability', true)}>Make Available</div>
                     <div className="ctx-item" onClick={() => performContextAction('availability', false)}>Make Unavailable</div>
                     <div style={{ borderTop: '1px solid #444', margin: '2px 0' }}></div>
-                    <div className="ctx-item" onClick={() => performContextAction('edit')}>Edit Item</div>
+                    <div className="ctx-item" onClick={() => performContextAction('edit')}>✏️ Edit Item</div>
+                    <div className="ctx-item" onClick={() => performContextAction('clone')}>📋 Clone Item</div>
                     <div style={{ borderTop: '1px solid #444', margin: '2px 0' }}></div>
 
                     {/* SUBMENUS */}

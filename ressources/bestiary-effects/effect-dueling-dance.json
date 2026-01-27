@@ -1,0 +1,44 @@
+{
+    "_id": "lWciVCnKhwp8cF6E",
+    "img": "systems/pf2e/icons/equipment/weapons/rapier.webp",
+    "name": "Effect: Dueling Dance",
+    "system": {
+        "description": {
+            "value": "<p>You gain a +2 circumstance bonus to your AC.</p>"
+        },
+        "duration": {
+            "expiry": "turn-start",
+            "sustained": false,
+            "unit": "rounds",
+            "value": 1
+        },
+        "level": {
+            "value": 14
+        },
+        "publication": {
+            "license": "ORC",
+            "remaster": true,
+            "title": "Pathfinder #205: Singer, Stalker, Skinsaw Man"
+        },
+        "rules": [
+            {
+                "key": "FlatModifier",
+                "selector": "ac",
+                "type": "circumstance",
+                "value": 2
+            }
+        ],
+        "start": {
+            "initiative": null,
+            "value": 0
+        },
+        "tokenIcon": {
+            "show": true
+        },
+        "traits": {
+            "rarity": "common",
+            "value": []
+        }
+    },
+    "type": "effect"
+}

@@ -258,6 +258,20 @@ export default function RichTextEditor({ value, onChange, className, style, plac
                 <button type="button" onClick={() => wrapSelection('b')} title="Bold"><b>B</b></button>
                 <button type="button" onClick={() => wrapSelection('i')} title="Italic"><i>I</i></button>
                 <button type="button" onClick={() => wrapSelection('gold')} title="Gold Text" style={{ color: '#c5a059', fontWeight: 'bold' }}>G</button>
+                <button type="button" onClick={() => {
+                    const textarea = textareaRef.current;
+                    if (!textarea) return;
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const currentVal = value || '';
+                    const selected = currentVal.substring(start, end);
+                    const newValue = currentVal.substring(0, start) + `||${selected}||` + currentVal.substring(end);
+                    onChange(newValue);
+                    setTimeout(() => {
+                        textarea.focus();
+                        textarea.setSelectionRange(start + 2 + selected.length, start + 2 + selected.length);
+                    }, 0);
+                }} title="Hidden (GM Only)" style={{ color: '#e57373', fontWeight: 'bold' }}>👁️</button>
 
                 <span className="rte-sep">|</span>
 

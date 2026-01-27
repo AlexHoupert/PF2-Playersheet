@@ -16,6 +16,8 @@ import ImpulsesView from './ImpulsesView';
 import FeatsView from './FeatsView';
 import ActionsView from './ActionsView';
 import QuestsView from './QuestsView';
+import LoreAdminView from './LoreAdminView';
+import BestiaryView from './BestiaryView';
 // import LootView from './LootView'; // Was imported in legacy but not in previous file content? Checked: activeTab === 'loot' at line 1016. It wasn't imported in line 1-28. Maybe it was defined in file or I missed it.
 // Checking previous file content... line 18 is 'QuestsView'. No LootView import.
 // But line 1016 says `{activeTab === 'loot' && <LootView db={db} setDb={setDb} />}`.
@@ -171,6 +173,8 @@ export default function AdminApp({ db, setDb }) {
                         <button className={`nav-btn ${activeTab === 'actions' ? 'active' : ''}`} onClick={() => setActiveTab('actions')}>Actions</button>
                         <button className={`nav-btn ${activeTab === 'feats' ? 'active' : ''}`} onClick={() => setActiveTab('feats')}>Feats</button>
                         <button className={`nav-btn ${activeTab === 'quests' ? 'active' : ''}`} onClick={() => setActiveTab('quests')}>Quests</button>
+                        <button className={`nav-btn ${activeTab === 'lore' ? 'active' : ''}`} onClick={() => setActiveTab('lore')}>Lore</button>
+                        <button className={`nav-btn ${activeTab === 'bestiary' ? 'active' : ''}`} onClick={() => setActiveTab('bestiary')}>Bestiary</button>
                         <button className={`nav-btn ${activeTab === 'system' ? 'active' : ''}`} onClick={() => setActiveTab('system')}>System</button>
                     </div>
                 </div>
@@ -201,24 +205,60 @@ export default function AdminApp({ db, setDb }) {
                             </div>
                             {/* Campaign XP / Init Controls could go here */}
                             {activeCampaign && (
-                                <div className="xp-control">
-                                    <span>XP: </span>
-                                    <input
-                                        type="number"
-                                        value={activeCampaign.xp || 0}
-                                        onChange={(e) => {
-                                            const v = parseInt(e.target.value) || 0;
+                                <div className="xp-control" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        <span>XP: </span>
+                                        <input
+                                            className="modal-input"
+                                            style={{ width: 80 }}
+                                            type="number"
+                                            value={activeCampaign.xp || 0}
+                                            onChange={(e) => {
+                                                const v = parseInt(e.target.value) || 0;
+                                                updateActiveCampaign(c => {
+                                                    const next = { ...c };
+                                                    next.xp = v;
+                                                    if (next.characters) next.characters.forEach(ch => {
+                                                        if (!ch.xp) ch.xp = { current: 0, max: 1000 };
+                                                        ch.xp.current = v;
+                                                    });
+                                                    return next;
+                                                });
+                                            }}
+                                        />
+                                    </div>
+                                    <button
+                                        className="btn-add-condition"
+                                        style={{ margin: 0, background: '#c5a059', color: '#111', fontWeight: 'bold' }}
+                                        onClick={() => {
+                                            const amtStr = prompt("Amount of XP to add:");
+                                            if (!amtStr) return;
+                                            const amt = parseInt(amtStr);
+                                            if (isNaN(amt) || amt === 0) return;
+
                                             updateActiveCampaign(c => {
                                                 const next = { ...c };
-                                                next.xp = v;
+                                                const current = next.xp || 0;
+                                                const newVal = current + amt;
+                                                next.xp = newVal;
+
+                                                // Update all characters
                                                 if (next.characters) next.characters.forEach(ch => {
                                                     if (!ch.xp) ch.xp = { current: 0, max: 1000 };
-                                                    ch.xp.current = v;
+                                                    ch.xp.current = newVal;
                                                 });
+
+                                                // Trigger Notification
+                                                next.xpNotification = {
+                                                    id: Date.now(),
+                                                    amount: amt
+                                                };
                                                 return next;
                                             });
                                         }}
-                                    />
+                                    >
+                                        + Add XP
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -308,6 +348,8 @@ export default function AdminApp({ db, setDb }) {
                 {activeTab === 'feats' && <FeatsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('feat'); }} />}
                 {activeTab === 'actions' && <ActionsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('item'); }} />}
                 {activeTab === 'quests' && <QuestsView db={db} setDb={setDb} />}
+                {activeTab === 'lore' && <LoreAdminView db={db} setDb={setDb} />}
+                {activeTab === 'bestiary' && <BestiaryView db={db} setDb={setDb} />}
                 {activeTab === 'system' && (
                     <div style={{ padding: 20 }}>
                         <h2>System</h2>

@@ -28,8 +28,16 @@ import { InventoryView } from './views/InventoryView';
 import { MagicView } from './views/MagicView';
 import { FeatsView } from './views/FeatsView';
 import { ImpulsesView } from './views/ImpulsesView';
+import PlayerQuestsView from './views/PlayerQuestsView';
+import LoreView from './views/LoreView';
+import MapsView from './views/MapsView';
+import ReputationView from './views/ReputationView';
 import { isEquipableInventoryItem, getWeaponCapacity } from '../shared/utils/combatUtils';
 import { ModalManager } from './ModalManager';
+// Top of file
+import NotificationOverlay from './components/NotificationOverlay';
+
+
 
 
 
@@ -50,6 +58,18 @@ export default function PlayerApp({ db, setDb }) {
 
     const [activeCharIndex, setActiveCharIndex] = useState(0);
 
+    const handleClearNotification = (id) => {
+        setDb(prev => {
+            if (!prev.notificationQueue) return prev;
+            return {
+                ...prev,
+                notificationQueue: prev.notificationQueue.filter(n => n.id !== id)
+            };
+        });
+    };
+    // Let's replace the top imports first.
+
+
     const [activeTab, setActiveTab] = useState('stats');
     // const [actionSubTab, setActionSubTab] = useState('Combat'); // Removed
     // const [itemSubTab, setItemSubTab] = useState('Equipment'); // Removed
@@ -60,6 +80,7 @@ export default function PlayerApp({ db, setDb }) {
     const [modalHistory, setModalHistory] = useState([]);
     const [actionModal, setActionModal] = useState({ mode: null, item: null });
     const [condTab, setCondTab] = useState('active');
+    const [appMode, setAppMode] = useState('character'); // 'character' | 'story'
     const tapRef = useRef({ id: null, time: 0 });
     const tapTimeout = useRef(null);
 
@@ -1111,12 +1132,16 @@ export default function PlayerApp({ db, setDb }) {
 
     // --- SWIPE LOGIC ---
     const mainTabs = useMemo(() => {
+        if (appMode === 'story') {
+            return ['quests', 'lore', 'maps', 'reputation'];
+        }
+        // Character Mode
         const tabs = ['stats', 'actions', 'feats'];
         if (character.isCaster || character.magic?.list?.length > 0) tabs.push('magic');
         if (character.isKineticist) tabs.push('impulses');
         tabs.push('items');
         return tabs;
-    }, [character.isCaster, character.magic, character.isKineticist]);
+    }, [appMode, character.isCaster, character.magic, character.isKineticist]);
 
     const { handlers: swipeHandlers, ref: swipeRef } = useSwipe({
         // Swipe Left -> Next Tab
@@ -1125,6 +1150,10 @@ export default function PlayerApp({ db, setDb }) {
             const idx = mainTabs.indexOf(activeTab);
             if (idx > -1 && idx < mainTabs.length - 1) {
                 setActiveTab(mainTabs[idx + 1]);
+            } else if (idx === -1 && mainTabs.length > 0) {
+                // If active tab not in current mode list (e.g. switched mode), default to first? 
+                // Or better, we should reset activeTab when appMode changes.
+                // We'll handle that in a useEffect.
             }
         },
         // Swipe Right -> Prev Tab
@@ -1136,7 +1165,8 @@ export default function PlayerApp({ db, setDb }) {
             }
         },
         threshold: 60, // Slightly higher threshold to avoid scroll interference
-        disabled: Boolean(modalMode) // Prevent swipe/scroll shield from interfering with modal scrolling
+        disabled: Boolean(modalMode), // Prevent swipe/scroll shield from interfering with modal scrolling
+        excludeSelectors: ['.tabs', '.modal-tabs', '.scroll-x'] // Allow native horizontal scrolling
     });
 
     // --- MAIN RENDER ---
@@ -1218,13 +1248,32 @@ export default function PlayerApp({ db, setDb }) {
                     overflow: hidden;
                     text-overflow: ellipsis;
                 }
+                .header-title { min-width: 0; flex: 1; overflow: hidden; white-space: nowrap; }
+                .header-title h1 { overflow: hidden; text-overflow: ellipsis; }
+
             `}</style>
             <div className="header-bar">
                 <div className="header-title">
                     <h1 {...pressEvents(null, 'level')}>{character.name}</h1>
                     <small>Level {character.level} | XP: {character.xp.current}</small>
                 </div>
-                <div className="header-controls">
+                <div className="header-controls" style={{ flexShrink: 0, gap: 5 }}>
+                    {/* MODE TOGGLE */}
+                    <button
+                        className="btn-char-switch"
+                        onClick={() => {
+                            const newMode = appMode === 'character' ? 'story' : 'character';
+                            setAppMode(newMode);
+                            // Default tabs
+                            if (newMode === 'story') setActiveTab('quests');
+                            else setActiveTab('stats');
+                        }}
+                        title={appMode === 'character' ? 'Switch to Story' : 'Switch to Character'}
+                        style={{ border: '1px solid var(--border-color)', color: 'var(--text-light)' }}
+                    >
+                        {appMode === 'character' ? '📖' : '👤'}
+                    </button>
+
                     {isGM && <button className="btn-char-switch" onClick={() => {
                         setActiveCharIndex((prev) => (prev + 1) % characters.length);
                     }}>👥</button>}
@@ -1238,7 +1287,7 @@ export default function PlayerApp({ db, setDb }) {
 
             {/* TABS */}
             <div className="tabs">
-                {['stats', 'actions', 'feats', ...(character.isCaster || character.magic?.list?.length > 0 ? ['magic'] : []), ...(character.isKineticist ? ['impulses'] : []), 'items'].map(tab => {
+                {mainTabs.map(tab => {
                     const hasLoot = tab === 'items' && (
                         character?.inventory?.some(i => i.isLoot) ||
                         db?.lootBags?.some(b => !b.isLocked && b.items.some(i => !i.claimedBy))
@@ -1268,6 +1317,14 @@ export default function PlayerApp({ db, setDb }) {
                         }}
                         onLongPress={handleLongPress}
                     />
+                )}
+
+                {activeTab === 'quests' && (
+                    <PlayerQuestsView quests={db?.quests || []} />
+                )}
+
+                {activeTab === 'lore' && (
+                    <LoreView lore={db?.lore || { articles: [] }} bestiary={db?.bestiary} />
                 )}
 
                 {activeTab === 'actions' && (
@@ -1308,6 +1365,9 @@ export default function PlayerApp({ db, setDb }) {
                         onLongPress={handleLongPress}
                     />
                 )}
+
+                {activeTab === 'maps' && <MapsView />}
+                {activeTab === 'reputation' && <ReputationView />}
             </div>
 
             {/* MODALS / FULL PAGE VIEWS */}
@@ -1590,6 +1650,10 @@ export default function PlayerApp({ db, setDb }) {
                 removeFromCharacter={removeFromCharacter}
                 saveNewAction={saveNewAction}
             />
+
+
+            {/* Notification Overlay */}
+            <NotificationOverlay queue={db.notificationQueue || []} onClear={handleClearNotification} />
         </div>
     );
 }

@@ -1,0 +1,47 @@
+{
+    "_id": "T2tfacwoOozQfsIz",
+    "img": "icons/magic/death/skull-poison-green.webp",
+    "name": "Effect: Infectious Aura",
+    "system": {
+        "description": {
+            "value": "<p>You take a –2 status penalty to saves against disease.</p>"
+        },
+        "duration": {
+            "expiry": null,
+            "sustained": false,
+            "unit": "unlimited",
+            "value": -1
+        },
+        "level": {
+            "value": 9
+        },
+        "publication": {
+            "license": "ORC",
+            "remaster": true,
+            "title": "Pathfinder Monster Core"
+        },
+        "rules": [
+            {
+                "key": "FlatModifier",
+                "predicate": [
+                    "item:trait:disease"
+                ],
+                "selector": "saving-throw",
+                "type": "status",
+                "value": -2
+            }
+        ],
+        "start": {
+            "initiative": null,
+            "value": 0
+        },
+        "tokenIcon": {
+            "show": true
+        },
+        "traits": {
+            "rarity": "common",
+            "value": []
+        }
+    },
+    "type": "effect"
+}

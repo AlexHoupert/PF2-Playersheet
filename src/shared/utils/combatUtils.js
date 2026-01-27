@@ -111,7 +111,10 @@ export const getWeaponAttackBonus = (item, character) => {
     const str = parseInt(character.stats?.attributes?.strength) || 0;
     const dex = parseInt(character.stats?.attributes?.dexterity) || 0;
 
-    const isRanged = /ranged|firearm|crossbow|bow|bomb/.test(grp) || traits.includes('thrown');
+    // Check if this is a ranged weapon: group matches ranged types, has thrown trait, OR has a range value
+    const rangeValue = item.system?.range ?? item.range;
+    const hasRange = rangeValue && (typeof rangeValue === 'number' ? rangeValue > 0 : parseInt(rangeValue) > 0);
+    const isRanged = /ranged|firearm|crossbow|bow|bomb/.test(grp) || traits.includes('thrown') || hasRange;
     const isFinesse = traits.includes('finesse');
 
     // 3. Level (If Trained+)

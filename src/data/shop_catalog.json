@@ -82,7 +82,7 @@
   {
     "sourceFile": "abidance-blinders.json",
     "img": "icons/commodities/leather/leather-leaf-tan.webp",
-    "name": "Abidance Blinders",
+    "name": "Abidance Blinders (Copy)",
     "type": "Equipment",
     "group": null,
     "category": null,
@@ -94,7 +94,8 @@
     "damage": {
       "dice": 1,
       "die": "d6",
-      "damageType": "slashing"
+      "damageType": "slashing",
+      "persistent": null
     },
     "splashDamage": null,
     "range": null,
@@ -118,7 +119,7 @@
     "hp": null,
     "price": 25,
     "level": 1,
-    "description": "",
+    "description": "lorem",
     "rarity": "common"
   },
   {
@@ -53313,6 +53314,130 @@
     "price": 1900,
     "level": 12,
     "description": "<p>This blue velvet cloak is cut from the remains of a curtain from a destroyed theater. When worn, you gain a +2 item bonus to Performance checks while acting, orating, or singing, as the cloak makes minor motions to accentuate your performance.</p>\n<p><strong>Activate</strong> <span class=\"action-glyph\">2</span> Interact</p>\n<p><strong>Frequency</strong> once per day</p>\n<hr />\n<p><strong>Effect</strong> You take a bow, spread your arms, and the cloak casts 4th-rank @UUID[Compendium.pf2e.spells-srd.Item.Darkness] centered on a corner of your space. This darkness doesn't impede your vision. While the darkness persists, it emits noise like the applauding of a moderately sized crowd.</p>",
+    "rarity": "uncommon"
+  },
+  {
+    "sourceFile": "custom/dagger_of_the_cinderblessed.json",
+    "img": "icons/weapons/daggers/dagger-curved-guard-blue.webp",
+    "name": "Dagger of the Cinderblessed",
+    "type": "Weapon",
+    "group": "Dagger",
+    "category": "simple",
+    "ammo": null,
+    "hands": null,
+    "bulk": {
+      "value": "L"
+    },
+    "damage": {
+      "dice": 1,
+      "die": "d4",
+      "damageType": "slashing"
+    },
+    "splashDamage": null,
+    "range": null,
+    "reload": null,
+    "traits": {
+      "value": [
+        "staff",
+        "magical"
+      ],
+      "rarity": "rare"
+    },
+    "bonus": null,
+    "bonusDamage": null,
+    "runes": null,
+    "acBonus": null,
+    "dexCap": null,
+    "checkPenalty": null,
+    "speedPenalty": null,
+    "strength": null,
+    "hardness": null,
+    "hp": null,
+    "price": 0,
+    "level": 5,
+    "description": "<p>This grip of this dagger resembles a blackened and burned piece of ashen wood. You can Interact to touch the tip of this dagger to a torch, tinder, or a flammable substance to ignite a flame.</p><hr /><p><strong>Activate</strong> Cast a Spell</p><p><strong>Effect</strong> You expend a number of charges from the staff to cast a spell from its list.</p><ul><li><strong>Cantrip</strong> @UUID[Compendium.pf2e.spells-srd.Item.Ignition]</li><li><strong>1st</strong> @UUID[Compendium.pf2e.spells-srd.Item.Breathe Fire]</li><li><strong>2nd</strong> @UUID[Compendium.pf2e.spells-srd.Item.Blazing Bolt]</li><li><strong>3rd</strong> @UUID[Compendium.pf2e.spells-srd.Item.Fireball]</li></ul><hr /><p><strong>Craft Requirements</strong> Supply one casting of all listed ranks of all listed spells.</p>",
+    "rarity": "rare"
+  },
+  {
+    "sourceFile": "custom/emberwalker_boots.json",
+    "img": "icons/equipment/feet/boots-leather-red.webp",
+    "name": "Emberwalker Boots",
+    "type": "Equipment",
+    "group": "Boots",
+    "category": null,
+    "ammo": null,
+    "hands": null,
+    "bulk": {
+      "value": ""
+    },
+    "damage": {
+      "dice": 1,
+      "die": "d6",
+      "damageType": "slashing"
+    },
+    "splashDamage": null,
+    "range": null,
+    "reload": null,
+    "traits": {
+      "value": [],
+      "rarity": "uncommon"
+    },
+    "bonus": null,
+    "bonusDamage": null,
+    "runes": null,
+    "acBonus": null,
+    "dexCap": null,
+    "checkPenalty": null,
+    "speedPenalty": null,
+    "strength": null,
+    "hardness": null,
+    "hp": null,
+    "price": 20,
+    "level": 2,
+    "description": "These sleek red boots feel pleasantly warm to the touch. While wearing emberwalker boots, you gain <span style=\"color: #c5a059\">resistance 1</span> to fire damage and ignore fire effects on surfaces.\n---\n<b><span>Activate</span></b>—<span style=\"color: #c5a059\">Ember Step</span> [two-actions] (manipulate)\n<b>Frequency </b>once per day\n\nEffect You Stride. Each square you move through during your Stride is scorched with bright flames, becoming hazardous terrain for 1 minute. A non-flying creature that moves through one of these spaces takes 1 fire damage.",
+    "rarity": "uncommon"
+  },
+  {
+    "sourceFile": "custom/mirror_cloak.json",
+    "img": "icons/equipment/back/cloak-collared-blue-iron.webp",
+    "name": "Mirror Cloak",
+    "type": "Equipment",
+    "group": "Cloak",
+    "category": null,
+    "ammo": null,
+    "hands": null,
+    "bulk": {
+      "value": "0.1"
+    },
+    "damage": {
+      "dice": 1,
+      "die": "d6",
+      "damageType": "untyped"
+    },
+    "splashDamage": null,
+    "range": null,
+    "reload": null,
+    "traits": {
+      "value": [
+        "magical",
+        "illusion",
+        "invested"
+      ],
+      "rarity": "uncommon"
+    },
+    "bonus": null,
+    "bonusDamage": null,
+    "runes": null,
+    "acBonus": null,
+    "dexCap": null,
+    "checkPenalty": null,
+    "speedPenalty": null,
+    "strength": null,
+    "hardness": null,
+    "hp": null,
+    "price": 55,
+    "level": 3,
+    "description": "Thousands of small, reflective, mirrored glass shards have been carefully stitched down this long silk cloak.\n---\n<b>Activate </b>[one-action] Interact\n\n<b>Requirements </b>The mirror robe was last activated to draw attention toward you, or you haven't used the mirror robe today\n\nEffect The mirror robe Creates a Diversion for you with a +1 Deception modifier.\n---\n<b>Activate </b>[one-action] Interact (visual)\n\n<b>Requirements </b>The mirror robe was last activated to divert attention away from you.\n\nEffect You draw attention toward yourself. Choose one foe to which you were hidden or undetected. You reveal yourself to all, becoming observed. The foe you chose diverts its attention to you, becoming @UUID[Compendium.pf2e.conditionitems.Item.AJh5ex99aV6VTggg]{Off-Guard} to your allies until the beginning of your next turn. If you are @UUID[Compendium.pf2e.conditionitems.Item.zJxUflt9np0q4yML]{Invisible} or otherwise can't become @UUID[Compendium.pf2e.conditionitems.Item.1wQY3JYyhMYeeV2G]{Observed}, you can't use this activation.",
     "rarity": "uncommon"
   },
   {

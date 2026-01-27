@@ -126,6 +126,15 @@ export function formatText(text, context = {}) {
         return parsed.replace(/\[/g, ' ').replace(/\]/g, '').replace(/\|.*/, '');
     });
 
+    // Replace Hidden Text ||text||
+    formatted = formatted.replace(/\|\|(.*?)\|\|/g, (match, content) => {
+        if (context.secretMode === 'reveal') {
+            return `<span class="gm-secret-revealable" title="Hidden to players">${content}</span>`;
+        }
+        // Player view: Hidden completely
+        return ``;
+    });
+
     formatted = formatted.replace(/<strong>(Critical\s+Success|Success|Critical\s+Failure|Failure)<\/strong>/gi, '<strong style="color:var(--text-gold)">$1</strong>');
     formatted = formatted.replace(/^(\*{3,}|-{3,}|_{3,})$/gm, '<hr />');
     formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
@@ -210,7 +219,9 @@ export function getConditionEffects(character, statName, attributeName) {
                 // lenient match: "Athletics", "Unarmed Attack", "Attack", "Specific Skill"
                 const match = eff.stat === statName || eff.stat === attributeName ||
                     (eff.stat === "Attack" && statName.includes("Attack")) || // e.g. "Melee Attack"
-                    (eff.stat === "Damage" && statName.includes("Damage"));
+                    (eff.stat === "Damage" && statName.includes("Damage")) ||
+                    // Quicksilver Mutagen: "Dexterity Actions" applies to all Dex-based checks (Skills, Attacks) but NOT AC.
+                    (eff.stat === "Dexterity Actions" && attributeName === "Dexterity" && statName !== "AC");
 
                 if (match) {
                     modifiers.push({ type: eff.type || 'item', value: eff.value, source: name });

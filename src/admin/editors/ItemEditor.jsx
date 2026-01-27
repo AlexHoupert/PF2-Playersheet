@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
+import ItemDetailContent from '../../shared/components/ItemDetailContent';
+import ImagePicker from '../../shared/components/ImagePicker';
 import { SHOP_INDEX_FILTER_OPTIONS } from '../../shared/catalog/shopIndex';
 
 export default function ItemEditor({ initialItem, onSave, onCancel }) {
@@ -15,33 +17,48 @@ export default function ItemEditor({ initialItem, onSave, onCancel }) {
         bulk: '',
         usage: '',
         traits: [],
-        damage: { dice: 1, die: 'd6', damageType: 'slashing' },
+        damages: [{ dice: 1, die: 'd6', damageType: 'slashing' }], // Array of damage entries
         range: '',
         description: '',
-        sourceFile: null
+        sourceFile: null,
+        img: null
     });
 
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState(null);
+    const [showImagePicker, setShowImagePicker] = useState(false);
 
     // Load initial data
     useEffect(() => {
         if (initialItem) {
+            // Parse damage - handle both single object and array formats
+            // Parse damage - handle both single object and array formats
+            let damages = [];
+            const itemDamage = initialItem.system?.damage || initialItem.damage;
+            if (itemDamage) {
+                if (Array.isArray(itemDamage)) {
+                    damages = itemDamage;
+                } else if (typeof itemDamage === 'object') {
+                    damages = [itemDamage];
+                }
+            }
+
             setFormData({
                 name: initialItem.name || '',
-                level: initialItem.level || 0,
-                price: parseFloat(initialItem.price) || 0,
+                level: initialItem.level || initialItem.system?.level?.value || 0,
+                price: parseFloat(initialItem.price) || initialItem.system?.price?.value?.gp || 0,
                 type: initialItem.type || 'Weapon',
-                category: initialItem.category || '',
-                group: initialItem.group || '',
-                rarity: initialItem.rarity || 'common',
-                bulk: initialItem.bulk || '',
-                usage: initialItem.usage || '',
-                traits: initialItem.traits?.value || initialItem.traits || [],
-                damage: initialItem.damage ? (typeof initialItem.damage === 'object' ? initialItem.damage : { dice: 1, die: 'd6', damageType: 'slashing' }) : { dice: 1, die: 'd6', damageType: 'slashing' },
-                range: initialItem.range || '',
-                description: initialItem.description || '',
-                sourceFile: initialItem.sourceFile || null
+                category: initialItem.category || initialItem.system?.category || '',
+                group: initialItem.group || initialItem.system?.group || '',
+                rarity: initialItem.rarity || initialItem.system?.traits?.rarity || 'common',
+                bulk: initialItem.bulk || initialItem.system?.bulk?.value || '',
+                usage: initialItem.usage || initialItem.system?.usage?.value || '',
+                traits: initialItem.traits?.value || initialItem.system?.traits?.value || initialItem.traits || [],
+                damages: damages,
+                range: initialItem.range || initialItem.system?.range || '',
+                description: initialItem.system?.description?.value || initialItem.description?.value || initialItem.description || '',
+                sourceFile: initialItem.sourceFile || null,
+                img: initialItem.img || null
             });
         }
     }, [initialItem]);
@@ -53,10 +70,14 @@ export default function ItemEditor({ initialItem, onSave, onCancel }) {
 
         try {
             // Construct the PF2e Item JSON structure
+            // For damage, use first entry as primary and store extras
+            const primaryDamage = formData.damages[0];
+            const extraDamages = formData.damages.slice(1);
+
             const itemJson = {
                 name: formData.name,
                 type: formData.type.toLowerCase(), // system uses lowercase types usually
-                img: initialItem?.img || "systems/pf2e/icons/default-icons/mystery-man.svg",
+                img: formData.img || initialItem?.img || "systems/pf2e/icons/default-icons/mystery-man.svg",
                 system: {
                     description: { value: formData.description },
                     level: { value: parseInt(formData.level) },
@@ -67,9 +88,11 @@ export default function ItemEditor({ initialItem, onSave, onCancel }) {
                     },
                     bulk: { value: formData.bulk },
                     usage: { value: formData.usage },
-                    // Add specific fields based on type if needed
-                    damage: formData.damage,
-                    range: formData.range,
+                    // Primary damage
+                    damage: primaryDamage,
+                    // Extra damage entries (custom field for multi-damage)
+                    extraDamage: extraDamages.length > 0 ? extraDamages : undefined,
+                    range: parseInt(formData.range) || null,
                     category: formData.category,
                     group: formData.group
                 }
@@ -79,17 +102,22 @@ export default function ItemEditor({ initialItem, onSave, onCancel }) {
             let filePath = formData.sourceFile;
             let isNew = !filePath;
 
-            if (isNew) {
+            if (!filePath) {
+                // New item - create in custom folder
                 const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                const safeType = formData.type.toLowerCase();
-                filePath = `ressources/equipment/${safeType}s/${safeName}.json`;
+                filePath = `ressources/equipment/custom/${safeName}.json`;
+            } else {
+                // Existing item - ensure path includes ressources/equipment/ prefix
+                if (!filePath.startsWith('ressources/')) {
+                    filePath = `ressources/equipment/${filePath}`;
+                }
             }
 
             // Save File
             const endpoint = isNew ? '/api/files/create' : '/api/files/save';
             const payload = isNew
-                ? { directory: `ressources/equipment/${formData.type.toLowerCase()}s`, filename: `${formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`, content: itemJson }
-                : { filePath: (filePath && !filePath.startsWith('ressources/')) ? `ressources/equipment/${filePath}` : filePath, content: itemJson };
+                ? { directory: 'ressources/equipment/custom', filename: `${formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`, content: itemJson }
+                : { filePath, content: itemJson };
 
             const res = await fetch(endpoint, {
                 method: 'POST',
@@ -115,88 +143,259 @@ export default function ItemEditor({ initialItem, onSave, onCancel }) {
         setFormData(prev => ({ ...prev, [field]: val }));
     };
 
+    // Damage entry management
+    const updateDamage = (index, field, value) => {
+        setFormData(prev => {
+            const newDamages = [...prev.damages];
+            newDamages[index] = { ...newDamages[index], [field]: value };
+            return { ...prev, damages: newDamages };
+        });
+    };
+
+    const addDamage = () => {
+        setFormData(prev => ({
+            ...prev,
+            damages: [...prev.damages, { dice: 1, die: 'd6', damageType: 'fire' }]
+        }));
+    };
+
+    const removeDamage = (index) => {
+        setFormData(prev => ({
+            ...prev,
+            damages: prev.damages.filter((_, i) => i !== index)
+        }));
+    };
+
+    const DAMAGE_TYPES = ['slashing', 'piercing', 'bludgeoning', 'fire', 'cold', 'electricity', 'acid', 'sonic', 'force', 'void', 'vitality', 'poison', 'mental', 'bleed', 'spirit', 'untyped'];
+    const DIE_OPTIONS = ['d4', 'd6', 'd8', 'd10', 'd12'];
+
+    const labelStyle = { display: 'block', color: '#888', fontSize: '0.8em', marginBottom: 4 };
+
     return (
-        <div className="editor-container" style={{ padding: 20, background: '#222', height: '100%', overflowY: 'auto' }}>
-            <h2>{initialItem ? 'Edit Item' : 'Create Item'}</h2>
+        <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+            {/* Left: Editor Form */}
+            <div className="editor-container" style={{ flex: 1, padding: 20, background: '#222', overflowY: 'auto' }}>
+                <h2>{initialItem?.name ? 'Edit Item' : 'Create Item'}</h2>
 
-            {error && <div className="error-banner" style={{ background: '#d32f2f', color: '#fff', padding: 10, marginBottom: 10 }}>{error}</div>}
+                {error && <div style={{ background: '#d32f2f', color: '#fff', padding: 10, marginBottom: 10, borderRadius: 4 }}>{error}</div>}
 
-            <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 20 }}>
-                <div className="form-group">
-                    <label>Name</label>
-                    <input className="modal-input" value={formData.name} onChange={e => handleChange('name', e.target.value)} />
+                {/* Basic Info Grid */}
+                <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10, marginBottom: 20 }}>
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label style={labelStyle}>Name</label>
+                        <input className="modal-input" value={formData.name} onChange={e => handleChange('name', e.target.value)} style={{ width: '100%' }} />
+                    </div>
+                    <div className="form-group">
+                        <label style={labelStyle}>Level</label>
+                        <input type="number" className="modal-input" value={formData.level} onChange={e => handleChange('level', e.target.value)} style={{ width: '100%' }} />
+                    </div>
+                    <div className="form-group">
+                        <label style={labelStyle}>Price (GP)</label>
+                        <input type="number" className="modal-input" value={formData.price} onChange={e => handleChange('price', e.target.value)} style={{ width: '100%' }} />
+                    </div>
+                    <div className="form-group">
+                        <label style={labelStyle}>Type</label>
+                        <select className="modal-input" value={formData.type} onChange={e => handleChange('type', e.target.value)} style={{ width: '100%' }}>
+                            {SHOP_INDEX_FILTER_OPTIONS.types.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label style={labelStyle}>Rarity</label>
+                        <select className="modal-input" value={formData.rarity} onChange={e => handleChange('rarity', e.target.value)} style={{ width: '100%' }}>
+                            {SHOP_INDEX_FILTER_OPTIONS.rarities.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label style={labelStyle}>Category</label>
+                        <input className="modal-input" value={formData.category} onChange={e => handleChange('category', e.target.value)} placeholder="e.g. simple, martial" style={{ width: '100%' }} />
+                    </div>
+                    <div className="form-group">
+                        <label style={labelStyle}>Group</label>
+                        <input className="modal-input" value={formData.group} onChange={e => handleChange('group', e.target.value)} placeholder="e.g. Sword, Bomb" style={{ width: '100%' }} />
+                    </div>
                 </div>
-                <div className="form-group">
-                    <label>Level</label>
-                    <input type="number" className="modal-input" value={formData.level} onChange={e => handleChange('level', e.target.value)} />
+
+                {/* Image/Icon Field */}
+                <div className="form-group" style={{ marginBottom: 20 }}>
+                    <label style={labelStyle}>Icon Image Path</label>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <input
+                            className="modal-input"
+                            value={formData.img || ''}
+                            onChange={e => handleChange('img', e.target.value)}
+                            placeholder="e.g. icons/equipment/weapons/longsword.webp"
+                            style={{ flex: 1 }}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowImagePicker(true)}
+                            style={{
+                                padding: '8px 12px',
+                                background: '#444',
+                                border: 'none',
+                                borderRadius: 4,
+                                color: '#ccc',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >Browse...</button>
+                        {formData.img && (
+                            <img
+                                src={(() => {
+                                    const baseUrl = import.meta.env.PROD ? '' : '/api/static';
+                                    const cleanPath = (formData.img || '').replace('systems/pf2e/', '').replace(/^\//, '');
+                                    return `${baseUrl}/${cleanPath}`;
+                                })()}
+                                alt="Preview"
+                                style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 4,
+                                    objectFit: 'contain',
+                                    background: '#111',
+                                    border: '1px solid #444'
+                                }}
+                                onError={e => e.target.style.display = 'none'}
+                            />
+                        )}
+                    </div>
+                    <div style={{ fontSize: '0.7em', color: '#666', marginTop: 4 }}>
+                        Path relative to ressources/ folder, or click Browse to select
+                    </div>
                 </div>
-                <div className="form-group">
-                    <label>Price (gp)</label>
-                    <input type="number" className="modal-input" value={formData.price} onChange={e => handleChange('price', e.target.value)} />
+
+                <div className="form-group" style={{ marginBottom: 20 }}>
+                    <label style={labelStyle}>Traits</label>
+                    <MultiSelectDropdown
+                        options={SHOP_INDEX_FILTER_OPTIONS.traits}
+                        selected={formData.traits}
+                        onChange={val => handleChange('traits', val)}
+                    />
+                </div>
+
+                {/* Damage Editor */}
+                <div className="form-group" style={{ marginBottom: 20 }}>
+                    <label style={labelStyle}>Damage</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {formData.damages.map((dmg, idx) => (
+                            <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', background: '#1a1a1a', padding: 8, borderRadius: 4 }}>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="20"
+                                    value={dmg.dice || 1}
+                                    onChange={e => updateDamage(idx, 'dice', parseInt(e.target.value) || 1)}
+                                    className="modal-input"
+                                    style={{ width: 50, textAlign: 'center' }}
+                                    title="Number of dice"
+                                />
+                                <select
+                                    value={dmg.die || 'd6'}
+                                    onChange={e => updateDamage(idx, 'die', e.target.value)}
+                                    className="modal-input"
+                                    style={{ width: 60 }}
+                                >
+                                    {DIE_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
+                                <select
+                                    value={dmg.damageType || 'slashing'}
+                                    onChange={e => updateDamage(idx, 'damageType', e.target.value)}
+                                    className="modal-input"
+                                    style={{ flex: 1, minWidth: 100 }}
+                                >
+                                    {DAMAGE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                                <button
+                                    type="button"
+                                    onClick={() => removeDamage(idx)}
+                                    style={{
+                                        padding: '4px 8px',
+                                        background: '#c44',
+                                        border: 'none',
+                                        borderRadius: 4,
+                                        color: '#fff',
+                                        cursor: 'pointer',
+                                        fontSize: '1em'
+                                    }}
+                                    title="Remove damage entry"
+                                >×</button>
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={addDamage}
+                            style={{
+                                padding: '6px 12px',
+                                background: '#3a5',
+                                border: 'none',
+                                borderRadius: 4,
+                                color: '#fff',
+                                cursor: 'pointer',
+                                alignSelf: 'flex-start',
+                                marginTop: 4
+                            }}
+                        >+ Add Damage</button>
+                    </div>
+                </div>
+
+                <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10, marginBottom: 20 }}>
+                    <div className="form-group">
+                        <label style={labelStyle}>Bulk</label>
+                        <input className="modal-input" value={formData.bulk} onChange={e => handleChange('bulk', e.target.value)} style={{ width: '100%' }} />
+                    </div>
+                    <div className="form-group">
+                        <label style={labelStyle}>Range (ft)</label>
+                        <input type="number" className="modal-input" value={formData.range} onChange={e => handleChange('range', e.target.value)} placeholder="0 = melee" style={{ width: '100%' }} />
+                    </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 20 }}>
+                    <label style={labelStyle}>Description</label>
+                    <RichTextEditor value={formData.description} onChange={val => handleChange('description', val)} style={{ height: 300 }} />
+                </div>
+
+                <div className="form-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #444', paddingTop: 20 }}>
+                    <button className="set-btn" style={{ background: '#555' }} onClick={onCancel} disabled={isSaving}>Cancel</button>
+                    <button className="set-btn" onClick={handleSave} disabled={isSaving}>
+                        {isSaving ? 'Saving...' : 'Save Item'}
+                    </button>
                 </div>
             </div>
 
-            <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 20 }}>
-                <div className="form-group">
-                    <label>Type</label>
-                    <select className="modal-input" value={formData.type} onChange={e => handleChange('type', e.target.value)}>
-                        {SHOP_INDEX_FILTER_OPTIONS.types.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                </div>
-                <div className="form-group">
-                    <label>Category</label>
-                    <select className="modal-input" value={formData.category} onChange={e => handleChange('category', e.target.value)}>
-                        <option value="">-</option>
-                        {SHOP_INDEX_FILTER_OPTIONS.categories.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                </div>
-                <div className="form-group">
-                    <label>Rarity</label>
-                    <select className="modal-input" value={formData.rarity} onChange={e => handleChange('rarity', e.target.value)}>
-                        {SHOP_INDEX_FILTER_OPTIONS.rarities.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                </div>
-                <div className="form-group">
-                    <label>Group</label>
-                    <input className="modal-input" value={formData.group} onChange={e => handleChange('group', e.target.value)} placeholder="e.g. Sword, Bomb" />
-                </div>
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 20 }}>
-                <label>Traits</label>
-                <MultiSelectDropdown
-                    options={SHOP_INDEX_FILTER_OPTIONS.traits}
-                    selected={formData.traits}
-                    onChange={val => handleChange('traits', val)}
-                />
-            </div>
-
-            <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10, marginBottom: 20 }}>
-                <div className="form-group">
-                    <label>Bulk</label>
-                    <input className="modal-input" value={formData.bulk} onChange={e => handleChange('bulk', e.target.value)} />
-                </div>
-                <div className="form-group">
-                    <label>Range</label>
-                    <input className="modal-input" value={formData.range} onChange={e => handleChange('range', e.target.value)} />
+            {/* Right: Live Preview */}
+            <div style={{ width: 380, minWidth: 320, borderLeft: '1px solid #444', overflowY: 'auto', padding: 16, background: '#1a1a1a' }}>
+                <h4 style={{ marginTop: 0, color: '#aaa', marginBottom: 16 }}>Live Preview</h4>
+                <div style={{ background: '#2a2a2a', borderRadius: 8, padding: 16 }}>
+                    <ItemDetailContent
+                        item={{
+                            name: formData.name || 'Unnamed Item',
+                            type: formData.type,
+                            level: parseInt(formData.level) || 0,
+                            price: parseFloat(formData.price) || 0,
+                            bulk: formData.bulk,
+                            rarity: formData.rarity,
+                            traits: { value: formData.traits },
+                            range: parseInt(formData.range) || null,
+                            damage: formData.damages[0],
+                            extraDamage: formData.damages.slice(1),
+                            category: formData.category,
+                            group: formData.group,
+                            description: formData.description,
+                            img: formData.img
+                        }}
+                        showImage={true}
+                        compact={false}
+                    />
                 </div>
             </div>
 
-            <div className="form-group" style={{ marginBottom: 20 }}>
-                <label>Description</label>
-                <RichTextEditor value={formData.description} onChange={val => handleChange('description', val)} style={{ height: 300 }} />
-            </div>
-
-            <div className="form-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #444', paddingTop: 20 }}>
-                <button className="set-btn" style={{ background: '#555' }} onClick={onCancel} disabled={isSaving}>Cancel</button>
-                <button className="set-btn" onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? 'Saving...' : 'Save Item'}
-                </button>
-            </div>
-
-            <style>{`
-                .form-group label { display: block; color: #888; font-size: 0.8em; marginBottom: 4px; }
-            `}</style>
+            {/* Image Picker Modal */}
+            <ImagePicker
+                isOpen={showImagePicker}
+                onClose={() => setShowImagePicker(false)}
+                onSelect={(path) => handleChange('img', path)}
+                initialPath="ressources"
+            />
         </div>
     );
 }

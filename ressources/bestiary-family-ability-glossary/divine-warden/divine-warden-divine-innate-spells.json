@@ -1,0 +1,29 @@
+{
+    "_id": "DlHTe9jLssEELY6a",
+    "folder": "DSLPRp6EvxMjlJh1",
+    "img": "systems/pf2e/icons/actions/Passive.webp",
+    "name": "(Divine Warden) Divine Innate Spells",
+    "system": {
+        "actionType": {
+            "value": "passive"
+        },
+        "actions": {
+            "value": null
+        },
+        "category": "offensive",
+        "description": {
+            "value": "<p>A divine warden gains @UUID[Compendium.pf2e.spells-srd.Item.Divine Lance] as an innate cantrip.</p>"
+        },
+        "publication": {
+            "license": "ORC",
+            "remaster": true,
+            "title": "Pathfinder Monster Core 2"
+        },
+        "rules": [],
+        "traits": {
+            "rarity": "common",
+            "value": []
+        }
+    },
+    "type": "action"
+}

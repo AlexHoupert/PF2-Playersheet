@@ -1,0 +1,43 @@
+{
+    "_id": "HVGl2hSrfqHE4OZ2",
+    "img": "icons/containers/bags/sack-simple-leather-tan.webp",
+    "name": "Effect: Alchemical Embalming",
+    "system": {
+        "description": {
+            "value": "<p>You take a –10‐foot penalty to all your Speeds.</p>"
+        },
+        "duration": {
+            "expiry": "turn-start",
+            "sustained": false,
+            "unit": "rounds",
+            "value": 1
+        },
+        "level": {
+            "value": 1
+        },
+        "publication": {
+            "license": "ORC",
+            "remaster": true,
+            "title": "Pathfinder NPC Core"
+        },
+        "rules": [
+            {
+                "key": "FlatModifier",
+                "selector": "all-speeds",
+                "value": -10
+            }
+        ],
+        "start": {
+            "initiative": null,
+            "value": 0
+        },
+        "tokenIcon": {
+            "show": true
+        },
+        "traits": {
+            "rarity": "common",
+            "value": []
+        }
+    },
+    "type": "effect"
+}

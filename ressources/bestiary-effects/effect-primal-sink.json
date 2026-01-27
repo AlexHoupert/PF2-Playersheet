@@ -1,0 +1,48 @@
+{
+    "_id": "45iy8x9ObfnkM97c",
+    "img": "icons/magic/nature/tree-animated-strike.webp",
+    "name": "Effect: Primal Sink",
+    "system": {
+        "description": {
+            "value": "<p>You gain a +1 status bonus to attack rolls, saving throws, skill checks, and sap saving throw DC.</p>"
+        },
+        "duration": {
+            "expiry": "turn-start",
+            "sustained": false,
+            "unit": "rounds",
+            "value": 4
+        },
+        "level": {
+            "value": 6
+        },
+        "publication": {
+            "license": "ORC",
+            "remaster": true,
+            "title": "Pathfinder #201: Pactbreaker"
+        },
+        "rules": [
+            {
+                "key": "FlatModifier",
+                "selector": [
+                    "attack",
+                    "saving-throw",
+                    "sap-inline-dc",
+                    "skill-check"
+                ],
+                "type": "status",
+                "value": 1
+            }
+        ],
+        "start": {
+            "initiative": null,
+            "value": 0
+        },
+        "tokenIcon": {
+            "show": true
+        },
+        "traits": {
+            "value": []
+        }
+    },
+    "type": "effect"
+}

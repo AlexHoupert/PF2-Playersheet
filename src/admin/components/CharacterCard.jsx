@@ -13,7 +13,8 @@ export function CharacterCard({
     updateCharacter,
     setModalMode,
     setModalData,
-    onOpenModalLong // wrapper to handle long press bubbling
+    onOpenModalLong, // wrapper to handle long press bubbling
+    onOpenModal // wrapper to set activeCharIndex before opening modal
 }) {
     const [activeTab, setActiveTab] = useState('stats');
 
@@ -56,10 +57,16 @@ export function CharacterCard({
         });
     };
 
-    // Generic helper for unified API
+    // Generic helper for unified API - uses onOpenModal prop if available, otherwise direct setters
     const handleOpenModal = (mode, data) => {
-        if (data !== undefined) setModalData(data);
-        setModalMode(mode);
+        if (onOpenModal) {
+            // Use the passed handler which sets activeCharIndex
+            onOpenModal(mode, data);
+        } else {
+            // Fallback to direct setting (may not set activeCharIndex)
+            if (data !== undefined) setModalData(data);
+            setModalMode(mode);
+        }
     };
 
     // Derived logic for display

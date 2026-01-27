@@ -1,0 +1,305 @@
+/* CreatureCard.css - Monster/Hazard stat block styling */
+
+.creature-card {
+    background: linear-gradient(145deg, #2a2a2a 0%, #1e1e1e 100%);
+    border: 2px solid #5c3d2e;
+    border-radius: 8px;
+    padding: 16px;
+    max-width: 500px;
+    font-family: inherit;
+    color: #e0e0e0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.creature-card.hazard {
+    border-color: #6b5b3e;
+}
+
+/* Header */
+.creature-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.creature-name {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #f5deb3;
+    font-weight: 600;
+}
+
+.creature-level {
+    background: #5c3d2e;
+    color: #f5deb3;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.hazard .creature-level {
+    background: #6b5b3e;
+}
+
+/* Traits */
+.creature-traits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.trait-pill {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Divider */
+.creature-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #5c3d2e, transparent);
+    margin: 12px 0;
+}
+
+.creature-divider.gm-divider {
+    background: linear-gradient(90deg, transparent, #7c5cae, transparent);
+}
+
+/* Sections */
+.creature-section {
+    margin: 6px 0;
+    line-height: 1.5;
+}
+
+.creature-section strong {
+    color: #c9a86c;
+}
+
+/* Combat stats */
+.combat-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.save-ranking {
+    font-size: 0.8em;
+    opacity: 0.7;
+    font-style: italic;
+}
+
+/* Defenses */
+.defenses {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Attacks */
+.creature-attack {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px;
+    margin: 4px 0;
+}
+
+.action-icon {
+    color: #c9a86c;
+    font-weight: bold;
+    margin-right: 4px;
+}
+
+.attack-name {
+    font-weight: 500;
+}
+
+.map {
+    color: #888;
+    font-size: 0.85em;
+}
+
+.attack-traits {
+    color: #888;
+    font-size: 0.9em;
+}
+
+.damage {
+    color: #e0e0e0;
+}
+
+.attack-effects {
+    color: #81c784;
+    font-style: italic;
+}
+
+/* Abilities */
+.creature-ability {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    margin: 4px 8px 4px 0;
+    padding: 2px 6px;
+    background: rgba(92, 61, 46, 0.3);
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.creature-ability:hover {
+    background: rgba(92, 61, 46, 0.5);
+}
+
+.ability-traits {
+    color: #888;
+    font-size: 0.85em;
+}
+
+/* Info section */
+.info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.skill-name {
+    color: #e0e0e0;
+}
+
+.skill-special {
+    color: #888;
+    font-size: 0.9em;
+}
+
+/* GM Only section */
+.gm-only {
+    background: rgba(124, 92, 174, 0.1);
+    border: 1px solid rgba(124, 92, 174, 0.3);
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-top: 4px;
+}
+
+.gm-label {
+    color: #7c5cae;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.dc-variants {
+    color: #888;
+    font-size: 0.9em;
+}
+
+/* Hazard-specific */
+.hazard-description {
+    font-style: italic;
+    color: #bbb;
+}
+
+/* Redacted blocks */
+.redacted-block {
+    display: inline-block;
+    background: linear-gradient(90deg, #333, #444, #333);
+    color: #333;
+    padding: 0 4px;
+    border-radius: 2px;
+    user-select: none;
+    font-family: monospace;
+    animation: redactedShimmer 2s infinite;
+}
+
+.redacted-block.name-redacted {
+    font-size: 1.2em;
+    min-width: 120px;
+}
+
+@keyframes redactedShimmer {
+
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* Context menu */
+.context-menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+}
+
+.creature-context-menu {
+    position: fixed;
+    z-index: 1000;
+    background: #2a2a2a;
+    border: 1px solid #5c3d2e;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    min-width: 160px;
+    padding: 4px 0;
+}
+
+.creature-context-menu .context-menu-title {
+    padding: 6px 12px;
+    color: #888;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #444;
+}
+
+.creature-context-menu button {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    color: #e0e0e0;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.creature-context-menu button:hover {
+    background: rgba(92, 61, 46, 0.4);
+}
+
+/* Muted text */
+.muted {
+    color: #666;
+}
+
+/* Mobile back button */
+@media (max-width: 768px) {
+    .mobile-back-btn {
+        display: block !important;
+    }
+}
+
+/* Condition links */
+.condition-link {
+    color: #81c784;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.condition-link:hover {
+    color: #a5d6a7;
+}

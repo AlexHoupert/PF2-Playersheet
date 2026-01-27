@@ -460,6 +460,27 @@ export function ManageHPModal({ character, updateCharacter, onClose }) {
     const [editVal, setEditVal] = useState("");
     const [showTempHp, setShowTempHp] = useState(false);
 
+    // Safety check: if no character is provided, show a message instead of crashing
+    if (!character || !character.stats || !character.stats.hp) {
+        return (
+            <div style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
+                display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
+            }} onClick={onClose}>
+                <div style={{
+                    backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
+                    padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
+                    color: '#e0e0e0', textAlign: 'center'
+                }} onClick={e => e.stopPropagation()}>
+                    <h2>No Character Selected</h2>
+                    <p style={{ color: '#888' }}>Please select a character first.</p>
+                    <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,

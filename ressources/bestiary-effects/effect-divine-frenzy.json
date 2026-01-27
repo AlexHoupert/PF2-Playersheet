@@ -1,0 +1,70 @@
+{
+    "_id": "1zAL0XwjCx6koYWL",
+    "img": "systems/pf2e/icons/spells/augury.webp",
+    "name": "Effect: Divine Frenzy",
+    "system": {
+        "description": {
+            "value": "<p>You take a –2 penalty to Perception checks and Will saves and gain a +2 status bonus to your spell DC and spell attack modifier. You can't use actions with the concentrate trait unless you're Casting a Spell or Seeking.</p>"
+        },
+        "duration": {
+            "expiry": "turn-end",
+            "sustained": false,
+            "unit": "minutes",
+            "value": 1
+        },
+        "level": {
+            "value": 3
+        },
+        "publication": {
+            "license": "ORC",
+            "remaster": true,
+            "title": "Pathfinder NPC Core"
+        },
+        "rules": [
+            {
+                "key": "Note",
+                "predicate": [
+                    "concentrate",
+                    {
+                        "nor": [
+                            "action:cast-a-spell",
+                            "action:seek"
+                        ]
+                    }
+                ],
+                "selector": "all",
+                "text": "{item|system.description.value}",
+                "title": "{item|name}",
+                "visibility": "owner"
+            },
+            {
+                "key": "FlatModifier",
+                "selector": [
+                    "perception",
+                    "will"
+                ],
+                "value": -2
+            },
+            {
+                "key": "FlatModifier",
+                "selector": [
+                    "spell-dc",
+                    "spell-attack"
+                ],
+                "type": "status",
+                "value": 2
+            }
+        ],
+        "start": {
+            "initiative": null,
+            "value": 0
+        },
+        "tokenIcon": {
+            "show": true
+        },
+        "traits": {
+            "value": []
+        }
+    },
+    "type": "effect"
+}

@@ -19,6 +19,30 @@ const ARMOR_RANKS = [
  * @returns {JSX.Element}
  */
 export function ACModal({ character, updateCharacter, onClose }) {
+    // Safety check: if no character is provided, show a message
+    if (!character) {
+        return (
+            <div style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1100,
+                display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
+            }} onClick={onClose}>
+                <div style={{
+                    backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
+                    borderRadius: '8px', maxWidth: '400px', width: '100%',
+                    color: '#e0e0e0', padding: 20, textAlign: 'center'
+                }} onClick={e => e.stopPropagation()}>
+                    <h2>No Character Selected</h2>
+                    <p style={{ color: '#888' }}>Please select a character first.</p>
+                    <button onClick={onClose} style={{
+                        marginTop: 20, width: '100%', padding: '10px', background: '#c5a059',
+                        border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', color: '#1a1a1d'
+                    }}>Close</button>
+                </div>
+            </div>
+        );
+    }
+
     const acData = getArmorClassData(character);
     const inventory = Array.isArray(character?.inventory) ? character.inventory : [];
 
@@ -252,6 +276,30 @@ export function ACModal({ character, updateCharacter, onClose }) {
 export function ShieldModal({ character, updateCharacter, onClose }) {
     const [editVal, setEditVal] = useState("");
 
+    // Safety check: if no character is provided, show a message
+    if (!character || !character.inventory) {
+        return (
+            <div style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1100,
+                display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
+            }} onClick={onClose}>
+                <div style={{
+                    backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
+                    borderRadius: '8px', maxWidth: '400px', width: '100%',
+                    color: '#e0e0e0', padding: 20, textAlign: 'center'
+                }} onClick={e => e.stopPropagation()}>
+                    <h2>No Character Selected</h2>
+                    <p style={{ color: '#888' }}>Please select a character first.</p>
+                    <button onClick={onClose} style={{
+                        marginTop: 20, width: '100%', padding: '10px', background: '#c5a059',
+                        border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', color: '#1a1a1d'
+                    }}>Close</button>
+                </div>
+            </div>
+        );
+    }
+
     const inventory = Array.isArray(character.inventory) ? character.inventory : [];
     const shields = inventory.filter(i => {
         const fromIndex = i?.name ? getShopIndexItemByName(i.name) : null;
@@ -265,7 +313,7 @@ export function ShieldModal({ character, updateCharacter, onClose }) {
     if (!equippedShield) {
         content = <div>No shield equipped.</div>;
     } else {
-        const shieldHp = character.stats.ac.shield_hp || 0;
+        const shieldHp = character.stats?.ac?.shield_hp || 0;
         const fromIndex = equippedShield?.name ? getShopIndexItemByName(equippedShield.name) : null;
         const merged = fromIndex ? { ...fromIndex, ...equippedShield } : equippedShield;
         const shieldMax = (merged.hpMax) || (merged.system?.hp?.max) || 20;

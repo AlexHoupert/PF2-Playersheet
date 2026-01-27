@@ -1,0 +1,50 @@
+{
+    "_id": "Xf5zZEYgLL4ku11j",
+    "img": "icons/skills/melee/strike-dagger-blood-red.webp",
+    "name": "Effect: You'll Pay for That",
+    "system": {
+        "description": {
+            "value": "<p>You gain a +5 status bonus to your next damage roll against the marked enemy.</p>"
+        },
+        "duration": {
+            "expiry": null,
+            "sustained": false,
+            "unit": "unlimited",
+            "value": -1
+        },
+        "level": {
+            "value": 12
+        },
+        "publication": {
+            "license": "ORC",
+            "remaster": true,
+            "title": "Pathfinder NPC Core"
+        },
+        "rules": [
+            {
+                "key": "TokenMark",
+                "slug": "youll-pay-for-that"
+            },
+            {
+                "key": "FlatModifier",
+                "predicate": [
+                    "target:mark:youll-pay-for-that"
+                ],
+                "selector": "damage",
+                "type": "status",
+                "value": 5
+            }
+        ],
+        "start": {
+            "initiative": null,
+            "value": 0
+        },
+        "tokenIcon": {
+            "show": true
+        },
+        "traits": {
+            "value": []
+        }
+    },
+    "type": "effect"
+}

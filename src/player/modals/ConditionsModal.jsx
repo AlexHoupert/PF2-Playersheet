@@ -106,9 +106,22 @@ export function ConditionsModal({
      */
     const getListForTab = (tab) => {
         if (tab === 'ACTIVE') {
+            // Handle conditions that can be strings or objects, with or without level
             return safeConds
-                .filter(c => (c.level > 0))
-                .map(c => c.name);
+                .filter(c => {
+                    // If string, it's active with level 1
+                    if (typeof c === 'string') return true;
+                    // If object, check if it has a level > 0, or if it's a binary condition (no level means active)
+                    const name = c?.name || '';
+                    const level = c?.level;
+                    // For valued conditions, need level > 0; for binary conditions, just being present means active
+                    if (level === undefined || level === null) {
+                        // Binary condition - just being present means active
+                        return !isConditionValued(name);
+                    }
+                    return level > 0;
+                })
+                .map(c => (typeof c === 'string') ? c : c?.name);
         }
         if (tab === 'NEGATIVE') return NEG_CONDS;
         if (tab === 'POSITIVE') return POS_CONDS;
@@ -277,7 +290,7 @@ export function ConditionsModal({
                     items: ['frightened', 'clumsy', 'drained', 'enfeebled', 'stupefied', 'sickened', 'fatigued', 'encumbered', 'slowed']
                 },
                 { title: 'Senses', items: ['blinded', 'dazzled', 'deafened'] },
-                { title: 'Mental', items: ['confused', 'controlled', 'fascinated','fleeing'] },
+                { title: 'Mental', items: ['confused', 'controlled', 'fascinated', 'fleeing'] },
                 {
                     title: 'Death and Injury',
                     items: ['doomed', 'dying', 'unconscious', 'wounded', 'persistent damage']

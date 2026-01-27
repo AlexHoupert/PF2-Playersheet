@@ -94,10 +94,16 @@ export default function FeatsView({ onInspectItem }) {
         const targets = contextMenu?.items || [];
         if (targets.length === 0) return;
 
+        const itemName = targets[0];
+        const item = sortedItems.find(i => i.name === itemName);
+
         if (action === 'edit') {
-            const itemName = targets[0];
-            const item = sortedItems.find(i => i.name === itemName);
             if (item) setEditingItem(item);
+        } else if (action === 'clone') {
+            if (item) {
+                const cloned = { ...item, name: item.name + ' (Copy)' };
+                setEditingItem(cloned);
+            }
         }
         setContextMenu(null);
     };
@@ -257,7 +263,8 @@ export default function FeatsView({ onInspectItem }) {
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer' }} onClick={() => performContextAction('edit')}>Edit Feat</div>
+                        <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #444' }} onClick={() => performContextAction('clone')}>📋 Clone Feat</div>
+                        <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer' }} onClick={() => performContextAction('edit')}>✏️ Edit Feat</div>
                         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }} onClick={() => setContextMenu(null)}></div>
                     </div>
                 )

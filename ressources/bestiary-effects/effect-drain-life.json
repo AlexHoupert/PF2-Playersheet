@@ -1,0 +1,41 @@
+{
+    "_id": "LRIYUFQ7FE9H4RWD",
+    "img": "icons/magic/unholy/hand-claw-glow-orange.webp",
+    "name": "Effect: Drain Life",
+    "system": {
+        "description": {
+            "value": "<p>You gain temporary Hit Points.</p>"
+        },
+        "duration": {
+            "expiry": null,
+            "sustained": false,
+            "unit": "unlimited",
+            "value": -1
+        },
+        "level": {
+            "value": 1
+        },
+        "publication": {
+            "license": "OGL",
+            "remaster": false,
+            "title": "Pathfinder Bestiary"
+        },
+        "rules": [
+            {
+                "key": "TempHP",
+                "value": "@item.origin.flags.pf2e.drainLifeTempHP"
+            }
+        ],
+        "start": {
+            "initiative": null,
+            "value": 0
+        },
+        "tokenIcon": {
+            "show": false
+        },
+        "traits": {
+            "value": []
+        }
+    },
+    "type": "effect"
+}

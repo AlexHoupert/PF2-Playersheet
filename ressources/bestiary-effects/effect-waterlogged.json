@@ -1,0 +1,49 @@
+{
+    "_id": "UxNq9uo1GpDYTi5Z",
+    "img": "icons/magic/water/wave-water-blue.webp",
+    "name": "Effect: Waterlogged",
+    "system": {
+        "description": {
+            "value": "<p>Your size grows to Gargantuan and you take a –15 penalty to your Speed.</p>"
+        },
+        "duration": {
+            "expiry": null,
+            "sustained": false,
+            "unit": "unlimited",
+            "value": -1
+        },
+        "level": {
+            "value": 15
+        },
+        "publication": {
+            "license": "ORC",
+            "remaster": true,
+            "title": "Pathfinder Monster Core 2"
+        },
+        "rules": [
+            {
+                "key": "CreatureSize",
+                "value": "gargantuan"
+            },
+            {
+                "key": "FlatModifier",
+                "selector": [
+                    "land-speed"
+                ],
+                "value": -15
+            }
+        ],
+        "start": {
+            "initiative": null,
+            "value": 0
+        },
+        "tokenIcon": {
+            "show": true
+        },
+        "traits": {
+            "rarity": "common",
+            "value": []
+        }
+    },
+    "type": "effect"
+}

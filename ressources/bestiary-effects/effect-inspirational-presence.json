@@ -1,0 +1,53 @@
+{
+    "_id": "CiCG3r7SHYMJeUxz",
+    "img": "icons/sundries/books/book-symbol-reverse-blue.webp",
+    "name": "Effect: Inspirational Presence",
+    "system": {
+        "description": {
+            "value": "<p>Any of the teacher's students in the aura gains a +1 circumstance bonus to Recall Knowledge.</p>"
+        },
+        "duration": {
+            "expiry": null,
+            "sustained": false,
+            "unit": "unlimited",
+            "value": -1
+        },
+        "level": {
+            "value": 0
+        },
+        "publication": {
+            "license": "ORC",
+            "remaster": true,
+            "title": "Pathfinder NPC Core"
+        },
+        "rules": [
+            {
+                "key": "RollOption",
+                "option": "inspirational-presence",
+                "toggleable": true
+            },
+            {
+                "key": "FlatModifier",
+                "predicate": [
+                    "action:recall-knowledge",
+                    "inspirational-presence"
+                ],
+                "selector": "skill-check",
+                "type": "circumstance",
+                "value": 1
+            }
+        ],
+        "start": {
+            "initiative": null,
+            "value": 0
+        },
+        "tokenIcon": {
+            "show": true
+        },
+        "traits": {
+            "rarity": "common",
+            "value": []
+        }
+    },
+    "type": "effect"
+}

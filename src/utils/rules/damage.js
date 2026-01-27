@@ -45,7 +45,10 @@ export function calculateWeaponDamage(weapon, character) {
     const str = parseInt(character.stats?.attributes?.strength) || 0;
     const traits = (weapon.traits?.value || weapon.traits || []).map(t => String(t).toLowerCase());
 
-    const isRanged = /ranged|firearm|crossbow|bow|bomb/.test(weapon.group || '') || traits.includes('thrown');
+    // Check if ranged: group matches ranged types, has thrown trait, OR has a range value
+    const rangeValue = weapon.system?.range ?? weapon.range;
+    const hasRange = rangeValue && (typeof rangeValue === 'number' ? rangeValue > 0 : parseInt(rangeValue) > 0);
+    const isRanged = /ranged|firearm|crossbow|bow|bomb/.test(weapon.group || '') || traits.includes('thrown') || hasRange;
     const isPropulsive = traits.includes('propulsive');
     const isThrown = traits.includes('thrown');
 

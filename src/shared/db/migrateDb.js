@@ -103,5 +103,43 @@ export function migrateDb(db) {
     if (!Array.isArray(next.shop.availableItems)) next.shop.availableItems = [];
     if (!Array.isArray(next.shop.traders)) next.shop.traders = [];
 
+    // --- 6. Lore Normalization ---
+    if (!next.lore || typeof next.lore !== 'object') {
+        next.lore = {
+            articles: [
+                {
+                    "id": "1",
+                    "title": "History of the Realm",
+                    "category": "history",
+                    "content": "The realm was founded in the **Age of Fire**...\n\nSee also: [[The First King]]",
+                    "image": "ressources/icons/cards/history.webp",
+                    "tags": ["intro"]
+                },
+                {
+                    "id": "2",
+                    "title": "The First King",
+                    "category": "history",
+                    "content": "The first king was a dragon...",
+                    "image": null,
+                    "tags": ["king"]
+                },
+                {
+                    "id": "3",
+                    "title": "Greenwood Forest",
+                    "category": "locations",
+                    "content": "A dense forest inhabited by elves.",
+                    "image": "ressources/icons/cards/locations.webp"
+                },
+                {
+                    "id": "4",
+                    "title": "Goblin",
+                    "category": "bestiary",
+                    "content": "Small, angry creatures.",
+                    "image": "ressources/icons/cards/bestiary.webp"
+                }
+            ]
+        };
+    }
+
     return next;
 }

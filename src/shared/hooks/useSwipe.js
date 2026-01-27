@@ -4,7 +4,7 @@ import { useRef, useEffect } from 'react';
  * Custom hook to detect swipe gestures and prevent accidental clicks.
  * Uses Touch and Mouse events for broad compatibility.
  */
-export function useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, threshold = 50, disabled = false }) {
+export function useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, threshold = 50, disabled = false, excludeSelectors = [] }) {
     const startObj = useRef(null); // {x, y}
     const currentObj = useRef(null); // {x, y}
     const isDragging = useRef(false);
@@ -133,15 +133,28 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, th
         }
     };
 
+    // Helper to check exclusion
+    const isExcluded = (target) => {
+        if (!excludeSelectors || excludeSelectors.length === 0) return false;
+        return excludeSelectors.some(selector => target.closest(selector));
+    };
+
     // --- HANDLERS ---
     const onTouchStart = (e) => {
         if (disabledRef.current) return;
+        if (isExcluded(e.target)) return;
         start(e.targetTouches[0].clientX, e.targetTouches[0].clientY);
     };
     const onTouchMove = (e) => {
         if (disabledRef.current) return;
+        // Don't check exclusion here strictly if we already started? 
+        // Actually if we prevent start, move won't trigger drag logic because startObj is null/reset or check happens in move.
+        // But let's act safe.
+        // If we didn't start, move shouldn't do anything.
+        // Logic in 'move': check startObj.current.
         move(e.targetTouches[0].clientX, e.targetTouches[0].clientY);
     };
+
     const onTouchEnd = () => {
         if (disabledRef.current) return;
         end();
@@ -155,6 +168,7 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, th
 
     const onMouseDown = (e) => {
         if (disabledRef.current) return;
+        if (isExcluded(e.target)) return;
         isMouseDown.current = true;
         start(e.clientX, e.clientY);
     };

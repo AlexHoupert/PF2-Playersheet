@@ -1,0 +1,36 @@
+{
+    "name": "Emberwalker Boots",
+    "type": "equipment",
+    "img": "icons/equipment/feet/boots-leather-red.webp",
+    "system": {
+        "description": {
+            "value": "These sleek red boots feel pleasantly warm to the touch. While wearing emberwalker boots, you gain <span style=\"color: #c5a059\">resistance 1</span> to fire damage and ignore fire effects on surfaces.\n---\n<b><span>Activate</span></b>—<span style=\"color: #c5a059\">Ember Step</span> [two-actions] (manipulate)\n<b>Frequency </b>once per day\n\nEffect You Stride. Each square you move through during your Stride is scorched with bright flames, becoming hazardous terrain for 1 minute. A non-flying creature that moves through one of these spaces takes 1 fire damage."
+        },
+        "level": {
+            "value": 2
+        },
+        "price": {
+            "value": {
+                "gp": 20
+            }
+        },
+        "traits": {
+            "value": [],
+            "rarity": "uncommon"
+        },
+        "bulk": {
+            "value": ""
+        },
+        "usage": {
+            "value": ""
+        },
+        "damage": {
+            "dice": 1,
+            "die": "d6",
+            "damageType": "slashing"
+        },
+        "range": null,
+        "category": "",
+        "group": "Boots"
+    }
+}

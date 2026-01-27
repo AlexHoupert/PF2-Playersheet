@@ -65,6 +65,52 @@ async function createServer() {
         }
     });
 
+    // LIST DIRECTORY
+    app.get('/api/files/list', async (req, res) => {
+        try {
+            const { directory = 'ressources' } = req.query;
+
+            const absolutePath = path.resolve(__dirname, '..', directory);
+            if (!absolutePath.startsWith(path.resolve(__dirname, '..'))) {
+                return res.status(403).json({ error: 'Access denied: Path outside project root' });
+            }
+
+            // Check if directory exists
+            try {
+                await fs.access(absolutePath);
+            } catch (e) {
+                return res.status(404).json({ error: 'Directory not found' });
+            }
+
+            const entries = await fs.readdir(absolutePath, { withFileTypes: true });
+
+            const items = entries
+                .filter(entry => {
+                    // Filter out hidden files and non-image files for images mode
+                    if (entry.name.startsWith('.')) return false;
+                    return true;
+                })
+                .map(entry => ({
+                    name: entry.name,
+                    isDirectory: entry.isDirectory(),
+                    path: path.posix.join(directory, entry.name).replace(/\\/g, '/'),
+                    // Add extension for files
+                    extension: entry.isDirectory() ? null : path.extname(entry.name).toLowerCase()
+                }))
+                .sort((a, b) => {
+                    // Directories first, then alphabetically
+                    if (a.isDirectory && !b.isDirectory) return -1;
+                    if (!a.isDirectory && b.isDirectory) return 1;
+                    return a.name.localeCompare(b.name);
+                });
+
+            res.json({ success: true, items, path: directory });
+        } catch (err) {
+            console.error(`[File] List Error: ${err.message}`);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // CREATE FILE
     app.post('/api/files/create', async (req, res) => {
         try {
@@ -143,6 +189,10 @@ async function createServer() {
                 break;
             case 'actions':
                 command = `${npmCmd} run build:actions`;
+                break;
+            case 'creatures':
+            case 'bestiary':
+                command = `${npmCmd} run build:creatures`;
                 break;
             case 'all':
                 command = `${npmCmd} run build:data`;

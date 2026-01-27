@@ -101,6 +101,7 @@ export function InventoryView({
                 equipTapTimeoutRef.current = setTimeout(() => {
                     onInspectItem(merged);
                     equipTapTimeoutRef.current = null;
+                    equipTapRef.current = { key: null, time: 0 }; // Reset for fresh double-tap detection
                 }, 260);
             };
         } else {
@@ -145,6 +146,7 @@ export function InventoryView({
                     equipTapTimeoutRef.current = setTimeout(() => {
                         onInspectItem(merged);
                         equipTapTimeoutRef.current = null;
+                        equipTapRef.current = { key: null, time: 0 }; // Reset for fresh double-tap detection
                     }, 260);
                 }
             };
