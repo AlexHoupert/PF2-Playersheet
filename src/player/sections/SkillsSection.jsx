@@ -26,16 +26,26 @@ export function SkillsSection({ character, onOpenModal, onLongPress }) {
 
     const renderSkills = () => {
         return Object.entries(character.skills).sort().map(([name, val]) => {
-            if ((!val && val !== 0) && name.startsWith("Lore")) return null;
+            // Legacy check: some old dbs might have null values, ignore unless explicitly 0
+            if (!val && val !== 0) return null;
 
             const calc = calculateStat(character, name, val);
             const isTrained = val > 0;
-            const baseSkill = name.split('_')[0].toLowerCase();
-            const ability = baseSkill === 'lore' ? 'Int' : skillAbility[baseSkill];
+
+            // Dynamic Lore Detection
+            let ability = skillAbility[name.toLowerCase()];
+            // If not in map, check if it looks like a Lore skill
+            if (!ability && name.toLowerCase().includes('lore')) {
+                ability = 'Int';
+            }
+
             const rawName = name.replace('_', ' ');
             let displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+
+            // Adjust specific names if needed (though map handles keys)
             if (displayName === 'Intimidate') displayName = 'Intimidation';
             if (displayName === 'Perform') displayName = 'Performance';
+
             const label = ability ? `${displayName} (${ability})` : displayName;
 
             return (
@@ -59,6 +69,16 @@ export function SkillsSection({ character, onOpenModal, onLongPress }) {
     return (
         <div>
             {renderSkills()}
+
+            <div style={{ marginTop: 15, display: 'flex', justifyContent: 'center' }}>
+                <button
+                    className="add-item-btn"
+                    onClick={() => onOpenModal('add_lore')}
+                    style={{ padding: '8px 16px', fontSize: '0.9em' }}
+                >
+                    + Add Lore
+                </button>
+            </div>
         </div>
     );
 }

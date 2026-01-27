@@ -198,6 +198,11 @@ export function EditProficiencyModal({ character, updateCharacter, onClose, moda
 
     const currentVal = isSkill ? (character.skills[key] || (key === 'Performance' ? character.skills['Perform'] : 0)) : (isSave ? (character.stats.saves?.[key] || 0) : (isImpulse ? (character.stats.impulse_proficiency || 0) : character.stats.class_dc));
 
+    // Determine if this is a custom lore (starts with "Lore") or otherwise removable
+    // Standard skills: acrobatics, arcana, athletics, crafting, deception, diplomacy, intimidation, medicine, nature, occultism, performance, religion, society, stealth, survival, thievery
+    // We allow removing anything that isn't a core system skill if we wanted, but specifically targeting Lores for now.
+    const isCustomLore = isSkill && key.startsWith('Lore');
+
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -240,7 +245,115 @@ export function EditProficiencyModal({ character, updateCharacter, onClose, moda
                         <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.class_dc = (c.stats.class_dc || 10) + 1)}>+</button>
                     </div>
                 )}
+
+                {isCustomLore && (
+                    <button className="set-btn" style={{ marginTop: 20, background: '#d32f2f', color: '#fff' }} onClick={() => {
+                        updateCharacter(c => {
+                            delete c.skills[key];
+                        });
+                        onClose();
+                    }}>
+                        Remove Skill
+                    </button>
+                )}
+
                 <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Modal to add a new Lore skill.
+ * @param {Object} props
+ * @param {Function} props.updateCharacter - Function to update the character state.
+ * @param {Function} props.onClose - Function to close the modal.
+ * @returns {JSX.Element}
+ */
+export function AddLoreModal({ updateCharacter, onClose }) {
+    const [name, setName] = useState("");
+    const [rank, setRank] = useState(2); // Default to Trained
+
+    const cleanName = name.trim();
+    const finalKey = cleanName.toLowerCase().startsWith('lore') ? cleanName : `Lore: ${cleanName}`;
+    const isValid = cleanName.length > 0;
+
+    const handleSave = () => {
+        if (!isValid) return;
+        updateCharacter(c => {
+            if (!c.skills) c.skills = {};
+            // Capitalize for display key if simpler, but key consistency matters.
+            // Using title case for key usually: "Lore: Explosives"
+            // The system seems to use keys as display names often, or keys like "Lore_1".
+            // Let's ensure proper formatting.
+            // If user typed "explosives", we make "Lore: Explosives".
+            // If "Lore: explosives", we make "Lore: Explosives".
+
+            let displayName = cleanName;
+            if (displayName.toLowerCase().startsWith('lore:')) {
+                displayName = displayName.substring(5).trim();
+            } else if (displayName.toLowerCase().startsWith('lore')) {
+                // edge case "LoreExplosives" - probably rare, treat as is
+            }
+
+            // Reconstruct nicely
+            displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+            const key = `Lore: ${displayName}`;
+
+            c.skills[key] = rank;
+        });
+        onClose();
+    };
+
+    return (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
+            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
+        }} onClick={onClose}>
+            <div style={{
+                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
+                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
+                color: '#e0e0e0', textAlign: 'center'
+            }} onClick={e => e.stopPropagation()}>
+                <h2>Add Lore Skill</h2>
+
+                <div className="modal-form-group">
+                    <label>Skill Name</label>
+                    <input
+                        className="modal-input"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        placeholder="e.g. Explosives, Undead..."
+                        autoFocus
+                    />
+                    <div style={{ fontSize: '0.8em', color: '#888', marginTop: 5 }}>
+                        Will appear as <strong>{finalKey}</strong>
+                    </div>
+                </div>
+
+                <div className="modal-form-group">
+                    <label>Initial Proficiency</label>
+                    <select
+                        className="modal-input"
+                        value={rank}
+                        onChange={e => setRank(parseInt(e.target.value))}
+                    >
+                        {ARMOR_RANKS.filter(r => r.value > 0).map(r => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <button
+                    className="set-btn"
+                    onClick={handleSave}
+                    disabled={!isValid}
+                    style={{ opacity: isValid ? 1 : 0.5 }}
+                >
+                    Add Skill
+                </button>
+                <button className="set-btn" onClick={onClose} style={{ marginTop: 10, background: '#444' }}>Cancel</button>
             </div>
         </div>
     );

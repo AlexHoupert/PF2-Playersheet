@@ -11,7 +11,7 @@ import {
     EditGoldModal, EditLevelModal, EditHPModal, EditSpeedModal,
     EditAttributeModal, EditProficiencyModal, EditArmorProficiencyModal,
     EditLanguagesModal, EditItemProficienciesModal, EditPerceptionModal,
-    ManageHPModal, AddActionModal, ContextModal
+    ManageHPModal, AddActionModal, ContextModal, AddLoreModal
 } from './modals/SimpleModals';
 
 import { ACModal, ShieldModal } from './modals/ACModals';
@@ -99,6 +99,10 @@ export function ModalManager({
                 removeFromCharacter={removeFromCharacter}
             />
         );
+    }
+
+    if (modalMode === 'add_lore') {
+        return <AddLoreModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
     }
 
     if (modalMode === 'gold') {
