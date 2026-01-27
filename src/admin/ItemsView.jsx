@@ -6,6 +6,7 @@ import { SHOP_CATEGORIES } from '../shared/constants/shop';
 import { deepClone } from '../shared/utils/deepClone';
 import { SHOP_INDEX_FILTER_OPTIONS, SHOP_INDEX_ITEMS, fetchShopItemDetailBySourceFile } from '../shared/catalog/shopIndex';
 import { shouldStack } from '../shared/utils/inventoryUtils';
+import SpellScrollSelectorModal from '../player/modals/SpellScrollSelectorModal';
 
 const uniqueTypes = SHOP_INDEX_FILTER_OPTIONS.types;
 const uniqueCategories = SHOP_INDEX_FILTER_OPTIONS.categories;
@@ -35,6 +36,7 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
     const [contextMenu, setContextMenu] = useState(null);
 
     const [editingItem, setEditingItem] = useState(null); // null = list, {} = create, object = edit
+    const [scrollSelectorData, setScrollSelectorData] = useState(null);
 
     const [newTraderName, setNewTraderName] = useState('');
 
@@ -256,13 +258,41 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
         setContextMenu({ x, y, items: newSelected, openUpwards });
     };
 
-    const performContextAction = (action, payload) => {
-        const targets = contextMenu?.items || [];
+    const performContextAction = (action, payload, itemOverride = null) => {
+        // Resolve targets to Item Objects
+        let targets = [];
+        if (itemOverride) {
+            targets = [itemOverride];
+        } else {
+            const names = contextMenu?.items || [];
+            targets = names.map(name => {
+                return sortedGlobalItems.find(i => i.name === name) || SHOP_INDEX_ITEMS.find(i => i.name === name) || { name };
+            });
+        }
+
         if (targets.length === 0) return;
 
+        // SCROLL CHECK (Only if not already overridden)
+        if (!itemOverride && (action === 'addToLoot' || action === 'givePlayer' || action === 'assignTrader')) {
+            const firstScroll = targets.find(i => i.name.match(/(?:Scroll of Rank (\d+)|Scroll of (\d+)(?:st|nd|rd|th)?-rank Spell)|(?:Wand of Rank (\d+)|Magic Wand \((\d+)(?:st|nd|rd|th)?-Rank Spell\))/i));
+            if (firstScroll) {
+                const scrollMatch = firstScroll.name.match(/(?:Scroll of Rank (\d+)|Scroll of (\d+)(?:st|nd|rd|th)?-rank Spell)/i);
+                const wandMatch = firstScroll.name.match(/(?:Wand of Rank (\d+)|Magic Wand \((\d+)(?:st|nd|rd|th)?-Rank Spell\))/i);
+
+                if (scrollMatch) {
+                    setScrollSelectorData({ mode: 'SELECT_SPELL', rank: parseInt(scrollMatch[1] || scrollMatch[2]), type: 'scroll', baseItem: firstScroll, action, payload });
+                    setContextMenu(null);
+                    return;
+                } else if (wandMatch) {
+                    setScrollSelectorData({ mode: 'SELECT_SPELL', rank: parseInt(wandMatch[1] || wandMatch[2]), type: 'wand', baseItem: firstScroll, action, payload });
+                    setContextMenu(null);
+                    return;
+                }
+            }
+        }
+
         if (action === 'edit') {
-            const itemName = targets[0]; // Edit single item
-            const item = sortedGlobalItems.find(i => i.name === itemName) || SHOP_INDEX_ITEMS.find(i => i.name === itemName); // Fallback search
+            const item = targets[0];
             if (item && item.sourceFile) {
                 // Fetch full item data including description
                 fetchShopItemDetailBySourceFile(item.sourceFile)
@@ -283,8 +313,7 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
         }
 
         if (action === 'clone') {
-            const itemName = targets[0];
-            const item = sortedGlobalItems.find(i => i.name === itemName) || SHOP_INDEX_ITEMS.find(i => i.name === itemName);
+            const item = targets[0];
             if (item) {
                 const cloned = { ...item, name: item.name + ' (Copy)' };
                 setEditingItem(cloned);
@@ -300,7 +329,8 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                 const next = deepClone(prev);
                 if (!next.shop) next.shop = { customItems: {} };
 
-                targets.forEach(name => {
+                targets.forEach(item => {
+                    const name = item.name;
                     // Only delete from customItems
                     if (next.shop.customItems && next.shop.customItems[name]) {
                         delete next.shop.customItems[name];
@@ -316,7 +346,9 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
             const next = deepClone(prev);
             if (!next.shop) next.shop = { availableItems: [], traders: [], availableFormulas: [] };
 
-            targets.forEach(itemName => {
+            targets.forEach(item => {
+                const itemName = item.name;
+
                 if (action === 'availability') {
                     const list = next.shop.availableItems || [];
                     if (payload === true && !list.includes(itemName)) list.push(itemName);
@@ -333,9 +365,11 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                 } else if (action === 'assignTrader') {
                     const trader = next.shop.traders.find(t => t.id === payload);
                     if (trader) {
-                        // Only strings in simple logic, or keep unique names
+                        // Store full item if it has customizations (like spell), otherwise just name
+                        const itemToStore = item.system?.spell ? item : itemName;
+                        // Check existence by name
                         const existing = trader.inventory.some(i => (typeof i === 'string' ? i : i.name) === itemName);
-                        if (!existing) trader.inventory.push(itemName);
+                        if (!existing) trader.inventory.push(itemToStore);
                     }
                 } else if (action === 'givePlayer') {
                     const campaignId = activeCampaign?.id;
@@ -346,11 +380,15 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                     // But `char` derivation needs checking.
                     // Let's assume payload is index in activeCampaign.characters
                     if (char) {
-                        const stackable = shouldStack({ name: itemName });
+                        const stackable = shouldStack(item);
                         const existing = stackable ? (char.inventory || []).find(i => i.name === itemName) : null;
                         if (!char.inventory) char.inventory = [];
-                        if (existing) existing.qty = (existing.qty || 1) + 1;
-                        else char.inventory.push({ name: itemName, qty: 1 });
+                        if (existing) {
+                            existing.qty = (existing.qty || 1) + 1;
+                        } else {
+                            // Push FULL item to preserve properties
+                            char.inventory.push({ ...item, qty: 1, instanceId: crypto.randomUUID(), addedAt: Date.now() });
+                        }
                     }
                 } else if (action === 'giveFormula') {
                     const campaignId = activeCampaign?.id;
@@ -365,14 +403,12 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                 } else if (action === 'addToLoot') {
                     const bag = (next.lootBags || []).find(b => b.id === payload);
                     if (bag) {
-                        const fullItem = SHOP_INDEX_ITEMS.find(i => i.name === itemName);
-                        if (fullItem) {
-                            bag.items.push({
-                                ...fullItem,
-                                instanceId: crypto.randomUUID(),
-                                addedAt: Date.now()
-                            });
-                        }
+                        // Use validated item data
+                        bag.items.push({
+                            ...item,
+                            instanceId: crypto.randomUUID(),
+                            addedAt: Date.now()
+                        });
                     }
                 }
             });
@@ -927,6 +963,38 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                 }
                 .ctx-submenu-parent:hover .ctx-submenu { display: block; }
             `}</style>
+            {/* Spell Selector Modal */}
+            {scrollSelectorData && (
+                <SpellScrollSelectorModal
+                    rank={scrollSelectorData.rank}
+                    type={scrollSelectorData.type}
+                    onCancel={() => setScrollSelectorData(null)}
+                    onSelect={(spell) => {
+                        const { baseItem, type, rank, action, payload } = scrollSelectorData;
+                        const newItem = { ...baseItem };
+                        // Clone system to avoid mutation
+                        newItem.system = baseItem.system ? JSON.parse(JSON.stringify(baseItem.system)) : {};
+
+                        // Preserve linkage to Shop Index for properties lookup
+                        newItem.system.originalName = baseItem.name;
+
+                        // Set Name
+                        newItem.name = `${type === 'scroll' ? 'Scroll' : 'Wand'} of ${spell.name} (Rank ${rank})`;
+
+                        // Embed Spell Index Entry
+                        newItem.system.spell = spell;
+
+                        // Initialize Wand Charges
+                        if (type === 'wand') {
+                            newItem.system.wand = { charges: 1, max: 1 };
+                        }
+
+                        // Execute context action with overridden item
+                        performContextAction(action, payload, newItem);
+                        setScrollSelectorData(null);
+                    }}
+                />
+            )}
         </div>
     );
 }

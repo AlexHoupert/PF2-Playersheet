@@ -28,11 +28,6 @@
         "usage": {
             "value": ""
         },
-        "damage": {
-            "dice": 1,
-            "die": "d6",
-            "damageType": "untyped"
-        },
         "range": null,
         "category": "",
         "group": "Cloak"

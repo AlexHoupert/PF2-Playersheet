@@ -17,7 +17,7 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb }
         bulk: '',
         usage: '',
         traits: [],
-        damages: [{ dice: 1, die: 'd6', damageType: 'slashing' }], // Array of damage entries
+        damages: [], // Array of damage entries
         range: '',
         description: '',
         sourceFile: null,

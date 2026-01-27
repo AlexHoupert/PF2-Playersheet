@@ -1,0 +1,31 @@
+{
+    "name": "test 5",
+    "type": "equipment",
+    "img": "systems/pf2e/icons/default-icons/mystery-man.svg",
+    "system": {
+        "description": {
+            "value": "no damage!!!!"
+        },
+        "level": {
+            "value": 0
+        },
+        "price": {
+            "value": {
+                "gp": 0
+            }
+        },
+        "traits": {
+            "value": [],
+            "rarity": "common"
+        },
+        "bulk": {
+            "value": "L"
+        },
+        "usage": {
+            "value": ""
+        },
+        "range": null,
+        "category": "",
+        "group": ""
+    }
+}

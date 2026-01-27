@@ -53524,11 +53524,7 @@
     "bulk": {
       "value": "0.1"
     },
-    "damage": {
-      "dice": 1,
-      "die": "d6",
-      "damageType": "untyped"
-    },
+    "damage": null,
     "splashDamage": null,
     "range": null,
     "reload": null,
@@ -53554,6 +53550,41 @@
     "level": 3,
     "description": "Thousands of small, reflective, mirrored glass shards have been carefully stitched down this long silk cloak.\n---\n<b>Activate </b>[one-action] Interact\n\n<b>Requirements </b>The mirror robe was last activated to draw attention toward you, or you haven't used the mirror robe today\n\nEffect The mirror robe Creates a Diversion for you with a +1 Deception modifier.\n---\n<b>Activate </b>[one-action] Interact (visual)\n\n<b>Requirements </b>The mirror robe was last activated to divert attention away from you.\n\nEffect You draw attention toward yourself. Choose one foe to which you were hidden or undetected. You reveal yourself to all, becoming observed. The foe you chose diverts its attention to you, becoming @UUID[Compendium.pf2e.conditionitems.Item.AJh5ex99aV6VTggg]{Off-Guard} to your allies until the beginning of your next turn. If you are @UUID[Compendium.pf2e.conditionitems.Item.zJxUflt9np0q4yML]{Invisible} or otherwise can't become @UUID[Compendium.pf2e.conditionitems.Item.1wQY3JYyhMYeeV2G]{Observed}, you can't use this activation.",
     "rarity": "uncommon"
+  },
+  {
+    "sourceFile": "custom/test_5.json",
+    "img": "icons/default-icons/mystery-man.svg",
+    "name": "test 5",
+    "type": "Equipment",
+    "group": null,
+    "category": null,
+    "ammo": null,
+    "hands": null,
+    "bulk": {
+      "value": "L"
+    },
+    "damage": null,
+    "splashDamage": null,
+    "range": null,
+    "reload": null,
+    "traits": {
+      "value": [],
+      "rarity": "common"
+    },
+    "bonus": null,
+    "bonusDamage": null,
+    "runes": null,
+    "acBonus": null,
+    "dexCap": null,
+    "checkPenalty": null,
+    "speedPenalty": null,
+    "strength": null,
+    "hardness": null,
+    "hp": null,
+    "price": 0,
+    "level": 0,
+    "description": "no damage!!!!",
+    "rarity": "common"
   },
   {
     "sourceFile": "cutlery.json",
