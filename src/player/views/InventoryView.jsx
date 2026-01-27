@@ -44,14 +44,16 @@ export function InventoryView({
 
             // 2. Type Priority (Weapon < Armor < Shield < Other)
             // Use merged data lookup if type missing on item instance
-            let fromIdx = getShopIndexItemByName(i.name);
-            if (!fromIdx && i.system?.originalName) {
-                fromIdx = getShopIndexItemByName(i.system.originalName);
-            }
-            if (!fromIdx && db?.shop?.customItems) {
-                fromIdx = db.shop.customItems[i.name]; // Use raw or mapped? Raw has .type usu. lowercase
-            }
-            return (i.type || fromIdx?.type || '').toLowerCase();
+            const getType = (i) => {
+                let fromIdx = getShopIndexItemByName(i.name);
+                if (!fromIdx && i.system?.originalName) {
+                    fromIdx = getShopIndexItemByName(i.system.originalName);
+                }
+                if (!fromIdx && db?.shop?.customItems) {
+                    fromIdx = db.shop.customItems[i.name];
+                }
+                return (i.type || fromIdx?.type || '').toLowerCase();
+            };
         };
     const typePriority = { weapon: 1, armor: 2, shield: 3 };
     const typeA = typePriority[getType(a.item)] || 4;
