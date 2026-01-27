@@ -53317,6 +53317,44 @@
     "rarity": "uncommon"
   },
   {
+    "sourceFile": "custom/crown_of_brilliance.json",
+    "img": "icons/equipment/head/crown-gold-blue.webp",
+    "name": "Crown of Brilliance",
+    "type": "Equipment",
+    "group": "Headwear",
+    "category": null,
+    "ammo": null,
+    "hands": null,
+    "bulk": {
+      "value": "L"
+    },
+    "damage": null,
+    "splashDamage": null,
+    "range": null,
+    "reload": null,
+    "traits": {
+      "value": [
+        "invested",
+        "magical"
+      ],
+      "rarity": "uncommon"
+    },
+    "bonus": null,
+    "bonusDamage": null,
+    "runes": null,
+    "acBonus": null,
+    "dexCap": null,
+    "checkPenalty": null,
+    "speedPenalty": null,
+    "strength": null,
+    "hardness": null,
+    "hp": null,
+    "price": 200,
+    "level": 4,
+    "description": "This masterfully crafted golden crown has three fire-red rubies embedded into it, each of them seems to shine with an inner fire.\n---\n<span style=\"color: #c5a059\">Kindle Intellect</span> [one-action] (concentrate, manipulate)\n\n<b>Effect </b>One of the rubies goes dim.\n\nA flame of inspiration ignites the wearers intellect, granting him a +1 item bonus to intelligence for 10 minutes.\n---\nThe rubies regain their light at sunrise",
+    "rarity": "uncommon"
+  },
+  {
     "sourceFile": "custom/dagger_of_the_cinderblessed.json",
     "img": "icons/weapons/daggers/dagger-curved-guard-blue.webp",
     "name": "Dagger of the Cinderblessed",

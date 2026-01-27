@@ -1,0 +1,34 @@
+{
+    "name": "Crown of Brilliance",
+    "type": "equipment",
+    "img": "icons/equipment/head/crown-gold-blue.webp",
+    "system": {
+        "description": {
+            "value": "This masterfully crafted golden crown has three fire-red rubies embedded into it, each of them seems to shine with an inner fire.\n---\n<span style=\"color: #c5a059\">Kindle Intellect</span> [one-action] (concentrate, manipulate)\n\n<b>Effect </b>One of the rubies goes dim.\n\nA flame of inspiration ignites the wearers intellect, granting him a +1 item bonus to intelligence for 10 minutes.\n---\nThe rubies regain their light at sunrise"
+        },
+        "level": {
+            "value": 4
+        },
+        "price": {
+            "value": {
+                "gp": 200
+            }
+        },
+        "traits": {
+            "value": [
+                "invested",
+                "magical"
+            ],
+            "rarity": "uncommon"
+        },
+        "bulk": {
+            "value": "L"
+        },
+        "usage": {
+            "value": ""
+        },
+        "range": null,
+        "category": "",
+        "group": "Headwear"
+    }
+}
