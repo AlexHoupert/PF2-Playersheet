@@ -94,7 +94,9 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
             category: i.system?.category || '',
             group: i.system?.group || '',
             rarity: i.system?.traits?.rarity || 'common',
-            traits: { value: i.system?.traits?.value || [] }, // Index usually has traits object or direct array? Checked ShopView: i.traits.value
+            traits: { value: i.system?.traits?.value || [] },
+            description: i.system?.description?.value,
+            bulk: i.system?.bulk?.value,
             img: i.img,
             sourceFile: null,
             isCustom: true,
