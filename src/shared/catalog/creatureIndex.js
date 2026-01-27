@@ -67,7 +67,8 @@ export async function fetchCreatureData(id) {
 
     try {
         // Fetch from resources - sourceFile already includes 'bestiary/' prefix
-        const response = await fetch(`/api/static/${indexItem.sourceFile}`);
+        const baseUrl = import.meta.env.PROD ? '/ressources' : '/api/static';
+        const response = await fetch(`${baseUrl}/${indexItem.sourceFile}`);
         if (response.ok) {
             const data = await response.json();
             creatureCache.set(id, data);
