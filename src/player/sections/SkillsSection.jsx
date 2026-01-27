@@ -29,6 +29,9 @@ export function SkillsSection({ character, onOpenModal, onLongPress }) {
             // Legacy check: some old dbs might have null values, ignore unless explicitly 0
             if (!val && val !== 0) return null;
 
+            // Hide legacy Lore_1, Lore_2, etc. (User request)
+            if (name.match(/^Lore_\d+$/)) return null;
+
             const calc = calculateStat(character, name, val);
             const isTrained = val > 0;
 
@@ -72,9 +75,9 @@ export function SkillsSection({ character, onOpenModal, onLongPress }) {
 
             <div style={{ marginTop: 15, display: 'flex', justifyContent: 'center' }}>
                 <button
-                    className="add-item-btn"
+                    className="btn-add-condition"
                     onClick={() => onOpenModal('add_lore')}
-                    style={{ padding: '8px 16px', fontSize: '0.9em' }}
+                    style={{ margin: 0, width: 'auto', padding: '6px 16px' }}
                 >
                     + Add Lore
                 </button>
