@@ -1,92 +1,108 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
 import ItemEditor from './editors/ItemEditor';
-import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
 import { SHOP_CATEGORIES } from '../shared/constants/shop';
 import { deepClone } from '../shared/utils/deepClone';
 import { SHOP_INDEX_FILTER_OPTIONS, SHOP_INDEX_ITEMS, fetchShopItemDetailBySourceFile } from '../shared/catalog/shopIndex';
 import { shouldStack } from '../shared/utils/inventoryUtils';
 import SpellScrollSelectorModal from '../player/modals/SpellScrollSelectorModal';
+import FilterDialog from './components/FilterDialog';
 
 const uniqueTypes = SHOP_INDEX_FILTER_OPTIONS.types;
 const uniqueCategories = SHOP_INDEX_FILTER_OPTIONS.categories;
 const uniqueRarities = SHOP_INDEX_FILTER_OPTIONS.rarities;
-const uniqueTraits = SHOP_INDEX_FILTER_OPTIONS.traits;
-// Extract unique groups dynamically
 const uniqueGroups = Array.from(new Set(SHOP_INDEX_ITEMS.map(i => i.group).filter(Boolean))).sort();
+
+const COLUMNS_CONFIG = {
+    name: { label: 'Name', type: 'text' },
+    level: { label: 'Level', type: 'number' },
+    price: { label: 'Price', type: 'number' },
+    type: { label: 'Type', type: 'select', options: uniqueTypes },
+    category: { label: 'Category', type: 'select', options: uniqueCategories },
+    group: { label: 'Group', type: 'select', options: uniqueGroups },
+    rarity: { label: 'Rarity', type: 'select', options: uniqueRarities },
+    traits: { label: 'Traits', type: 'text' },
+    damage: { label: 'Damage', type: 'text' },
+    range: { label: 'Range', type: 'text' },
+    bulk: { label: 'Bulk', type: 'text' }
+};
+
+// Scrollbar styling
+const scrollbarStyles = `
+    .items-view-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+    .items-view-scroll::-webkit-scrollbar-track { background: #1a1a1a; }
+    .items-view-scroll::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+    .items-view-scroll::-webkit-scrollbar-thumb:hover { background: #555; }
+`;
+
+// Card wrapper for consistent styling
+const Card = ({ children, style, className, ...rest }) => (
+    <div className={className} style={{
+        background: '#1a1a1a',
+        borderRadius: 8,
+        border: '1px solid #333',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        ...style
+    }} {...rest}>
+        {children}
+    </div>
+);
 
 export default function ItemsView({ db, setDb, onInspectItem }) {
     const { activeCampaign } = useCampaign();
-    const [itemSearch, setItemSearch] = useState('');
-    const [itemFilterType, setItemFilterType] = useState([]);
-    const [itemFilterCategory, setItemFilterCategory] = useState([]);
-    const [itemFilterRarity, setItemFilterRarity] = useState([]);
-    const [itemFilterTraits, setItemFilterTraits] = useState([]);
-    const [itemFilterGroup, setItemFilterGroup] = useState([]); // NEW Group Filter
-    const [itemFilterAvailable, setItemFilterAvailable] = useState(false);
-    const [itemFilterFormulaAvailable, setItemFilterFormulaAvailable] = useState(false);
-    const [itemPage, setItemPage] = useState(1);
+
+    // --- STATE ---
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(50);
-    const [visibleColumns, setVisibleColumns] = useState(['name', 'level', 'price', 'type', 'rarity']);
+
+    // Layout Mode
+    const [sideMode, setSideMode] = useState('none');
+    const [selectedTraderId, setSelectedTraderId] = useState(null);
+    const [selectedLootId, setSelectedLootId] = useState(null);
+    const [sidePage, setSidePage] = useState(1);
+
+    // Filters
+    const [activeFilters, setActiveFilters] = useState({});
+    const [showFilterDialog, setShowFilterDialog] = useState(false);
+    const [applySideFilters, setApplySideFilters] = useState(false);
+
+    // Columns
+    const [visibleColumns, setVisibleColumns] = useState(() => {
+        try {
+            const saved = localStorage.getItem('itemsViewColumns');
+            return saved ? JSON.parse(saved) : ['name', 'level', 'price', 'type', 'rarity'];
+        } catch {
+            return ['name', 'level', 'price', 'type', 'rarity'];
+        }
+    });
     const [showColSelector, setShowColSelector] = useState(false);
 
+    // Sorting
     const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+    const [sideSortConfig, setSideSortConfig] = useState({ key: 'name', direction: 'asc' });
+
+    // Selection (main table)
     const [selectedItems, setSelectedItems] = useState([]);
     const [lastSelectedIndex, setLastSelectedIndex] = useState(-1);
+
+    // Selection (side panel)
+    const [selectedSideItems, setSelectedSideItems] = useState([]);
+    const [lastSideSelectedIndex, setLastSideSelectedIndex] = useState(-1);
+
+    const [editingItem, setEditingItem] = useState(null);
     const [contextMenu, setContextMenu] = useState(null);
-
-    const [editingItem, setEditingItem] = useState(null); // null = list, {} = create, object = edit
-    const [scrollSelectorData, setScrollSelectorData] = useState(null);
-
+    const [contextSubMenu, setContextSubMenu] = useState(null);
     const [newTraderName, setNewTraderName] = useState('');
 
-    // --- SPLIT VIEW STATE ---
-    const [inspectingTraderId, setInspectingTraderId] = useState(null);
-    const [inspectingLootId, setInspectingLootId] = useState(null);
-    const [applyFiltersToInspector, setApplyFiltersToInspector] = useState(false);
-    const [inspectorSortConfig, setInspectorSortConfig] = useState({ key: 'name', direction: 'asc' });
+    useEffect(() => {
+        localStorage.setItem('itemsViewColumns', JSON.stringify(visibleColumns));
+    }, [visibleColumns]);
 
-    const availableList = db.shop?.availableItems || [];
-
-    // Helper to filter items
-    const getFilteredItems = (items) => {
-        const searchLower = itemSearch.trim().toLowerCase();
-        return items.filter(i => {
-            if (itemFilterType.length && !itemFilterType.includes(i.type)) return false;
-            // Trader/Loot items might not have all fields populated if they are simple objects, 
-            // but for full items they should.
-            // (The derivation logic below ensures they are resolved against SHOP_INDEX_ITEMS).
-
-            if (itemFilterCategory.length && !itemFilterCategory.includes(i.category)) return false;
-            if (itemFilterRarity.length && !itemFilterRarity.includes(i.rarity)) return false;
-            if (itemFilterTraits.length && !itemFilterTraits.every(t => (i.traits?.value || []).includes(t))) return false;
-            if (itemFilterGroup.length && !itemFilterGroup.includes(i.group)) return false;
-
-            if (itemFilterAvailable && !(db.shop?.availableItems || []).includes(i.name)) return false;
-            if (itemFilterFormulaAvailable && !(db.shop?.availableFormulas || []).includes(i.name)) return false;
-
-            return i.name.toLowerCase().includes(searchLower);
-        });
-    };
-
-    // Helper to sort items
-    const getSortedItems = (items, config) => {
-        const copy = [...items];
-        copy.sort((a, b) => {
-            let valA = a[config.key];
-            let valB = b[config.key];
-            if (typeof valA === 'object' && valA !== null) valA = valA.value || 0;
-            if (typeof valB === 'object' && valB !== null) valB = valB.value || 0;
-            if (valA < valB) return config.direction === 'asc' ? -1 : 1;
-            if (valA > valB) return config.direction === 'asc' ? 1 : -1;
-            return 0;
-        });
-        return copy;
-    };
-
-    // Global List
-    const filteredGlobalItems = useMemo(() => {
-        // Merge custom items from DB
+    // --- DATA PREP ---
+    const globalItems = useMemo(() => {
         const customItemsRaw = Object.values(db.shop?.customItems || {});
         const flatCustomItems = customItemsRaw.map(i => ({
             name: i.name,
@@ -102,900 +118,638 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
             img: i.img,
             sourceFile: null,
             isCustom: true,
-            // Store full data for editing
             data: i
         }));
+        return [...flatCustomItems, ...SHOP_INDEX_ITEMS];
+    }, [db.shop?.customItems]);
 
-        // Combine with static index
-        // Prefer custom items if names collide? Or show both? Name collision issues.
-        // Set deduplication preferred specific to this view?
-        // Let's just concat for now.
-        const combined = [...flatCustomItems, ...SHOP_INDEX_ITEMS];
+    const filterItem = (item, filters, searchTerm) => {
+        if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
 
-        return getFilteredItems(combined);
-    }, [itemFilterCategory, itemFilterRarity, itemFilterTraits, itemFilterType, itemFilterGroup, itemSearch, itemFilterAvailable, itemFilterFormulaAvailable, db.shop]);
+        if (filters.Available === true && !(db.shop?.availableItems || []).includes(item.name)) return false;
+        if (filters.Available === false && (db.shop?.availableItems || []).includes(item.name)) return false;
+
+        if (filters.Formula === true && !(db.shop?.availableFormulas || []).includes(item.name)) return false;
+        if (filters.Formula === false && (db.shop?.availableFormulas || []).includes(item.name)) return false;
+
+        for (const [key, val] of Object.entries(filters)) {
+            if (key === 'Available' || key === 'Formula') continue;
+            if (!val || (Array.isArray(val) && val.length === 0)) continue;
+            const itemVal = item[key];
+            if (Array.isArray(val)) {
+                if (!val.includes(itemVal)) return false;
+            } else if (typeof val === 'string') {
+                if (!String(itemVal || '').toLowerCase().includes(val.toLowerCase())) return false;
+            }
+        }
+        return true;
+    };
+
+    const filteredGlobalItems = useMemo(() => {
+        return globalItems.filter(i => filterItem(i, activeFilters, search));
+    }, [globalItems, activeFilters, search, db.shop]);
 
     const sortedGlobalItems = useMemo(() => {
-        return getSortedItems(filteredGlobalItems, sortConfig);
+        return [...filteredGlobalItems].sort((a, b) => {
+            let valA = a[sortConfig.key];
+            let valB = b[sortConfig.key];
+            if (typeof valA === 'object' && valA?.value) valA = valA.value;
+            if (typeof valB === 'object' && valB?.value) valB = valB.value;
+            if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
     }, [filteredGlobalItems, sortConfig]);
 
-    const totalPages = useMemo(
-        () => Math.max(1, Math.ceil(sortedGlobalItems.length / itemsPerPage)),
-        [sortedGlobalItems.length, itemsPerPage]
-    );
+    const totalPages = Math.max(1, Math.ceil(sortedGlobalItems.length / itemsPerPage));
+    const paginatedItems = sortedGlobalItems.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
-    const currentPage = Math.min(itemPage, totalPages);
-    const paginatedItems = useMemo(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        return sortedGlobalItems.slice(startIndex, startIndex + itemsPerPage);
-    }, [currentPage, itemsPerPage, sortedGlobalItems]);
+    // --- SIDE PANEL DATA ---
+    const activeTrader = db.shop?.traders?.find(t => t.id === selectedTraderId);
+    const activeLoot = db.lootBags?.find(b => b.id === selectedLootId);
 
-    useEffect(() => {
-        if (itemPage !== currentPage) setItemPage(currentPage);
-    }, [currentPage, itemPage]);
+    const sideItems = useMemo(() => {
+        let items = [];
+        if (sideMode === 'trader' && activeTrader) {
+            items = activeTrader.inventory.map(entry => {
+                const name = typeof entry === 'string' ? entry : entry.name;
+                const base = globalItems.find(i => i.name === name) || { name, type: 'Unknown', level: 0, price: 0 };
+                return { ...base, ...entry, _isRef: typeof entry === 'string' };
+            });
+        } else if (sideMode === 'loot' && activeLoot) {
+            items = activeLoot.items.map((item, idx) => ({ ...item, _sideIdx: idx }));
+        }
+        return items.sort((a, b) => {
+            let valA = a[sideSortConfig.key];
+            let valB = b[sideSortConfig.key];
+            if (valA < valB) return sideSortConfig.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return sideSortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [sideMode, activeTrader, activeLoot, globalItems, sideSortConfig, db.shop]);
 
-    const allColumns = useMemo(
-        () => ['name', 'level', 'price', 'damage', 'range', 'type', 'category', 'group', 'rarity', 'traits'],
-        []
-    );
+    const filteredSideItems = useMemo(() => {
+        return applySideFilters ? sideItems.filter(i => filterItem(i, activeFilters, search)) : sideItems;
+    }, [sideItems, applySideFilters, activeFilters, search]);
 
-    const handleSort = (key) => {
-        let direction = 'asc';
-        if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
-        setSortConfig({ key, direction });
+    // Side List Pagination (10 max)
+    const sideLists = useMemo(() => {
+        let list = [];
+        if (sideMode === 'trader') list = db.shop?.traders || [];
+        if (sideMode === 'loot') list = db.lootBags || [];
+        const max = 10;
+        const total = Math.ceil(list.length / max) || 1;
+        const current = Math.min(sidePage, total);
+        return { sliced: list.slice((current - 1) * max, current * max), total, current };
+    }, [db.shop, db.lootBags, sideMode, sidePage]);
+
+    // --- HANDLERS ---
+    const handleSort = (key) => setSortConfig(p => ({ key, direction: p.key === key && p.direction === 'asc' ? 'desc' : 'asc' }));
+    const handleSideSort = (key) => setSideSortConfig(p => ({ key, direction: p.key === key && p.direction === 'asc' ? 'desc' : 'asc' }));
+
+    // Main table selection
+    const handleSelect = (e, item, index) => {
+        if (e.ctrlKey || e.metaKey) {
+            setSelectedItems(prev => prev.some(i => i.name === item.name) ? prev.filter(i => i.name !== item.name) : [...prev, item]);
+            setLastSelectedIndex(index);
+        } else if (e.shiftKey && lastSelectedIndex !== -1) {
+            const start = Math.min(lastSelectedIndex, index);
+            const end = Math.max(lastSelectedIndex, index);
+            const range = paginatedItems.slice(start, end + 1);
+            const combined = [...selectedItems];
+            range.forEach(r => { if (!combined.some(c => c.name === r.name)) combined.push(r); });
+            setSelectedItems(combined);
+        } else {
+            setSelectedItems([item]);
+            setLastSelectedIndex(index);
+        }
     };
 
-    const handleInspectorSort = (key) => {
-        let direction = 'asc';
-        if (inspectorSortConfig.key === key && inspectorSortConfig.direction === 'asc') direction = 'desc';
-        setInspectorSortConfig({ key, direction });
+    // Side panel selection
+    const handleSideSelect = (e, item, index) => {
+        const key = item.instanceId || item.name;
+        if (e.ctrlKey || e.metaKey) {
+            setSelectedSideItems(prev => prev.some(i => (i.instanceId || i.name) === key) ? prev.filter(i => (i.instanceId || i.name) !== key) : [...prev, item]);
+            setLastSideSelectedIndex(index);
+        } else if (e.shiftKey && lastSideSelectedIndex !== -1) {
+            const start = Math.min(lastSideSelectedIndex, index);
+            const end = Math.max(lastSideSelectedIndex, index);
+            const range = filteredSideItems.slice(start, end + 1);
+            const combined = [...selectedSideItems];
+            range.forEach(r => { if (!combined.some(c => (c.instanceId || c.name) === (r.instanceId || r.name))) combined.push(r); });
+            setSelectedSideItems(combined);
+        } else {
+            setSelectedSideItems([item]);
+            setLastSideSelectedIndex(index);
+        }
     };
 
-    const toggleItemAvailability = (itemName) => {
+    const handleDragStart = (e, item, source) => {
+        let dragging;
+        if (source === 'global') {
+            dragging = selectedItems.some(i => i.name === item.name) ? [...selectedItems] : [item];
+        } else {
+            const key = item.instanceId || item.name;
+            dragging = selectedSideItems.some(i => (i.instanceId || i.name) === key) ? [...selectedSideItems] : [item];
+        }
+        e.dataTransfer.setData('app/items', JSON.stringify({ items: dragging, source }));
+    };
+
+    const handleDrop = (e, targetType, targetId) => {
+        e.preventDefault();
+        const data = e.dataTransfer.getData('app/items');
+        if (!data) return;
+        const { items, source } = JSON.parse(data);
+
         setDb(prev => {
             const next = deepClone(prev);
-            if (!next.shop) next.shop = { availableItems: [], traders: [], availableFormulas: [] };
-            const list = next.shop.availableItems || [];
-            next.shop.availableItems = list.includes(itemName)
-                ? list.filter(i => i !== itemName)
-                : [...list, itemName];
+            if (targetType === 'trader' && targetId) {
+                const t = next.shop.traders.find(x => x.id === targetId);
+                if (t) items.forEach(i => { if (!t.inventory.some(x => (typeof x === 'string' ? x : x.name) === i.name)) t.inventory.push(i.name); });
+            } else if (targetType === 'loot' && targetId) {
+                const b = next.lootBags.find(x => x.id === targetId);
+                if (b) items.forEach(i => {
+                    const stackable = shouldStack(i);
+                    const existing = stackable ? b.items.find(x => x.name === i.name && !x.claimedBy) : null;
+                    if (existing) existing.qty = (existing.qty || 1) + 1;
+                    else b.items.push({ ...i, qty: 1, instanceId: crypto.randomUUID(), addedAt: Date.now() });
+                });
+            } else if (targetType === 'global') {
+                // Dragging from side panel to main table removes items
+                if (source === 'trader' && selectedTraderId) {
+                    const t = next.shop.traders.find(x => x.id === selectedTraderId);
+                    if (t) t.inventory = t.inventory.filter(x => !items.some(d => d.name === (typeof x === 'string' ? x : x.name)));
+                } else if (source === 'loot' && selectedLootId) {
+                    const b = next.lootBags.find(x => x.id === selectedLootId);
+                    if (b) b.items = b.items.filter(x => !items.some(d => d.instanceId ? d.instanceId === x.instanceId : d.name === x.name));
+                }
+                setSelectedSideItems([]);
+            }
             return next;
         });
     };
 
-    const toggleFormulaAvailability = (itemName) => {
+    // --- CONTEXT MENU ---
+    const handleContextMenu = (e, item, source) => {
+        e.preventDefault();
+        if (source === 'global') {
+            if (!selectedItems.some(i => i.name === item.name)) setSelectedItems([item]);
+        } else {
+            const key = item.instanceId || item.name;
+            if (!selectedSideItems.some(i => (i.instanceId || i.name) === key)) setSelectedSideItems([item]);
+        }
+        setContextMenu({ x: e.clientX, y: e.clientY, item, source });
+        setContextSubMenu(null);
+    };
+
+    const closeContextMenu = () => { setContextMenu(null); setContextSubMenu(null); };
+
+    const performAction = (action, arg) => {
+        closeContextMenu();
+        const source = contextMenu?.source || 'global';
+        const targets = source === 'global'
+            ? (selectedItems.length > 0 ? selectedItems : [contextMenu?.item].filter(Boolean))
+            : (selectedSideItems.length > 0 ? selectedSideItems : [contextMenu?.item].filter(Boolean));
+
+        if (action === 'edit') { setEditingItem(targets[0]); return; }
+        if (action === 'clone') { setEditingItem({ ...targets[0], name: `${targets[0].name} (Copy)`, isCustom: true }); return; }
+        if (action === 'newItem') { setEditingItem({ name: '', isCustom: true }); return; }
+        if (action === 'inspect' && onInspectItem) { onInspectItem(targets[0]); return; }
+
+        // Side panel specific actions
+        if (action === 'removeFromSide') {
+            setDb(prev => {
+                const next = deepClone(prev);
+                if (source === 'trader' && selectedTraderId) {
+                    const t = next.shop.traders.find(x => x.id === selectedTraderId);
+                    if (t) t.inventory = t.inventory.filter(x => !targets.some(d => d.name === (typeof x === 'string' ? x : x.name)));
+                } else if (source === 'loot' && selectedLootId) {
+                    const b = next.lootBags.find(x => x.id === selectedLootId);
+                    if (b) b.items = b.items.filter(x => !targets.some(d => d.instanceId ? d.instanceId === x.instanceId : d.name === x.name));
+                }
+                return next;
+            });
+            setSelectedSideItems([]);
+            return;
+        }
+
+        if (action === 'setAmount' && source === 'loot') {
+            const newQty = prompt('Enter quantity:', targets[0].qty || 1);
+            if (newQty === null) return;
+            const qty = parseInt(newQty, 10) || 1;
+            setDb(prev => {
+                const next = deepClone(prev);
+                const b = next.lootBags.find(x => x.id === selectedLootId);
+                if (b) {
+                    targets.forEach(t => {
+                        const item = b.items.find(x => x.instanceId === t.instanceId);
+                        if (item) item.qty = qty;
+                    });
+                }
+                return next;
+            });
+            return;
+        }
+
         setDb(prev => {
             const next = deepClone(prev);
-            if (!next.shop) next.shop = { availableItems: [], traders: [], availableFormulas: [] };
-            const list = next.shop.availableFormulas || [];
-            next.shop.availableFormulas = list.includes(itemName)
-                ? list.filter(i => i !== itemName)
-                : [...list, itemName];
+            if (!next.shop) next.shop = {};
+            if (!next.shop.availableItems) next.shop.availableItems = [];
+            if (!next.shop.availableFormulas) next.shop.availableFormulas = [];
+            if (!next.lootBags) next.lootBags = [];
+
+            targets.forEach(t => {
+                if (action === 'makeAvailable' && !next.shop.availableItems.includes(t.name)) next.shop.availableItems.push(t.name);
+                if (action === 'makeUnavailable') next.shop.availableItems = next.shop.availableItems.filter(x => x !== t.name);
+                if (action === 'addFormula' && !next.shop.availableFormulas.includes(t.name)) next.shop.availableFormulas.push(t.name);
+                if (action === 'removeFormula') next.shop.availableFormulas = next.shop.availableFormulas.filter(x => x !== t.name);
+                if (action === 'addToTrader' && arg) {
+                    const tr = next.shop.traders?.find(x => x.id === arg);
+                    if (tr && !tr.inventory.some(x => (typeof x === 'string' ? x : x.name) === t.name)) tr.inventory.push(t.name);
+                }
+                if (action === 'addToLoot' && arg) {
+                    const bag = next.lootBags.find(x => x.id === arg);
+                    if (bag) bag.items.push({ ...t, qty: 1, instanceId: crypto.randomUUID() });
+                }
+                if (action === 'giveToPlayer' && arg) {
+                    const p = next.players?.find(x => x.id === arg);
+                    if (p) { if (!p.inventory) p.inventory = []; p.inventory.push({ ...t, instanceId: crypto.randomUUID() }); }
+                }
+                if (action === 'giveFormulaToPlayer' && arg) {
+                    const p = next.players?.find(x => x.id === arg);
+                    if (p) { if (!p.formulas) p.formulas = []; if (!p.formulas.includes(t.name)) p.formulas.push(t.name); }
+                }
+                if (action === 'delete') {
+                    if (t.isCustom && next.shop.customItems) delete next.shop.customItems[t.name];
+                }
+            });
             return next;
         });
     };
 
-    const createTrader = () => {
-        const name = newTraderName.trim();
-        if (!name) return;
+    const handleCreateTrader = () => {
+        if (!newTraderName.trim()) return;
         setDb(prev => {
             const next = deepClone(prev);
-            if (!next.shop) next.shop = { availableItems: [], traders: [] };
-            next.shop.traders = [
-                ...(next.shop.traders || []),
-                { id: Date.now(), name, category: SHOP_CATEGORIES[0], inventory: [] }
-            ];
+            if (!next.shop) next.shop = {};
+            if (!next.shop.traders) next.shop.traders = [];
+            next.shop.traders.push({ id: Date.now(), name: newTraderName.trim(), inventory: [], category: 'General' });
             return next;
         });
         setNewTraderName('');
     };
 
-    const deleteTrader = (id) => {
-        if (!window.confirm('Delete this trader?')) return;
+    const handleCreateLoot = () => {
+        const name = prompt("Loot Bag Name:");
+        if (!name) return;
         setDb(prev => {
             const next = deepClone(prev);
-            next.shop.traders = (next.shop.traders || []).filter(t => t.id !== id);
-            return next;
-        });
-        if (inspectingTraderId === id) setInspectingTraderId(null);
-    };
-
-    const updateTrader = (id, fn) => {
-        setDb(prev => {
-            const next = deepClone(prev);
-            const traderIndex = (next.shop.traders || []).findIndex(t => t.id === id);
-            if (traderIndex === -1) return prev;
-            fn(next.shop.traders[traderIndex]);
+            if (!next.lootBags) next.lootBags = [];
+            next.lootBags.push({ id: Date.now(), name, items: [], goldValue: 0 });
             return next;
         });
     };
 
-    const handleRowClick = (e, item, index) => {
-        if (e.target.type === 'checkbox') return;
-
-        let newSelected = [...selectedItems];
-        const name = item.name;
-
-        if (e.ctrlKey || e.metaKey) {
-            if (newSelected.includes(name)) newSelected = newSelected.filter(n => n !== name);
-            else newSelected.push(name);
-            setLastSelectedIndex(index);
-        } else if (e.shiftKey && lastSelectedIndex !== -1 && index >= 0) {
-            const start = Math.min(lastSelectedIndex, index);
-            const end = Math.max(lastSelectedIndex, index);
-            const range = paginatedItems.slice(start, end + 1).map(i => i.name);
-            range.forEach(n => {
-                if (!newSelected.includes(n)) newSelected.push(n);
-            });
-        } else {
-            newSelected = [name];
-            setLastSelectedIndex(index);
+    // Double-click handler for info modal
+    const handleDoubleClick = (item) => {
+        if (onInspectItem) {
+            onInspectItem(item);
         }
-
-        setSelectedItems(newSelected);
     };
 
-    const handleContextMenu = (e, item, index) => {
-        e.preventDefault();
-        let newSelected = [...selectedItems];
-        if (!newSelected.includes(item.name)) {
-            newSelected = [item.name];
-            setSelectedItems(newSelected);
-            setLastSelectedIndex(index);
-        }
+    const tableColumns = ['Available', 'Formula', ...visibleColumns];
+    const isSelected = (item) => selectedItems.some(i => i.name === item.name);
+    const isSideSelected = (item) => selectedSideItems.some(i => (i.instanceId || i.name) === (item.instanceId || item.name));
 
-        // Smart Positioning
-        let x = e.clientX;
-        let y = e.clientY;
-        const winH = window.innerHeight;
-        // Determine if we should open upwards (if in bottom 40% of screen)
-        const openUpwards = y > winH * 0.6;
-
-        // Adjust Y for bottom alignment if opening upwards is better
-        // We can't know exact height, but we can set `bottom` style instead of `top`
-        // or just offset y.
-
-        setContextMenu({ x, y, items: newSelected, openUpwards });
-    };
-
-    const performContextAction = (action, payload, itemOverride = null) => {
-        // Resolve targets to Item Objects
-        let targets = [];
-        if (itemOverride) {
-            targets = [itemOverride];
-        } else {
-            const names = contextMenu?.items || [];
-            targets = names.map(name => {
-                return sortedGlobalItems.find(i => i.name === name) || SHOP_INDEX_ITEMS.find(i => i.name === name) || { name };
-            });
-        }
-
-        if (targets.length === 0) return;
-
-        // SCROLL CHECK (Only if not already overridden)
-        if (!itemOverride && (action === 'addToLoot' || action === 'givePlayer' || action === 'assignTrader')) {
-            const firstScroll = targets.find(i => i.name.match(/(?:Scroll of Rank (\d+)|Scroll of (\d+)(?:st|nd|rd|th)?-rank Spell)|(?:Wand of Rank (\d+)|Magic Wand \((\d+)(?:st|nd|rd|th)?-Rank Spell\))/i));
-            if (firstScroll) {
-                const scrollMatch = firstScroll.name.match(/(?:Scroll of Rank (\d+)|Scroll of (\d+)(?:st|nd|rd|th)?-rank Spell)/i);
-                const wandMatch = firstScroll.name.match(/(?:Wand of Rank (\d+)|Magic Wand \((\d+)(?:st|nd|rd|th)?-Rank Spell\))/i);
-
-                if (scrollMatch) {
-                    setScrollSelectorData({ mode: 'SELECT_SPELL', rank: parseInt(scrollMatch[1] || scrollMatch[2]), type: 'scroll', baseItem: firstScroll, action, payload });
-                    setContextMenu(null);
-                    return;
-                } else if (wandMatch) {
-                    setScrollSelectorData({ mode: 'SELECT_SPELL', rank: parseInt(wandMatch[1] || wandMatch[2]), type: 'wand', baseItem: firstScroll, action, payload });
-                    setContextMenu(null);
-                    return;
-                }
-            }
-        }
-
-        if (action === 'edit') {
-            const item = targets[0];
-            if (item && item.sourceFile) {
-                // Fetch full item data including description
-                fetchShopItemDetailBySourceFile(item.sourceFile)
-                    .then(fullItem => setEditingItem(fullItem))
-                    .catch(err => {
-                        console.error('Failed to fetch item details:', err);
-                        setEditingItem(item); // Fallback to index data
-                    });
-            } else if (item) {
-                if (item.isCustom && item.data) {
-                    setEditingItem(item.data); // Load full custom data
-                } else {
-                    setEditingItem(item);
-                }
-            }
-            setContextMenu(null);
-            return;
-        }
-
-        if (action === 'clone') {
-            const item = targets[0];
-            if (item) {
-                const cloned = { ...item, name: item.name + ' (Copy)' };
-                setEditingItem(cloned);
-            }
-            setContextMenu(null);
-            return;
-        }
-
-        if (action === 'delete') {
-            if (!confirm(`Are you sure you want to delete ${targets.length} items? This cannot be undone.`)) return;
-
-            setDb(prev => {
-                const next = deepClone(prev);
-                if (!next.shop) next.shop = { customItems: {} };
-
-                targets.forEach(item => {
-                    const name = item.name;
-                    // Only delete from customItems
-                    if (next.shop.customItems && next.shop.customItems[name]) {
-                        delete next.shop.customItems[name];
-                    }
-                });
-                return next;
-            });
-            setContextMenu(null);
-            return;
-        }
-
-        setDb(prev => {
-            const next = deepClone(prev);
-            if (!next.shop) next.shop = { availableItems: [], traders: [], availableFormulas: [] };
-
-            targets.forEach(item => {
-                const itemName = item.name;
-
-                if (action === 'availability') {
-                    const list = next.shop.availableItems || [];
-                    if (payload === true && !list.includes(itemName)) list.push(itemName);
-                    if (payload === false && list.includes(itemName)) {
-                        next.shop.availableItems = list.filter(n => n !== itemName);
-                    }
-                } else if (action === 'formulaAvailability') {
-                    if (!next.shop.availableFormulas) next.shop.availableFormulas = [];
-                    const list = next.shop.availableFormulas;
-                    if (payload === true && !list.includes(itemName)) list.push(itemName);
-                    if (payload === false && list.includes(itemName)) {
-                        next.shop.availableFormulas = list.filter(n => n !== itemName);
-                    }
-                } else if (action === 'assignTrader') {
-                    const trader = next.shop.traders.find(t => t.id === payload);
-                    if (trader) {
-                        // Store full item if it has customizations (like spell), otherwise just name
-                        const itemToStore = item.system?.spell ? item : itemName;
-                        // Check existence by name
-                        const existing = trader.inventory.some(i => (typeof i === 'string' ? i : i.name) === itemName);
-                        if (!existing) trader.inventory.push(itemToStore);
-                    }
-                } else if (action === 'givePlayer') {
-                    const campaignId = activeCampaign?.id;
-                    if (!campaignId) return next;
-                    const char = next.campaigns?.[campaignId]?.characters?.[payload] || next.characters?.[payload]; // support both structs? assumption: useCampaign gives activeCampaign
-                    // Wait, activeCampaign has characters, payload is index? Or ID?
-                    // In previous code render it was index. `activeCampaign.characters` is array.
-                    // But `char` derivation needs checking.
-                    // Let's assume payload is index in activeCampaign.characters
-                    if (char) {
-                        const stackable = shouldStack(item);
-                        const existing = stackable ? (char.inventory || []).find(i => i.name === itemName) : null;
-                        if (!char.inventory) char.inventory = [];
-                        if (existing) {
-                            existing.qty = (existing.qty || 1) + 1;
-                        } else {
-                            // Push FULL item to preserve properties
-                            char.inventory.push({ ...item, qty: 1, instanceId: crypto.randomUUID(), addedAt: Date.now() });
-                        }
-                    }
-                } else if (action === 'giveFormula') {
-                    const campaignId = activeCampaign?.id;
-                    if (!campaignId) return next;
-                    const char = next.campaigns?.[campaignId]?.characters?.[payload] || next.characters?.[payload];
-                    if (char) {
-                        if (!char.formulaBook) char.formulaBook = [];
-                        if (!char.formulaBook.includes(itemName)) {
-                            char.formulaBook.push(itemName);
-                        }
-                    }
-                } else if (action === 'addToLoot') {
-                    const bag = (next.lootBags || []).find(b => b.id === payload);
-                    if (bag) {
-                        // Use validated item data
-                        bag.items.push({
-                            ...item,
-                            instanceId: crypto.randomUUID(),
-                            addedAt: Date.now()
-                        });
-                    }
-                }
-            });
-            return next;
-        });
-        setContextMenu(null);
-    };
-
-    // ... DRAG HANDLERS ...
-    const handleDragStart = (e, item, source) => {
-        e.dataTransfer.setData('application/json', JSON.stringify({ item, source }));
-    };
-
-    const handleDropOnTrader = (e, traderId) => {
-        e.preventDefault();
-        const dataStr = e.dataTransfer.getData('application/json');
-        if (!dataStr) return;
-        try {
-            const { item } = JSON.parse(dataStr);
-            if (!item || !item.name) return;
-            setDb(prev => {
-                const next = deepClone(prev);
-                const trader = next.shop.traders.find(t => t.id === traderId);
-                if (trader) {
-                    const existing = trader.inventory.map(x => (typeof x === 'string' ? x : x.name));
-                    if (!existing.includes(item.name)) {
-                        trader.inventory.push(item.name);
-                    }
-                }
-                return next;
-            });
-        } catch (err) { }
-    };
-
-    const handleDropOnLoot = (e, bagId) => {
-        e.preventDefault();
-        const dataStr = e.dataTransfer.getData('application/json');
-        if (!dataStr) return;
-        try {
-            const { item } = JSON.parse(dataStr);
-            if (!item || !item.name) return;
-
-            // QTY Prompt for stackables
-            let qty = 1;
-            if (shouldStack(item)) {
-                const res = prompt(`Quantity for ${item.name}?`, "1");
-                if (res === null) return;
-                qty = parseInt(res) || 1;
-            }
-
-            setDb(prev => {
-                const next = deepClone(prev);
-                const bag = next.lootBags.find(b => b.id === bagId);
-                if (bag) {
-                    // Check for existing stackable item
-                    const stackable = shouldStack(item);
-                    const existing = stackable ? bag.items.find(i => i.name === item.name && !i.claimedBy) : null;
-
-                    if (existing) {
-                        existing.qty = (existing.qty || 1) + qty;
-                    } else {
-                        // Add potentially multiple if not stackable? No, usually distinct instances if not stackable.
-                        // But if user requested 5 swords, we might want 5 instances.
-                        // For non-stackable, let's loop. For stackable, we did logic above.
-                        if (stackable) {
-                            bag.items.push({ ...item, qty, instanceId: crypto.randomUUID(), addedAt: Date.now() });
-                        } else {
-                            for (let i = 0; i < qty; i++) {
-                                bag.items.push({ ...item, instanceId: crypto.randomUUID(), addedAt: Date.now() });
-                            }
-                        }
-                    }
-                }
-                return next;
-            });
-        } catch (err) { }
-    };
-
-    const handleDropOnGlobal = (e) => {
-        // Handle removal if dragging BACK from Trader/Loot
-        e.preventDefault();
-        const dataStr = e.dataTransfer.getData('application/json');
-        if (!dataStr) return;
-        try {
-            const { item, source } = JSON.parse(dataStr);
-            if (source === 'trader' && inspectingTraderId) {
-                setDb(prev => {
-                    const next = deepClone(prev);
-                    const trader = next.shop.traders.find(t => t.id === inspectingTraderId);
-                    if (trader) {
-                        trader.inventory = trader.inventory.filter(i => (typeof i === 'string' ? i : i.name) !== item.name);
-                    }
-                    return next;
-                });
-            }
-            if (source === 'loot' && inspectingLootId) {
-                setDb(prev => {
-                    const next = deepClone(prev);
-                    const bag = next.lootBags.find(b => b.id === inspectingLootId);
-                    if (bag) {
-                        // If stackable, decrement? Or remove all? 
-                        // Dragging usually implies moving the whole "stack" represented by the row.
-                        bag.items = bag.items.filter(i => i.instanceId !== item.instanceId);
-                    }
-                    return next;
-                });
-            }
-        } catch (err) { }
-    };
-
-    // --- RENDER HELPERS ---
-    const renderTable = (items, source, onRowClickOverride = null, sortCfg = sortConfig, onSort = handleSort) => (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
-            <thead>
-                <tr style={{ background: '#333', textAlign: 'left', position: 'sticky', top: 0 }}>
-                    {source === 'global' && <th style={{ padding: 8 }}>Avail</th>}
-                    {source === 'global' && <th style={{ padding: 8 }}>Formula</th>}
-                    {visibleColumns.map(c => (
-                        <th key={c} style={{ padding: 8, textTransform: 'capitalize', cursor: 'pointer' }} onClick={() => onSort(c)}>
-                            {c} {sortCfg.key === c ? (sortCfg.direction === 'asc' ? '▲' : '▼') : ''}
-                        </th>
-                    ))}
-                    {source === 'loot' && <th style={{ padding: 8 }}>Qty/Avail</th>}
-                </tr>
-            </thead>
-            <tbody>
-                {items.map((item, idx) => {
-                    const isSelected = selectedItems.includes(item.name);
-                    return (
-                        <tr
-                            key={item.instanceId || idx}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, item, source)}
-                            style={{
-                                borderBottom: '1px solid #444',
-                                background: isSelected ? 'rgba(197, 160, 89, 0.2)' : (idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
-                                cursor: 'grab'
-                            }}
-                            onClick={(e) => onRowClickOverride ? onRowClickOverride(e, item) : handleRowClick(e, item, idx)}
-                            onDoubleClick={() => onInspectItem?.(item)}
-                            onContextMenu={(e) => handleContextMenu(e, item, idx)}
-                        >
-                            {source === 'global' && (
-                                <>
-                                    <td style={{ padding: 8 }}>
-                                        <input type="checkbox" checked={availableList.includes(item.name)} onChange={(e) => { e.stopPropagation(); toggleItemAvailability(item.name); }} onClick={(e) => e.stopPropagation()} />
-                                    </td>
-                                    <td style={{ padding: 8 }}>
-                                        <input type="checkbox" checked={(db.shop?.availableFormulas || []).includes(item.name)} onChange={(e) => { e.stopPropagation(); toggleFormulaAvailability(item.name); }} onClick={(e) => e.stopPropagation()} />
-                                    </td>
-                                </>
-                            )}
-                            {visibleColumns.map(c => (
-                                <td key={c} style={{ padding: 8 }}>
-                                    {c === 'price' ? `${item.price} gp` :
-                                        c === 'traits' ? (item.traits?.value?.join(', ') || '-') :
-                                            c === 'damage' ? (item.damage ? (typeof item.damage === 'string' ? item.damage : `${item.damage.dice}${item.damage.die} ${item.damage.damageType}`) : '-') :
-                                                c === 'range' ? (item.range ? `${item.range} ft` : '-') :
-                                                    item[c]
-                                    }
-                                </td>
-                            ))}
-                            {source === 'loot' && (
-                                <td style={{ padding: 8 }}>
-                                    {(item.qty || 1) > 1 && <span style={{ marginRight: 5, color: '#aaa' }}>x{item.qty}</span>}
-                                    {item.claimedBy ? <span style={{ color: '#c5a059' }}>Claimed: {item.claimedBy}</span> : <span style={{ color: '#4caf50' }}>Available</span>}
-                                </td>
-                            )}
-                        </tr>
-                    );
-                })}
-            </tbody>
-        </table>
+    // Context menu item component
+    const CtxItem = ({ icon, label, onClick, danger, hasSubmenu, onMouseEnter }) => (
+        <div
+            onClick={onClick}
+            onMouseEnter={onMouseEnter}
+            style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px', cursor: 'pointer',
+                color: danger ? '#e57373' : '#ddd', background: 'transparent', transition: 'background 0.15s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = '#333'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+        >
+            <span style={{ width: 18, textAlign: 'center', opacity: 0.7 }}>{icon}</span>
+            <span style={{ flex: 1 }}>{label}</span>
+            {hasSubmenu && <span style={{ opacity: 0.5 }}>▶</span>}
+        </div>
     );
 
-    // ... RENDER ...
+    const CtxDivider = () => <div style={{ height: 1, background: '#444', margin: '4px 0' }} />;
 
-    // Derived Active Data
-    const activeTrader = db.shop?.traders?.find(t => t.id === inspectingTraderId);
-    const activeLootBag = db.lootBags?.find(b => b.id === inspectingLootId);
+    // Grid layout changes based on sideMode: 3fr main, 2fr side
+    const gridTemplate = sideMode === 'none'
+        ? 'auto 1fr / 1fr'
+        : 'auto 1fr / 3fr 2fr';
 
-    // Resolve Items Logic
-    const rawTraderItems = activeTrader ? activeTrader.inventory.map(name => {
-        const found = SHOP_INDEX_ITEMS.find(i => i.name === (typeof name === 'string' ? name : name.name));
-        return found || (typeof name === 'object' ? name : { name, price: 0 }); // Fallback
-    }) : [];
-
-    const rawLootItems = activeLootBag ? activeLootBag.items : [];
-
-    // Filter & Sort for Inspector
-    const processedTraderItems = useMemo(() => {
-        let items = rawTraderItems;
-        if (applyFiltersToInspector) {
-            items = getFilteredItems(items);
-        }
-        return getSortedItems(items, inspectorSortConfig);
-    }, [rawTraderItems, applyFiltersToInspector, inspectorSortConfig, itemFilterType, itemFilterCategory, itemFilterRarity, itemFilterTraits, itemFilterGroup, itemSearch, itemFilterAvailable, itemFilterFormulaAvailable]);
-
-    const processedLootItems = useMemo(() => {
-        let items = rawLootItems;
-        if (applyFiltersToInspector) {
-            items = getFilteredItems(items);
-        }
-        return getSortedItems(items, inspectorSortConfig);
-    }, [rawLootItems, applyFiltersToInspector, inspectorSortConfig, itemFilterType, itemFilterCategory, itemFilterRarity, itemFilterTraits, itemFilterGroup, itemSearch, itemFilterAvailable, itemFilterFormulaAvailable]);
-
-    if (editingItem) {
-        return (
-            <ItemEditor
-                initialItem={Object.keys(editingItem).length === 0 ? null : editingItem}
-                onSave={() => window.location.reload()}
-                onCancel={() => setEditingItem(null)}
-                onSaveToDb={(itemData) => {
-                    setDb(prev => ({
-                        ...prev,
-                        shop: {
-                            ...prev.shop,
-                            customItems: {
-                                ...prev.shop?.customItems,
-                                [itemData.name]: itemData // Key by Name for ShopView lookup compatibility (or ID)
-                                // If we key by Name, we assume distinct names. ItemEditor 'safeId' was name-based.
-                            }
-                        }
-                    }));
-                }}
-            />
-        );
-    }
+    // Button style for consistency
+    const toolbarBtnStyle = {
+        margin: 0,
+        padding: '6px 12px',
+        background: '#333',
+        border: '1px solid #444',
+        color: '#ddd',
+        borderRadius: 4,
+        cursor: 'pointer',
+        fontSize: '0.9em',
+        whiteSpace: 'nowrap',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6
+    };
 
     return (
-        <div className="admin-layout" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-            {/* TOOLBAR */}
-            <div style={{ padding: 10, background: '#222', borderBottom: '1px solid #444', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                <input
-                    className="modal-input"
-                    placeholder="Search..."
-                    value={itemSearch}
-                    onChange={e => {
-                        setItemSearch(e.target.value);
-                        setItemPage(1);
-                    }}
-                    style={{ width: 200 }}
-                />
-
-                <button className="btn-add-condition" style={{ margin: 0, width: 'auto', background: '#4caf50' }} onClick={() => setEditingItem({})}>
-                    + New Item
-                </button>
-
-                <MultiSelectDropdown label="Type" options={uniqueTypes} selected={itemFilterType} onChange={(v) => { setItemFilterType(v); setItemPage(1); }} />
-                <MultiSelectDropdown label="Group" options={uniqueGroups} selected={itemFilterGroup} onChange={(v) => { setItemFilterGroup(v); setItemPage(1); }} />
-                <MultiSelectDropdown label="Category" options={uniqueCategories} selected={itemFilterCategory} onChange={(v) => { setItemFilterCategory(v); setItemPage(1); }} />
-                <MultiSelectDropdown label="Rarity" options={uniqueRarities} selected={itemFilterRarity} onChange={(v) => { setItemFilterRarity(v); setItemPage(1); }} />
-
-                <div style={{ display: 'flex', gap: 5 }}>
-                    <button className={`btn-add-condition ${itemFilterAvailable ? 'active' : ''}`} style={{ margin: 0, width: 'auto', border: itemFilterAvailable ? '1px solid var(--text-gold)' : '1px solid #444' }} onClick={() => setItemFilterAvailable(p => !p)}>Avail</button>
-                    <button className={`btn-add-condition ${itemFilterFormulaAvailable ? 'active' : ''}`} style={{ margin: 0, width: 'auto', border: itemFilterFormulaAvailable ? '1px solid var(--text-gold)' : '1px solid #444' }} onClick={() => setItemFilterFormulaAvailable(p => !p)}>Formula</button>
-                </div>
-
-                {/* ... Column selection & Page Size ... */}
-                <div style={{ position: 'relative' }}>
-                    <button className="btn-add-condition" style={{ margin: 0, width: 'auto' }} onClick={() => setShowColSelector(!showColSelector)}>
-                        Columns ▾
-                    </button>
-                    {showColSelector && (
-                        <div style={{ position: 'absolute', top: '100%', left: 0, background: '#333', border: '1px solid #555', padding: 10, zIndex: 10, minWidth: 150 }}>
-                            {allColumns.map(col => (
-                                <div key={col} style={{ display: 'flex', gap: 5, marginBottom: 5 }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={visibleColumns.includes(col)}
-                                        onChange={() => {
-                                            setVisibleColumns(prev => prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]);
-                                        }}
-                                    />
-                                    <span style={{ textTransform: 'capitalize' }}>{col}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                <select className="modal-input" style={{ width: 'auto', marginLeft: 'auto' }} value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setItemPage(1); }}>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                </select>
-            </div>
-
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                {/* LEFT MAIN AREA */}
-                <div style={{ flex: 3, display: 'flex', flexDirection: 'column', borderRight: '1px solid #444', overflow: 'hidden' }}>
-
-                    {/* GLOBAL LIST (Top or Full) */}
-                    <div
-                        style={{ flex: 1, overflow: 'auto', padding: 0 }}
-                        onDrop={handleDropOnGlobal}
-                        onDragOver={e => e.preventDefault()}
+        <>
+            <style>{scrollbarStyles}</style>
+            <div style={{ display: 'grid', gridTemplate, gap: 10, height: '100%', overflow: 'hidden' }}>
+                {/* TOOLBAR CARD - spans full width */}
+                <Card style={{ gridColumn: '1 / -1', flexDirection: 'row', alignItems: 'center', padding: '10px 15px', gap: 10 }}>
+                    <input
+                        className="modal-input"
+                        placeholder="Search..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        style={{ width: 180 }}
+                    />
+                    <button style={toolbarBtnStyle} onClick={() => performAction('newItem')}>New Item</button>
+                    <button
+                        style={{ ...toolbarBtnStyle, background: Object.keys(activeFilters).length > 0 ? '#c5a059' : '#333', color: Object.keys(activeFilters).length > 0 ? '#000' : '#ddd' }}
+                        onClick={() => setShowFilterDialog(true)}
                     >
-                        {renderTable(paginatedItems, 'global')}
-                    </div>
-                    <div style={{ padding: 5, borderTop: '1px solid #444', background: '#222', display: 'flex', justifyContent: 'center', gap: 10 }}>
-                        <button disabled={currentPage === 1} onClick={() => setItemPage(p => Math.max(1, p - 1))}>Prev</button>
-                        <span>Page {currentPage} of {totalPages}</span>
-                        <button disabled={currentPage === totalPages} onClick={() => setItemPage(p => Math.min(totalPages, p + 1))}>Next</button>
+                        Filter{Object.keys(activeFilters).length > 0 ? ` (${Object.keys(activeFilters).length})` : ''}
+                    </button>
+                    <div style={{ position: 'relative' }}>
+                        <button style={toolbarBtnStyle} onClick={() => setShowColSelector(!showColSelector)}>
+                            Columns <span style={{ opacity: 0.6 }}>▾</span>
+                        </button>
+                        {showColSelector && (
+                            <div style={{ position: 'absolute', top: '100%', left: 0, background: '#1a1a1a', border: '1px solid #444', padding: 8, zIndex: 1000, minWidth: 160, boxShadow: '0 4px 12px rgba(0,0,0,0.5)', borderRadius: 6, marginTop: 4 }}>
+                                {Object.keys(COLUMNS_CONFIG).map(colKey => (
+                                    <label key={colKey} style={{ display: 'flex', gap: 8, padding: '4px 6px', cursor: 'pointer', color: '#ddd', fontSize: '0.9em' }}>
+                                        <input type="checkbox" checked={visibleColumns.includes(colKey)} onChange={() => setVisibleColumns(prev => prev.includes(colKey) ? prev.filter(c => c !== colKey) : [...prev, colKey])} />
+                                        {COLUMNS_CONFIG[colKey].label}
+                                    </label>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
-                    {/* INSPECTOR SPLIT (Bottom) */}
-                    {(activeTrader || activeLootBag) && (
-                        <div style={{
-                            height: '50%', // Fixed 50% height
-                            maxHeight: '50vh',
-                            borderTop: '4px solid #c5a059',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            background: '#1a1a1a',
-                            flexShrink: 0 // Don't shrink below 50% if possible, or adjust
-                        }}
-                            onDrop={(e) => {
-                                if (activeTrader) handleDropOnTrader(e, activeTrader.id);
-                                if (activeLootBag) handleDropOnLoot(e, activeLootBag.id);
-                            }}
-                            onDragOver={e => e.preventDefault()}
-                        >
-                            <div style={{ padding: 10, background: '#333', color: '#fff', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span>
-                                    {activeTrader ? `Trader: ${activeTrader.name}` : `Loot: ${activeLootBag.name} (${activeLootBag.items.length} items)`}
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 0, border: '1px solid #444', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
+                        <button style={{ padding: '6px 16px', minWidth: 60, background: sideMode === 'none' ? '#c5a059' : '#222', color: sideMode === 'none' ? '#000' : '#888', border: 'none', cursor: 'pointer', fontWeight: 500 }} onClick={() => setSideMode('none')}>Items</button>
+                        <button style={{ padding: '6px 16px', minWidth: 60, background: sideMode === 'trader' ? '#c5a059' : '#222', color: sideMode === 'trader' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500 }} onClick={() => { setSideMode('trader'); setSelectedSideItems([]); }}>Trader</button>
+                        <button style={{ padding: '6px 16px', minWidth: 60, background: sideMode === 'loot' ? '#c5a059' : '#222', color: sideMode === 'loot' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500 }} onClick={() => { setSideMode('loot'); setSelectedSideItems([]); }}>Loot</button>
+                    </div>
+                </Card>
+
+                {/* MAIN TABLE CARD */}
+                <Card style={{ minHeight: 0 }} onDrop={e => handleDrop(e, 'global')} onDragOver={e => e.preventDefault()}>
+                    <div className="items-view-scroll" style={{ flex: 1, overflow: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
+                            <thead style={{ position: 'sticky', top: 0, background: '#222', zIndex: 10 }}>
+                                <tr>
+                                    {tableColumns.map(col => {
+                                        const isMeta = col === 'Available' || col === 'Formula';
+                                        return (
+                                            <th key={col} style={{ padding: 8, textAlign: 'left', cursor: !isMeta ? 'pointer' : 'default', color: '#aaa', borderBottom: '1px solid #444' }} onClick={() => !isMeta && handleSort(col)}>
+                                                {col === 'Available' ? 'Av' : col === 'Formula' ? 'Fm' : COLUMNS_CONFIG[col]?.label || col}
+                                                {!isMeta && sortConfig.key === col && (sortConfig.direction === 'asc' ? ' ▲' : ' ▼')}
+                                            </th>
+                                        );
+                                    })}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {paginatedItems.map((item, idx) => (
+                                    <tr
+                                        key={item.instanceId || idx}
+                                        draggable
+                                        onDragStart={e => handleDragStart(e, item, 'global')}
+                                        onContextMenu={e => handleContextMenu(e, item, 'global')}
+                                        onClick={e => handleSelect(e, item, idx)}
+                                        onDoubleClick={() => handleDoubleClick(item)}
+                                        style={{
+                                            borderBottom: '1px solid #333',
+                                            background: isSelected(item) ? 'rgba(197, 160, 89, 0.25)' : (idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {tableColumns.map(col => {
+                                            if (col === 'Available') return <td key={col} style={{ padding: 8 }}><input type="checkbox" checked={(db.shop?.availableItems || []).includes(item.name)} onChange={(e) => { e.stopPropagation(); performAction((db.shop?.availableItems || []).includes(item.name) ? 'makeUnavailable' : 'makeAvailable'); }} onClick={e => e.stopPropagation()} /></td>;
+                                            if (col === 'Formula') return <td key={col} style={{ padding: 8 }}><input type="checkbox" checked={(db.shop?.availableFormulas || []).includes(item.name)} onChange={(e) => { e.stopPropagation(); performAction((db.shop?.availableFormulas || []).includes(item.name) ? 'removeFormula' : 'addFormula'); }} onClick={e => e.stopPropagation()} /></td>;
+                                            return <td key={col} style={{ padding: 8, color: '#ddd' }}>{item[col]}</td>;
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    {/* Pagination */}
+                    <div style={{ padding: 8, borderTop: '1px solid #333', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, background: '#1a1a1a' }}>
+                        <button disabled={page === 1} onClick={() => setPage(p => p - 1)}>◀</button>
+                        <span style={{ fontSize: '0.85em' }}>Page {page} / {totalPages}</span>
+                        <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>▶</button>
+                        <select value={itemsPerPage} onChange={e => { setItemsPerPage(Number(e.target.value)); setPage(1); }} style={{ marginLeft: 10 }}>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                        </select>
+                    </div>
+                </Card>
+
+                {/* SIDE PANEL (Trader/Loot List + Inventory) */}
+                {sideMode !== 'none' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
+                        {/* TRADERS/LOOT LIST */}
+                        <Card style={{ flex: '0 0 auto', maxHeight: '35%' }}>
+                            <div style={{ padding: 8, borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#222' }}>
+                                <span style={{ color: '#c5a059', fontWeight: 'bold' }}>{sideMode === 'trader' ? 'Traders' : 'Loot Bags'}</span>
+                                <button style={{ fontSize: '0.75em', background: '#333', border: '1px solid #555', padding: '3px 8px', cursor: 'pointer' }} onClick={sideMode === 'trader' ? handleCreateTrader : handleCreateLoot}>+ New</button>
+                            </div>
+                            {sideMode === 'trader' && (
+                                <div style={{ padding: 5 }}>
+                                    <input className="modal-input" placeholder="New Trader Name..." value={newTraderName} onChange={e => setNewTraderName(e.target.value)} style={{ width: '100%', marginBottom: 5 }} onKeyDown={e => e.key === 'Enter' && handleCreateTrader()} />
+                                </div>
+                            )}
+                            <div className="items-view-scroll" style={{ flex: 1, overflow: 'auto' }}>
+                                {sideLists.sliced.map(entry => (
+                                    <div
+                                        key={entry.id}
+                                        onClick={() => { sideMode === 'trader' ? setSelectedTraderId(entry.id) : setSelectedLootId(entry.id); setSelectedSideItems([]); }}
+                                        onDrop={e => handleDrop(e, sideMode, entry.id)}
+                                        onDragOver={e => e.preventDefault()}
+                                        style={{
+                                            padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid #333',
+                                            background: (sideMode === 'trader' ? selectedTraderId : selectedLootId) === entry.id ? '#333' : 'transparent',
+                                            display: 'flex', justifyContent: 'space-between'
+                                        }}
+                                    >
+                                        <span>{entry.name}</span>
+                                        <span style={{ color: '#888' }}>({sideMode === 'trader' ? entry.inventory.length : entry.items.length})</span>
+                                    </div>
+                                ))}
+                            </div>
+                            {sideLists.total > 1 && (
+                                <div style={{ padding: 4, borderTop: '1px solid #333', display: 'flex', justifyContent: 'center', gap: 5 }}>
+                                    <button disabled={sidePage === 1} onClick={() => setSidePage(p => p - 1)}>◀</button>
+                                    <span style={{ fontSize: '0.75em' }}>{sideLists.current} / {sideLists.total}</span>
+                                    <button disabled={sidePage === sideLists.total} onClick={() => setSidePage(p => p + 1)}>▶</button>
+                                </div>
+                            )}
+                        </Card>
+
+                        {/* INVENTORY TABLE */}
+                        <Card style={{ flex: 1, minHeight: 0 }}>
+                            <div style={{ padding: 8, borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#222' }}>
+                                <span style={{ color: '#c5a059', fontWeight: 'bold' }}>
+                                    {sideMode === 'trader' && (activeTrader ? activeTrader.name : 'Select Trader')}
+                                    {sideMode === 'loot' && (activeLoot ? activeLoot.name : 'Select Loot')}
                                 </span>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
-                                    {/* Apply Filters Switch */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.9em', fontWeight: 'normal' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={applyFiltersToInspector}
-                                            onChange={() => setApplyFiltersToInspector(p => !p)}
-                                            style={{ cursor: 'pointer' }}
-                                        />
-                                        <span onClick={() => setApplyFiltersToInspector(p => !p)} style={{ cursor: 'pointer' }}>Apply Filters</span>
-                                    </div>
-
-                                    {activeLootBag && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                            <span style={{ color: '#ffd700', fontSize: '0.9em' }}>Gold:</span>
-                                            <input
-                                                type="number"
-                                                className="modal-input"
-                                                style={{ width: 80, padding: 2, background: '#222', border: '1px solid #555' }}
-                                                value={activeLootBag.goldValue || 0}
-                                                onChange={(e) => {
-                                                    const val = parseFloat(e.target.value) || 0;
-                                                    setDb(prev => {
-                                                        const next = deepClone(prev);
-                                                        const b = next.lootBags.find(x => x.id === activeLootBag.id);
-                                                        if (b) b.goldValue = val;
-                                                        return next;
-                                                    });
+                                <label style={{ display: 'flex', gap: 5, fontSize: '0.8em', cursor: 'pointer' }}>
+                                    <input type="checkbox" checked={applySideFilters} onChange={() => setApplySideFilters(p => !p)} /> Filter
+                                </label>
+                            </div>
+                            {sideMode === 'loot' && activeLoot && (
+                                <div style={{ padding: 5, borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <span style={{ color: '#ffd700', fontSize: '0.8em' }}>Gold:</span>
+                                    <input type="number" className="modal-input" style={{ width: 80, padding: 2 }} value={activeLoot.goldValue || 0}
+                                        onChange={e => { const val = parseFloat(e.target.value) || 0; setDb(p => { const n = deepClone(p); n.lootBags.find(x => x.id === activeLoot.id).goldValue = val; return n; }); }} />
+                                </div>
+                            )}
+                            <div className="items-view-scroll" style={{ flex: 1, overflow: 'auto' }}>
+                                <table style={{ width: '100%', fontSize: '0.85em', borderCollapse: 'collapse' }}>
+                                    <thead style={{ position: 'sticky', top: 0, background: '#222' }}>
+                                        <tr>
+                                            {sideMode === 'trader' && <th style={{ padding: 4 }}>Av</th>}
+                                            {sideMode === 'trader' && <th style={{ padding: 4 }}>Fm</th>}
+                                            <th style={{ padding: 4, textAlign: 'left', cursor: 'pointer' }} onClick={() => handleSideSort('name')}>Name{sideSortConfig.key === 'name' && (sideSortConfig.direction === 'asc' ? ' ▲' : ' ▼')}</th>
+                                            <th style={{ padding: 4, cursor: 'pointer' }} onClick={() => handleSideSort('level')}>Lvl{sideSortConfig.key === 'level' && (sideSortConfig.direction === 'asc' ? ' ▲' : ' ▼')}</th>
+                                            <th style={{ padding: 4, cursor: 'pointer' }} onClick={() => handleSideSort('type')}>Type{sideSortConfig.key === 'type' && (sideSortConfig.direction === 'asc' ? ' ▲' : ' ▼')}</th>
+                                            {sideMode === 'loot' && <th style={{ padding: 4 }}>Qty</th>}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredSideItems.map((item, idx) => (
+                                            <tr
+                                                key={item.instanceId || idx}
+                                                draggable
+                                                onDragStart={e => handleDragStart(e, item, sideMode)}
+                                                onContextMenu={e => handleContextMenu(e, item, sideMode)}
+                                                onClick={e => handleSideSelect(e, item, idx)}
+                                                onDoubleClick={() => handleDoubleClick(item)}
+                                                style={{
+                                                    borderBottom: '1px solid #333',
+                                                    background: isSideSelected(item) ? 'rgba(197, 160, 89, 0.25)' : (idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
+                                                    cursor: 'pointer'
                                                 }}
-                                            />
-                                        </div>
-                                    )}
-
-                                    <button onClick={() => { setInspectingTraderId(null); setInspectingLootId(null); }}>Close Inspector</button>
-                                </div>
+                                            >
+                                                {sideMode === 'trader' && <td style={{ padding: 4 }}><input type="checkbox" checked={(db.shop?.availableItems || []).includes(item.name)} onChange={e => { e.stopPropagation(); performAction((db.shop?.availableItems || []).includes(item.name) ? 'makeUnavailable' : 'makeAvailable'); }} onClick={e => e.stopPropagation()} /></td>}
+                                                {sideMode === 'trader' && <td style={{ padding: 4 }}><input type="checkbox" checked={(db.shop?.availableFormulas || []).includes(item.name)} onChange={e => { e.stopPropagation(); performAction((db.shop?.availableFormulas || []).includes(item.name) ? 'removeFormula' : 'addFormula'); }} onClick={e => e.stopPropagation()} /></td>}
+                                                <td style={{ padding: 4 }}>{item.name}</td>
+                                                <td style={{ padding: 4 }}>{item.level || 0}</td>
+                                                <td style={{ padding: 4 }}>{item.type}</td>
+                                                {sideMode === 'loot' && <td style={{ padding: 4 }}>{item.qty || 1}</td>}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                            <div style={{ flex: 1, overflow: 'auto' }}>
-                                {activeTrader && renderTable(processedTraderItems, 'trader', (e, item) => handleRowClick(e, item, -1), inspectorSortConfig, handleInspectorSort)}
-                                {activeLootBag && renderTable(processedLootItems, 'loot', (e, item) => handleRowClick(e, item, -1), inspectorSortConfig, handleInspectorSort)}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* RIGHT SIDEBAR (Manager) */}
-                <div style={{ flex: 1, background: '#1a1a1d', padding: 10, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-                    {/* TRADERS SECTION */}
-                    <div>
-                        <h3>Traders</h3>
-                        <div style={{ display: 'flex', gap: 5, marginBottom: 15 }}>
-                            <input className="modal-input" placeholder="New Trader Name" value={newTraderName} onChange={e => setNewTraderName(e.target.value)} />
-                            <button className="btn-add-condition" style={{ margin: 0 }} onClick={createTrader}>+</button>
-                        </div>
-                        {/* ... keep traders list ... */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {(db.shop?.traders || []).map(trader => (
-                                <div key={trader.id} style={{ background: inspectingTraderId === trader.id ? '#3e2723' : '#2b2b2e', padding: 10, borderRadius: 4, border: '1px solid #444' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                                        <select
-                                            className="modal-input"
-                                            style={{ width: 'auto' }}
-                                            value={trader.category}
-                                            onChange={e => updateTrader(trader.id, t => { t.category = e.target.value; })}
-                                        >
-                                            {SHOP_CATEGORIES.map(cat => (
-                                                <option key={cat} value={cat}>{cat}</option>
-                                            ))}
-                                        </select>
-                                        {trader.name}
-                                        <button style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => deleteTrader(trader.id)}>🗑️</button>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8em', color: '#888' }}>
-                                        <span>{trader.inventory.length} items</span>
-                                        <button className="icon-btn" style={{ color: '#c5a059', fontSize: '1.2em' }} title="Inspect" onClick={() => { setInspectingLootId(null); setInspectingTraderId(trader.id); }}>👁️</button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                        </Card>
                     </div>
+                )}
 
-                    {/* LOOT BAGS SECTION */}
-                    <div style={{ borderTop: '1px solid #444', paddingTop: 10 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3>Loot Bags 💰</h3>
-                            <button className="btn-add-condition" style={{ margin: 0, padding: '2px 8px' }} onClick={() => {
-                                const name = prompt("Bag Name:");
-                                if (name) setDb(prev => ({ ...prev, lootBags: [...(prev.lootBags || []), { id: crypto.randomUUID(), name, items: [], isLocked: true }] }));
-                            }}>+</button>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-                            {(db.lootBags || []).map(bag => (
-                                <div
-                                    key={bag.id}
-                                    style={{ background: inspectingLootId === bag.id ? '#3e2723' : '#222', padding: 10, borderRadius: 4, border: `1px solid ${bag.isLocked ? '#d32f2f' : '#4caf50'}` }}
-                                >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontWeight: 'bold' }}>{bag.name}</span>
-                                        <div style={{ display: 'flex', gap: 5 }}>
-                                            <button className="icon-btn" title="Inspect" onClick={() => { setInspectingTraderId(null); setInspectingLootId(bag.id); }}>👁️</button>
-                                            <button className="icon-btn" onClick={() => setDb(prev => {
-                                                const newDb = deepClone(prev);
-                                                const b = (newDb.lootBags || []).find(x => x.id === bag.id);
-                                                if (b) b.isLocked = !b.isLocked;
-                                                return newDb;
-                                            })}>{bag.isLocked ? '🔒' : '🔓'}</button>
-                                            <button className="icon-btn" style={{ color: '#d32f2f' }} onClick={() => {
-                                                if (confirm('Delete Bag?')) setDb(prev => ({ ...prev, lootBags: prev.lootBags.filter(b => b.id !== bag.id) }));
-                                            }}>🗑️</button>
-                                        </div>
-                                    </div>
-                                    <div style={{ fontSize: '0.8em', color: '#888', marginTop: 4 }}>
-                                        {bag.items.length} items {bag.goldValue > 0 ? `• ${bag.goldValue} gp` : ''} • {bag.isLocked ? 'Hidden' : 'Visible'}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Context Menu (re-using state) */}
-            {contextMenu && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: contextMenu.openUpwards ? 'auto' : contextMenu.y,
-                        bottom: contextMenu.openUpwards ? (window.innerHeight - contextMenu.y) : 'auto',
-                        left: contextMenu.x,
-                        background: '#2b2b2e',
-                        border: '1px solid #c5a059',
-                        borderRadius: 4,
-                        zIndex: 2000,
-                        minWidth: 180,
-                        boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div className="ctx-item" onClick={() => performContextAction('availability', true)}>Make Available</div>
-                    <div className="ctx-item" onClick={() => performContextAction('availability', false)}>Make Unavailable</div>
-                    <div style={{ borderTop: '1px solid #444', margin: '2px 0' }}></div>
-                    <div className="ctx-item" onClick={() => performContextAction('edit')}>✏️ Edit Item</div>
-                    <div className="ctx-item" onClick={() => performContextAction('clone')}>📋 Clone Item</div>
-                    <div className="ctx-item" style={{ color: '#ef9a9a' }} onClick={() => performContextAction('delete')}>🗑️ Delete Item</div>
-                    <div style={{ borderTop: '1px solid #444', margin: '2px 0' }}></div>
-
-                    {/* SUBMENUS */}
-
-                    {/* Trader Submenu */}
-                    <div className="ctx-item ctx-submenu-parent">
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Assign to Trader</span>
-                            <span>▶</span>
-                        </div>
-                        <div className="ctx-submenu" style={contextMenu.openUpwards ? { bottom: 0, top: 'auto', borderBottom: '1px solid #c5a059', borderTop: '1px solid #c5a059' } : {}}>
-                            {db.shop.traders.length === 0 && <div className="ctx-item disabled">No Traders</div>}
-                            {db.shop.traders.map(t => (
-                                <div key={t.id} className="ctx-item" onClick={() => performContextAction('assignTrader', t.id)}>{t.name}</div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Loot Bag Submenu */}
-                    <div className="ctx-item ctx-submenu-parent">
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Add to Loot Bag</span>
-                            <span>▶</span>
-                        </div>
-                        <div className="ctx-submenu" style={contextMenu.openUpwards ? { bottom: 0, top: 'auto', borderBottom: '1px solid #c5a059', borderTop: '1px solid #c5a059' } : {}}>
-                            {(!db.lootBags || db.lootBags.length === 0) && <div className="ctx-item disabled">No Loot Bags</div>}
-                            {(db.lootBags || []).map(b => (
-                                <div key={b.id} className="ctx-item" onClick={() => performContextAction('addToLoot', b.id)}>{b.name}</div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Player Submenus */}
-                    <div className="ctx-item ctx-submenu-parent">
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Give to Player</span>
-                            <span>▶</span>
-                        </div>
-                        <div className="ctx-submenu" style={contextMenu.openUpwards ? { bottom: 0, top: 'auto', borderBottom: '1px solid #c5a059', borderTop: '1px solid #c5a059' } : {}}>
-                            {(activeCampaign?.characters || []).map((c, i) => (
-                                <div key={c.id} className="ctx-item" onClick={() => performContextAction('givePlayer', i)}>{c.name}</div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="ctx-item ctx-submenu-parent">
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Give Formula to Player</span>
-                            <span>▶</span>
-                        </div>
-                        <div className="ctx-submenu" style={contextMenu.openUpwards ? { bottom: 0, top: 'auto', borderBottom: '1px solid #c5a059', borderTop: '1px solid #c5a059' } : {}}>
-                            {(activeCampaign?.characters || []).map((c, i) => (
-                                <div key={c.id} className="ctx-item" onClick={() => performContextAction('giveFormula', i)}>{c.name}</div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }} onClick={() => setContextMenu(null)}></div>
-                </div>
-            )}
-            <style>{`
-                .ctx-item { padding: 8px 12px; cursor: pointer; color: #ddd; } 
-                .ctx-item:hover { background: #444; color: #fff; } 
-                .ctx-item.disabled { color: #666; cursor: default; } 
-                .icon-btn { background:none; border:none; cursor:pointer; font-size: 1.1em; padding: 2px; } 
-                .icon-btn:hover { background: #444; border-radius: 4px; }
-                
-                /* Submenus */
-                .ctx-submenu-parent { position: relative; }
-                .ctx-submenu {
-                    display: none;
-                    position: absolute;
-                    left: 100%;
-                    top: -1px;
-                    background: #2b2b2e;
-                    border: 1px solid #c5a059;
-                    min-width: 160px;
-                    box-shadow: 2px 2px 10px rgba(0,0,0,0.5);
-                    z-index: 2005;
-                }
-                .ctx-submenu-parent:hover .ctx-submenu { display: block; }
-            `}</style>
-            {/* Spell Selector Modal */}
-            {scrollSelectorData && (
-                <SpellScrollSelectorModal
-                    rank={scrollSelectorData.rank}
-                    type={scrollSelectorData.type}
-                    ignoreAvailability={true}
-                    onCancel={() => setScrollSelectorData(null)}
-                    onSelect={(spell) => {
-                        const { baseItem, type, rank, action, payload } = scrollSelectorData;
-                        const newItem = { ...baseItem };
-                        // Clone system to avoid mutation
-                        newItem.system = baseItem.system ? JSON.parse(JSON.stringify(baseItem.system)) : {};
-
-                        // Preserve linkage to Shop Index for properties lookup
-                        newItem.system.originalName = baseItem.name;
-
-                        // Set Name
-                        newItem.name = `${type === 'scroll' ? 'Scroll' : 'Wand'} of ${spell.name} (Rank ${rank})`;
-
-                        // Embed Spell Index Entry
-                        newItem.system.spell = spell;
-
-                        // Initialize Wand Charges
-                        if (type === 'wand') {
-                            newItem.system.wand = { charges: 1, max: 1 };
-                        }
-
-                        // Execute context action with overridden item
-                        performContextAction(action, payload, newItem);
-                        setScrollSelectorData(null);
-                    }}
+                {/* FILTER DIALOG */}
+                <FilterDialog
+                    isOpen={showFilterDialog} onClose={() => setShowFilterDialog(false)}
+                    columns={Object.keys(COLUMNS_CONFIG)} activeFilters={activeFilters} onApply={setActiveFilters}
+                    optionsMap={{ type: uniqueTypes, category: uniqueCategories, group: uniqueGroups, rarity: uniqueRarities, Available: true, Formula: true }}
                 />
-            )}
-        </div>
+
+                {/* ITEM EDITOR MODAL */}
+                {editingItem && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000, padding: 20 }}>
+                        <div className="items-view-scroll" style={{ maxHeight: 'calc(100vh - 40px)', overflow: 'auto', borderRadius: 8 }}>
+                            <ItemEditor
+                                initialItem={Object.keys(editingItem).length > 0 ? editingItem : null}
+                                onSave={() => window.location.reload()}
+                                onCancel={() => setEditingItem(null)}
+                                onSaveToDb={() => { }}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* CONTEXT MENU */}
+                {contextMenu && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 2000 }} onClick={closeContextMenu} onContextMenu={e => { e.preventDefault(); closeContextMenu(); }}>
+                        <div style={{ position: 'absolute', top: contextMenu.y, left: contextMenu.x, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,0.6)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+                            {/* Side panel context menu */}
+                            {(contextMenu.source === 'trader' || contextMenu.source === 'loot') ? (
+                                <>
+                                    <CtxItem icon="🔍" label="View Details" onClick={() => { if (onInspectItem) onInspectItem(contextMenu.item); closeContextMenu(); }} />
+                                    <CtxDivider />
+                                    <CtxItem icon="🗑️" label="Remove Item" onClick={() => performAction('removeFromSide')} danger />
+                                    {contextMenu.source === 'loot' && (
+                                        <CtxItem icon="🔢" label="Set Amount" onClick={() => performAction('setAmount')} />
+                                    )}
+                                </>
+                            ) : (
+                                /* Main table context menu */
+                                <>
+                                    {(db.shop?.availableItems || []).includes(contextMenu.item.name)
+                                        ? <CtxItem icon="✓" label="Make Unavailable" onClick={() => performAction('makeUnavailable')} />
+                                        : <CtxItem icon="+" label="Make Available" onClick={() => performAction('makeAvailable')} />
+                                    }
+                                    {(db.shop?.availableFormulas || []).includes(contextMenu.item.name)
+                                        ? <CtxItem icon="📖" label="Remove Formula" onClick={() => performAction('removeFormula')} />
+                                        : <CtxItem icon="📜" label="Add Formula" onClick={() => performAction('addFormula')} />
+                                    }
+                                    <CtxDivider />
+                                    <CtxItem icon="✏️" label="Edit Item" onClick={() => performAction('edit')} />
+                                    <CtxItem icon="📋" label="Clone Item" onClick={() => performAction('clone')} />
+                                    <CtxItem icon="🗑️" label="Delete Item" onClick={() => performAction('delete')} danger />
+                                    <CtxDivider />
+                                    <div style={{ position: 'relative' }} onMouseEnter={() => setContextSubMenu('trader')} onMouseLeave={() => contextSubMenu === 'trader' && setContextSubMenu(null)}>
+                                        <CtxItem icon="🏪" label="Assign to Trader" hasSubmenu />
+                                        {contextSubMenu === 'trader' && (
+                                            <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
+                                                {(db.shop?.traders || []).map(t => <CtxItem key={t.id} label={t.name} onClick={() => performAction('addToTrader', t.id)} />)}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ position: 'relative' }} onMouseEnter={() => setContextSubMenu('loot')} onMouseLeave={() => contextSubMenu === 'loot' && setContextSubMenu(null)}>
+                                        <CtxItem icon="💰" label="Add to Loot Bag" hasSubmenu />
+                                        {contextSubMenu === 'loot' && (
+                                            <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
+                                                {(db.lootBags || []).map(b => <CtxItem key={b.id} label={b.name} onClick={() => performAction('addToLoot', b.id)} />)}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ position: 'relative' }} onMouseEnter={() => setContextSubMenu('player')} onMouseLeave={() => contextSubMenu === 'player' && setContextSubMenu(null)}>
+                                        <CtxItem icon="🎁" label="Give to Player" hasSubmenu />
+                                        {contextSubMenu === 'player' && (
+                                            <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
+                                                {(db.players || []).map(p => <CtxItem key={p.id} label={p.name} onClick={() => performAction('giveToPlayer', p.id)} />)}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ position: 'relative' }} onMouseEnter={() => setContextSubMenu('formula')} onMouseLeave={() => contextSubMenu === 'formula' && setContextSubMenu(null)}>
+                                        <CtxItem icon="📜" label="Give Formula to Player" hasSubmenu />
+                                        {contextSubMenu === 'formula' && (
+                                            <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
+                                                {(db.players || []).map(p => <CtxItem key={p.id} label={p.name} onClick={() => performAction('giveFormulaToPlayer', p.id)} />)}
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </>
     );
 }

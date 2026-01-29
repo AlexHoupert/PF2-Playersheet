@@ -39,8 +39,11 @@ import { CharacterCard } from './components/CharacterCard';
 import { ModalManager } from '../player/ModalManager';
 import XpOverlay from '../player/components/XpOverlay';
 
+import Sidebar from './components/Sidebar';
+import Breadcrumbs from './components/Breadcrumbs';
+
 import '../App.css';
-import './AdminApp.css'; // Ensure this exists or I might mock it. It was imported in original.
+import './AdminApp.css';
 
 export default function AdminApp({ db, setDb }) {
     const { activeCampaign, updateActiveCampaign, assignUser } = useCampaign();
@@ -158,210 +161,193 @@ export default function AdminApp({ db, setDb }) {
 
     return (
         <div className="app-container admin-theme">
-            {/* HEADER */}
-            <div className="header-bar">
-                <div className="header-title">
-                    <h1>GM Screen</h1>
-                </div>
-                <div className="header-controls">
-                    <button className={`nav-btn ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => setActiveTab('sessions')}>Sessions</button>
-                    <button className={`nav-btn ${activeTab === 'players' ? 'active' : ''}`} onClick={() => setActiveTab('players')}>Players</button>
-                    <button className={`nav-btn ${activeTab === 'items' ? 'active' : ''}`} onClick={() => setActiveTab('items')}>Items</button>
-                    <button className={`nav-btn ${activeTab === 'spells' ? 'active' : ''}`} onClick={() => setActiveTab('spells')}>Spells</button>
-                    {/* More tabs... collapsed for mobile? */}
-                    <div className="desktop-only-nav" style={{ display: 'inline-flex' }}>
-                        <button className={`nav-btn ${activeTab === 'impulses' ? 'active' : ''}`} onClick={() => setActiveTab('impulses')}>Impulses</button>
-                        <button className={`nav-btn ${activeTab === 'actions' ? 'active' : ''}`} onClick={() => setActiveTab('actions')}>Actions</button>
-                        <button className={`nav-btn ${activeTab === 'feats' ? 'active' : ''}`} onClick={() => setActiveTab('feats')}>Feats</button>
-                        <button className={`nav-btn ${activeTab === 'quests' ? 'active' : ''}`} onClick={() => setActiveTab('quests')}>Quests</button>
-                        <button className={`nav-btn ${activeTab === 'lore' ? 'active' : ''}`} onClick={() => setActiveTab('lore')}>Lore</button>
-                        <button className={`nav-btn ${activeTab === 'bestiary' ? 'active' : ''}`} onClick={() => setActiveTab('bestiary')}>Bestiary</button>
-                        <button className={`nav-btn ${activeTab === 'system' ? 'active' : ''}`} onClick={() => setActiveTab('system')}>System</button>
-                    </div>
-                </div>
-                <div className="header-actions">
-                    <button className="btn-char-switch" onClick={() => window.location.search = ''} title="Player View">👤</button>
-                </div>
-            </div>
+            <div className="admin-shell" style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
+                <Sidebar activeTab={activeTab} onSelect={setActiveTab} />
 
-            {/* MAIN CONTENT */}
-            <div className="admin-content-area">
-                {activeTab === 'sessions' && <SessionManager db={db} setDb={setDb} />}
+                {/* HEAD & CONTENT */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                    <Breadcrumbs activeTab={activeTab} />
 
-                {activeTab === 'players' && (
-                    <div className="admin-layout-column">
-                        <div className="admin-toolbar">
-                            <div className="toolbar-left">
-                                <h3>{activeCampaign?.name || 'Legacy Campaign'}</h3>
-                                <div className="toggle-group">
-                                    <button
-                                        className={playerTabMode === 'cards' ? 'active' : ''}
-                                        onClick={() => setPlayerTabMode('cards')}
-                                    >Cards</button>
-                                    <button
-                                        className={playerTabMode === 'users' ? 'active' : ''}
-                                        onClick={() => setPlayerTabMode('users')}
-                                    >Users</button>
-                                </div>
-                            </div>
-                            {/* Campaign XP / Init Controls could go here */}
-                            {activeCampaign && (
-                                <div className="xp-control" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                        <span>XP: </span>
-                                        <input
-                                            className="modal-input"
-                                            style={{ width: 80 }}
-                                            type="number"
-                                            value={activeCampaign.xp || 0}
-                                            onChange={(e) => {
-                                                const v = parseInt(e.target.value) || 0;
-                                                updateActiveCampaign(c => {
-                                                    const next = { ...c };
-                                                    next.xp = v;
-                                                    if (next.characters) next.characters.forEach(ch => {
-                                                        if (!ch.xp) ch.xp = { current: 0, max: 1000 };
-                                                        ch.xp.current = v;
-                                                    });
-                                                    return next;
-                                                });
-                                            }}
-                                        />
+                    <div className="admin-content-area" style={{ flex: 1, overflow: 'hidden', padding: 15, background: '#111', display: 'flex', flexDirection: 'column' }}>
+                        {activeTab === 'sessions' && <SessionManager db={db} setDb={setDb} />}
+
+                        {activeTab === 'players' && (
+                            <div className="admin-layout-column" style={{ padding: 10, height: '100%', overflowY: 'auto' }}>
+                                <div className="admin-toolbar">
+                                    <div className="toolbar-left">
+                                        <h3>{activeCampaign?.name || 'Legacy Campaign'}</h3>
+                                        <div className="toggle-group">
+                                            <button
+                                                className={playerTabMode === 'cards' ? 'active' : ''}
+                                                onClick={() => setPlayerTabMode('cards')}
+                                            >Cards</button>
+                                            <button
+                                                className={playerTabMode === 'users' ? 'active' : ''}
+                                                onClick={() => setPlayerTabMode('users')}
+                                            >Users</button>
+                                        </div>
                                     </div>
-                                    <button
-                                        className="btn-add-condition"
-                                        style={{ margin: 0, background: '#c5a059', color: '#111', fontWeight: 'bold' }}
-                                        onClick={() => {
-                                            const amtStr = prompt("Amount of XP to add:");
-                                            if (!amtStr) return;
-                                            const amt = parseInt(amtStr);
-                                            if (isNaN(amt) || amt === 0) return;
-
-                                            updateActiveCampaign(c => {
-                                                const next = { ...c };
-                                                const current = next.xp || 0;
-                                                const newVal = current + amt;
-                                                next.xp = newVal;
-
-                                                // Update all characters
-                                                if (next.characters) next.characters.forEach(ch => {
-                                                    if (!ch.xp) ch.xp = { current: 0, max: 1000 };
-                                                    ch.xp.current = newVal;
-                                                });
-
-                                                // Trigger Notification
-                                                next.xpNotification = {
-                                                    id: Date.now(),
-                                                    amount: amt
-                                                };
-                                                return next;
-                                            });
-                                        }}
-                                    >
-                                        + Add XP
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        {playerTabMode === 'cards' && (
-                            <div className="players-grid-container">
-                                {characters.map((char, i) => (
-                                    <CharacterCard
-                                        key={char.id || i}
-                                        character={char}
-                                        db={db}
-                                        setDb={setDb}
-                                        updateCharacter={(fn) => updateCharacter(i, fn)}
-                                        setModalMode={setModalMode}
-                                        setModalData={setModalData}
-                                        onOpenModalLong={(data, mode) => {
-                                            // Handle long press context
-                                            setActiveCharIndex(i);
-                                            setModalData(data);
-                                            setModalMode(mode || 'context');
-                                        }}
-                                        onOpenModal={(mode, data) => {
-                                            setActiveCharIndex(i);
-                                            if (data) setModalData(data);
-                                            setModalMode(mode);
-                                        }}
-                                    />
-                                ))}
-                            </div>
-                        )}
-
-                        {playerTabMode === 'users' && (
-                            <div className="user-management-panel">
-                                {/* (Original User Management Logic) */}
-                                {/* I will implement a simplified version or re-paste the logic if needed. 
-                                     The user asked for improvement, so I'll keep the logic but clean up the UI.
-                                 */}
-                                <div className="add-user-row">
-                                    <input id="new-user-email" placeholder="New User Email" />
-                                    <button onClick={() => {
-                                        const el = document.getElementById('new-user-email');
-                                        if (el && el.value.includes('@')) {
-                                            assignUser(el.value, activeCampaign?.id, null, 'player');
-                                            el.value = '';
-                                        }
-                                    }}>Authorize</button>
-                                </div>
-                                <table className="user-table">
-                                    <thead>
-                                        <tr><th>Email</th><th>Role</th><th>Character</th><th>Action</th></tr>
-                                    </thead>
-                                    <tbody>
-                                        {db.users && Object.entries(db.users).map(([email, info]) => (
-                                            <tr key={email}>
-                                                <td>{email}</td>
-                                                <td>{info.role}</td>
-                                                <td>
-                                                    <select
-                                                        value={info.characterId || ''}
-                                                        onChange={(e) => assignUser(email, info.campaignId, e.target.value, info.role)}
-                                                    >
-                                                        <option value="">None</option>
-                                                        {characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                                    </select>
-                                                </td>
-                                                <td>
-                                                    <button onClick={() => {
-                                                        setDb(prev => {
-                                                            const n = { ...prev };
-                                                            delete n.users[email];
-                                                            return n;
+                                    {/* Campaign XP / Init Controls could go here */}
+                                    {activeCampaign && (
+                                        <div className="xp-control" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                                <span>XP: </span>
+                                                <input
+                                                    className="modal-input"
+                                                    style={{ width: 80 }}
+                                                    type="number"
+                                                    value={activeCampaign.xp || 0}
+                                                    onChange={(e) => {
+                                                        const v = parseInt(e.target.value) || 0;
+                                                        updateActiveCampaign(c => {
+                                                            const next = { ...c };
+                                                            next.xp = v;
+                                                            if (next.characters) next.characters.forEach(ch => {
+                                                                if (!ch.xp) ch.xp = { current: 0, max: 1000 };
+                                                                ch.xp.current = v;
+                                                            });
+                                                            return next;
                                                         });
-                                                    }}>Revoke</button>
-                                                </td>
-                                            </tr>
+                                                    }}
+                                                />
+                                            </div>
+                                            <button
+                                                className="btn-add-condition"
+                                                style={{ margin: 0, background: '#c5a059', color: '#111', fontWeight: 'bold' }}
+                                                onClick={() => {
+                                                    const amtStr = prompt("Amount of XP to add:");
+                                                    if (!amtStr) return;
+                                                    const amt = parseInt(amtStr);
+                                                    if (isNaN(amt) || amt === 0) return;
+
+                                                    updateActiveCampaign(c => {
+                                                        const next = { ...c };
+                                                        const current = next.xp || 0;
+                                                        const newVal = current + amt;
+                                                        next.xp = newVal;
+
+                                                        // Update all characters
+                                                        if (next.characters) next.characters.forEach(ch => {
+                                                            if (!ch.xp) ch.xp = { current: 0, max: 1000 };
+                                                            ch.xp.current = newVal;
+                                                        });
+
+                                                        // Trigger Notification
+                                                        next.xpNotification = {
+                                                            id: Date.now(),
+                                                            amount: amt
+                                                        };
+                                                        return next;
+                                                    });
+                                                }}
+                                            >
+                                                + Add XP
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {playerTabMode === 'cards' && (
+                                    <div className="players-grid-container">
+                                        {characters.map((char, i) => (
+                                            <CharacterCard
+                                                key={char.id || i}
+                                                character={char}
+                                                db={db}
+                                                setDb={setDb}
+                                                updateCharacter={(fn) => updateCharacter(i, fn)}
+                                                setModalMode={setModalMode}
+                                                setModalData={setModalData}
+                                                onOpenModalLong={(data, mode) => {
+                                                    // Handle long press context
+                                                    setActiveCharIndex(i);
+                                                    setModalData(data);
+                                                    setModalMode(mode || 'context');
+                                                }}
+                                                onOpenModal={(mode, data) => {
+                                                    setActiveCharIndex(i);
+                                                    if (data) setModalData(data);
+                                                    setModalMode(mode);
+                                                }}
+                                            />
                                         ))}
-                                    </tbody>
-                                </table>
+                                    </div>
+                                )}
+
+                                {playerTabMode === 'users' && (
+                                    <div className="user-management-panel">
+                                        <div className="add-user-row">
+                                            <input id="new-user-email" placeholder="New User Email" />
+                                            <button onClick={() => {
+                                                const el = document.getElementById('new-user-email');
+                                                if (el && el.value.includes('@')) {
+                                                    assignUser(el.value, activeCampaign?.id, null, 'player');
+                                                    el.value = '';
+                                                }
+                                            }}>Authorize</button>
+                                        </div>
+                                        <table className="user-table">
+                                            <thead>
+                                                <tr><th>Email</th><th>Role</th><th>Character</th><th>Action</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                {db.users && Object.entries(db.users).map(([email, info]) => (
+                                                    <tr key={email}>
+                                                        <td>{email}</td>
+                                                        <td>{info.role}</td>
+                                                        <td>
+                                                            <select
+                                                                value={info.characterId || ''}
+                                                                onChange={(e) => assignUser(email, info.campaignId, e.target.value, info.role)}
+                                                            >
+                                                                <option value="">None</option>
+                                                                {characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <button onClick={() => {
+                                                                setDb(prev => {
+                                                                    const n = { ...prev };
+                                                                    delete n.users[email];
+                                                                    return n;
+                                                                });
+                                                            }}>Revoke</button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'items' && <ItemsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('item'); }} />}
+                        {activeTab === 'spells' && <SpellsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('spell'); }} />}
+                        {activeTab === 'impulses' && <ImpulsesView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('impulse'); }} />}
+                        {activeTab === 'feats' && <FeatsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('feat'); }} />}
+                        {activeTab === 'actions' && <ActionsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('item'); }} />}
+                        {activeTab === 'quests' && <QuestsView db={db} setDb={setDb} />}
+                        {activeTab === 'lore' && <LoreAdminView db={db} setDb={setDb} />}
+
+                        {/* Bestiary Routes */}
+                        {(activeTab === 'bestiary' || activeTab === 'bestiary_overview') && <BestiaryView db={db} setDb={setDb} />}
+                        {activeTab === 'bestiary_creatures' && <BestiaryView db={db} setDb={setDb} initialFilterType={['npc']} />}
+                        {activeTab === 'bestiary_hazards' && <BestiaryView db={db} setDb={setDb} initialFilterType={['hazard']} />}
+
+                        {activeTab === 'system' && (
+                            <div style={{ padding: 20, height: '100%', overflowY: 'auto' }}>
+                                <h2>System</h2>
+                                <FirebaseMigrator db={db} />
+                                <div style={{ marginTop: 20 }}>
+                                    <button onClick={() => handleRebuild('all')}>Rebuild Indexes</button>
+                                    {rebuildStatus && <span>{rebuildStatus.status}</span>}
+                                </div>
+                                <button onClick={resetData} style={{ marginTop: 20, background: 'red' }}>Reset All Data</button>
                             </div>
                         )}
                     </div>
-                )}
-
-                {activeTab === 'items' && <ItemsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('item'); }} />}
-                {activeTab === 'spells' && <SpellsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('spell'); }} />}
-                {activeTab === 'impulses' && <ImpulsesView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('impulse'); }} />}
-                {activeTab === 'feats' && <FeatsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('feat'); }} />}
-                {activeTab === 'actions' && <ActionsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('item'); }} />}
-                {activeTab === 'quests' && <QuestsView db={db} setDb={setDb} />}
-                {activeTab === 'lore' && <LoreAdminView db={db} setDb={setDb} />}
-                {activeTab === 'bestiary' && <BestiaryView db={db} setDb={setDb} />}
-                {activeTab === 'system' && (
-                    <div style={{ padding: 20 }}>
-                        <h2>System</h2>
-                        <FirebaseMigrator db={db} />
-                        <div style={{ marginTop: 20 }}>
-                            <button onClick={() => handleRebuild('all')}>Rebuild Indexes</button>
-                            {rebuildStatus && <span>{rebuildStatus.status}</span>}
-                        </div>
-                        <button onClick={resetData} style={{ marginTop: 20, background: 'red' }}>Reset All Data</button>
-                    </div>
-                )}
+                </div>
             </div>
 
             <ModalManager
@@ -381,6 +367,6 @@ export default function AdminApp({ db, setDb }) {
 
             {/* XP Overlay */}
             <XpOverlay xpNotification={activeCampaign?.xpNotification} />
-        </div>
+        </div >
     );
 }

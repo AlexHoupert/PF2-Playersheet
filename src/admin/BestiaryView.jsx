@@ -23,16 +23,22 @@ const DEFAULT_REVEAL_STATE = {
     size: 'precise'
 };
 
-export default function BestiaryView({ db, setDb }) {
+export default function BestiaryView({ db, setDb, initialFilterType }) {
     const { activeCampaign } = useCampaign();
 
     // List state
     const [search, setSearch] = useState('');
-    const [filterType, setFilterType] = useState([]);
+    const [filterType, setFilterType] = useState(initialFilterType || []);
     const [filterRarity, setFilterRarity] = useState([]);
     const [filterTraits, setFilterTraits] = useState([]);
     const [filterGroup, setFilterGroup] = useState([]);
     const [filterBestiary, setFilterBestiary] = useState(false);
+
+    useEffect(() => {
+        setFilterType(initialFilterType || []);
+        setPage(1);
+    }, [JSON.stringify(initialFilterType)]); // Deep compare logic simplified
+
     const [page, setPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
