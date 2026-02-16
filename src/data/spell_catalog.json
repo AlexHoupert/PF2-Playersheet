@@ -3260,8 +3260,8 @@
     "time": "2",
     "defense": null,
     "area": null,
-    "scroll_available": false,
-    "wand_available": false
+    "scroll_available": true,
+    "wand_available": true
   },
   {
     "sourceFile": "spells/1st-rank/necromancers-generosity.json",

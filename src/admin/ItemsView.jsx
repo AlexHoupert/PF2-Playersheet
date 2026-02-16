@@ -96,6 +96,7 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
     const [contextMenu, setContextMenu] = useState(null);
     const [contextSubMenu, setContextSubMenu] = useState(null);
     const [newTraderName, setNewTraderName] = useState('');
+    const [pendingSpellAction, setPendingSpellAction] = useState(null);
 
     useEffect(() => {
         localStorage.setItem('itemsViewColumns', JSON.stringify(visibleColumns));
@@ -166,7 +167,8 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
 
     // --- SIDE PANEL DATA ---
     const activeTrader = db.shop?.traders?.find(t => t.id === selectedTraderId);
-    const activeLoot = db.lootBags?.find(b => b.id === selectedLootId);
+    const campaignLootBags = activeCampaign?.lootBags || [];
+    const activeLoot = campaignLootBags.find(b => b.id === selectedLootId);
 
     const sideItems = useMemo(() => {
         let items = [];
@@ -196,12 +198,12 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
     const sideLists = useMemo(() => {
         let list = [];
         if (sideMode === 'trader') list = db.shop?.traders || [];
-        if (sideMode === 'loot') list = db.lootBags || [];
+        if (sideMode === 'loot') list = campaignLootBags;
         const max = 10;
         const total = Math.ceil(list.length / max) || 1;
         const current = Math.min(sidePage, total);
         return { sliced: list.slice((current - 1) * max, current * max), total, current };
-    }, [db.shop, db.lootBags, sideMode, sidePage]);
+    }, [db.shop, campaignLootBags, sideMode, sidePage]);
 
     // --- HANDLERS ---
     const handleSort = (key) => setSortConfig(p => ({ key, direction: p.key === key && p.direction === 'asc' ? 'desc' : 'asc' }));
@@ -266,8 +268,9 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
             if (targetType === 'trader' && targetId) {
                 const t = next.shop.traders.find(x => x.id === targetId);
                 if (t) items.forEach(i => { if (!t.inventory.some(x => (typeof x === 'string' ? x : x.name) === i.name)) t.inventory.push(i.name); });
-            } else if (targetType === 'loot' && targetId) {
-                const b = next.lootBags.find(x => x.id === targetId);
+            } else if (targetType === 'loot' && targetId && activeCampaign) {
+                const campData = next.campaigns[activeCampaign.id];
+                const b = campData?.lootBags?.find(x => x.id === targetId);
                 if (b) items.forEach(i => {
                     const stackable = shouldStack(i);
                     const existing = stackable ? b.items.find(x => x.name === i.name && !x.claimedBy) : null;
@@ -279,8 +282,9 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                 if (source === 'trader' && selectedTraderId) {
                     const t = next.shop.traders.find(x => x.id === selectedTraderId);
                     if (t) t.inventory = t.inventory.filter(x => !items.some(d => d.name === (typeof x === 'string' ? x : x.name)));
-                } else if (source === 'loot' && selectedLootId) {
-                    const b = next.lootBags.find(x => x.id === selectedLootId);
+                } else if (source === 'loot' && selectedLootId && activeCampaign) {
+                    const campData = next.campaigns[activeCampaign.id];
+                    const b = campData?.lootBags?.find(x => x.id === selectedLootId);
                     if (b) b.items = b.items.filter(x => !items.some(d => d.instanceId ? d.instanceId === x.instanceId : d.name === x.name));
                 }
                 setSelectedSideItems([]);
@@ -304,6 +308,53 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
 
     const closeContextMenu = () => { setContextMenu(null); setContextSubMenu(null); };
 
+    // Helper: detect scroll/wand items that need spell selection
+    const detectScrollWand = (item) => {
+        const scrollMatch = item.name.match(/(?:Scroll of Rank (\d+)|Scroll of (\d+)(?:st|nd|rd|th)?-rank Spell)/i);
+        if (scrollMatch) return { type: 'scroll', rank: parseInt(scrollMatch[1] || scrollMatch[2]) };
+        const wandMatch = item.name.match(/(?:Wand of Rank (\d+)|Magic Wand \((\d+)(?:st|nd|rd|th)?-Rank Spell\))/i);
+        if (wandMatch) return { type: 'wand', rank: parseInt(wandMatch[1] || wandMatch[2]) };
+        return null;
+    };
+
+    // Helper: execute the actual item action (shared between performAction and spell selection callback)
+    const executeItemAction = (action, arg, items) => {
+        setDb(prev => {
+            const next = deepClone(prev);
+            if (!next.shop) next.shop = {};
+            if (!next.shop.availableItems) next.shop.availableItems = [];
+            if (!next.shop.availableFormulas) next.shop.availableFormulas = [];
+            const campData = activeCampaign ? next.campaigns[activeCampaign.id] : null;
+
+            items.forEach(t => {
+                if (action === 'makeAvailable' && !next.shop.availableItems.includes(t.name)) next.shop.availableItems.push(t.name);
+                if (action === 'makeUnavailable') next.shop.availableItems = next.shop.availableItems.filter(x => x !== t.name);
+                if (action === 'addFormula' && !next.shop.availableFormulas.includes(t.name)) next.shop.availableFormulas.push(t.name);
+                if (action === 'removeFormula') next.shop.availableFormulas = next.shop.availableFormulas.filter(x => x !== t.name);
+                if (action === 'addToTrader' && arg) {
+                    const tr = next.shop.traders?.find(x => x.id === arg);
+                    if (tr && !tr.inventory.some(x => (typeof x === 'string' ? x : x.name) === t.name)) tr.inventory.push(t.name);
+                }
+                if (action === 'addToLoot' && arg && campData) {
+                    const bag = campData.lootBags?.find(x => x.id === arg);
+                    if (bag) bag.items.push({ ...t, qty: 1, instanceId: crypto.randomUUID() });
+                }
+                if (action === 'giveToPlayer' && arg && campData) {
+                    const p = campData.characters?.find(x => x.id === arg);
+                    if (p) { if (!p.inventory) p.inventory = []; p.inventory.push({ ...t, instanceId: crypto.randomUUID() }); }
+                }
+                if (action === 'giveFormulaToPlayer' && arg && campData) {
+                    const p = campData.characters?.find(x => x.id === arg);
+                    if (p) { if (!p.formulas) p.formulas = []; if (!p.formulas.includes(t.name)) p.formulas.push(t.name); }
+                }
+                if (action === 'delete') {
+                    if (t.isCustom && next.shop.customItems) delete next.shop.customItems[t.name];
+                }
+            });
+            return next;
+        });
+    };
+
     const performAction = (action, arg) => {
         closeContextMenu();
         const source = contextMenu?.source || 'global';
@@ -323,8 +374,9 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                 if (source === 'trader' && selectedTraderId) {
                     const t = next.shop.traders.find(x => x.id === selectedTraderId);
                     if (t) t.inventory = t.inventory.filter(x => !targets.some(d => d.name === (typeof x === 'string' ? x : x.name)));
-                } else if (source === 'loot' && selectedLootId) {
-                    const b = next.lootBags.find(x => x.id === selectedLootId);
+                } else if (source === 'loot' && selectedLootId && activeCampaign) {
+                    const campData = next.campaigns[activeCampaign.id];
+                    const b = campData?.lootBags?.find(x => x.id === selectedLootId);
                     if (b) b.items = b.items.filter(x => !targets.some(d => d.instanceId ? d.instanceId === x.instanceId : d.name === x.name));
                 }
                 return next;
@@ -339,7 +391,8 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
             const qty = parseInt(newQty, 10) || 1;
             setDb(prev => {
                 const next = deepClone(prev);
-                const b = next.lootBags.find(x => x.id === selectedLootId);
+                const campData = activeCampaign ? next.campaigns[activeCampaign.id] : null;
+                const b = campData?.lootBags?.find(x => x.id === selectedLootId);
                 if (b) {
                     targets.forEach(t => {
                         const item = b.items.find(x => x.instanceId === t.instanceId);
@@ -351,40 +404,18 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
             return;
         }
 
-        setDb(prev => {
-            const next = deepClone(prev);
-            if (!next.shop) next.shop = {};
-            if (!next.shop.availableItems) next.shop.availableItems = [];
-            if (!next.shop.availableFormulas) next.shop.availableFormulas = [];
-            if (!next.lootBags) next.lootBags = [];
+        // For addToLoot, giveToPlayer, addToTrader: check if any target is a scroll/wand needing spell selection
+        if (['addToLoot', 'giveToPlayer', 'addToTrader'].includes(action) && targets.length > 0) {
+            const firstTarget = targets[0];
+            const swInfo = detectScrollWand(firstTarget);
+            if (swInfo) {
+                // Intercept: show spell picker before completing the action
+                setPendingSpellAction({ action, arg, baseItem: firstTarget, ...swInfo });
+                return;
+            }
+        }
 
-            targets.forEach(t => {
-                if (action === 'makeAvailable' && !next.shop.availableItems.includes(t.name)) next.shop.availableItems.push(t.name);
-                if (action === 'makeUnavailable') next.shop.availableItems = next.shop.availableItems.filter(x => x !== t.name);
-                if (action === 'addFormula' && !next.shop.availableFormulas.includes(t.name)) next.shop.availableFormulas.push(t.name);
-                if (action === 'removeFormula') next.shop.availableFormulas = next.shop.availableFormulas.filter(x => x !== t.name);
-                if (action === 'addToTrader' && arg) {
-                    const tr = next.shop.traders?.find(x => x.id === arg);
-                    if (tr && !tr.inventory.some(x => (typeof x === 'string' ? x : x.name) === t.name)) tr.inventory.push(t.name);
-                }
-                if (action === 'addToLoot' && arg) {
-                    const bag = next.lootBags.find(x => x.id === arg);
-                    if (bag) bag.items.push({ ...t, qty: 1, instanceId: crypto.randomUUID() });
-                }
-                if (action === 'giveToPlayer' && arg) {
-                    const p = next.players?.find(x => x.id === arg);
-                    if (p) { if (!p.inventory) p.inventory = []; p.inventory.push({ ...t, instanceId: crypto.randomUUID() }); }
-                }
-                if (action === 'giveFormulaToPlayer' && arg) {
-                    const p = next.players?.find(x => x.id === arg);
-                    if (p) { if (!p.formulas) p.formulas = []; if (!p.formulas.includes(t.name)) p.formulas.push(t.name); }
-                }
-                if (action === 'delete') {
-                    if (t.isCustom && next.shop.customItems) delete next.shop.customItems[t.name];
-                }
-            });
-            return next;
-        });
+        executeItemAction(action, arg, targets);
     };
 
     const handleCreateTrader = () => {
@@ -401,11 +432,12 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
 
     const handleCreateLoot = () => {
         const name = prompt("Loot Bag Name:");
-        if (!name) return;
+        if (!name || !activeCampaign) return;
         setDb(prev => {
             const next = deepClone(prev);
-            if (!next.lootBags) next.lootBags = [];
-            next.lootBags.push({ id: Date.now(), name, items: [], goldValue: 0 });
+            const campData = next.campaigns[activeCampaign.id];
+            if (!campData.lootBags) campData.lootBags = [];
+            campData.lootBags.push({ id: Date.now(), name, items: [], goldValue: 0 });
             return next;
         });
     };
@@ -616,7 +648,7 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                                 <div style={{ padding: 5, borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', gap: 5 }}>
                                     <span style={{ color: '#ffd700', fontSize: '0.8em' }}>Gold:</span>
                                     <input type="number" className="modal-input" style={{ width: 80, padding: 2 }} value={activeLoot.goldValue || 0}
-                                        onChange={e => { const val = parseFloat(e.target.value) || 0; setDb(p => { const n = deepClone(p); n.lootBags.find(x => x.id === activeLoot.id).goldValue = val; return n; }); }} />
+                                        onChange={e => { const val = parseFloat(e.target.value) || 0; setDb(p => { const n = deepClone(p); if (activeCampaign) { const camp = n.campaigns[activeCampaign.id]; camp.lootBags.find(x => x.id === activeLoot.id).goldValue = val; } return n; }); }} />
                                 </div>
                             )}
                             <div className="items-view-scroll" style={{ flex: 1, overflow: 'auto' }}>
@@ -685,7 +717,7 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                 {/* CONTEXT MENU */}
                 {contextMenu && (
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 2000 }} onClick={closeContextMenu} onContextMenu={e => { e.preventDefault(); closeContextMenu(); }}>
-                        <div style={{ position: 'absolute', top: contextMenu.y, left: contextMenu.x, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,0.6)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ position: 'absolute', top: contextMenu.y, left: contextMenu.x, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,0.6)', overflow: 'visible' }} onClick={e => e.stopPropagation()}>
                             {/* Side panel context menu */}
                             {(contextMenu.source === 'trader' || contextMenu.source === 'loot') ? (
                                 <>
@@ -724,7 +756,7 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                                         <CtxItem icon="💰" label="Add to Loot Bag" hasSubmenu />
                                         {contextSubMenu === 'loot' && (
                                             <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
-                                                {(db.lootBags || []).map(b => <CtxItem key={b.id} label={b.name} onClick={() => performAction('addToLoot', b.id)} />)}
+                                                {campaignLootBags.map(b => <CtxItem key={b.id} label={b.name} onClick={() => performAction('addToLoot', b.id)} />)}
                                             </div>
                                         )}
                                     </div>
@@ -732,7 +764,7 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                                         <CtxItem icon="🎁" label="Give to Player" hasSubmenu />
                                         {contextSubMenu === 'player' && (
                                             <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
-                                                {(db.players || []).map(p => <CtxItem key={p.id} label={p.name} onClick={() => performAction('giveToPlayer', p.id)} />)}
+                                                {(activeCampaign?.characters || []).map(p => <CtxItem key={p.id} label={p.name} onClick={() => performAction('giveToPlayer', p.id)} />)}
                                             </div>
                                         )}
                                     </div>
@@ -740,7 +772,7 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                                         <CtxItem icon="📜" label="Give Formula to Player" hasSubmenu />
                                         {contextSubMenu === 'formula' && (
                                             <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
-                                                {(db.players || []).map(p => <CtxItem key={p.id} label={p.name} onClick={() => performAction('giveFormulaToPlayer', p.id)} />)}
+                                                {(activeCampaign?.characters || []).map(p => <CtxItem key={p.id} label={p.name} onClick={() => performAction('giveFormulaToPlayer', p.id)} />)}
                                             </div>
                                         )}
                                     </div>
@@ -750,6 +782,29 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                     </div>
                 )}
             </div>
+
+            {/* Spell Scroll/Wand Selector for GM actions */}
+            {pendingSpellAction && (
+                <SpellScrollSelectorModal
+                    rank={pendingSpellAction.rank}
+                    type={pendingSpellAction.type}
+                    ignoreAvailability={true}
+                    onCancel={() => setPendingSpellAction(null)}
+                    onSelect={(spell) => {
+                        const { action, arg, baseItem, type, rank } = pendingSpellAction;
+                        const newItem = { ...baseItem };
+                        newItem.system = baseItem.system ? JSON.parse(JSON.stringify(baseItem.system)) : {};
+                        newItem.system.originalName = baseItem.name;
+                        newItem.name = `${type === 'scroll' ? 'Scroll' : 'Wand'} of ${spell.name} (Rank ${rank})`;
+                        newItem.system.spell = spell;
+                        if (type === 'wand') {
+                            newItem.system.wand = { charges: 1, max: 1 };
+                        }
+                        executeItemAction(action, arg, [newItem]);
+                        setPendingSpellAction(null);
+                    }}
+                />
+            )}
         </>
     );
 }
