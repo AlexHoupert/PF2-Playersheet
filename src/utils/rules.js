@@ -303,7 +303,9 @@ export function calculateStat(character, statName, profValue) {
     const prof = parseInt(profValue) || 0;
     let attrKey = "Intelligence";
 
-    if (!statName.startsWith("Lore")) attrKey = STAT_MAP[statName] || "Strength";
+    // Normalize skill name to Title Case for STAT_MAP lookup (handles lowercase keys from new DB format)
+    const normalizedName = statName.charAt(0).toUpperCase() + statName.slice(1);
+    if (!normalizedName.startsWith("Lore")) attrKey = STAT_MAP[normalizedName] || STAT_MAP[statName] || "Strength";
     if (statName === "AC") attrKey = "Dexterity";
 
     const attrVal = parseInt(character.stats.attributes[attrKey.toLowerCase()]) || 0;
