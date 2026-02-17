@@ -18,6 +18,7 @@ import ActionsView from './ActionsView';
 import QuestsView from './QuestsView';
 import LoreAdminView from './LoreAdminView';
 import BestiaryView from './BestiaryView';
+import EncounterView from './EncounterView';
 // import LootView from './LootView'; // Was imported in legacy but not in previous file content? Checked: activeTab === 'loot' at line 1016. It wasn't imported in line 1-28. Maybe it was defined in file or I missed it.
 // Checking previous file content... line 18 is 'QuestsView'. No LootView import.
 // But line 1016 says `{activeTab === 'loot' && <LootView db={db} setDb={setDb} />}`.
@@ -334,6 +335,7 @@ export default function AdminApp({ db, setDb }) {
                         {(activeTab === 'bestiary' || activeTab === 'bestiary_overview') && <BestiaryView db={db} setDb={setDb} />}
                         {activeTab === 'bestiary_creatures' && <BestiaryView db={db} setDb={setDb} initialFilterType={['npc']} />}
                         {activeTab === 'bestiary_hazards' && <BestiaryView db={db} setDb={setDb} initialFilterType={['hazard']} />}
+                        {activeTab === 'encounters' && <EncounterView db={db} setDb={setDb} />}
 
                         {activeTab === 'system' && (
                             <div style={{ padding: 20, height: '100%', overflowY: 'auto' }}>

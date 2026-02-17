@@ -12,6 +12,7 @@ const BREADCRUMB_MAP = {
     'bestiary_overview': ['Resources', 'Bestiary', 'Overview'],
     'bestiary_creatures': ['Resources', 'Bestiary', 'Creatures'],
     'bestiary_hazards': ['Resources', 'Bestiary', 'Hazards'],
+    'encounters': ['Resources', 'Bestiary', 'Encounters'],
     'actions': ['Resources', 'Actions'],
     'feats': ['Resources', 'Feats'],
     'lore': ['Story', 'Lore'],

@@ -3,6 +3,7 @@ import dbData from './data/new_db.json';
 import { CampaignProvider } from './shared/context/CampaignContext';
 import PlayerApp from './player/PlayerApp';
 import AdminApp from './admin/AdminApp';
+import PartyScreen from './player/PartyScreen';
 
 export default function App() {
     const [db, setDb] = usePersistedDb(dbData);
@@ -11,12 +12,15 @@ export default function App() {
     if (!db) return <div style={{ color: '#fff' }}>Loading...</div>;
 
     const isAdmin = queryParams.get('admin') === 'true';
+    const isParty = queryParams.get('party') === 'true';
 
     return (
-        <CampaignProvider db={db} setDb={setDb} isAdmin={isAdmin}>
-            {isAdmin
-                ? <AdminApp db={db} setDb={setDb} />
-                : <PlayerApp db={db} setDb={setDb} />
+        <CampaignProvider db={db} setDb={setDb} isAdmin={isAdmin || isParty}>
+            {isParty
+                ? <PartyScreen db={db} />
+                : isAdmin
+                    ? <AdminApp db={db} setDb={setDb} />
+                    : <PlayerApp db={db} setDb={setDb} />
             }
         </CampaignProvider>
     );

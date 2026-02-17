@@ -25,7 +25,8 @@ const NAV_GROUPS = [
                 id: 'bestiary', label: 'Bestiary', icon: '🐉', children: [
                     { id: 'bestiary_creatures', label: 'Creatures', icon: '👾' },
                     { id: 'bestiary_hazards', label: 'Hazards', icon: '⚠️' },
-                    { id: 'bestiary_overview', label: 'All', icon: '📚' } // Added overview for full list
+                    { id: 'bestiary_overview', label: 'All', icon: '📚' },
+                    { id: 'encounters', label: 'Encounters', icon: '⚔️' }
                 ]
             },
             { id: 'actions', label: 'Actions', icon: '⚔️' },

@@ -1,0 +1,134 @@
+/* ═══════════════════════════════════════════
+   PartyScreen – Player-facing encounter view
+   ═══════════════════════════════════════════ */
+
+.party-screen {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    background: #0a0a12;
+    color: #e8e8e8;
+    overflow: hidden;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* Empty / waiting state */
+.party-screen--empty {
+    align-items: center;
+    justify-content: center;
+}
+
+.party-screen__waiting {
+    text-align: center;
+    animation: party-pulse 3s ease-in-out infinite;
+}
+
+.party-screen__waiting-icon {
+    font-size: 4em;
+    display: block;
+    margin-bottom: 20px;
+}
+
+.party-screen__waiting h1 {
+    margin: 0 0 8px;
+    font-size: 1.8em;
+    color: #c5a059;
+}
+
+.party-screen__waiting p {
+    color: #777;
+    font-size: 1.05em;
+}
+
+@keyframes party-pulse {
+
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Tracker */
+.party-tracker {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.party-tracker__header {
+    padding: 20px 30px 14px;
+    border-bottom: 1px solid #1e1e2a;
+}
+
+.party-tracker__title {
+    margin: 0;
+    font-size: 1.6em;
+    font-weight: 800;
+    color: #c5a059;
+    letter-spacing: 0.02em;
+}
+
+.party-tracker__list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Info panel */
+.party-info {
+    width: 380px;
+    min-width: 300px;
+    background: #111118;
+    border-left: 1px solid #1e1e2a;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.party-info__header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #1e1e2a;
+}
+
+.party-info__header h2 {
+    margin: 0;
+    font-size: 1.15em;
+    color: #e8e8e8;
+}
+
+.party-info__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+}
+
+.party-info__loading {
+    color: #555;
+    text-align: center;
+    padding: 30px;
+}
+
+.party-info__player-summary {
+    text-align: center;
+    padding: 20px;
+}
+
+.party-info__player-summary h3 {
+    margin: 0 0 6px;
+    color: #c5a059;
+    font-size: 1.3em;
+}
+
+.party-info__player-summary p {
+    color: #999;
+    margin: 0;
+}
