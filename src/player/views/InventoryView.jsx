@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useCampaign } from '../../shared/context/CampaignContext';
 import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
 import { getShopItemRowMeta } from '../../shared/catalog/shopRowMeta';
 import { shouldStack } from '../../shared/utils/inventoryUtils';
@@ -26,6 +27,7 @@ export function InventoryView({
     const [itemSubTab, setItemSubTab] = useState('Equipment');
     const equipTapRef = useRef({ key: null, time: 0 });
     const equipTapTimeoutRef = useRef(null);
+    const { activeCampaign } = useCampaign();
 
     // Helper functions from PlayerApp logic (Assuming they are not exported elsewhere yet)
     // We'll need to duplicate them or extract them to a util file if they are large.
@@ -389,7 +391,7 @@ export function InventoryView({
         <div className="sub-tabs">
             {['Equipment', 'Consumables', 'Misc', /*hasLoot ? 'Loot' : null*/ 'Loot'].map(t => {
                 const isLoot = t === 'Loot';
-                const visibleBags = (db?.lootBags || []).filter(b => !b.isLocked);
+                const visibleBags = (activeCampaign?.lootBags || []).filter(b => !b.isLocked);
                 // Check items AND gold for visibility
                 const bagsWithLoot = visibleBags.filter(b => (b.items && b.items.some(i => !i.claimedBy)) || (b.goldValue || 0) > 0);
                 const hasLoot = lootItems.length > 0 || bagsWithLoot.length > 0;
@@ -453,7 +455,7 @@ export function InventoryView({
 
             {itemSubTab === 'Loot' && (
                 (() => {
-                    const visibleBags = (db?.lootBags || []).filter(b => !b.isLocked);
+                    const visibleBags = (activeCampaign?.lootBags || []).filter(b => !b.isLocked);
                     const bagsWithLoot = visibleBags.filter(b => (b.items && b.items.some(i => !i.claimedBy)) || b.goldValue > 0);
 
                     if (bagsWithLoot.length === 0 && lootItems.length === 0) {

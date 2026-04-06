@@ -95,7 +95,6 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
     const [editingItem, setEditingItem] = useState(null);
     const [contextMenu, setContextMenu] = useState(null);
     const [contextSubMenu, setContextSubMenu] = useState(null);
-    const [newTraderName, setNewTraderName] = useState('');
     const [pendingSpellAction, setPendingSpellAction] = useState(null);
 
     useEffect(() => {
@@ -419,15 +418,17 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
     };
 
     const handleCreateTrader = () => {
-        if (!newTraderName.trim()) return;
+        const name = prompt('Trader Name:');
+        if (!name?.trim()) return;
+        const category = prompt('Category (Alchemy, Blacksmith, Remedies, Magic, Adventuring, Special):', 'General');
+        if (category === null) return;
         setDb(prev => {
             const next = deepClone(prev);
             if (!next.shop) next.shop = {};
             if (!next.shop.traders) next.shop.traders = [];
-            next.shop.traders.push({ id: Date.now(), name: newTraderName.trim(), inventory: [], category: 'General' });
+            next.shop.traders.push({ id: Date.now(), name: name.trim(), inventory: [], category: category.trim() || 'General' });
             return next;
         });
-        setNewTraderName('');
     };
 
     const handleCreateLoot = () => {
@@ -601,11 +602,6 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                                 <span style={{ color: '#c5a059', fontWeight: 'bold' }}>{sideMode === 'trader' ? 'Traders' : 'Loot Bags'}</span>
                                 <button style={{ fontSize: '0.75em', background: '#333', border: '1px solid #555', padding: '3px 8px', cursor: 'pointer' }} onClick={sideMode === 'trader' ? handleCreateTrader : handleCreateLoot}>+ New</button>
                             </div>
-                            {sideMode === 'trader' && (
-                                <div style={{ padding: 5 }}>
-                                    <input className="modal-input" placeholder="New Trader Name..." value={newTraderName} onChange={e => setNewTraderName(e.target.value)} style={{ width: '100%', marginBottom: 5 }} onKeyDown={e => e.key === 'Enter' && handleCreateTrader()} />
-                                </div>
-                            )}
                             <div className="items-view-scroll" style={{ flex: 1, overflow: 'auto' }}>
                                 {sideLists.sliced.map(entry => (
                                     <div
@@ -616,10 +612,20 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                                         style={{
                                             padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid #333',
                                             background: (sideMode === 'trader' ? selectedTraderId : selectedLootId) === entry.id ? '#333' : 'transparent',
-                                            display: 'flex', justifyContent: 'space-between'
+                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                                         }}
                                     >
-                                        <span>{entry.name}</span>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            {sideMode === 'loot' && (
+                                                <span style={{ fontSize: '0.85em', opacity: entry.isLocked ? 0.4 : 1 }} title={entry.isLocked ? 'Hidden from players' : 'Visible to players'}>
+                                                    {entry.isLocked ? '🚫' : '👁️'}
+                                                </span>
+                                            )}
+                                            {sideMode === 'trader' && (
+                                                <span style={{ fontSize: '0.65em', color: '#888', fontStyle: 'italic' }}>[{entry.category || 'General'}]</span>
+                                            )}
+                                            {entry.name}
+                                        </span>
                                         <span style={{ color: '#888' }}>({sideMode === 'trader' ? entry.inventory.length : entry.items.length})</span>
                                     </div>
                                 ))}
@@ -640,9 +646,45 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                                     {sideMode === 'trader' && (activeTrader ? activeTrader.name : 'Select Trader')}
                                     {sideMode === 'loot' && (activeLoot ? activeLoot.name : 'Select Loot')}
                                 </span>
-                                <label style={{ display: 'flex', gap: 5, fontSize: '0.8em', cursor: 'pointer' }}>
-                                    <input type="checkbox" checked={applySideFilters} onChange={() => setApplySideFilters(p => !p)} /> Filter
-                                </label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    {sideMode === 'loot' && activeLoot && (
+                                        <button
+                                            style={{ fontSize: '0.75em', background: activeLoot.isLocked ? '#443322' : '#334433', border: '1px solid #555', padding: '3px 8px', cursor: 'pointer', borderRadius: 4, color: activeLoot.isLocked ? '#c88' : '#8c8' }}
+                                            onClick={() => {
+                                                setDb(prev => {
+                                                    const next = deepClone(prev);
+                                                    if (activeCampaign) {
+                                                        const bag = next.campaigns[activeCampaign.id]?.lootBags?.find(x => x.id === activeLoot.id);
+                                                        if (bag) bag.isLocked = !bag.isLocked;
+                                                    }
+                                                    return next;
+                                                });
+                                            }}
+                                        >
+                                            {activeLoot.isLocked ? '🚫 Hidden' : '👁️ Visible'}
+                                        </button>
+                                    )}
+                                    {sideMode === 'trader' && activeTrader && (
+                                        <select
+                                            value={activeTrader.category || 'General'}
+                                            onChange={e => {
+                                                setDb(prev => {
+                                                    const next = deepClone(prev);
+                                                    const t = next.shop?.traders?.find(x => x.id === activeTrader.id);
+                                                    if (t) t.category = e.target.value;
+                                                    return next;
+                                                });
+                                            }}
+                                            style={{ fontSize: '0.75em', background: '#333', border: '1px solid #555', color: '#ddd', padding: '2px 6px', borderRadius: 4 }}
+                                        >
+                                            <option value="General">General</option>
+                                            {SHOP_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    )}
+                                    <label style={{ display: 'flex', gap: 5, fontSize: '0.8em', cursor: 'pointer' }}>
+                                        <input type="checkbox" checked={applySideFilters} onChange={() => setApplySideFilters(p => !p)} /> Filter
+                                    </label>
+                                </div>
                             </div>
                             {sideMode === 'loot' && activeLoot && (
                                 <div style={{ padding: 5, borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', gap: 5 }}>

@@ -1291,7 +1291,7 @@ export default function PlayerApp({ db, setDb }) {
                 {mainTabs.map(tab => {
                     const hasLoot = tab === 'items' && (
                         character?.inventory?.some(i => i.isLoot) ||
-                        db?.lootBags?.some(b => !b.isLocked && b.items.some(i => !i.claimedBy))
+                        activeCampaign?.lootBags?.some(b => !b.isLocked && b.items.some(i => !i.claimedBy))
                     );
                     return (
                         <button
@@ -1419,15 +1419,16 @@ export default function PlayerApp({ db, setDb }) {
                                     nextChars[charIndex] = char;
                                     next.campaigns[campaignId].characters = nextChars;
 
-                                    // 2. Mark in Loot Bag
-                                    if (next.lootBags) {
-                                        const bags = deepClone(next.lootBags);
+                                    // 2. Mark in Loot Bag (campaign-level)
+                                    const campData = next.campaigns[campaignId];
+                                    if (campData?.lootBags) {
+                                        const bags = deepClone(campData.lootBags);
                                         const targetBag = bags.find(b => b.id === bag.id);
                                         if (targetBag) {
                                             const targetItem = targetBag.items.find(i => i.instanceId === item.instanceId);
-                                            if (targetItem) targetItem.claimedBy = char.name; // Use current char name for claim signature
+                                            if (targetItem) targetItem.claimedBy = char.name;
                                         }
-                                        next.lootBags = bags;
+                                        campData.lootBags = bags;
                                     }
 
                                     return next;
@@ -1439,13 +1440,14 @@ export default function PlayerApp({ db, setDb }) {
                                     const campaignId = activeCampaign?.id;
                                     if (!campaignId || !next.campaigns?.[campaignId]) return prev;
 
-                                    // Update Bag
-                                    const bags = deepClone(next.lootBags || []);
+                                    // Update Bag (campaign-level)
+                                    const campData = next.campaigns[campaignId];
+                                    const bags = deepClone(campData?.lootBags || []);
                                     const bag = bags.find(b => b.id === bagId);
                                     if (!bag || (bag.goldValue || 0) < amount) return prev;
 
                                     bag.goldValue = Math.max(0, (bag.goldValue || 0) - amount);
-                                    next.lootBags = bags;
+                                    campData.lootBags = bags;
 
                                     // Update Character
                                     const nextChars = [...next.campaigns[campaignId].characters];
@@ -1466,14 +1468,15 @@ export default function PlayerApp({ db, setDb }) {
                                     const campaignId = activeCampaign?.id;
                                     if (!campaignId || !next.campaigns?.[campaignId]) return prev;
 
-                                    // Update Bag
-                                    const bags = deepClone(next.lootBags || []);
+                                    // Update Bag (campaign-level)
+                                    const campData2 = next.campaigns[campaignId];
+                                    const bags = deepClone(campData2?.lootBags || []);
                                     const bag = bags.find(b => b.id === bagId);
                                     if (!bag || (bag.goldValue || 0) <= 0) return prev;
 
                                     const totalGold = bag.goldValue;
                                     bag.goldValue = 0;
-                                    next.lootBags = bags;
+                                    campData2.lootBags = bags;
 
                                     // Distribute to characters
                                     const nextChars = [...next.campaigns[campaignId].characters];

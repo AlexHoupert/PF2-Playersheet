@@ -8,6 +8,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
 import CreatureCard from '../shared/components/CreatureCard';
+import { CharacterCard } from '../admin/components/CharacterCard';
 import InitiativeCard from '../admin/components/InitiativeCard';
 import './PartyScreen.css';
 
@@ -20,20 +21,23 @@ export default function PartyScreen({ db }) {
     const activeEncounter = encounters.find(e => e.isActive) || null;
     const allCreatures = useMemo(() => getAllCreatures(), []);
 
-    // Only show visible combatants
+    // Only show visible combatants, rotated so active is on top
     const visibleCombatants = useMemo(() => {
         if (!activeEncounter) return [];
-        return [...activeEncounter.combatants]
-            .filter(c => c.visible)
+        const byInit = [...activeEncounter.combatants]
             .sort((a, b) => (b.initiative ?? 0) - (a.initiative ?? 0));
-    }, [activeEncounter?.combatants]);
+        const idx = (activeEncounter.currentTurnIndex ?? 0) % (byInit.length || 1);
+        const rotated = [...byInit.slice(idx), ...byInit.slice(0, idx)];
+        return rotated.filter(c => c.visible);
+    }, [activeEncounter?.combatants, activeEncounter?.currentTurnIndex]);
 
+    // Active combatant is always first in the full rotated list (may be hidden)
     const activeTurnId = useMemo(() => {
-        if (!activeEncounter || visibleCombatants.length === 0) return null;
-        // The active turn comes from the full sorted list (including hidden)
-        const allSorted = [...(activeEncounter.combatants || [])]
+        if (!activeEncounter) return null;
+        const byInit = [...(activeEncounter.combatants || [])]
             .sort((a, b) => (b.initiative ?? 0) - (a.initiative ?? 0));
-        return allSorted[activeEncounter.currentTurnIndex ?? 0]?.id;
+        const idx = (activeEncounter.currentTurnIndex ?? 0) % (byInit.length || 1);
+        return byInit[idx]?.id;
     }, [activeEncounter]);
 
     // selectedEntityId from GM
@@ -115,10 +119,14 @@ export default function PartyScreen({ db }) {
                             <div className="party-info__loading">Loading...</div>
                         )}
                         {selectedCombatant.type === 'player' && infoCharData && (
-                            <div className="party-info__player-summary">
-                                <h3>{infoCharData.name}</h3>
-                                <p>Level {infoCharData.level} {infoCharData.class || ''}</p>
-                            </div>
+                            <CharacterCard
+                                character={infoCharData}
+                                db={db}
+                                setDb={() => { }}
+                                updateCharacter={() => { }}
+                                setModalMode={() => { }}
+                                setModalData={() => { }}
+                            />
                         )}
                     </div>
                 </div>
@@ -126,3 +134,4 @@ export default function PartyScreen({ db }) {
         </div>
     );
 }
+

@@ -1,10 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+
+const SEEN_KEY = 'pf2e-seen-xp-notifications';
+
+function getSeenIds() {
+    try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); } catch { return []; }
+}
+function markSeen(id) {
+    const seen = getSeenIds();
+    if (!seen.includes(id)) {
+        seen.push(id);
+        // Keep only last 50 to avoid unbounded growth
+        if (seen.length > 50) seen.splice(0, seen.length - 50);
+        localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
+    }
+}
 
 export default function XpOverlay({ xpNotification }) {
     const [active, setActive] = useState(null); // { amount }
 
     useEffect(() => {
         if (xpNotification && xpNotification.id) {
+            // Skip if already seen on this client
+            if (getSeenIds().includes(xpNotification.id)) return;
+
+            markSeen(xpNotification.id);
             setActive(xpNotification);
             const timer = setTimeout(() => {
                 setActive(null);
@@ -42,7 +61,7 @@ export default function XpOverlay({ xpNotification }) {
                         0 0 10px rgba(0,0,0,0.8),
                         0 0 20px #c5a059,
                         0 0 40px #c5a059;
-                    font-family: 'Cinzel', serif; /* Assuming global font or fallback */
+                    font-family: 'Cinzel', serif;
                     letter-spacing: 2px;
                 }
 

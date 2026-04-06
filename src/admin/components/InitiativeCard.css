@@ -8,9 +8,12 @@
     background: #1e1e24;
     border: 1px solid #2a2a35;
     cursor: pointer;
-    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    transition: border-color 0.25s, box-shadow 0.25s, background 0.25s,
+        padding 0.25s, max-width 0.35s, margin 0.35s;
     user-select: none;
     position: relative;
+    /* Inactive: narrower */
+    max-width: 75%;
 }
 
 .init-card:hover {
@@ -24,21 +27,28 @@
     box-shadow: 0 0 0 1px #c5a059, 0 0 12px rgba(197, 160, 89, 0.15);
 }
 
-/* Active turn — bigger + glow */
+/* ─── Active turn — full width + glow ─── */
 .init-card--active {
     background: #1c2230;
     border-color: #5b8dd9;
-    box-shadow: 0 0 0 2px #5b8dd9, 0 0 18px rgba(91, 141, 217, 0.2);
-    padding: 14px 16px;
+    box-shadow: 0 0 0 2px #5b8dd9, 0 0 22px rgba(91, 141, 217, 0.25);
+    padding: 16px 18px;
+    max-width: 100%;
 }
 
 .init-card--active .init-card__name {
-    font-size: 1.1em;
+    font-size: 1.15em;
     font-weight: 700;
 }
 
 .init-card--active .init-card__hp-bar-bg {
-    height: 10px;
+    height: 12px;
+}
+
+.init-card--active .init-card__badge {
+    min-width: 46px;
+    height: 46px;
+    font-size: 1.2em;
 }
 
 /* Hidden creature (GM only) */
@@ -66,17 +76,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 38px;
-    height: 38px;
+    min-width: 36px;
+    height: 36px;
     border-radius: 8px;
     background: #2a2a35;
     color: #c5a059;
     font-weight: 700;
-    font-size: 1.05em;
+    font-size: 1em;
     cursor: pointer;
     flex-shrink: 0;
     align-self: center;
-    transition: background 0.15s;
+    transition: background 0.15s, min-width 0.25s, height 0.25s, font-size 0.25s;
 }
 
 .init-card__badge:hover {
@@ -122,6 +132,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 0.95em;
+    transition: font-size 0.25s;
 }
 
 .init-card__hidden-icon {
@@ -144,7 +155,7 @@
     background: #2a2a35;
     border-radius: 4px;
     overflow: hidden;
-    transition: height 0.2s;
+    transition: height 0.25s;
 }
 
 .init-card__hp-bar-fill {

@@ -2,12 +2,13 @@
  * InitiativeCard – compact combat card for encounter tracker.
  * Shows name, HP bar, AC/saves, initiative badge, condition pills.
  * Accepts `isActive` for the enlarged active-turn styling.
+ * Wrapped in forwardRef for framer-motion AnimatePresence compatibility.
  */
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import './InitiativeCard.css';
 
-export default function InitiativeCard({
+const InitiativeCard = forwardRef(function InitiativeCard({
     combatant,
     isActive = false,
     isSelected = false,
@@ -18,7 +19,7 @@ export default function InitiativeCard({
     onHpChange,
     creatureData,        // full creature stats from catalog (for creatures)
     characterData,       // character object from campaign (for players)
-}) {
+}, ref) {
     const [editingInit, setEditingInit] = useState(false);
     const [editingHp, setEditingHp] = useState(false);
     const [tempInit, setTempInit] = useState('');
@@ -78,7 +79,9 @@ export default function InitiativeCard({
 
     return (
         <motion.div
+            ref={ref}
             layout
+            layoutId={combatant.id}
             className={[
                 'init-card',
                 isActive && 'init-card--active',
@@ -94,7 +97,10 @@ export default function InitiativeCard({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, x: -60 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            transition={{
+                type: 'spring', stiffness: 180, damping: 24,
+                layout: { type: 'spring', stiffness: 150, damping: 22, delay: 0.15 },
+            }}
         >
             {/* Initiative Badge */}
             <div className="init-card__badge" onClick={handleInitiativeClick}>
@@ -174,4 +180,6 @@ export default function InitiativeCard({
             </div>
         </motion.div>
     );
-}
+});
+
+export default InitiativeCard;

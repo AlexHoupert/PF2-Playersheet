@@ -62,7 +62,7 @@ export default function EncounterView({ db, setDb }) {
     const filteredCreatures = useMemo(() => {
         if (!creatureSearch || creatureSearch.length < 2) return [];
         const q = creatureSearch.toLowerCase();
-        return allCreatures.filter(c => c.name.toLowerCase().includes(q)).slice(0, 20);
+        return allCreatures.filter(c => c.name && c.name.toLowerCase().includes(q)).slice(0, 20);
     }, [creatureSearch, allCreatures]);
 
     // ── Load creature data for info panel ──
@@ -70,12 +70,10 @@ export default function EncounterView({ db, setDb }) {
         if (!activeEncounter) return;
         activeEncounter.combatants.filter(c => c.type === 'creature' && c.creatureId && !creatureDataCache[c.creatureId])
             .forEach(c => {
-                const catalogEntry = allCreatures.find(cat => cat.id === c.creatureId || cat.name === c.creatureId);
-                if (catalogEntry?.sourceFile) {
-                    fetchCreatureData(catalogEntry.sourceFile).then(data => {
-                        if (data) setCreatureDataCache(prev => ({ ...prev, [c.creatureId]: data }));
-                    });
-                }
+                // fetchCreatureData expects the creature id
+                fetchCreatureData(c.creatureId).then(data => {
+                    if (data) setCreatureDataCache(prev => ({ ...prev, [c.creatureId]: data }));
+                });
             });
     }, [activeEncounter?.combatants?.length]);
 
@@ -122,20 +120,18 @@ export default function EncounterView({ db, setDb }) {
 
     // ── Combatant management ──
     const addCreatureToEncounter = (encId, catalogEntry) => {
-        // Need to fetch full data for HP
-        if (catalogEntry.sourceFile) {
-            fetchCreatureData(catalogEntry.sourceFile).then(data => {
-                if (!data) return;
-                data._catalogId = catalogEntry.id;
-                updateEncounter(encId, enc => {
-                    const existing = enc.combatants.filter(c => c.creatureId === catalogEntry.id);
-                    const combatant = makeCombatant('creature', data);
-                    combatant.instanceLabel = existing.length + 1;
-                    enc.combatants.push(combatant);
-                });
-                setCreatureDataCache(prev => ({ ...prev, [catalogEntry.id]: data }));
+        // fetchCreatureData expects the creature id, not sourceFile
+        fetchCreatureData(catalogEntry.id).then(data => {
+            if (!data) return;
+            data._catalogId = catalogEntry.id;
+            updateEncounter(encId, enc => {
+                const existing = enc.combatants.filter(c => c.creatureId === catalogEntry.id);
+                const combatant = makeCombatant('creature', data);
+                combatant.instanceLabel = existing.length + 1;
+                enc.combatants.push(combatant);
             });
-        }
+            setCreatureDataCache(prev => ({ ...prev, [catalogEntry.id]: data }));
+        });
     };
 
     const addAllPlayers = (encId) => {
@@ -186,15 +182,20 @@ export default function EncounterView({ db, setDb }) {
     };
 
     // ── Turn management ──
+    // Initiative-sorted, then rotated so the active combatant is always first (top of list).
     const sortedCombatants = useMemo(() => {
         if (!activeEncounter) return [];
-        return [...activeEncounter.combatants].sort((a, b) => (b.initiative ?? 0) - (a.initiative ?? 0));
-    }, [activeEncounter?.combatants]);
+        const byInit = [...activeEncounter.combatants].sort((a, b) => (b.initiative ?? 0) - (a.initiative ?? 0));
+        const idx = (activeEncounter.currentTurnIndex ?? 0) % (byInit.length || 1);
+        return [...byInit.slice(idx), ...byInit.slice(0, idx)];
+    }, [activeEncounter?.combatants, activeEncounter?.currentTurnIndex]);
 
     const endTurn = () => {
-        if (!activeEncounter || sortedCombatants.length === 0) return;
+        if (!activeEncounter) return;
+        const total = activeEncounter.combatants.length;
+        if (total === 0) return;
         updateEncounter(activeEncounter.id, enc => {
-            enc.currentTurnIndex = ((enc.currentTurnIndex ?? 0) + 1) % sortedCombatants.length;
+            enc.currentTurnIndex = ((enc.currentTurnIndex ?? 0) + 1) % total;
         });
     };
 
@@ -205,7 +206,8 @@ export default function EncounterView({ db, setDb }) {
         });
     };
 
-    const activeTurnId = sortedCombatants[activeEncounter?.currentTurnIndex ?? 0]?.id;
+    // Active combatant is always the first in the rotated list
+    const activeTurnId = sortedCombatants[0]?.id;
 
     // ── Context menu ──
     const handleCardContext = (e, combatant) => {
