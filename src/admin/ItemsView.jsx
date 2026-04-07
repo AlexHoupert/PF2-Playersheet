@@ -603,32 +603,79 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                                 <button style={{ fontSize: '0.75em', background: '#333', border: '1px solid #555', padding: '3px 8px', cursor: 'pointer' }} onClick={sideMode === 'trader' ? handleCreateTrader : handleCreateLoot}>+ New</button>
                             </div>
                             <div className="items-view-scroll" style={{ flex: 1, overflow: 'auto' }}>
-                                {sideLists.sliced.map(entry => (
-                                    <div
-                                        key={entry.id}
-                                        onClick={() => { sideMode === 'trader' ? setSelectedTraderId(entry.id) : setSelectedLootId(entry.id); setSelectedSideItems([]); }}
-                                        onDrop={e => handleDrop(e, sideMode, entry.id)}
-                                        onDragOver={e => e.preventDefault()}
-                                        style={{
-                                            padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid #333',
-                                            background: (sideMode === 'trader' ? selectedTraderId : selectedLootId) === entry.id ? '#333' : 'transparent',
-                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                                        }}
-                                    >
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            {sideMode === 'loot' && (
+                                {sideMode === 'trader' ? (
+                                    /* TRADER TABLE */
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85em' }}>
+                                        <thead style={{ position: 'sticky', top: 0, background: '#222', zIndex: 5 }}>
+                                            <tr>
+                                                <th style={{ padding: '4px 8px', textAlign: 'left', color: '#aaa', borderBottom: '1px solid #444' }}>Name</th>
+                                                <th style={{ padding: '4px 8px', textAlign: 'left', color: '#aaa', borderBottom: '1px solid #444' }}>Category</th>
+                                                <th style={{ padding: '4px 8px', textAlign: 'center', color: '#aaa', borderBottom: '1px solid #444' }}>Hidden</th>
+                                                <th style={{ padding: '4px 8px', textAlign: 'right', color: '#aaa', borderBottom: '1px solid #444' }}>Items</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sideLists.sliced.map(entry => (
+                                                <tr
+                                                    key={entry.id}
+                                                    onClick={() => { setSelectedTraderId(entry.id); setSelectedSideItems([]); }}
+                                                    onDrop={e => handleDrop(e, 'trader', entry.id)}
+                                                    onDragOver={e => e.preventDefault()}
+                                                    style={{
+                                                        cursor: 'pointer',
+                                                        borderBottom: '1px solid #333',
+                                                        background: selectedTraderId === entry.id ? '#333' : 'transparent',
+                                                        opacity: entry.hidden ? 0.6 : 1
+                                                    }}
+                                                >
+                                                    <td style={{ padding: '5px 8px', color: '#ddd' }}>{entry.name}</td>
+                                                    <td style={{ padding: '5px 8px', color: '#888', fontSize: '0.9em' }}>{entry.category || 'General'}</td>
+                                                    <td style={{ padding: '5px 8px', textAlign: 'center' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!entry.hidden}
+                                                            onClick={e => e.stopPropagation()}
+                                                            onChange={e => {
+                                                                e.stopPropagation();
+                                                                setDb(prev => {
+                                                                    const next = deepClone(prev);
+                                                                    const t = next.shop.traders.find(x => x.id === entry.id);
+                                                                    if (t) t.hidden = !t.hidden;
+                                                                    return next;
+                                                                });
+                                                            }}
+                                                            title={entry.hidden ? 'Hidden from players' : 'Visible to players'}
+                                                        />
+                                                    </td>
+                                                    <td style={{ padding: '5px 8px', textAlign: 'right', color: '#888' }}>{entry.inventory.length}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    /* LOOT BAG LIST (keep existing div layout) */
+                                    sideLists.sliced.map(entry => (
+                                        <div
+                                            key={entry.id}
+                                            onClick={() => { setSelectedLootId(entry.id); setSelectedSideItems([]); }}
+                                            onDrop={e => handleDrop(e, 'loot', entry.id)}
+                                            onDragOver={e => e.preventDefault()}
+                                            style={{
+                                                padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid #333',
+                                                background: selectedLootId === entry.id ? '#333' : 'transparent',
+                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                            }}
+                                        >
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                 <span style={{ fontSize: '0.85em', opacity: entry.isLocked ? 0.4 : 1 }} title={entry.isLocked ? 'Hidden from players' : 'Visible to players'}>
                                                     {entry.isLocked ? '🚫' : '👁️'}
                                                 </span>
-                                            )}
-                                            {sideMode === 'trader' && (
-                                                <span style={{ fontSize: '0.65em', color: '#888', fontStyle: 'italic' }}>[{entry.category || 'General'}]</span>
-                                            )}
-                                            {entry.name}
-                                        </span>
-                                        <span style={{ color: '#888' }}>({sideMode === 'trader' ? entry.inventory.length : entry.items.length})</span>
-                                    </div>
-                                ))}
+                                                {entry.name}
+                                            </span>
+                                            <span style={{ color: '#888' }}>({entry.items.length})</span>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                             {sideLists.total > 1 && (
                                 <div style={{ padding: 4, borderTop: '1px solid #333', display: 'flex', justifyContent: 'center', gap: 5 }}>

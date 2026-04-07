@@ -19,7 +19,7 @@ export default function ShopView({ db, onInspectItem, onBuyItem, onBuyFormula, k
     const [showShopFilters, setShowShopFilters] = useState(false);
 
     const allTraders = useMemo(
-        () => (Array.isArray(db.shop?.traders) ? db.shop.traders : []),
+        () => (Array.isArray(db.shop?.traders) ? db.shop.traders.filter(t => !t.hidden) : []),
         [db.shop?.traders]
     );
 
