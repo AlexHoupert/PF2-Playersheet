@@ -2,7 +2,8 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useSwipe } from '../shared/hooks/useSwipe';
 import { useCampaign } from '../shared/context/CampaignContext';
-import { calculateStat, formatText, ACTION_ICONS } from '../utils/rules';
+import { calculateStat } from '../utils/rules';
+import { parseFoundry, ACTION_ICONS } from '../shared/utils/foundryParser';
 import { deepClone } from '../shared/utils/deepClone';
 import ShopView from './ShopView';
 // import { usePersistedDb } from '../shared/db/usePersistedDb';

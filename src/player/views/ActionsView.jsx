@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { getAllActionIndexItems } from '../../shared/catalog/actionIndex';
-import { calculateStat, ACTION_ICONS, formatText } from '../../utils/rules';
+import { calculateStat } from '../../utils/rules';
+import { parseFoundry, ACTION_ICONS } from '../../shared/utils/foundryParser';
 import { LongPressable } from '../../shared/components/LongPressable';
 
 export function ActionsView({ character, onOpenModal, onLongPress }) {
@@ -171,7 +172,7 @@ export function ActionsView({ character, onOpenModal, onLongPress }) {
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                                     <div className="item-row-main" style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                                        <div className="item-name" style={{ color: '#e0e0e0' }} dangerouslySetInnerHTML={{ __html: formatText(action.name) }} />
+                                        <div className="item-name" style={{ color: '#e0e0e0' }} dangerouslySetInnerHTML={{ __html: parseFoundry(action.name) }} />
                                         {ActionIcon && (
                                             <span style={{ marginLeft: 6, display: 'flex', alignItems: 'center' }}
                                                 title={action.typeCode === 'R' ? 'Reaction' : action.typeCode === 'F' ? 'Free Action' : `${action.typeCode} Action(s)`}

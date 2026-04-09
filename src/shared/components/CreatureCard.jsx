@@ -16,11 +16,10 @@ import {
     getActionIcon,
     getAbilitySortPriority,
     formatSize,
-    parseAbilityText,
     getRatingColor,
     getRarityColor,
-    ACTION_ICONS
 } from '../../utils/bestiaryUtils';
+import { parseFoundry, ACTION_ICONS } from '../utils/foundryParser';
 
 // Reveal states: 'hidden' | 'precise' | 'estimate' | 'false'
 const DEFAULT_REVEAL_STATE = {
@@ -372,7 +371,7 @@ export default function CreatureCard({
             )}
             {isHazard && disable && (
                 <div className="creature-section">
-                    <strong>Disable</strong> <span dangerouslySetInnerHTML={{ __html: parseAbilityText(disable) }} />
+                    <strong>Disable</strong> <span dangerouslySetInnerHTML={{ __html: parseFoundry(disable) }} />
                 </div>
             )}
 
@@ -466,7 +465,7 @@ export default function CreatureCard({
                 <>
                     <div className="creature-divider" />
                     <div className="creature-section">
-                        <strong>Routine</strong> <span dangerouslySetInnerHTML={{ __html: parseAbilityText(routine) }} />
+                        <strong>Routine</strong> <span dangerouslySetInnerHTML={{ __html: parseFoundry(routine) }} />
                     </div>
                 </>
             )}

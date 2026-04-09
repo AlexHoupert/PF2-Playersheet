@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatText } from '../../utils/rules';
+import { parseFoundry } from '../../shared/utils/foundryParser';
 import { isEquipableInventoryItem, getWeaponCapacity } from '../../shared/utils/combatUtils';
 import { calculateWeaponDamage } from '../../utils/rules/damage';
 import { applyRune, removeRune, getRunes } from '../../utils/rules/runes';
@@ -795,7 +795,7 @@ export function ItemDetailModal({
                 <div
                     className="formatted-content"
                     dangerouslySetInnerHTML={{
-                        __html: formatText(
+                        __html: parseFoundry(
                             modalData.description ||
                             (isLoadingShopDetail ? 'Loading item details…' : shopDetailError ? `Failed to load item details: ${shopDetailError}` : 'No description.'),
                             { actor: character }
@@ -824,7 +824,7 @@ export function ItemDetailModal({
                                 </strong>
                                 <div
                                     className="formatted-content"
-                                    dangerouslySetInnerHTML={{ __html: formatText(bloodMagicEffects.Effects[character.magic.bloodmagic].description || "") }}
+                                    dangerouslySetInnerHTML={{ __html: parseFoundry(bloodMagicEffects.Effects[character.magic.bloodmagic].description || "") }}
                                 />
                             </>
                         )}

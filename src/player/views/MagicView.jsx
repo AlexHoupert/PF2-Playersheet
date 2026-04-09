@@ -1,4 +1,5 @@
-import { formatText, ACTION_ICONS, calculateSpellAttackAndDC } from '../../utils/rules';
+import { calculateSpellAttackAndDC } from '../../utils/rules';
+import { parseFoundry, ACTION_ICONS } from '../../shared/utils/foundryParser';
 import { getSpellIndexItemByName } from '../../shared/catalog/spellIndex';
 import { LongPressable } from '../../shared/components/LongPressable';
 
@@ -112,7 +113,7 @@ export const MagicView = ({ character, updateCharacter, setModalData, setModalMo
                         else if (t === "3") timeIcon = ACTION_ICONS["[three-actions]"];
                         else if (t.includes("reaction")) timeIcon = ACTION_ICONS["[reaction]"];
                         else if (t.includes("free")) timeIcon = ACTION_ICONS["[free-action]"];
-                        else timeIcon = formatText(rawTime);
+                        else timeIcon = parseFoundry(rawTime);
                     }
 
                     const metaParts = [];

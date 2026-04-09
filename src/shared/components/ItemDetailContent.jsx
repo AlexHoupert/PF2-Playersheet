@@ -3,7 +3,7 @@
  * Can be used standalone in editor preview or wrapped in a modal
  */
 import React from 'react';
-import { formatText } from '../../utils/rules';
+import { parseFoundry } from '../utils/foundryParser';
 
 // Rarity colors for item names
 const RARITY_COLORS = {
@@ -191,7 +191,7 @@ export default function ItemDetailContent({
             ) : description ? (
                 <div
                     className="formatted-content"
-                    dangerouslySetInnerHTML={{ __html: formatText(description) }}
+                    dangerouslySetInnerHTML={{ __html: parseFoundry(description) }}
                 />
             ) : (
                 <div style={{ color: '#666', fontStyle: 'italic' }}>No description available.</div>

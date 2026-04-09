@@ -1,5 +1,6 @@
 import React from 'react';
-import { formatText, ACTION_ICONS, calculateImpulseAttackAndClassDC } from '../../utils/rules';
+import { calculateImpulseAttackAndClassDC } from '../../utils/rules';
+import { parseFoundry, ACTION_ICONS } from '../../shared/utils/foundryParser';
 import { LongPressable } from '../../shared/components/LongPressable';
 
 export const ImpulsesView = ({ character, setModalData, setModalMode, onLongPress }) => {
@@ -63,7 +64,7 @@ export const ImpulsesView = ({ character, setModalData, setModalMode, onLongPres
                         else if (t === "3" || t.includes("three")) timeIcon = ACTION_ICONS["[three-actions]"];
                         else if (t.includes("reaction")) timeIcon = ACTION_ICONS["[reaction]"];
                         else if (t.includes("free")) timeIcon = ACTION_ICONS["[free-action]"];
-                        else timeIcon = formatText(rawTime);
+                        else timeIcon = parseFoundry(rawTime);
                     }
 
                     // Range / Target / Defense

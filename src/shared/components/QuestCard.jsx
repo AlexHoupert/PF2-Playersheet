@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatText } from '../../utils/rules';
+import { parseFoundry } from '../utils/foundryParser';
 
 const getStatusColor = (s) => {
     switch (s) {
@@ -59,7 +59,7 @@ export default function QuestCard({ quest, quests, expandedQuestIds, onToggle, o
                             <div className="quest-title">{quest.title}</div>
                         </div>
                         {/* Header Short Description */}
-                        <div className="quest-short-desc" dangerouslySetInnerHTML={{ __html: formatText(quest.shortDescription || quest.descriptionPublic || '', { secretMode: isGM ? 'reveal' : 'hide' }) }} />
+                        <div className="quest-short-desc" dangerouslySetInnerHTML={{ __html: parseFoundry(quest.shortDescription || quest.descriptionPublic || '', { secretMode: isGM ? 'reveal' : 'hide' }) }} />
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -79,7 +79,7 @@ export default function QuestCard({ quest, quests, expandedQuestIds, onToggle, o
                         {isGM && quest.descriptionGM && (
                             <div style={{ background: '#2a1a1a', padding: 10, border: '1px dashed #ef5350', borderRadius: 4, marginBottom: 15 }}>
                                 <div style={{ color: '#ef5350', fontSize: '0.75em', textTransform: 'uppercase', marginBottom: 5 }}>GM Secrets</div>
-                                <div className="formatted-content" style={{ color: '#ccc', fontSize: '0.95em' }} dangerouslySetInnerHTML={{ __html: formatText(quest.descriptionGM, { secretMode: 'reveal' }) }} />
+                                <div className="formatted-content" style={{ color: '#ccc', fontSize: '0.95em' }} dangerouslySetInnerHTML={{ __html: parseFoundry(quest.descriptionGM, { secretMode: 'reveal' }) }} />
                             </div>
                         )}
 
@@ -88,7 +88,7 @@ export default function QuestCard({ quest, quests, expandedQuestIds, onToggle, o
                             <div
                                 className="formatted-content"
                                 style={{ marginBottom: 15 }}
-                                dangerouslySetInnerHTML={{ __html: formatText(quest.descriptionPublic, { secretMode: isGM ? 'reveal' : 'hide' }) }}
+                                dangerouslySetInnerHTML={{ __html: parseFoundry(quest.descriptionPublic, { secretMode: isGM ? 'reveal' : 'hide' }) }}
                                 onContextMenu={(e) => {
                                     if (isGM && onRevealSecret) {
                                         // Check if clicked exactly on a revealable secret

@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatText } from '../../utils/rules';
+import { parseFoundry } from '../../shared/utils/foundryParser';
 
 export default function QuestCodexItem({ quest, onToggleObjective }) {
     // Calculate progress - exclude hidden and failed objectives from player view
@@ -25,7 +25,7 @@ export default function QuestCodexItem({ quest, onToggleObjective }) {
             <summary className="quest-summary">
                 <div className="quest-summary-content">
                     <div className="quest-title">{quest.title}</div>
-                    <div className="quest-short-desc" dangerouslySetInnerHTML={{ __html: formatText(quest.shortDescription || quest.descriptionPublic || '') }} />
+                    <div className="quest-short-desc" dangerouslySetInnerHTML={{ __html: parseFoundry(quest.shortDescription || quest.descriptionPublic || '') }} />
                 </div>
                 <span className={`quest-status-badge ${getBadgeClass(quest.status)}`}>{quest.status}</span>
             </summary>
@@ -33,7 +33,7 @@ export default function QuestCodexItem({ quest, onToggleObjective }) {
             <div className="quest-body">
                 {/* Full Description if open */}
                 {quest.descriptionPublic && (
-                    <div className="formatted-content" style={{ marginBottom: 15 }} dangerouslySetInnerHTML={{ __html: formatText(quest.descriptionPublic) }} />
+                    <div className="formatted-content" style={{ marginBottom: 15 }} dangerouslySetInnerHTML={{ __html: parseFoundry(quest.descriptionPublic) }} />
                 )}
 
                 {/* Progress Bar */}

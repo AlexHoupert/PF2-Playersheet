@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import RichTextEditor from '../shared/components/RichTextEditor';
 import QuestCard from '../shared/components/QuestCard';
-import { formatText } from '../utils/rules';
 import { useCampaign } from '../shared/context/CampaignContext';
 
 export default function QuestsView({ db, setDb }) {

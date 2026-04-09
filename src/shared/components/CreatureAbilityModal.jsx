@@ -3,7 +3,8 @@
  * Shows full description with parsed @Localize, @UUID, @Check, @Damage references
  */
 import React from 'react';
-import { parseAbilityText, getActionIcon, ACTION_ICONS } from '../../utils/bestiaryUtils';
+import { getActionIcon } from '../../utils/bestiaryUtils';
+import { parseFoundry, ACTION_ICONS } from '../utils/foundryParser';
 
 export default function CreatureAbilityModal({ ability, onClose }) {
     if (!ability) return null;
@@ -140,7 +141,7 @@ export default function CreatureAbilityModal({ ability, onClose }) {
                         color: '#ddd',
                         lineHeight: 1.6
                     }}
-                    dangerouslySetInnerHTML={{ __html: parseAbilityText(description) }}
+                    dangerouslySetInnerHTML={{ __html: parseFoundry(description) }}
                 />
             </div>
         </div>

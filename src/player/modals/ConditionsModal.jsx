@@ -3,7 +3,7 @@ import {
     NEG_CONDS, POS_CONDS, VIS_CONDS, BINARY_CONDS, getConditionIcon
 } from '../../shared/constants/conditions';
 import { getConditionImgSrc, isConditionValued, getConditionCatalogEntry } from '../../shared/constants/conditionsCatalog';
-import { formatText } from '../../utils/rules'; // Ensure rules util is imported
+import { parseFoundry } from '../../shared/utils/foundryParser';
 
 /**
  * @typedef {Object} Condition
@@ -259,7 +259,7 @@ export function ConditionsModal({
                 {/* Description Content */}
                 <div
                     className="formatted-content"
-                    dangerouslySetInnerHTML={{ __html: formatText(entry?.description || "No description.", { actor: character }) }}
+                    dangerouslySetInnerHTML={{ __html: parseFoundry(entry?.description || "No description.", { actor: character }) }}
                     style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
                 />
             </div>
