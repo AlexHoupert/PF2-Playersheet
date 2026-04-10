@@ -275,7 +275,7 @@ export function parseFoundry(text, context = {}) {
             if (pack.includes('effect') || pack.includes('Effect')) return '';
             const type = PACK_TYPE_MAP[pack] ?? 'reference';
             const display = (label || name).trim();
-            return `<span class="content-link" data-type="${type}" data-name="${name.replace(/"/g, '&quot;')}">${display}</span>`;
+            return `<span class="content-link" style="color:var(--text-gold);text-decoration:underline;cursor:pointer;" data-type="${type}" data-name="${name.replace(/"/g, '&quot;')}">${display}</span>`;
         }
     );
 

@@ -30,7 +30,8 @@ const NAV_GROUPS = [
                 ]
             },
             { id: 'actions', label: 'Actions', icon: '⚔️' },
-            { id: 'feats', label: 'Feats', icon: '🏆' }
+            { id: 'feats', label: 'Feats', icon: '🏆' },
+            { id: 'abilities', label: 'Abilities', icon: '⚡' }
         ]
     },
     {

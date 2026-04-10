@@ -6,6 +6,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import CreatureCard from '../../shared/components/CreatureCard';
+import AbilityPicker from '../../shared/components/AbilityPicker';
 import { CREATURE_INDEX_FILTER_OPTIONS } from '../../shared/catalog/creatureIndex';
 
 // Common damage types
@@ -78,6 +79,10 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
     // Save state
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState(null);
+
+    // Ability picker
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const [pickerDefaultType, setPickerDefaultType] = useState(null);
 
     // Collapse states for sections
     const [expandedSections, setExpandedSections] = useState({
@@ -391,6 +396,15 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
     };
 
 
+    const addAbilityFromLibrary = (item) => {
+        setItems(prev => [...prev, item]);
+    };
+
+    const openPicker = (isPassive) => {
+        setPickerDefaultType(isPassive ? 'P' : null);
+        setPickerOpen(true);
+    };
+
     const addAbility = (isPassive = false) => {
         const newId = `ability-${Date.now()}`;
         setItems(prev => [...prev, {
@@ -432,6 +446,7 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
     const sectionHeaderStyle = { color: '#c5a059', marginBottom: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 };
 
     return (
+        <>
         <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
             {/* Left: Editor Form */}
             <div style={{ flex: 1, padding: 20, background: '#222', overflowY: 'auto' }}>
@@ -642,7 +657,10 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
                 </h4>
                 {expandedSections.passiveAbilities && (
                     <div style={{ marginBottom: 20, padding: 10, background: '#2a2a2a', borderRadius: 4 }}>
-                        <button className="set-btn" style={{ marginBottom: 10, padding: '4px 10px', fontSize: '0.8em' }} onClick={() => addAbility(true)}>+ Add Passive</button>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                            <button className="set-btn" style={{ padding: '4px 10px', fontSize: '0.8em' }} onClick={() => addAbility(true)}>+ Add Passive</button>
+                            <button className="set-btn" style={{ padding: '4px 10px', fontSize: '0.8em', background: '#3a3a2a', borderColor: '#c9a86c' }} onClick={() => openPicker(true)}>📚 From Library</button>
+                        </div>
                         {passiveAbilities.map(ability => (
                             <div key={ability._id} style={{ marginBottom: 10, padding: 10, background: '#333', borderRadius: 4 }}>
                                 <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
@@ -667,7 +685,10 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
                 </h4>
                 {expandedSections.activeAbilities && (
                     <div style={{ marginBottom: 20, padding: 10, background: '#2a2a2a', borderRadius: 4 }}>
-                        <button className="set-btn" style={{ marginBottom: 10, padding: '4px 10px', fontSize: '0.8em' }} onClick={() => addAbility(false)}>+ Add Active</button>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                            <button className="set-btn" style={{ padding: '4px 10px', fontSize: '0.8em' }} onClick={() => addAbility(false)}>+ Add Active</button>
+                            <button className="set-btn" style={{ padding: '4px 10px', fontSize: '0.8em', background: '#3a3a2a', borderColor: '#c9a86c' }} onClick={() => openPicker(false)}>📚 From Library</button>
+                        </div>
                         {activeAbilities.map(ability => (
                             <div key={ability._id} style={{ marginBottom: 10, padding: 10, background: '#333', borderRadius: 4 }}>
                                 <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
@@ -738,5 +759,14 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
                 />
             </div>
         </div>
+
+        {pickerOpen && (
+            <AbilityPicker
+                defaultTypeFilter={pickerDefaultType}
+                onSelect={addAbilityFromLibrary}
+                onClose={() => setPickerOpen(false)}
+            />
+        )}
+        </>
     );
 }

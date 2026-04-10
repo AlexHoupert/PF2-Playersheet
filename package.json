@@ -11,7 +11,8 @@
     "build:actions": "node scripts/generate_action_index.js",
     "build:impulses": "node scripts/build_impulses.js",
     "build:creatures": "node scripts/build_creatures.js",
-    "build:data": "npm run build:shop && npm run build:spells && npm run build:feats && npm run build:actions && npm run build:impulses && npm run build:creatures",
+    "build:abilities": "node scripts/build_ability_index.js",
+    "build:data": "npm run build:shop && npm run build:spells && npm run build:feats && npm run build:actions && npm run build:impulses && npm run build:creatures && npm run build:abilities",
     "build": "npm run build:data && vite build && node scripts/copy_ressources_to_dist.js",
     "preview": "vite preview"
   },
