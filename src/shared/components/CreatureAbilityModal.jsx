@@ -6,7 +6,7 @@ import React from 'react';
 import { getActionIcon } from '../../utils/bestiaryUtils';
 import { parseFoundry, ACTION_ICONS } from '../utils/foundryParser';
 
-export default function CreatureAbilityModal({ ability, onClose }) {
+export default function CreatureAbilityModal({ ability, onClose, onContentLinkClick }) {
     if (!ability) return null;
 
     const actionType = ability.system?.actionType?.value;
@@ -141,6 +141,7 @@ export default function CreatureAbilityModal({ ability, onClose }) {
                         color: '#ddd',
                         lineHeight: 1.6
                     }}
+                    onClick={onContentLinkClick}
                     dangerouslySetInnerHTML={{ __html: parseFoundry(description) }}
                 />
             </div>

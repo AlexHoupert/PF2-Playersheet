@@ -23,7 +23,7 @@ const DEFAULT_REVEAL_STATE = {
     size: 'precise'
 };
 
-export default function BestiaryView({ db, setDb, initialFilterType }) {
+export default function BestiaryView({ db, setDb, initialFilterType, onContentLinkClick }) {
     const { activeCampaign } = useCampaign();
 
     // List state
@@ -699,6 +699,7 @@ export default function BestiaryView({ db, setDb, initialFilterType }) {
                 <CreatureAbilityModal
                     ability={selectedAbility}
                     onClose={() => setSelectedAbility(null)}
+                    onContentLinkClick={onContentLinkClick}
                 />
             )}
         </div>

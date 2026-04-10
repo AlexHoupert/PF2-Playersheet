@@ -29,6 +29,16 @@ body {
     padding-bottom: 80px;
 }
 
+/* Foundry content links — rendered by parseFoundry() inside dangerouslySetInnerHTML */
+.content-link {
+    color: var(--text-gold);
+    text-decoration: underline;
+    cursor: pointer;
+}
+.content-link:hover {
+    opacity: 0.8;
+}
+
 @media (max-width: 600px) {
     body {
         padding: 5px;

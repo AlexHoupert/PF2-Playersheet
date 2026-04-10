@@ -1174,7 +1174,7 @@ export default function PlayerApp({ db, setDb }) {
     // --- MAIN RENDER ---
 
     return (
-        <div className="app-container" ref={swipeRef} {...swipeHandlers}>
+        <div className="app-container" ref={swipeRef} {...swipeHandlers} onClick={handleContentLinkClick}>
             {/* HEADER */}
             <style>{`
                 /* MAGIC TAB CSS */

@@ -5,9 +5,11 @@ import { DB_STORAGE_KEY } from '../shared/db/usePersistedDb';
 
 // Backend / Services
 import { fetchShopItemDetailBySourceFile, getShopIndexItemByName } from '../shared/catalog/shopIndex';
-import { fetchSpellDetailBySourceFile } from '../shared/catalog/spellIndex';
+import { fetchSpellDetailBySourceFile, getSpellIndexItemByName } from '../shared/catalog/spellIndex';
 import { fetchImpulseDetailBySourceFile } from '../shared/catalog/impulseIndex';
-import { fetchFeatDetailBySourceFile } from '../shared/catalog/featIndex';
+import { fetchFeatDetailBySourceFile, getFeatIndexItemByName } from '../shared/catalog/featIndex';
+import { fetchActionDetailBySourceFile, getActionIndexItemByName } from '../shared/catalog/actionIndex';
+import { getConditionCatalogEntry } from '../shared/constants/conditionsCatalog';
 
 // Components
 import ItemsView from './ItemsView';
@@ -141,6 +143,52 @@ export default function AdminApp({ db, setDb }) {
         }
     };
 
+    const handleContentLinkClick = async (e) => {
+        const link = e.target.closest('.content-link');
+        if (!link) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const type = link.dataset.type;
+        const name = link.dataset.name;
+        try {
+            if (type === 'condition') {
+                const entry = getConditionCatalogEntry(name);
+                if (entry) { setModalData(name); setModalMode('conditionInfo'); }
+            } else if (type === 'action') {
+                const idx = getActionIndexItemByName(name);
+                if (idx) {
+                    const data = await fetchActionDetailBySourceFile(idx.sourceFile);
+                    setModalData({ ...data, _entityType: 'action' });
+                    setModalMode('item');
+                }
+            } else if (type === 'item') {
+                const idx = getShopIndexItemByName(name);
+                if (idx) {
+                    const data = await fetchShopItemDetailBySourceFile(idx.sourceFile);
+                    setModalData({ ...data, _entityType: 'item' });
+                    setModalMode('item');
+                }
+            } else if (type === 'spell') {
+                const idx = getSpellIndexItemByName(name);
+                if (idx) {
+                    const data = await fetchSpellDetailBySourceFile(idx.sourceFile);
+                    setModalData({ ...data, _entityType: 'spell' });
+                    setModalMode('item');
+                }
+            } else if (type === 'feat') {
+                const idx = getFeatIndexItemByName(name);
+                if (idx) {
+                    const data = await fetchFeatDetailBySourceFile(idx.sourceFile);
+                    setModalData({ ...data, _entityType: 'feat' });
+                    setModalMode('item');
+                }
+            }
+        } catch (err) {
+            console.error('Content link navigation error', err);
+        }
+    };
+
     const handleRebuild = async (type) => {
         // ... (Keep existing rebuild logic? It relies on fetch to local server API check line 127 in orig)
         // I'll just keep the simplified console log or the real fetch if I had it.
@@ -161,7 +209,7 @@ export default function AdminApp({ db, setDb }) {
     const characters = activeCampaign ? activeCampaign.characters : (db.characters || []);
 
     return (
-        <div className="app-container admin-theme">
+        <div className="app-container admin-theme" onClick={handleContentLinkClick}>
             <div className="admin-shell" style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
                 <Sidebar activeTab={activeTab} onSelect={setActiveTab} />
 
@@ -332,9 +380,9 @@ export default function AdminApp({ db, setDb }) {
                         {activeTab === 'lore' && <LoreAdminView db={db} setDb={setDb} />}
 
                         {/* Bestiary Routes */}
-                        {(activeTab === 'bestiary' || activeTab === 'bestiary_overview') && <BestiaryView db={db} setDb={setDb} />}
-                        {activeTab === 'bestiary_creatures' && <BestiaryView db={db} setDb={setDb} initialFilterType={['npc']} />}
-                        {activeTab === 'bestiary_hazards' && <BestiaryView db={db} setDb={setDb} initialFilterType={['hazard']} />}
+                        {(activeTab === 'bestiary' || activeTab === 'bestiary_overview') && <BestiaryView db={db} setDb={setDb} onContentLinkClick={handleContentLinkClick} />}
+                        {activeTab === 'bestiary_creatures' && <BestiaryView db={db} setDb={setDb} initialFilterType={['npc']} onContentLinkClick={handleContentLinkClick} />}
+                        {activeTab === 'bestiary_hazards' && <BestiaryView db={db} setDb={setDb} initialFilterType={['hazard']} onContentLinkClick={handleContentLinkClick} />}
                         {activeTab === 'encounters' && <EncounterView db={db} setDb={setDb} />}
 
                         {activeTab === 'system' && (
@@ -364,7 +412,7 @@ export default function AdminApp({ db, setDb }) {
                 shopDetailError={shopItemDetailError}
                 dailyPrepQueue={[]}
                 setDailyPrepQueue={() => { }}
-            // Admin specific helpers could be added here
+                onContentLinkClick={handleContentLinkClick}
             />
 
             {/* XP Overlay */}
