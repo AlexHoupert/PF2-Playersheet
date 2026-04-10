@@ -47,12 +47,15 @@ function buildFoundryItem(ability) {
     };
 }
 
+const PAGE_SIZE = 100;
+
 export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = null }) {
     const allAbilities = getAllAbilities();
     const [search, setSearch]         = useState('');
     const [typeFilter, setTypeFilter]   = useState(defaultTypeFilter);
     const [traitFilter, setTraitFilter] = useState([]);
     const [preview, setPreview]         = useState(null);
+    const [page, setPage]               = useState(1);
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -63,6 +66,10 @@ export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = n
             return true;
         });
     }, [allAbilities, typeFilter, traitFilter, search]);
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const safePage   = Math.min(page, totalPages);
+    const pageItems  = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
     const handleSelect = (ability) => {
         onSelect(buildFoundryItem(ability));
@@ -97,7 +104,7 @@ export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = n
                         className="modal-input"
                         placeholder="Search abilities..."
                         value={search}
-                        onChange={e => setSearch(e.target.value)}
+                        onChange={e => { setSearch(e.target.value); setPage(1); }}
                         style={{ flex: 1, minWidth: 150 }}
                         autoFocus
                     />
@@ -105,7 +112,7 @@ export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = n
                         {TYPE_TABS.map(tab => (
                             <button
                                 key={tab.code ?? 'all'}
-                                onClick={() => setTypeFilter(tab.code)}
+                                onClick={() => { setTypeFilter(tab.code); setPage(1); }}
                                 style={{
                                     padding: '4px 10px', border: '1px solid #444', borderRadius: 4,
                                     cursor: 'pointer', fontSize: '0.8em',
@@ -119,7 +126,7 @@ export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = n
                         label="Traits"
                         options={ABILITY_INDEX_FILTER_OPTIONS.traits}
                         selected={traitFilter}
-                        onChange={setTraitFilter}
+                        onChange={v => { setTraitFilter(v); setPage(1); }}
                     />
                 </div>
 
@@ -130,7 +137,7 @@ export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = n
                         <div style={{ fontSize: '0.75em', color: '#555', padding: '4px 16px' }}>
                             {filtered.length} abilities · double-click to add
                         </div>
-                        {filtered.map(a => (
+                        {pageItems.map(a => (
                             <div
                                 key={a.name}
                                 onClick={() => setPreview(a)}
@@ -156,6 +163,15 @@ export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = n
                             <div style={{ color: '#555', textAlign: 'center', padding: 40, fontSize: '0.9em' }}>
                                 No abilities indexed yet.<br />
                                 Run <code>npm run build:abilities</code> to build the index.
+                            </div>
+                        )}
+                        {totalPages > 1 && (
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid #222' }}>
+                                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1}
+                                    style={{ padding: '3px 10px', background: '#2a2a2a', border: '1px solid #444', color: '#ccc', cursor: 'pointer', borderRadius: 3 }}>‹</button>
+                                <span style={{ color: '#888', fontSize: '0.85em' }}>Page {safePage} / {totalPages}</span>
+                                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}
+                                    style={{ padding: '3px 10px', background: '#2a2a2a', border: '1px solid #444', color: '#ccc', cursor: 'pointer', borderRadius: 3 }}>›</button>
                             </div>
                         )}
                     </div>
