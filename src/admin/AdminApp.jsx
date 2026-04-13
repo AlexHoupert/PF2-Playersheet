@@ -377,7 +377,7 @@ export default function AdminApp({ db, setDb }) {
                         {activeTab === 'impulses' && <ImpulsesView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('impulse'); }} />}
                         {activeTab === 'feats' && <FeatsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('feat'); }} />}
                         {activeTab === 'actions' && <ActionsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('item'); }} />}
-                        {activeTab === 'abilities' && <AbilitiesView />}
+                        {activeTab === 'abilities' && <AbilitiesView db={db} setDb={setDb} />}
                         {activeTab === 'quests' && <QuestsView db={db} setDb={setDb} />}
                         {activeTab === 'lore' && <LoreAdminView db={db} setDb={setDb} />}
 

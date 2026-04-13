@@ -13,6 +13,7 @@ import CreatureAbilityModal from '../shared/components/CreatureAbilityModal';
 import CreatureEditor from './editors/CreatureEditor';
 import { getRecallKnowledgeDC, generateFalseData } from '../utils/bestiaryUtils';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
+import { copyRef, getInMemoryRef } from '../shared/clipboard/refClipboard';
 
 // Default reveal state for new creatures
 const DEFAULT_REVEAL_STATE = {
@@ -48,6 +49,41 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
     // Selection & context menu
     const [selectedItems, setSelectedItems] = useState([]);
     const [contextMenu, setContextMenu] = useState(null);
+    const [toast, setToast] = useState(null);
+
+    const showToast = (msg) => {
+        const key = Date.now();
+        setToast({ msg, key });
+        setTimeout(() => setToast(t => t?.key === key ? null : t), 2200);
+    };
+
+    const pasteAbilityToCreature = (creature) => {
+        const ref = getInMemoryRef();
+        if (!ref || ref.type !== 'ability') { showToast('No ability reference in clipboard'); return; }
+        const ability = ref.data;
+        const foundryItem = {
+            _id: `ability-${Date.now()}`,
+            name: ability.name,
+            type: 'action',
+            img: '',
+            system: {
+                actionType: { value: ability.typeCode === 'P' ? 'passive' : ability.typeCode === 'R' ? 'reaction' : ability.typeCode === 'F' ? 'free' : 'action' },
+                actions: { value: ['1','2','3'].includes(ability.typeCode) ? parseInt(ability.typeCode) : null },
+                description: { value: ability.description || '' },
+                traits: { value: ability.traits || [] },
+            },
+        };
+        setDb(prev => {
+            const cc = { ...prev.bestiary?.customCreatures };
+            const entry = cc[creature.id];
+            if (!entry) return prev;
+            const data = { ...entry.data, items: [...(entry.data?.items || []), foundryItem] };
+            cc[creature.id] = { ...entry, data };
+            return { ...prev, bestiary: { ...prev.bestiary, customCreatures: cc } };
+        });
+        showToast(`"${ability.name}" added to ${creature.name}`);
+        setContextMenu(null);
+    };
 
     // Editor state
     const [editingCreature, setEditingCreature] = useState(null);
@@ -662,6 +698,22 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
                     <div
                         className="ctx-item"
                         style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #444' }}
+                        onClick={() => { copyRef('creature', contextMenu.creature); showToast('Reference copied'); setContextMenu(null); }}
+                    >
+                        📎 Copy Reference
+                    </div>
+                    {contextMenu.creature.isCustom && (
+                        <div
+                            className="ctx-item"
+                            style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #444', color: getInMemoryRef()?.type === 'ability' ? '#ddd' : '#555' }}
+                            onClick={() => contextMenu.creature.isCustom && pasteAbilityToCreature(contextMenu.creature)}
+                        >
+                            📥 Paste Referenced Ability
+                        </div>
+                    )}
+                    <div
+                        className="ctx-item"
+                        style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #444' }}
                         onClick={() => handleEdit(contextMenu.creature)}
                     >
                         ✏️ Edit
@@ -701,6 +753,13 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
                     onClose={() => setSelectedAbility(null)}
                     onContentLinkClick={onContentLinkClick}
                 />
+            )}
+
+            {/* Toast */}
+            {toast && (
+                <div style={{ position: 'fixed', bottom: 30, left: '50%', transform: 'translateX(-50%)', background: '#2b2b2e', border: '1px solid #c9a86c', color: '#f5deb3', padding: '8px 20px', borderRadius: 6, zIndex: 4000, fontSize: '0.9em', pointerEvents: 'none' }}>
+                    {toast.msg}
+                </div>
             )}
         </div>
     );
