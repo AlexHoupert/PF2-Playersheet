@@ -36,6 +36,7 @@ import EncounterView from './EncounterView';
 // Let's assume I shouldn't break it if it works. But if it's not there...
 // I'll stick to what I saw.
 
+import MapAdminView from './MapAdminView';
 import FirebaseMigrator from './FirebaseMigrator';
 import SessionManager from './views/SessionManager';
 
@@ -380,6 +381,7 @@ export default function AdminApp({ db, setDb }) {
                         {activeTab === 'abilities' && <AbilitiesView db={db} setDb={setDb} />}
                         {activeTab === 'quests' && <QuestsView db={db} setDb={setDb} />}
                         {activeTab === 'lore' && <LoreAdminView db={db} setDb={setDb} />}
+                        {activeTab === 'maps' && <MapAdminView />}
 
                         {/* Bestiary Routes */}
                         {(activeTab === 'bestiary' || activeTab === 'bestiary_overview') && <BestiaryView db={db} setDb={setDb} onContentLinkClick={handleContentLinkClick} />}

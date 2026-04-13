@@ -168,6 +168,44 @@ async function createServer() {
         }
     });
 
+    // UPLOAD IMAGE (base64 body → binary file in ressources/)
+    app.post('/api/files/upload-base64', async (req, res) => {
+        try {
+            const { filename, base64, directory = 'maps' } = req.body;
+            if (!filename || !base64) {
+                return res.status(400).json({ error: 'Missing filename or base64' });
+            }
+
+            // Preserve extension, sanitize the stem
+            const ext  = path.extname(filename) || '.jpg';
+            const stem = path.basename(filename, ext).replace(/[^a-z0-9_\-]/gi, '_');
+            const safeFilename = `${stem}${ext}`;
+
+            // Always write inside ressources/ — no path traversal
+            const ressourcesRoot = path.resolve(__dirname, '..', 'ressources');
+            const dirPath = path.resolve(ressourcesRoot, directory);
+            if (!dirPath.startsWith(ressourcesRoot)) {
+                return res.status(403).json({ error: 'Access denied' });
+            }
+
+            await fs.mkdir(dirPath, { recursive: true });
+
+            // Strip "data:<mime>;base64," prefix if the client sent a data URL
+            const cleanBase64 = base64.replace(/^data:[^;]+;base64,/, '');
+            const buffer = Buffer.from(cleanBase64, 'base64');
+
+            const filePath = path.join(dirPath, safeFilename);
+            await fs.writeFile(filePath, buffer);
+
+            const servePath = `/api/static/${directory}/${safeFilename}`;
+            console.log(`[File] Uploaded image: ${filePath} → ${servePath}`);
+            res.json({ success: true, path: servePath });
+        } catch (err) {
+            console.error(`[File] Upload-base64 Error: ${err.message}`);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     app.post('/api/admin/rebuild-index/:type', (req, res) => {
         const { type } = req.params;
         const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';

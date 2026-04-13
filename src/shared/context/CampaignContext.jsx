@@ -75,7 +75,7 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false }) {
             ...prev,
             campaigns: {
                 ...prev.campaigns,
-                [id]: { id, name, characters: [], quests: [], lootBags: [], createdAt: Date.now() }
+                [id]: { id, name, characters: [], quests: [], lootBags: [], maps: [], createdAt: Date.now() }
             }
         }));
         return id;
