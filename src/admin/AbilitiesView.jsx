@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { getAllAbilities, ABILITY_INDEX_FILTER_OPTIONS } from '../shared/catalog/abilityIndex';
 import { parseFoundry } from '../shared/utils/foundryParser';
 import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
+import BottomSheet from '../shared/components/BottomSheet';
+import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { copyRef } from '../shared/clipboard/refClipboard';
 
 const PAGE_SIZE = 100;
@@ -68,7 +70,7 @@ function AbilityFormModal({ initial, onSave, onClose }) {
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3100 }}
             onClick={onClose}>
-            <div style={{ background: '#1e1e21', border: '1px solid #c9a86c', borderRadius: 8, width: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+            <div style={{ background: '#1e1e21', border: '1px solid #c9a86c', borderRadius: 8, width: 'min(560px, 95vw)', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
                 onClick={e => e.stopPropagation()}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ margin: 0, color: '#f5deb3' }}>{initial.isCustom && initial.name ? 'Edit Ability' : 'New Ability'}</h3>
@@ -131,7 +133,7 @@ function CreaturePickerModal({ db, onPick, onClose }) {
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3100 }}
             onClick={onClose}>
-            <div style={{ background: '#1e1e21', border: '1px solid #c9a86c', borderRadius: 8, width: 420, maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+            <div style={{ background: '#1e1e21', border: '1px solid #c9a86c', borderRadius: 8, width: 'min(420px, 95vw)', maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
                 onClick={e => e.stopPropagation()}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ margin: 0, color: '#f5deb3' }}>Give to Creature</h3>
@@ -159,8 +161,44 @@ function CreaturePickerModal({ db, onPick, onClose }) {
     );
 }
 
+// ── Shared preview body (used in both desktop panel and mobile BottomSheet) ────
+function AbilityPreviewContent({ selected, setAbilityForm, copyRef, showToast, setCreaturePicker }) {
+    return (
+        <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                <h4 style={{ color: '#f5deb3', margin: 0 }}>{selected.name}</h4>
+                <div style={{ display: 'flex', gap: 6 }}>
+                    {selected.isCustom && (
+                        <button onClick={() => setAbilityForm({ ...selected })} title="Edit"
+                            style={{ background: 'none', border: 'none', color: '#c9a86c', cursor: 'pointer', fontSize: '1.1em' }}>✏️</button>
+                    )}
+                    <button onClick={() => { copyRef('ability', selected); showToast('Reference copied'); }} title="Copy Reference"
+                        style={{ background: 'none', border: 'none', color: '#c9a86c', cursor: 'pointer', fontSize: '1.1em' }}>📎</button>
+                    <button onClick={() => setCreaturePicker(selected)} title="Give to Creature"
+                        style={{ background: 'none', border: 'none', color: '#c9a86c', cursor: 'pointer', fontSize: '1.1em' }}>🐉</button>
+                </div>
+            </div>
+            <div style={{ color: '#888', fontSize: '0.8em', marginBottom: 8 }}>
+                {selected.typeCode === 'P' ? 'Passive' : selected.typeCode === 'R' ? 'Reaction' : selected.typeCode === 'F' ? 'Free Action' : `${selected.typeCode} Action(s)`}
+                {selected.category ? ` · ${selected.category}` : ''}
+                {selected.isCustom && <span style={{ color: '#c9a86c', marginLeft: 6 }}>★ Custom</span>}
+            </div>
+            {(selected.traits || []).length > 0 && (
+                <div style={{ marginBottom: 10 }}>
+                    {selected.traits.map(t => (
+                        <span key={t} style={{ display: 'inline-block', padding: '2px 6px', marginRight: 4, marginBottom: 4, borderRadius: 3, background: '#555', color: '#fff', fontSize: '0.75em' }}>{t}</span>
+                    ))}
+                </div>
+            )}
+            <div style={{ color: '#ccc', fontSize: '0.85em', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: parseFoundry(selected.description) }} />
+        </>
+    );
+}
+
 // ── Main View ─────────────────────────────────────────────────────────────────
 export default function AbilitiesView({ db, setDb }) {
+    const { isMobile } = useWindowSize();
+
     // Merge indexed abilities with custom db abilities (custom takes priority by name)
     const allAbilities = useMemo(() => {
         const indexed = getAllAbilities();
@@ -332,44 +370,26 @@ export default function AbilitiesView({ db, setDb }) {
                     )}
                 </div>
 
-                {/* Preview panel */}
-                <div style={{ width: 360, overflowY: 'auto', background: '#1a1a1a', borderRadius: 6, padding: 16, flexShrink: 0 }}>
-                    {selected ? (
-                        <>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                                <h4 style={{ color: '#f5deb3', margin: 0 }}>{selected.name}</h4>
-                                <div style={{ display: 'flex', gap: 6 }}>
-                                    {selected.isCustom && (
-                                        <button onClick={() => setAbilityForm({ ...selected })} title="Edit"
-                                            style={{ background: 'none', border: 'none', color: '#c9a86c', cursor: 'pointer', fontSize: '1.1em' }}>✏️</button>
-                                    )}
-                                    <button onClick={() => { copyRef('ability', selected); showToast('Reference copied'); }} title="Copy Reference"
-                                        style={{ background: 'none', border: 'none', color: '#c9a86c', cursor: 'pointer', fontSize: '1.1em' }}>📎</button>
-                                    <button onClick={() => setCreaturePicker(selected)} title="Give to Creature"
-                                        style={{ background: 'none', border: 'none', color: '#c9a86c', cursor: 'pointer', fontSize: '1.1em' }}>🐉</button>
-                                </div>
+                {/* Desktop: preview panel */}
+                {!isMobile && (
+                    <div style={{ width: 360, overflowY: 'auto', background: '#1a1a1a', borderRadius: 6, padding: 16, flexShrink: 0 }}>
+                        {selected ? <AbilityPreviewContent selected={selected} setAbilityForm={setAbilityForm} copyRef={copyRef} showToast={showToast} setCreaturePicker={setCreaturePicker} /> : (
+                            <div style={{ color: '#444', textAlign: 'center', marginTop: 40 }}>
+                                Click a row to preview.<br />Right-click for options.
                             </div>
-                            <div style={{ color: '#888', fontSize: '0.8em', marginBottom: 8 }}>
-                                {selected.typeCode === 'P' ? 'Passive' : selected.typeCode === 'R' ? 'Reaction' : selected.typeCode === 'F' ? 'Free Action' : `${selected.typeCode} Action(s)`}
-                                {selected.category ? ` · ${selected.category}` : ''}
-                                {selected.isCustom && <span style={{ color: '#c9a86c', marginLeft: 6 }}>★ Custom</span>}
-                            </div>
-                            {(selected.traits || []).length > 0 && (
-                                <div style={{ marginBottom: 10 }}>
-                                    {selected.traits.map(t => (
-                                        <span key={t} style={{ display: 'inline-block', padding: '2px 6px', marginRight: 4, marginBottom: 4, borderRadius: 3, background: '#555', color: '#fff', fontSize: '0.75em' }}>{t}</span>
-                                    ))}
-                                </div>
-                            )}
-                            <div style={{ color: '#ccc', fontSize: '0.85em', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: parseFoundry(selected.description) }} />
-                        </>
-                    ) : (
-                        <div style={{ color: '#444', textAlign: 'center', marginTop: 40 }}>
-                            Click a row to preview.<br />Right-click for options.
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
             </div>
+
+            {/* Mobile: preview BottomSheet */}
+            {isMobile && (
+                <BottomSheet isOpen={!!selected} onClose={() => setSelected(null)} title={selected?.name || ''} height="70vh">
+                    <div style={{ padding: '8px 16px', overflowY: 'auto', height: '100%' }}>
+                        {selected && <AbilityPreviewContent selected={selected} setAbilityForm={setAbilityForm} copyRef={copyRef} showToast={showToast} setCreaturePicker={setCreaturePicker} />}
+                    </div>
+                </BottomSheet>
+            )}
 
             {/* Context Menu */}
             {contextMenu && (
@@ -416,7 +436,7 @@ export default function AbilitiesView({ db, setDb }) {
 
             {/* Toast */}
             {toast && (
-                <div style={{ position: 'fixed', bottom: 30, left: '50%', transform: 'translateX(-50%)', background: '#2b2b2e', border: '1px solid #c9a86c', color: '#f5deb3', padding: '8px 20px', borderRadius: 6, zIndex: 4000, fontSize: '0.9em', pointerEvents: 'none' }}>
+                <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: '#2b2b2e', border: '1px solid #c9a86c', color: '#f5deb3', padding: '8px 20px', borderRadius: 6, zIndex: 4000, fontSize: '0.9em', pointerEvents: 'none' }}>
                     {toast.msg}
                 </div>
             )}

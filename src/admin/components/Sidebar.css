@@ -222,3 +222,80 @@
     color: #888;
     font-size: 0.75rem;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE BOTTOM NAV BAR
+   Replaces the sidebar entirely on screens < 640px.
+   ═══════════════════════════════════════════════════════════ */
+
+.bottom-nav {
+    display: none; /* desktop: hidden */
+}
+
+@media (max-width: 639px) {
+    /* Hide the sidebar panel */
+    .sidebar-container { display: none; }
+
+    /* Show bottom nav */
+    .bottom-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: #1a1a1a;
+        border-top: 2px solid #5c4033;
+        z-index: 500;
+        /* Respect iOS home indicator */
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        overflow: hidden;
+    }
+
+    .bottom-nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        background: none;
+        border: none;
+        color: #888;
+        cursor: pointer;
+        padding: 4px 2px;
+        font-size: 0.62rem;
+        transition: color 0.15s;
+        min-width: 0;
+        /* tap target */
+        min-height: 44px;
+    }
+
+    .bottom-nav-item.active {
+        color: #c9a86c;
+    }
+
+    .bottom-nav-item .bnav-icon {
+        font-size: 1.3rem;
+        line-height: 1;
+    }
+
+    .bottom-nav-item .bnav-label {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        font-size: 0.6rem;
+    }
+
+    /* Sub-menu sheet trigger — active group gets gold indicator dot */
+    .bottom-nav-item.has-children.active::after {
+        content: '';
+        display: block;
+        width: 4px;
+        height: 4px;
+        background: #c9a86c;
+        border-radius: 50%;
+        margin-top: 2px;
+    }
+}

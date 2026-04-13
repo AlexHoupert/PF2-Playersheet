@@ -7,6 +7,7 @@ import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import CreatureCard from '../../shared/components/CreatureCard';
 import AbilityPicker from '../../shared/components/AbilityPicker';
+import { useWindowSize } from '../../shared/hooks/useWindowSize';
 import { CREATURE_INDEX_FILTER_OPTIONS } from '../../shared/catalog/creatureIndex';
 
 // Common damage types
@@ -45,6 +46,8 @@ const SKILL_LIST = [
 ];
 
 export default function CreatureEditor({ initialCreature, onSave, onCancel, onSaveToDb }) {
+    const { isMobile } = useWindowSize();
+
     // Form state - basic info
     const [name, setName] = useState('');
     const [level, setLevel] = useState(0);
@@ -764,8 +767,8 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
                 </div>
             </div>
 
-            {/* Right: Live Preview */}
-            <div style={{ width: 400, minWidth: 350, borderLeft: '1px solid #444', overflowY: 'auto', padding: 16, background: '#1a1a1a' }}>
+            {/* Right: Live Preview — hidden on mobile */}
+            {!isMobile && <div style={{ width: 400, minWidth: 350, borderLeft: '1px solid #444', overflowY: 'auto', padding: 16, background: '#1a1a1a' }}>
                 <h4 style={{ marginTop: 0, color: '#aaa', marginBottom: 10 }}>Live Preview (GM View)</h4>
                 <CreatureCard
                     creature={previewCreature}
@@ -774,7 +777,7 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
                     falseData={{}}
                     onAbilityClick={() => { }}
                 />
-            </div>
+            </div>}
         </div>
 
         {pickerOpen && (

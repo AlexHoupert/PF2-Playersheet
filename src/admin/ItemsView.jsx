@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
 import ItemEditor from './editors/ItemEditor';
+import FilterBar from './components/FilterBar';
+import BottomSheet from '../shared/components/BottomSheet';
+import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { SHOP_CATEGORIES } from '../shared/constants/shop';
 import { deepClone } from '../shared/utils/deepClone';
 import { SHOP_INDEX_FILTER_OPTIONS, SHOP_INDEX_ITEMS, fetchShopItemDetailBySourceFile } from '../shared/catalog/shopIndex';
 import { shouldStack } from '../shared/utils/inventoryUtils';
 import SpellScrollSelectorModal from '../player/modals/SpellScrollSelectorModal';
-import FilterDialog from './components/FilterDialog';
 
 const uniqueTypes = SHOP_INDEX_FILTER_OPTIONS.types;
 const uniqueCategories = SHOP_INDEX_FILTER_OPTIONS.categories;
@@ -52,6 +54,7 @@ const Card = ({ children, style, className, ...rest }) => (
 
 export default function ItemsView({ db, setDb, onInspectItem }) {
     const { activeCampaign } = useCampaign();
+    const { isMobile } = useWindowSize();
 
     // --- STATE ---
     const [search, setSearch] = useState('');
@@ -66,8 +69,10 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
 
     // Filters
     const [activeFilters, setActiveFilters] = useState({});
-    const [showFilterDialog, setShowFilterDialog] = useState(false);
     const [applySideFilters, setApplySideFilters] = useState(false);
+
+    // Mobile: show side panel in bottom sheet
+    const [mobileSideOpen, setMobileSideOpen] = useState(false);
 
     // Columns
     const [visibleColumns, setVisibleColumns] = useState(() => {
@@ -498,10 +503,10 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
 
     const CtxDivider = () => <div style={{ height: 1, background: '#444', margin: '4px 0' }} />;
 
-    // Grid layout changes based on sideMode: 3fr main, 2fr side
-    const gridTemplate = sideMode === 'none'
-        ? 'auto 1fr / 1fr'
-        : 'auto 1fr / 3fr 2fr';
+    // Grid layout: mobile always single column; desktop splits when side panel open
+    const gridTemplate = (!isMobile && sideMode !== 'none')
+        ? 'auto 1fr / 3fr 2fr'
+        : 'auto 1fr / 1fr';
 
     // Button style for consistency
     const toolbarBtnStyle = {
@@ -524,42 +529,44 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
             <style>{scrollbarStyles}</style>
             <div style={{ display: 'grid', gridTemplate, gap: 10, height: '100%', overflow: 'hidden' }}>
                 {/* TOOLBAR CARD - spans full width */}
-                <Card style={{ gridColumn: '1 / -1', flexDirection: 'row', alignItems: 'center', padding: '10px 15px', gap: 10 }}>
-                    <input
-                        className="modal-input"
-                        placeholder="Search..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        style={{ width: 180 }}
-                    />
-                    <button style={toolbarBtnStyle} onClick={() => performAction('newItem')}>New Item</button>
-                    <button
-                        style={{ ...toolbarBtnStyle, background: Object.keys(activeFilters).length > 0 ? '#c5a059' : '#333', color: Object.keys(activeFilters).length > 0 ? '#000' : '#ddd' }}
-                        onClick={() => setShowFilterDialog(true)}
-                    >
-                        Filter{Object.keys(activeFilters).length > 0 ? ` (${Object.keys(activeFilters).length})` : ''}
-                    </button>
-                    <div style={{ position: 'relative' }}>
-                        <button style={toolbarBtnStyle} onClick={() => setShowColSelector(!showColSelector)}>
-                            Columns <span style={{ opacity: 0.6 }}>▾</span>
-                        </button>
-                        {showColSelector && (
-                            <div style={{ position: 'absolute', top: '100%', left: 0, background: '#1a1a1a', border: '1px solid #444', padding: 8, zIndex: 1000, minWidth: 160, boxShadow: '0 4px 12px rgba(0,0,0,0.5)', borderRadius: 6, marginTop: 4 }}>
-                                {Object.keys(COLUMNS_CONFIG).map(colKey => (
-                                    <label key={colKey} style={{ display: 'flex', gap: 8, padding: '4px 6px', cursor: 'pointer', color: '#ddd', fontSize: '0.9em' }}>
-                                        <input type="checkbox" checked={visibleColumns.includes(colKey)} onChange={() => setVisibleColumns(prev => prev.includes(colKey) ? prev.filter(c => c !== colKey) : [...prev, colKey])} />
-                                        {COLUMNS_CONFIG[colKey].label}
-                                    </label>
-                                ))}
+                <Card style={{ gridColumn: '1 / -1', padding: '8px 12px', gap: 8 }}>
+                    <FilterBar
+                        search={search}
+                        onSearch={setSearch}
+                        searchPlaceholder="Search items..."
+                        activeFilters={activeFilters}
+                        onFiltersChange={setActiveFilters}
+                        columns={Object.keys(COLUMNS_CONFIG)}
+                        optionsMap={{ type: uniqueTypes, category: uniqueCategories, group: uniqueGroups, rarity: uniqueRarities, traits: SHOP_INDEX_FILTER_OPTIONS.traits, bulk: ['L', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], Available: true, Formula: true }}
+                        columnLabels={{ Available: 'Available', Formula: 'Formula' }}
+                        extraLeft={
+                            <div style={{ display: 'flex', gap: 0, border: '1px solid #444', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
+                                <button style={{ padding: '5px 12px', background: sideMode === 'none' ? '#c5a059' : '#222', color: sideMode === 'none' ? '#000' : '#888', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85em' }} onClick={() => setSideMode('none')}>Items</button>
+                                <button style={{ padding: '5px 12px', background: sideMode === 'trader' ? '#c5a059' : '#222', color: sideMode === 'trader' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('trader'); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Trader</button>
+                                <button style={{ padding: '5px 12px', background: sideMode === 'loot' ? '#c5a059' : '#222', color: sideMode === 'loot' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('loot'); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Loot</button>
                             </div>
-                        )}
-                    </div>
-
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 0, border: '1px solid #444', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
-                        <button style={{ padding: '6px 16px', minWidth: 60, background: sideMode === 'none' ? '#c5a059' : '#222', color: sideMode === 'none' ? '#000' : '#888', border: 'none', cursor: 'pointer', fontWeight: 500 }} onClick={() => setSideMode('none')}>Items</button>
-                        <button style={{ padding: '6px 16px', minWidth: 60, background: sideMode === 'trader' ? '#c5a059' : '#222', color: sideMode === 'trader' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500 }} onClick={() => { setSideMode('trader'); setSelectedSideItems([]); }}>Trader</button>
-                        <button style={{ padding: '6px 16px', minWidth: 60, background: sideMode === 'loot' ? '#c5a059' : '#222', color: sideMode === 'loot' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500 }} onClick={() => { setSideMode('loot'); setSelectedSideItems([]); }}>Loot</button>
-                    </div>
+                        }
+                        extraRight={
+                            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                <button style={toolbarBtnStyle} onClick={() => performAction('newItem')}>+ Item</button>
+                                <div style={{ position: 'relative' }}>
+                                    <button style={toolbarBtnStyle} onClick={() => setShowColSelector(!showColSelector)}>
+                                        Cols <span style={{ opacity: 0.6 }}>▾</span>
+                                    </button>
+                                    {showColSelector && (
+                                        <div style={{ position: 'absolute', top: '100%', right: 0, background: '#1a1a1a', border: '1px solid #444', padding: 8, zIndex: 1000, minWidth: 160, boxShadow: '0 4px 12px rgba(0,0,0,0.5)', borderRadius: 6, marginTop: 4 }}>
+                                            {Object.keys(COLUMNS_CONFIG).map(colKey => (
+                                                <label key={colKey} style={{ display: 'flex', gap: 8, padding: '4px 6px', cursor: 'pointer', color: '#ddd', fontSize: '0.9em' }}>
+                                                    <input type="checkbox" checked={visibleColumns.includes(colKey)} onChange={() => setVisibleColumns(prev => prev.includes(colKey) ? prev.filter(c => c !== colKey) : [...prev, colKey])} />
+                                                    {COLUMNS_CONFIG[colKey].label}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        }
+                    />
                 </Card>
 
                 {/* MAIN TABLE CARD */}
@@ -570,8 +577,10 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                                 <tr>
                                     {tableColumns.map(col => {
                                         const isMeta = col === 'Available' || col === 'Formula';
+                                        // Hide less important columns on smaller screens
+                                        const priority = { category: 3, group: 3, rarity: 2, traits: 2, damage: 2, range: 2, bulk: 3 }[col];
                                         return (
-                                            <th key={col} style={{ padding: 8, textAlign: 'left', cursor: !isMeta ? 'pointer' : 'default', color: '#aaa', borderBottom: '1px solid #444' }} onClick={() => !isMeta && handleSort(col)}>
+                                            <th key={col} data-priority={priority} style={{ padding: 8, textAlign: 'left', cursor: !isMeta ? 'pointer' : 'default', color: '#aaa', borderBottom: '1px solid #444', whiteSpace: 'nowrap' }} onClick={() => !isMeta && handleSort(col)}>
                                                 {col === 'Available' ? 'Av' : col === 'Formula' ? 'Fm' : COLUMNS_CONFIG[col]?.label || col}
                                                 {!isMeta && sortConfig.key === col && (sortConfig.direction === 'asc' ? ' ▲' : ' ▼')}
                                             </th>
@@ -595,9 +604,10 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                                         }}
                                     >
                                         {tableColumns.map(col => {
-                                            if (col === 'Available') return <td key={col} style={{ padding: 8 }}><input type="checkbox" checked={(db.shop?.availableItems || []).includes(item.name)} onChange={(e) => { e.stopPropagation(); performAction((db.shop?.availableItems || []).includes(item.name) ? 'makeUnavailable' : 'makeAvailable'); }} onClick={e => e.stopPropagation()} /></td>;
-                                            if (col === 'Formula') return <td key={col} style={{ padding: 8 }}><input type="checkbox" checked={(db.shop?.availableFormulas || []).includes(item.name)} onChange={(e) => { e.stopPropagation(); performAction((db.shop?.availableFormulas || []).includes(item.name) ? 'removeFormula' : 'addFormula'); }} onClick={e => e.stopPropagation()} /></td>;
-                                            return <td key={col} style={{ padding: 8, color: '#ddd' }}>{item[col]}</td>;
+                                            const priority = { category: 3, group: 3, rarity: 2, traits: 2, damage: 2, range: 2, bulk: 3 }[col];
+                                            if (col === 'Available') return <td key={col} data-priority={priority} style={{ padding: 8 }}><input type="checkbox" checked={(db.shop?.availableItems || []).includes(item.name)} onChange={(e) => { e.stopPropagation(); performAction((db.shop?.availableItems || []).includes(item.name) ? 'makeUnavailable' : 'makeAvailable'); }} onClick={e => e.stopPropagation()} /></td>;
+                                            if (col === 'Formula') return <td key={col} data-priority={priority} style={{ padding: 8 }}><input type="checkbox" checked={(db.shop?.availableFormulas || []).includes(item.name)} onChange={(e) => { e.stopPropagation(); performAction((db.shop?.availableFormulas || []).includes(item.name) ? 'removeFormula' : 'addFormula'); }} onClick={e => e.stopPropagation()} /></td>;
+                                            return <td key={col} data-priority={priority} style={{ padding: 8, color: '#ddd' }}>{item[col]}</td>;
                                         })}
                                     </tr>
                                 ))}
@@ -617,8 +627,8 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                     </div>
                 </Card>
 
-                {/* SIDE PANEL (Trader/Loot List + Inventory) */}
-                {sideMode !== 'none' && (
+                {/* SIDE PANEL (Trader/Loot List + Inventory) — desktop only inline */}
+                {!isMobile && sideMode !== 'none' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
                         {/* TRADERS/LOOT LIST */}
                         <Card style={{ flex: '0 0 auto', maxHeight: '35%' }}>
@@ -806,13 +816,6 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                     </div>
                 )}
 
-                {/* FILTER DIALOG */}
-                <FilterDialog
-                    isOpen={showFilterDialog} onClose={() => setShowFilterDialog(false)}
-                    columns={Object.keys(COLUMNS_CONFIG)} activeFilters={activeFilters} onApply={setActiveFilters}
-                    optionsMap={{ type: uniqueTypes, category: uniqueCategories, group: uniqueGroups, rarity: uniqueRarities, traits: SHOP_INDEX_FILTER_OPTIONS.traits, bulk: ['L', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], Available: true, Formula: true }}
-                />
-
                 {/* ITEM EDITOR MODAL */}
                 {editingItem && (
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000, padding: 20 }}>
@@ -895,6 +898,68 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                     </div>
                 )}
             </div>
+
+            {/* MOBILE SIDE PANEL (Trader / Loot) in BottomSheet */}
+            {isMobile && sideMode !== 'none' && (
+                <BottomSheet
+                    isOpen={mobileSideOpen}
+                    onClose={() => setMobileSideOpen(false)}
+                    title={sideMode === 'trader' ? 'Traders' : 'Loot Bags'}
+                    height="85vh"
+                >
+                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                        {/* List of traders / loot bags */}
+                        <div style={{ flex: '0 0 auto', maxHeight: '35%', overflow: 'auto', borderBottom: '1px solid #444' }}>
+                            <div style={{ padding: '6px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1a1a1a' }}>
+                                <span style={{ color: '#c5a059', fontWeight: 'bold', fontSize: '0.9em' }}>{sideMode === 'trader' ? 'Select Trader' : 'Select Loot Bag'}</span>
+                                <button style={{ fontSize: '0.75em', background: '#333', border: '1px solid #555', padding: '3px 8px', cursor: 'pointer', color: '#ddd', borderRadius: 4 }} onClick={sideMode === 'trader' ? handleCreateTrader : handleCreateLoot}>+ New</button>
+                            </div>
+                            {sideMode === 'trader'
+                                ? sideLists.sliced.map(entry => (
+                                    <div key={entry.id} onClick={() => { setSelectedTraderId(entry.id); setSelectedSideItems([]); }}
+                                        style={{ padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #333', background: selectedTraderId === entry.id ? '#333' : 'transparent', display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 }}>
+                                        <span style={{ color: '#ddd' }}>{entry.name}</span>
+                                        <span style={{ color: '#888', fontSize: '0.85em' }}>{entry.category || 'General'} · {entry.inventory.length} items</span>
+                                    </div>
+                                ))
+                                : sideLists.sliced.map(entry => (
+                                    <div key={entry.id} onClick={() => { setSelectedLootId(entry.id); setSelectedSideItems([]); }}
+                                        style={{ padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #333', background: selectedLootId === entry.id ? '#333' : 'transparent', display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 }}>
+                                        <span style={{ color: '#ddd' }}>{entry.name}</span>
+                                        <span style={{ color: '#888', fontSize: '0.85em' }}>{entry.items.length} items</span>
+                                    </div>
+                                ))
+                            }
+                        </div>
+                        {/* Inventory of selected trader/loot */}
+                        <div style={{ flex: 1, overflow: 'auto' }}>
+                            {sideMode === 'trader' && activeTrader && (
+                                <div style={{ padding: '6px 16px', background: '#1a1a1a', borderBottom: '1px solid #333', color: '#c5a059', fontWeight: 'bold', fontSize: '0.9em' }}>{activeTrader.name}</div>
+                            )}
+                            {sideMode === 'loot' && activeLoot && (
+                                <div style={{ padding: '6px 16px', background: '#1a1a1a', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: '#c5a059', fontWeight: 'bold', fontSize: '0.9em' }}>{activeLoot.name}</span>
+                                    <span style={{ color: '#ffd700', fontSize: '0.8em' }}>Gold: {activeLoot.goldValue || 0}</span>
+                                </div>
+                            )}
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
+                                <tbody>
+                                    {filteredSideItems.map((item, idx) => (
+                                        <tr key={item.instanceId || idx}
+                                            onContextMenu={e => handleContextMenu(e, item, sideMode)}
+                                            onClick={e => handleSideSelect(e, item, idx)}
+                                            style={{ borderBottom: '1px solid #333', background: isSideSelected(item) ? 'rgba(197,160,89,0.25)' : 'transparent', cursor: 'pointer', minHeight: 44 }}>
+                                            <td style={{ padding: '10px 16px', color: '#ddd' }}>{item.name}</td>
+                                            <td style={{ padding: '10px 8px', color: '#888', fontSize: '0.85em' }}>Lv{item.level || 0}</td>
+                                            {sideMode === 'loot' && <td style={{ padding: '10px 8px', color: '#888' }}>×{item.qty || 1}</td>}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </BottomSheet>
+            )}
 
             {/* Spell Scroll/Wand Selector for GM actions */}
             {pendingSpellAction && (
