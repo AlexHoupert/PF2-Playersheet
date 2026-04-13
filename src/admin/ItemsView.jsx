@@ -135,6 +135,30 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
         for (const [key, val] of Object.entries(filters)) {
             if (key === 'Available' || key === 'Formula') continue;
             if (!val || (Array.isArray(val) && val.length === 0)) continue;
+
+            // traits is stored as { rarity, value: [...] } — needs special handling
+            if (key === 'traits') {
+                const itemTraits = Array.isArray(item.traits?.value) ? item.traits.value
+                    : Array.isArray(item.traits) ? item.traits : [];
+                if (Array.isArray(val)) {
+                    if (!val.every(t => itemTraits.includes(t))) return false;
+                } else if (typeof val === 'string' && val) {
+                    if (!itemTraits.some(t => t.toLowerCase().includes(val.toLowerCase()))) return false;
+                }
+                continue;
+            }
+
+            // bulk can be a number or 'L' string — compare as string
+            if (key === 'bulk') {
+                const itemBulk = String(item.bulk ?? '');
+                if (Array.isArray(val)) {
+                    if (!val.includes(itemBulk)) return false;
+                } else if (typeof val === 'string' && val) {
+                    if (itemBulk !== val) return false;
+                }
+                continue;
+            }
+
             const itemVal = item[key];
             if (Array.isArray(val)) {
                 if (!val.includes(itemVal)) return false;
@@ -344,7 +368,7 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                 }
                 if (action === 'giveFormulaToPlayer' && arg && campData) {
                     const p = campData.characters?.find(x => x.id === arg);
-                    if (p) { if (!p.formulas) p.formulas = []; if (!p.formulas.includes(t.name)) p.formulas.push(t.name); }
+                    if (p) { if (!p.formulaBook) p.formulaBook = []; if (!p.formulaBook.includes(t.name)) p.formulaBook.push(t.name); }
                 }
                 if (action === 'delete') {
                     if (t.isCustom && next.shop.customItems) delete next.shop.customItems[t.name];
@@ -786,7 +810,7 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                 <FilterDialog
                     isOpen={showFilterDialog} onClose={() => setShowFilterDialog(false)}
                     columns={Object.keys(COLUMNS_CONFIG)} activeFilters={activeFilters} onApply={setActiveFilters}
-                    optionsMap={{ type: uniqueTypes, category: uniqueCategories, group: uniqueGroups, rarity: uniqueRarities, Available: true, Formula: true }}
+                    optionsMap={{ type: uniqueTypes, category: uniqueCategories, group: uniqueGroups, rarity: uniqueRarities, traits: SHOP_INDEX_FILTER_OPTIONS.traits, bulk: ['L', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], Available: true, Formula: true }}
                 />
 
                 {/* ITEM EDITOR MODAL */}
