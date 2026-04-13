@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../../shared/context/CampaignContext';
 import { deepClone } from '../../shared/utils/deepClone';
+import { useWindowSize } from '../../shared/hooks/useWindowSize';
 
 export default function SessionManager({ db, setDb }) {
+    const { isMobile } = useWindowSize();
     const {
         campaigns,
         activeCampaign,
@@ -178,7 +180,7 @@ export default function SessionManager({ db, setDb }) {
 
             {/* ACTIVE CAMPAIGN DETAILS */}
             {activeCampaign && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20 }}>
 
                     {/* CHARACTERS COLUMN */}
                     <div style={{ background: '#222', padding: 15, borderRadius: 8 }}>
@@ -187,27 +189,27 @@ export default function SessionManager({ db, setDb }) {
                         {/* CREATE CHARACTER FORM (Moved Up & Styled) */}
                         <div style={{ background: '#333', padding: 10, borderRadius: 4, marginBottom: 20, border: '1px solid #555' }}>
                             <div style={{ fontWeight: 'bold', marginBottom: 5, color: '#c5a059' }}>+ Add New Character</div>
-                            <div style={{ display: 'flex', gap: 5 }}>
+                            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                                 <input
                                     value={newCharName} onChange={e => setNewCharName(e.target.value)}
                                     placeholder="Character Name"
-                                    style={{ flex: 1, padding: 8, background: '#111', border: '1px solid #444', color: '#fff' }}
+                                    style={{ flex: '1 1 140px', padding: 8, background: '#111', border: '1px solid #444', color: '#fff', minHeight: 40 }}
                                 />
                                 <input
                                     type="number"
                                     value={newCharLvl} onChange={e => setNewCharLvl(e.target.value)}
-                                    style={{ width: 60, padding: 8, background: '#111', border: '1px solid #444', color: '#fff' }}
+                                    style={{ width: 60, padding: 8, background: '#111', border: '1px solid #444', color: '#fff', minHeight: 40 }}
                                     min={1} max={20}
                                 />
-                                <label style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#111', padding: '0 10px', border: '1px solid #444', borderRadius: 4, cursor: 'pointer' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#111', padding: '0 10px', border: '1px solid #444', borderRadius: 4, cursor: 'pointer', minHeight: 40 }}>
                                     <input
                                         type="checkbox"
                                         checked={isSpellcaster}
                                         onChange={e => setIsSpellcaster(e.target.checked)}
                                     />
-                                    <span style={{ fontSize: '0.9em' }}>Caster?</span>
+                                    <span style={{ fontSize: '0.9em' }}>Caster</span>
                                 </label>
-                                <button onClick={handleCreateCharacter} style={{ padding: '8px 15px', background: '#c5a059', border: 'none', color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>Create</button>
+                                <button onClick={handleCreateCharacter} style={{ padding: '8px 15px', background: '#c5a059', border: 'none', color: '#000', fontWeight: 'bold', cursor: 'pointer', minHeight: 40 }}>Create</button>
                             </div>
                         </div>
 
@@ -263,20 +265,20 @@ export default function SessionManager({ db, setDb }) {
 
                         <div style={{ marginBottom: 15 }}>
                             <strong>Assign User to Character:</strong>
-                            <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
+                            <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
                                 <input
                                     type="email"
                                     value={newUserEmail}
                                     onChange={e => setNewUserEmail(e.target.value)}
-                                    placeholder="User Email (e.g. player@test.com)"
-                                    style={{ flex: 1, padding: 8 }}
+                                    placeholder="User Email"
+                                    style={{ flex: '1 1 160px', padding: 8, background: '#111', border: '1px solid #444', color: '#fff', minHeight: 40 }}
                                 />
                                 <select
                                     value={selectedUserChar}
                                     onChange={e => setSelectedUserChar(e.target.value)}
-                                    style={{ padding: 8 }}
+                                    style={{ flex: '1 1 140px', padding: 8, background: '#111', border: '1px solid #444', color: '#fff', minHeight: 40 }}
                                 >
-                                    <option value="">-- Select Character --</option>
+                                    <option value="">-- Character --</option>
                                     {activeCampaign.characters?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </select>
                                 <button
@@ -286,7 +288,7 @@ export default function SessionManager({ db, setDb }) {
                                             setNewUserEmail('');
                                         }
                                     }}
-                                    style={{ background: '#444', color: '#fff', border: 'none', padding: '0 15px', cursor: 'pointer' }}
+                                    style={{ background: '#444', color: '#fff', border: 'none', padding: '0 15px', cursor: 'pointer', minHeight: 40 }}
                                 >
                                     Assign
                                 </button>

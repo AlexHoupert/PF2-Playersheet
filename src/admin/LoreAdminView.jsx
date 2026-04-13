@@ -1,8 +1,11 @@
 import React, { useState, useMemo } from 'react';
+import BottomSheet from '../shared/components/BottomSheet';
+import { useWindowSize } from '../shared/hooks/useWindowSize';
 
 const LORE_CATEGORIES = ['History', 'Locations', 'NPCs', 'Bestiary'];
 
 export default function LoreAdminView({ db, setDb }) {
+    const { isMobile } = useWindowSize();
     const [selectedCategory, setSelectedCategory] = useState('History');
     const [selectedArticleId, setSelectedArticleId] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -174,9 +177,9 @@ export default function LoreAdminView({ db, setDb }) {
 
     // --- RENDER ---
     return (
-        <div style={{ display: 'flex', height: 'calc(100vh - 100px)', gap: 20 }}>
+        <div style={{ display: 'flex', height: 'calc(100vh - 100px)', gap: isMobile ? 0 : 20, flexDirection: isMobile ? 'column' : 'row' }}>
             {/* LEFT: Category + Article List */}
-            <div style={{ width: '300px', background: 'rgba(0,0,0,0.3)', padding: 15, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ width: isMobile ? '100%' : '300px', background: 'rgba(0,0,0,0.3)', padding: 15, display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: isMobile ? 'visible' : undefined }}>
                 <h3 style={{ marginTop: 0 }}>Lore Wiki</h3>
 
                 {/* Category Selector */}
@@ -199,7 +202,7 @@ export default function LoreAdminView({ db, setDb }) {
                 </select>
 
                 {/* Article List */}
-                <div style={{ flex: 1, overflowY: 'auto', marginBottom: 10 }}>
+                <div style={{ flex: isMobile ? 'none' : 1, overflowY: 'auto', marginBottom: 10, maxHeight: isMobile ? 'calc(100dvh - 260px)' : undefined }}>
                     {filteredArticles.length === 0 && (
                         <p style={{ color: '#666', textAlign: 'center' }}>No articles yet.</p>
                     )}
@@ -277,8 +280,8 @@ export default function LoreAdminView({ db, setDb }) {
                 </button>
             </div>
 
-            {/* RIGHT: Editor / Preview */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
+            {/* RIGHT: Editor / Preview — hidden on mobile (uses BottomSheet instead) */}
+            {!isMobile && <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
                 {isEditing ? (
                     <div style={{ background: '#1a1a1d', padding: 20, borderRadius: 8, border: '1px solid #444' }}>
                         <h2 style={{ marginTop: 0 }}>{editForm.id && articles.find(a => a.id === editForm.id) ? 'Edit Article' : 'New Article'}</h2>
@@ -523,7 +526,72 @@ export default function LoreAdminView({ db, setDb }) {
                         <p>Select an article to preview or click "New Article" to create one.</p>
                     </div>
                 )}
-            </div>
+            </div>}
+
+            {/* Mobile: article view / editor in BottomSheet */}
+            {isMobile && (
+                <BottomSheet
+                    isOpen={isEditing || !!selectedArticle}
+                    onClose={() => { if (isEditing) handleCancel(); else setSelectedArticleId(null); }}
+                    title={isEditing ? (editForm.id && articles.find(a => a.id === editForm.id) ? 'Edit Article' : 'New Article') : selectedArticle?.title || ''}
+                    height="90vh"
+                >
+                    <div style={{ overflowY: 'auto', height: '100%', padding: '0 16px 16px' }}>
+                        {isEditing ? (
+                            <div style={{ background: '#1a1a1d', padding: 20, borderRadius: 8, border: '1px solid #444' }}>
+                                {/* Title */}
+                                <div style={{ marginBottom: 15 }}>
+                                    <label style={{ display: 'block', marginBottom: 5, color: '#aaa' }}>Title</label>
+                                    <input type="text" className="modal-input" value={editForm.title || ''} onChange={(e) => setEditForm(f => ({ ...f, title: e.target.value }))} />
+                                </div>
+                                <div style={{ marginBottom: 15 }}>
+                                    <label style={{ display: 'block', marginBottom: 5, color: '#aaa' }}>Category</label>
+                                    <select className="modal-input" value={editForm.category || selectedCategory.toLowerCase()} onChange={(e) => setEditForm(f => ({ ...f, category: e.target.value }))}>
+                                        {LORE_CATEGORIES.map(cat => <option key={cat} value={cat.toLowerCase()}>{cat}</option>)}
+                                    </select>
+                                </div>
+                                <div style={{ marginBottom: 15 }}>
+                                    <label style={{ display: 'block', marginBottom: 5, color: '#aaa' }}>Group</label>
+                                    <input type="text" className="modal-input" placeholder="e.g., Eras, Characters..." value={editForm.group || ''} onChange={(e) => setEditForm(f => ({ ...f, group: e.target.value }))} />
+                                </div>
+                                <div style={{ marginBottom: 15 }}>
+                                    <label style={{ display: 'block', marginBottom: 5, color: '#aaa' }}>Tags (comma-separated)</label>
+                                    <input type="text" className="modal-input" placeholder="king, legend, history" value={(editForm.tags || []).join(', ')} onChange={(e) => setEditForm(f => ({ ...f, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))} />
+                                </div>
+                                <div style={{ marginBottom: 15 }}>
+                                    <label style={{ display: 'block', marginBottom: 5, color: '#aaa' }}>Infobox (key:value pairs)</label>
+                                    <textarea className="modal-input" rows={4} value={editForm.infobox || ''} onChange={(e) => setEditForm(f => ({ ...f, infobox: e.target.value }))} style={{ fontFamily: 'monospace', resize: 'vertical', fontSize: '0.9em' }} />
+                                </div>
+                                <div style={{ marginBottom: 15 }}>
+                                    <label style={{ display: 'block', marginBottom: 5, color: '#aaa' }}>Content</label>
+                                    <textarea id="lore-content-editor" className="modal-input" rows={14} value={editForm.content || ''} onChange={(e) => setEditForm(f => ({ ...f, content: e.target.value }))} style={{ fontFamily: 'monospace', resize: 'vertical' }} />
+                                </div>
+                                <div style={{ display: 'flex', gap: 10 }}>
+                                    <button onClick={handleCancel} className="btn-add-condition" style={{ flex: 1 }}>Cancel</button>
+                                    <button onClick={handleSave} style={{ flex: 1, padding: 10, background: 'var(--text-gold)', color: '#1a1a1d', border: 'none', fontWeight: 'bold', cursor: 'pointer', borderRadius: 4 }}>Save</button>
+                                </div>
+                            </div>
+                        ) : selectedArticle ? (
+                            <div style={{ background: '#1a1a1d', padding: 20, borderRadius: 8, border: '1px solid #444' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                                    <h2 style={{ margin: 0, color: '#f5deb3', fontSize: '1.3em' }}>{selectedArticle.title}</h2>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <button onClick={() => handleEdit(selectedArticle)} className="btn-add-condition">Edit</button>
+                                        <button onClick={() => handleDelete(selectedArticle.id)} className="btn-add-condition" style={{ borderColor: '#d32f2f', color: '#ff8a80' }}>Del</button>
+                                    </div>
+                                </div>
+                                {selectedArticle.group && <div style={{ color: '#888', marginBottom: 12, fontSize: '0.85em' }}>Group: {selectedArticle.group}</div>}
+                                <div style={{ color: '#ccc', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{selectedArticle.content || <em style={{ color: '#666' }}>No content yet.</em>}</div>
+                                {selectedArticle.tags?.length > 0 && (
+                                    <div style={{ marginTop: 20, paddingTop: 12, borderTop: '1px solid #333' }}>
+                                        {selectedArticle.tags.map(t => <span key={t} style={{ display: 'inline-block', marginRight: 8, padding: '2px 8px', background: '#333', borderRadius: 4, color: '#888', fontSize: '0.85em' }}>#{t}</span>)}
+                                    </div>
+                                )}
+                            </div>
+                        ) : null}
+                    </div>
+                </BottomSheet>
+            )}
 
             {/* Context Menu */}
             {contextMenu && (

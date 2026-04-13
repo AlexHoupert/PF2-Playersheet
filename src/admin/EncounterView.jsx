@@ -8,6 +8,8 @@ import { useCampaign } from '../shared/context/CampaignContext';
 import { deepClone } from '../shared/utils/deepClone';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
 import CreatureCard from '../shared/components/CreatureCard';
+import BottomSheet from '../shared/components/BottomSheet';
+import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { CharacterCard } from './components/CharacterCard';
 import InitiativeCard from './components/InitiativeCard';
 import './EncounterView.css';
@@ -39,9 +41,11 @@ function makeCombatant(type, data) {
 
 export default function EncounterView({ db, setDb }) {
     const { activeCampaign, updateActiveCampaign } = useCampaign();
+    const { isMobile } = useWindowSize();
 
     // Local UI state
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
     const [contextMenu, setContextMenu] = useState(null);
     const [creatureSearch, setCreatureSearch] = useState('');
     const [creatureDataCache, setCreatureDataCache] = useState({});
@@ -239,99 +243,141 @@ export default function EncounterView({ db, setDb }) {
         return () => document.removeEventListener('click', handler);
     }, []);
 
-    // ═══════════════════════ RENDER ═══════════════════════
-    return (
-        <div className="encounter-view" onClick={closeContextMenu}>
-            {/* ── SIDEBAR ── */}
-            {sidebarOpen && (
-                <div className="enc-sidebar">
-                    <div className="enc-sidebar__header">
-                        <h3>Encounters</h3>
-                        <button className="enc-btn enc-btn--small" onClick={createEncounter} title="New Encounter">＋</button>
-                    </div>
+    // ── Info panel body (shared between desktop panel and mobile BottomSheet) ──
+    const infoPanelBody = selectedCombatant ? (
+        <div className="enc-info-panel__body">
+            {selectedCombatant.type === 'creature' && infoCreatureData && (
+                <CreatureCard
+                    creature={infoCreatureData}
+                    isGM={true}
+                    revealState={getRevealState(selectedCombatant.creatureId)}
+                    onRevealChange={(field, mode) => {
+                        setDb(prev => {
+                            const next = deepClone(prev);
+                            if (!next.bestiary) next.bestiary = { creatures: {} };
+                            if (!next.bestiary.creatures) next.bestiary.creatures = {};
+                            if (!next.bestiary.creatures[selectedCombatant.creatureId]) {
+                                next.bestiary.creatures[selectedCombatant.creatureId] = { revealState: {} };
+                            }
+                            next.bestiary.creatures[selectedCombatant.creatureId].revealState[field] = mode;
+                            return next;
+                        });
+                    }}
+                />
+            )}
+            {selectedCombatant.type === 'creature' && !infoCreatureData && (
+                <div className="enc-info-panel__loading">Loading creature data...</div>
+            )}
+            {selectedCombatant.type === 'player' && infoCharData && (
+                <CharacterCard
+                    character={infoCharData}
+                    db={db}
+                    setDb={setDb}
+                    updateCharacter={(fn) => {
+                        updateActiveCampaign(campaign => {
+                            const next = deepClone(campaign);
+                            const idx = next.characters.findIndex(c => c.id === infoCharData.id);
+                            if (idx > -1) fn(next.characters[idx]);
+                            return next;
+                        });
+                    }}
+                    setModalMode={() => { }}
+                    setModalData={() => { }}
+                />
+            )}
+            {selectedCombatant.type === 'player' && !infoCharData && (
+                <div className="enc-info-panel__loading">Player data not found.</div>
+            )}
+        </div>
+    ) : null;
 
-                    {/* Encounter List */}
-                    <div className="enc-sidebar__list">
-                        {encounters.map(enc => (
-                            <div
-                                key={enc.id}
-                                className={`enc-sidebar__item ${enc.id === selectedEncounterId ? 'enc-sidebar__item--selected' : ''} ${enc.isActive ? 'enc-sidebar__item--active' : ''}`}
-                                onClick={() => setSelectedEncounterId(enc.id)}
-                                onContextMenu={(e) => { e.preventDefault(); deleteEncounter(enc.id); }}
-                            >
-                                <span className="enc-sidebar__item-name">
-                                    {enc.isActive && <span className="enc-sidebar__active-dot">●</span>}
-                                    {enc.name}
-                                </span>
-                                <span className="enc-sidebar__item-count">{enc.combatants.length}</span>
+    // ── Sidebar body (shared between desktop and mobile BottomSheet) ──────────
+    const sidebarBody = (
+        <>
+            <div className="enc-sidebar__header">
+                <h3>Encounters</h3>
+                <button className="enc-btn enc-btn--small" onClick={createEncounter} title="New Encounter">＋</button>
+            </div>
+            <div className="enc-sidebar__list">
+                {encounters.map(enc => (
+                    <div
+                        key={enc.id}
+                        className={`enc-sidebar__item ${enc.id === selectedEncounterId ? 'enc-sidebar__item--selected' : ''} ${enc.isActive ? 'enc-sidebar__item--active' : ''}`}
+                        onClick={() => setSelectedEncounterId(enc.id)}
+                        onContextMenu={(e) => { e.preventDefault(); deleteEncounter(enc.id); }}
+                    >
+                        <span className="enc-sidebar__item-name">
+                            {enc.isActive && <span className="enc-sidebar__active-dot">●</span>}
+                            {enc.name}
+                        </span>
+                        <span className="enc-sidebar__item-count">{enc.combatants.length}</span>
+                    </div>
+                ))}
+                {encounters.length === 0 && <div className="enc-sidebar__empty">No encounters yet</div>}
+            </div>
+            {selectedEncounter && (
+                <div className="enc-sidebar__manage">
+                    <div className="enc-sidebar__manage-header">
+                        <h4>{selectedEncounter.name}</h4>
+                        <div className="enc-sidebar__manage-actions">
+                            {!selectedEncounter.isActive && (
+                                <button className="enc-btn enc-btn--gold" onClick={() => activateEncounter(selectedEncounter.id)}>
+                                    ▶ Activate
+                                </button>
+                            )}
+                            <button className="enc-btn enc-btn--small" onClick={() => addAllPlayers(selectedEncounter.id)} title="Add all players">
+                                👥+
+                            </button>
+                        </div>
+                    </div>
+                    <div className="enc-sidebar__combatants">
+                        {selectedEncounter.combatants.map(c => (
+                            <div key={c.id} className="enc-sidebar__combatant">
+                                <span>{c.type === 'player' ? '🧑' : '👹'} {c.name}{c.instanceLabel > 1 ? ` #${c.instanceLabel}` : ''}</span>
+                                <button className="enc-btn enc-btn--tiny enc-btn--danger" onClick={() => removeCombatant(selectedEncounter.id, c.id)}>✕</button>
                             </div>
                         ))}
-                        {encounters.length === 0 && (
-                            <div className="enc-sidebar__empty">No encounters yet</div>
-                        )}
                     </div>
-
-                    {/* Selected encounter management */}
-                    {selectedEncounter && (
-                        <div className="enc-sidebar__manage">
-                            <div className="enc-sidebar__manage-header">
-                                <h4>{selectedEncounter.name}</h4>
-                                <div className="enc-sidebar__manage-actions">
-                                    {!selectedEncounter.isActive && (
-                                        <button className="enc-btn enc-btn--gold" onClick={() => activateEncounter(selectedEncounter.id)}>
-                                            ▶ Activate
-                                        </button>
-                                    )}
-                                    <button className="enc-btn enc-btn--small" onClick={() => addAllPlayers(selectedEncounter.id)} title="Add all players">
-                                        👥+
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Combatant list */}
-                            <div className="enc-sidebar__combatants">
-                                {selectedEncounter.combatants.map(c => (
-                                    <div key={c.id} className="enc-sidebar__combatant">
-                                        <span>{c.type === 'player' ? '🧑' : '👹'} {c.name}{c.instanceLabel > 1 ? ` #${c.instanceLabel}` : ''}</span>
-                                        <button className="enc-btn enc-btn--tiny enc-btn--danger" onClick={() => removeCombatant(selectedEncounter.id, c.id)}>✕</button>
+                    <div className="enc-sidebar__search">
+                        <input
+                            className="enc-search-input"
+                            placeholder="Search creatures..."
+                            value={creatureSearch}
+                            onChange={(e) => setCreatureSearch(e.target.value)}
+                        />
+                        {filteredCreatures.length > 0 && (
+                            <div className="enc-sidebar__search-results">
+                                {filteredCreatures.map(c => (
+                                    <div
+                                        key={c.id}
+                                        className="enc-sidebar__search-item"
+                                        onClick={() => { addCreatureToEncounter(selectedEncounter.id, c); setCreatureSearch(''); }}
+                                    >
+                                        <span>{c.name}</span>
+                                        <span className="enc-sidebar__search-level">Lv {c.level}</span>
                                     </div>
                                 ))}
                             </div>
-
-                            {/* Creature search */}
-                            <div className="enc-sidebar__search">
-                                <input
-                                    className="enc-search-input"
-                                    placeholder="Search creatures..."
-                                    value={creatureSearch}
-                                    onChange={(e) => setCreatureSearch(e.target.value)}
-                                />
-                                {filteredCreatures.length > 0 && (
-                                    <div className="enc-sidebar__search-results">
-                                        {filteredCreatures.map(c => (
-                                            <div
-                                                key={c.id}
-                                                className="enc-sidebar__search-item"
-                                                onClick={() => { addCreatureToEncounter(selectedEncounter.id, c); setCreatureSearch(''); }}
-                                            >
-                                                <span>{c.name}</span>
-                                                <span className="enc-sidebar__search-level">Lv {c.level}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
+            )}
+        </>
+    );
+
+    // ═══════════════════════ RENDER ═══════════════════════
+    return (
+        <div className="encounter-view" onClick={closeContextMenu}>
+            {/* ── SIDEBAR: desktop inline, mobile BottomSheet ── */}
+            {!isMobile && sidebarOpen && (
+                <div className="enc-sidebar">{sidebarBody}</div>
             )}
 
             {/* ── MAIN AREA ── */}
             <div className="enc-main">
-                {/* Toolbar */}
                 <div className="enc-toolbar">
-                    <button className="enc-btn enc-btn--small" onClick={() => setSidebarOpen(!sidebarOpen)}>
-                        {sidebarOpen ? '◀' : '▶'}
+                    <button className="enc-btn enc-btn--small" onClick={() => isMobile ? setMobileSidebarOpen(true) : setSidebarOpen(!sidebarOpen)}>
+                        ☰
                     </button>
                     {activeEncounter && (
                         <>
@@ -339,14 +385,13 @@ export default function EncounterView({ db, setDb }) {
                             <div className="enc-toolbar__actions">
                                 <button className="enc-btn enc-btn--gold" onClick={endTurn}>End Turn ⏭</button>
                                 <button className="enc-btn enc-btn--small" onClick={resetRound} title="Reset to top of round">↺</button>
-                                <button className="enc-btn enc-btn--small" onClick={openPartyScreen} title="Open Party Screen">📺</button>
+                                {!isMobile && <button className="enc-btn enc-btn--small" onClick={openPartyScreen} title="Open Party Screen">📺</button>}
                             </div>
                         </>
                     )}
-                    {!activeEncounter && <span className="enc-toolbar__hint">No active encounter. Select one from the sidebar and activate it.</span>}
+                    {!activeEncounter && <span className="enc-toolbar__hint">No active encounter — open the sidebar to select one.</span>}
                 </div>
 
-                {/* Initiative Tracker */}
                 {activeEncounter && (
                     <div className="enc-tracker">
                         <AnimatePresence mode="popLayout">
@@ -373,60 +418,27 @@ export default function EncounterView({ db, setDb }) {
                 )}
             </div>
 
-            {/* ── INFO PANEL ── */}
-            {activeEncounter && selectedCombatant && (
+            {/* ── INFO PANEL: desktop inline, mobile BottomSheet ── */}
+            {activeEncounter && selectedCombatant && !isMobile && (
                 <div className="enc-info-panel">
                     <div className="enc-info-panel__header">
                         <h3>{selectedCombatant.name}</h3>
                         <button className="enc-btn enc-btn--small" onClick={() => selectEntity(null)}>✕</button>
                     </div>
-                    <div className="enc-info-panel__body">
-                        {selectedCombatant.type === 'creature' && infoCreatureData && (
-                            <CreatureCard
-                                creature={infoCreatureData}
-                                isGM={true}
-                                revealState={getRevealState(selectedCombatant.creatureId)}
-                                onRevealChange={(field, mode) => {
-                                    setDb(prev => {
-                                        const next = deepClone(prev);
-                                        if (!next.bestiary) next.bestiary = { creatures: {} };
-                                        if (!next.bestiary.creatures) next.bestiary.creatures = {};
-                                        if (!next.bestiary.creatures[selectedCombatant.creatureId]) {
-                                            next.bestiary.creatures[selectedCombatant.creatureId] = { revealState: {} };
-                                        }
-                                        next.bestiary.creatures[selectedCombatant.creatureId].revealState[field] = mode;
-                                        return next;
-                                    });
-                                }}
-                            />
-                        )}
-                        {selectedCombatant.type === 'creature' && !infoCreatureData && (
-                            <div className="enc-info-panel__loading">Loading creature data...</div>
-                        )}
-                        {selectedCombatant.type === 'player' && infoCharData && (
-                            <CharacterCard
-                                character={infoCharData}
-                                db={db}
-                                setDb={setDb}
-                                updateCharacter={(fn) => {
-                                    updateActiveCampaign(campaign => {
-                                        const next = deepClone(campaign);
-                                        const idx = next.characters.findIndex(c => c.id === infoCharData.id);
-                                        if (idx > -1) {
-                                            fn(next.characters[idx]);
-                                        }
-                                        return next;
-                                    });
-                                }}
-                                setModalMode={() => { }}
-                                setModalData={() => { }}
-                            />
-                        )}
-                        {selectedCombatant.type === 'player' && !infoCharData && (
-                            <div className="enc-info-panel__loading">Player data not found.</div>
-                        )}
-                    </div>
+                    {infoPanelBody}
                 </div>
+            )}
+
+            {/* ── Mobile BottomSheets ── */}
+            {isMobile && (
+                <>
+                    <BottomSheet isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} title="Encounters" height="85vh">
+                        <div style={{ overflowY: 'auto', height: '100%' }}>{sidebarBody}</div>
+                    </BottomSheet>
+                    <BottomSheet isOpen={!!selectedCombatant} onClose={() => selectEntity(null)} title={selectedCombatant?.name || ''} height="85vh">
+                        {infoPanelBody}
+                    </BottomSheet>
+                </>
             )}
 
             {/* ── Context Menu ── */}
