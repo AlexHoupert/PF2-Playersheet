@@ -16,6 +16,13 @@ const DAMAGE_TYPES = [
     'good', 'evil', 'chaotic', 'lawful', 'silver', 'cold-iron', 'adamantine', 'vitality', 'void'
 ];
 
+// Types valid for resistances and weaknesses (damage types + special categories)
+const DEFENSE_TYPES = [
+    ...DAMAGE_TYPES,
+    'all', 'physical', 'non-magical', 'unarmed', 'area-damage', 'critical-hits',
+    'precision', 'splash-damage', 'off-guard',
+].sort();
+
 // Immunity types include damage types + conditions
 const IMMUNITY_TYPES = [
     ...DAMAGE_TYPES,
@@ -538,7 +545,7 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
                             {resistances.map((res, idx) => (
                                 <div key={idx} style={{ display: 'flex', gap: 5, marginBottom: 5 }}>
                                     <select className="modal-input" value={res.type} onChange={e => updateDefense(idx, 'type', e.target.value, setResistances)} style={{ flex: 1 }}>
-                                        {DAMAGE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                        {DEFENSE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                                     </select>
                                     <input type="number" className="modal-input" value={res.value || 0} onChange={e => updateDefense(idx, 'value', parseInt(e.target.value), setResistances)} style={{ width: 60 }} placeholder="Value" />
                                     <button onClick={() => removeDefense(idx, setResistances)} style={{ background: '#d32f2f', color: '#fff', border: 'none', padding: '0 8px', cursor: 'pointer' }}>×</button>
@@ -555,7 +562,7 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
                             {weaknesses.map((weak, idx) => (
                                 <div key={idx} style={{ display: 'flex', gap: 5, marginBottom: 5 }}>
                                     <select className="modal-input" value={weak.type} onChange={e => updateDefense(idx, 'type', e.target.value, setWeaknesses)} style={{ flex: 1 }}>
-                                        {DAMAGE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                        {DEFENSE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                                     </select>
                                     <input type="number" className="modal-input" value={weak.value || 0} onChange={e => updateDefense(idx, 'value', parseInt(e.target.value), setWeaknesses)} style={{ width: 60 }} placeholder="Value" />
                                     <button onClick={() => removeDefense(idx, setWeaknesses)} style={{ background: '#d32f2f', color: '#fff', border: 'none', padding: '0 8px', cursor: 'pointer' }}>×</button>
@@ -628,6 +635,16 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
                                         onChange={e => updateItemSystem(attack._id, 'traits.value', e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
                                         placeholder="Traits (comma-separated)"
                                         style={{ flex: 1 }}
+                                    />
+                                </div>
+                                <div style={{ marginBottom: 5 }}>
+                                    <input
+                                        type="text"
+                                        className="modal-input"
+                                        value={Array.isArray(attack.system?.attackEffects?.value) ? attack.system.attackEffects.value.join(', ') : ''}
+                                        onChange={e => updateItemSystem(attack._id, 'attackEffects.value', e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
+                                        placeholder="Bonus effects (e.g. grab, push, trip)"
+                                        style={{ width: '100%', fontSize: '0.85em' }}
                                     />
                                 </div>
 

@@ -330,7 +330,15 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
     };
 
     const handleEdit = async (creature) => {
-        // Edit existing creature - fetch data and open editor
+        // Custom DB creatures: load directly from db
+        if (creature.isCustom) {
+            const data = db.bestiary?.customCreatures?.[creature.id]?.data;
+            if (!data) { alert('Custom creature data not found in database'); setContextMenu(null); return; }
+            setEditingCreature({ ...creature, data });
+            setContextMenu(null);
+            return;
+        }
+        // Index creatures: fetch from file system
         const data = await fetchCreatureData(creature.id);
         if (!data) {
             alert('Failed to load creature data');
@@ -342,8 +350,10 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
     };
 
     const handleClone = async (creature) => {
-        // Clone creature - fetch data and create a copy with new ID
-        const data = await fetchCreatureData(creature.id);
+        // Custom DB creatures: load directly from db
+        const data = creature.isCustom
+            ? db.bestiary?.customCreatures?.[creature.id]?.data
+            : await fetchCreatureData(creature.id);
         if (!data) {
             alert('Failed to load creature data');
             setContextMenu(null);
@@ -465,10 +475,13 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
         return (
             <CreatureEditor
                 initialCreature={editingCreature}
-                onSave={() => {
+                onSave={(data) => {
                     setEditingCreature(null);
-                    // Reload page to refresh catalog after rebuild
-                    window.location.reload();
+                    // Only reload when saved to the file system (triggers index rebuild).
+                    // DB saves (data.message contains 'Database') don't need a reload.
+                    if (!data?.message?.includes('Database')) {
+                        window.location.reload();
+                    }
                 }}
                 onCancel={() => setEditingCreature(null)}
                 onSaveToDb={(creatureData) => {
