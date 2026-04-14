@@ -61,8 +61,25 @@ export default function EncounterView({ db, setDb }) {
     // Which combatant is selected for the info panel
     const selectedEntityId = activeEncounter?.selectedEntityId || null;
 
-    // ── Creature catalog for search ──
-    const allCreatures = useMemo(() => getAllCreatures(), []);
+    // ── Creature catalog for search (static index + custom creatures from DB) ──
+    const allCreatures = useMemo(() => {
+        const indexed = getAllCreatures();
+        const custom = Object.values(db?.bestiary?.customCreatures || {}).map(c => ({
+            id: c.id,
+            name: c.name,
+            level: c.data?.system?.details?.level?.value ?? 0,
+            type: c.type || 'npc',
+            img: c.data?.img || '',
+            rarity: c.data?.system?.traits?.rarity || 'common',
+            size: c.data?.system?.traits?.size?.value || 'med',
+            traits: c.data?.system?.traits?.value || [],
+            isCustom: true,
+        }));
+        // Custom creatures first, then deduplicate static ones by name
+        const customNames = new Set(custom.map(c => c.name));
+        return [...custom, ...indexed.filter(c => !customNames.has(c.name))];
+    }, [db?.bestiary?.customCreatures]);
+
     const filteredCreatures = useMemo(() => {
         if (!creatureSearch || creatureSearch.length < 2) return [];
         const q = creatureSearch.toLowerCase();
@@ -72,9 +89,15 @@ export default function EncounterView({ db, setDb }) {
     // ── Load creature data for info panel ──
     useEffect(() => {
         if (!activeEncounter) return;
-        activeEncounter.combatants.filter(c => c.type === 'creature' && c.creatureId && !creatureDataCache[c.creatureId])
+        activeEncounter.combatants
+            .filter(c => c.type === 'creature' && c.creatureId && !creatureDataCache[c.creatureId])
             .forEach(c => {
-                // fetchCreatureData expects the creature id
+                // Check custom creatures first (synchronous, no fetch needed)
+                const customData = db?.bestiary?.customCreatures?.[c.creatureId]?.data;
+                if (customData) {
+                    setCreatureDataCache(prev => ({ ...prev, [c.creatureId]: customData }));
+                    return;
+                }
                 fetchCreatureData(c.creatureId).then(data => {
                     if (data) setCreatureDataCache(prev => ({ ...prev, [c.creatureId]: data }));
                 });
@@ -124,9 +147,7 @@ export default function EncounterView({ db, setDb }) {
 
     // ── Combatant management ──
     const addCreatureToEncounter = (encId, catalogEntry) => {
-        // fetchCreatureData expects the creature id, not sourceFile
-        fetchCreatureData(catalogEntry.id).then(data => {
-            if (!data) return;
+        const applyData = (data) => {
             data._catalogId = catalogEntry.id;
             updateEncounter(encId, enc => {
                 const existing = enc.combatants.filter(c => c.creatureId === catalogEntry.id);
@@ -135,6 +156,17 @@ export default function EncounterView({ db, setDb }) {
                 enc.combatants.push(combatant);
             });
             setCreatureDataCache(prev => ({ ...prev, [catalogEntry.id]: data }));
+        };
+
+        if (catalogEntry.isCustom) {
+            // Custom creatures are already in DB — no async fetch needed
+            const customData = db?.bestiary?.customCreatures?.[catalogEntry.id]?.data;
+            if (customData) applyData(deepClone(customData));
+            return;
+        }
+
+        fetchCreatureData(catalogEntry.id).then(data => {
+            if (data) applyData(data);
         });
     };
 
@@ -353,7 +385,10 @@ export default function EncounterView({ db, setDb }) {
                                         className="enc-sidebar__search-item"
                                         onClick={() => { addCreatureToEncounter(selectedEncounter.id, c); setCreatureSearch(''); }}
                                     >
-                                        <span>{c.name}</span>
+                                        <span>
+                                            {c.name}
+                                            {c.isCustom && <span style={{ marginLeft: 5, fontSize: '0.72em', color: '#c5a059' }}>✦</span>}
+                                        </span>
                                         <span className="enc-sidebar__search-level">Lv {c.level}</span>
                                     </div>
                                 ))}
