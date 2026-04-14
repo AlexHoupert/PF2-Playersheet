@@ -32,7 +32,7 @@ import { ImpulsesView } from './views/ImpulsesView';
 import PlayerQuestsView from './views/PlayerQuestsView';
 import LoreView from './views/LoreView';
 import MapsView from './views/MapsView';
-import ReputationView from './views/ReputationView';
+import ProgressView from './views/ProgressView';
 import { isEquipableInventoryItem, getWeaponCapacity } from '../shared/utils/combatUtils';
 import { ModalManager } from './ModalManager';
 // Top of file
@@ -1135,7 +1135,7 @@ export default function PlayerApp({ db, setDb }) {
     // --- SWIPE LOGIC ---
     const mainTabs = useMemo(() => {
         if (appMode === 'story') {
-            return ['quests', 'lore', 'maps', 'reputation'];
+            return ['quests', 'lore', 'maps', 'progress'];
         }
         // Character Mode
         const tabs = ['stats', 'actions', 'feats'];
@@ -1369,7 +1369,7 @@ export default function PlayerApp({ db, setDb }) {
                 )}
 
                 {activeTab === 'maps' && <MapsView />}
-                {activeTab === 'reputation' && <ReputationView />}
+                {activeTab === 'progress' && <ProgressView />}
             </div>
 
             {/* MODALS / FULL PAGE VIEWS */}

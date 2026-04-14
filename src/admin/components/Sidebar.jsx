@@ -41,7 +41,8 @@ const NAV_GROUPS = [
         items: [
             { id: 'lore',   label: 'Lore',   icon: '📖' },
             { id: 'quests', label: 'Quests', icon: '📜' },
-            { id: 'maps',   label: 'Maps',   icon: '🗺️' }
+            { id: 'maps',      label: 'Maps',     icon: '🗺️' },
+            { id: 'progress',  label: 'Progress', icon: '📊' }
         ]
     }
 ];
