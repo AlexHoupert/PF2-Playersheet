@@ -307,10 +307,12 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
     };
 
     const handleClone = async (creature) => {
-        const data = creature.isCustom
+        const rawData = creature.isCustom
             ? db.bestiary?.customCreatures?.[creature.id]?.data
             : await fetchCreatureData(creature.id);
-        if (!data) { alert('Failed to load creature data'); setContextMenu(null); return; }
+        if (!rawData) { alert('Failed to load creature data'); setContextMenu(null); return; }
+        // Deep-copy so the clone shares no nested object references with the original
+        const data = JSON.parse(JSON.stringify(rawData));
         setEditingCreature({
             ...creature, id: null, sourceFile: null,
             data: { ...data, _id: null, name: (data.name || creature.name) + ' (Copy)' }
@@ -389,6 +391,7 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
         return (
             <CreatureEditor
                 initialCreature={editingCreature}
+                customAbilities={Object.values(db?.abilities?.custom || {})}
                 onSave={(data) => {
                     setEditingCreature(null);
                     if (!data?.message?.includes('Database')) window.location.reload();

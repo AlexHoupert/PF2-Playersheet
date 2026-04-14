@@ -45,7 +45,7 @@ const SKILL_LIST = [
     'religion', 'society', 'stealth', 'survival', 'thievery'
 ];
 
-export default function CreatureEditor({ initialCreature, onSave, onCancel, onSaveToDb }) {
+export default function CreatureEditor({ initialCreature, onSave, onCancel, onSaveToDb, customAbilities = [] }) {
     const { isMobile } = useWindowSize();
 
     // Form state - basic info
@@ -130,8 +130,9 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
             setWeaknesses(sys.attributes?.weaknesses || []);
 
             setSkills(sys.skills || {});
-            setItems(data.items || []);
-            setRawItemsJson(JSON.stringify(data.items || [], null, 2));
+            const itemsCopy = JSON.parse(JSON.stringify(data.items || []));
+            setItems(itemsCopy);
+            setRawItemsJson(JSON.stringify(itemsCopy, null, 2));
 
             setDescription(sys.details?.publicNotes || sys.description?.value || '');
             setSourceFile(initialCreature.sourceFile || null);
@@ -290,8 +291,9 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
     const updateItemSystem = (itemId, path, value) => {
         setItems(prev => prev.map(item => {
             if (item._id !== itemId) return item;
-            const newItem = { ...item, system: { ...item.system } };
-            // Handle nested path like 'bonus.value'
+            // Deep-clone system so nested shared references (from cloned creatures) are not mutated
+            const newItem = { ...item, system: JSON.parse(JSON.stringify(item.system || {})) };
+            // Handle nested path like 'bonus.value' or 'damageRolls.roll0.damage'
             const parts = path.split('.');
             let obj = newItem.system;
             for (let i = 0; i < parts.length - 1; i++) {
@@ -785,6 +787,7 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
                 defaultTypeFilter={pickerDefaultType}
                 onSelect={addAbilityFromLibrary}
                 onClose={() => setPickerOpen(false)}
+                customAbilities={customAbilities}
             />
         )}
         </>

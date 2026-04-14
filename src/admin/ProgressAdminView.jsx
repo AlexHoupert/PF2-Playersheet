@@ -363,7 +363,7 @@ function ResearchAdmin({ progress, save }) {
     const addTopic = () => {
         updateTopics(t => t.push({
             id: uid(), name: 'New Topic', currentPoints: 0, maxPoints: 10,
-            dc: null, dcRevealed: false, infoPoints: [],
+            dc: null, dcModified: null, dcRevealed: false, infoPoints: [],
         }));
     };
 
@@ -441,9 +441,23 @@ function ResearchAdmin({ progress, save }) {
                                     <Input type="number" value={topic.maxPoints} onChange={v => updateTopic(topic.id, { maxPoints: v })} />
                                 </Field>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: 8, alignItems: 'end' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '80px 80px 1fr', gap: 8, alignItems: 'end' }}>
                                 <Field label="DC Value">
                                     <Input type="number" value={topic.dc ?? ''} onChange={v => updateTopic(topic.id, { dc: v || null })} placeholder="—" />
+                                </Field>
+                                <Field label="DC Modified">
+                                    <Input
+                                        type="number"
+                                        value={topic.dcModified ?? ''}
+                                        onChange={v => updateTopic(topic.id, { dcModified: v === '' ? null : v })}
+                                        placeholder="0"
+                                        style={{
+                                            color: (topic.dcModified ?? 0) < 0 ? '#4caf50'
+                                                 : (topic.dcModified ?? 0) > 0 ? '#e53935'
+                                                 : undefined,
+                                            fontWeight: topic.dcModified != null && topic.dcModified !== 0 ? 'bold' : 'normal',
+                                        }}
+                                    />
                                 </Field>
                                 <Field label=" ">
                                     <div style={{ paddingBottom: 4 }}>

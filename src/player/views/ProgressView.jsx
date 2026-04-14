@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../../shared/context/CampaignContext';
 import BottomSheet from '../../shared/components/BottomSheet';
-import { useWindowSize } from '../../shared/hooks/useWindowSize';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -14,16 +13,41 @@ function getProgressData(campaign) {
     };
 }
 
-// Returns the active rank object for a faction given its currentPoints
-function getActiveRank(faction) {
-    const ranks = faction.ranks || [];
-    // ranks are sorted by threshold ascending; active = last rank whose threshold <= currentPoints
-    const sorted = [...ranks].sort((a, b) => a.threshold - b.threshold);
+// Returns the active rank/stage/tier whose threshold has been met
+function getActiveEntry(currentPts, entries) {
+    const sorted = [...entries].sort((a, b) => a.threshold - b.threshold);
     let active = null;
-    for (const r of sorted) {
-        if (faction.currentPoints >= r.threshold) active = r;
+    for (const e of sorted) {
+        if (currentPts >= e.threshold) active = e;
     }
     return active;
+}
+
+/**
+ * Computes segment-relative progress between the previous and next threshold.
+ * Example: currentPts=23, thresholds=[10,20,40] → prev=20, next=40 → { seg:3, segMax:20 }
+ */
+function getSegmentProgress(currentPts, thresholds) {
+    const sorted = [...thresholds].filter(t => t != null).sort((a, b) => a - b);
+
+    let prev = 0;
+    let next = null;
+    for (const t of sorted) {
+        if (currentPts >= t) prev = t;
+        else { next = t; break; }
+    }
+
+    if (next === null) {
+        // At or past last threshold — show full bar
+        const last = sorted[sorted.length - 1] ?? 0;
+        const secondLast = sorted.length > 1 ? sorted[sorted.length - 2] : 0;
+        const segMax = last - secondLast || 1;
+        return { seg: segMax, segMax, atMax: true, prev, next: null };
+    }
+
+    const seg = currentPts - prev;
+    const segMax = next - prev;
+    return { seg, segMax, atMax: false, prev, next };
 }
 
 // ─── Sub-Tab Nav ─────────────────────────────────────────────────────────────
@@ -64,22 +88,20 @@ function SubTabBar({ active, onChange }) {
 
 // ─── Progress Bar ────────────────────────────────────────────────────────────
 
-function ProgressBar({ current, max, color = '#4caf50', showText = true }) {
-    const pct = max > 0 ? Math.min(100, Math.max(0, (current / max) * 100)) : 0;
+function ProgressBar({ seg, segMax, color = '#4caf50', label }) {
+    const pct = segMax > 0 ? Math.min(100, Math.max(0, (seg / segMax) * 100)) : 100;
     return (
         <div style={{ width: '100%' }}>
-            <div style={{
-                height: 10, borderRadius: 5, background: '#2a2a2a', overflow: 'hidden', position: 'relative',
-            }}>
+            <div style={{ height: 10, borderRadius: 5, background: '#2a2a2a', overflow: 'hidden' }}>
                 <div style={{
                     width: `${pct}%`, height: '100%',
                     background: color, borderRadius: 5,
                     transition: 'width 0.4s ease',
                 }} />
             </div>
-            {showText && (
+            {label !== false && (
                 <div style={{ fontSize: '0.75em', color: '#888', marginTop: 3, textAlign: 'right' }}>
-                    {current} / {max}
+                    {seg} / {segMax}
                 </div>
             )}
         </div>
@@ -93,7 +115,7 @@ function ReputationTab({ data }) {
     const factions = data.reputation?.factions || [];
 
     const selectedFaction = factions.find(f => f.id === selected);
-    const activeRank = selectedFaction ? getActiveRank(selectedFaction) : null;
+    const activeRank = selectedFaction ? getActiveEntry(Math.abs(selectedFaction.currentPoints || 0), selectedFaction.ranks || []) : null;
     const unlockedPerks = activeRank?.perks || [];
 
     if (factions.length === 0) {
@@ -103,11 +125,13 @@ function ReputationTab({ data }) {
     return (
         <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {factions.map(faction => {
-                const rank = getActiveRank(faction);
+                const rank = getActiveEntry(Math.abs(faction.currentPoints || 0), faction.ranks || []);
                 const isPositive = (faction.currentPoints || 0) >= 0;
                 const barColor = isPositive ? '#4caf50' : '#e53935';
-                const max = faction.maxPoints || 10;
-                const current = Math.abs(faction.currentPoints || 0);
+                const pts = Math.abs(faction.currentPoints || 0);
+                const thresholds = (faction.ranks || []).map(r => r.threshold);
+                const { seg, segMax } = getSegmentProgress(pts, thresholds);
+
                 return (
                     <button
                         key={faction.id}
@@ -134,7 +158,10 @@ function ReputationTab({ data }) {
                                 {isPositive ? '+' : '-'}{Math.abs(faction.currentPoints || 0)}
                             </div>
                         </div>
-                        <ProgressBar current={current} max={max} color={barColor} showText={false} />
+                        <ProgressBar seg={seg} segMax={segMax} color={barColor} label={false} />
+                        <div style={{ fontSize: '0.72em', color: '#666', marginTop: 3, textAlign: 'right' }}>
+                            {seg} / {segMax}
+                        </div>
                     </button>
                 );
             })}
@@ -144,59 +171,67 @@ function ReputationTab({ data }) {
                 onClose={() => setSelected(null)}
                 title={selectedFaction?.name}
             >
-                {selectedFaction && (
-                    <div style={{ padding: '0 16px 24px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                            {selectedFaction.icon && <span style={{ fontSize: '2em' }}>{selectedFaction.icon}</span>}
-                            <div>
-                                {activeRank ? (
-                                    <div style={{ color: '#c5a059', fontWeight: 'bold', fontSize: '1.1em' }}>
-                                        {activeRank.title}
-                                    </div>
-                                ) : (
-                                    <div style={{ color: '#888' }}>No rank achieved yet</div>
-                                )}
-                                <div style={{ color: '#888', fontSize: '0.85em', marginTop: 2 }}>
-                                    {selectedFaction.currentPoints || 0} / {selectedFaction.maxPoints || 10} points
-                                </div>
-                            </div>
-                        </div>
-                        <ProgressBar
-                            current={Math.abs(selectedFaction.currentPoints || 0)}
-                            max={selectedFaction.maxPoints || 10}
-                            color={(selectedFaction.currentPoints || 0) >= 0 ? '#4caf50' : '#e53935'}
-                        />
-                        {unlockedPerks.length > 0 && (
-                            <>
-                                <div style={{ marginTop: 20, marginBottom: 10, color: '#c5a059', fontWeight: 'bold', fontSize: '0.9em' }}>
-                                    UNLOCKED PERKS
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                    {unlockedPerks.map((perk, i) => (
-                                        <div key={i} style={{
-                                            background: '#1a1a1a', border: '1px solid #2a2a2a',
-                                            borderRadius: 8, padding: '10px 12px',
-                                        }}>
-                                            <div style={{ color: '#e8e8e8', fontWeight: 'bold', fontSize: '0.9em' }}>
-                                                {perk.name}
-                                            </div>
-                                            {perk.description && (
-                                                <div style={{ color: '#aaa', fontSize: '0.82em', marginTop: 4, lineHeight: 1.5 }}>
-                                                    {perk.description}
-                                                </div>
-                                            )}
+                {selectedFaction && (() => {
+                    const isPositive = (selectedFaction.currentPoints || 0) >= 0;
+                    const pts = Math.abs(selectedFaction.currentPoints || 0);
+                    const thresholds = (selectedFaction.ranks || []).map(r => r.threshold);
+                    const { seg, segMax, atMax, next } = getSegmentProgress(pts, thresholds);
+                    return (
+                        <div style={{ padding: '0 16px 24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                                {selectedFaction.icon && <span style={{ fontSize: '2em' }}>{selectedFaction.icon}</span>}
+                                <div>
+                                    {activeRank ? (
+                                        <div style={{ color: '#c5a059', fontWeight: 'bold', fontSize: '1.1em' }}>
+                                            {activeRank.title}
                                         </div>
-                                    ))}
+                                    ) : (
+                                        <div style={{ color: '#888' }}>No rank achieved yet</div>
+                                    )}
+                                    <div style={{ color: '#888', fontSize: '0.85em', marginTop: 2 }}>
+                                        {isPositive ? '+' : '-'}{Math.abs(selectedFaction.currentPoints || 0)} points total
+                                        {!atMax && next != null && (
+                                            <span> · {next - pts} to next rank</span>
+                                        )}
+                                    </div>
                                 </div>
-                            </>
-                        )}
-                        {unlockedPerks.length === 0 && activeRank && (
-                            <div style={{ marginTop: 16, color: '#666', fontSize: '0.85em', textAlign: 'center' }}>
-                                No perks for this rank.
                             </div>
-                        )}
-                    </div>
-                )}
+                            <ProgressBar
+                                seg={seg} segMax={segMax}
+                                color={isPositive ? '#4caf50' : '#e53935'}
+                            />
+                            {unlockedPerks.length > 0 && (
+                                <>
+                                    <div style={{ marginTop: 20, marginBottom: 10, color: '#c5a059', fontWeight: 'bold', fontSize: '0.9em' }}>
+                                        UNLOCKED PERKS
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        {unlockedPerks.map((perk, i) => (
+                                            <div key={i} style={{
+                                                background: '#1a1a1a', border: '1px solid #2a2a2a',
+                                                borderRadius: 8, padding: '10px 12px',
+                                            }}>
+                                                <div style={{ color: '#e8e8e8', fontWeight: 'bold', fontSize: '0.9em' }}>
+                                                    {perk.name}
+                                                </div>
+                                                {perk.description && (
+                                                    <div style={{ color: '#aaa', fontSize: '0.82em', marginTop: 4, lineHeight: 1.5 }}>
+                                                        {perk.description}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                            {unlockedPerks.length === 0 && activeRank && (
+                                <div style={{ marginTop: 16, color: '#666', fontSize: '0.85em', textAlign: 'center' }}>
+                                    No perks for this rank.
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
             </BottomSheet>
         </div>
     );
@@ -213,12 +248,14 @@ function ResearchTab({ data }) {
         return <EmptyState icon="📚" text="No research topics yet." />;
     }
 
+    const dcMod = selectedTopic?.dcModified;
+    const dcModColor = dcMod < 0 ? '#4caf50' : dcMod > 0 ? '#e53935' : '#888';
+
     return (
         <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {topics.map(topic => {
-                const maxPts = topic.maxPoints || 10;
                 const revealedCount = (topic.infoPoints || []).filter(p => p.revealed).length;
-                const totalCount = (topic.infoPoints || []).length;
+                const mod = topic.dcModified;
                 return (
                     <button
                         key={topic.id}
@@ -229,28 +266,34 @@ function ResearchTab({ data }) {
                             textAlign: 'left', width: '100%',
                         }}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div>
                                 <div style={{ color: '#e8e8e8', fontWeight: 'bold', fontSize: '0.95em' }}>
                                     {topic.name || 'Unnamed Topic'}
                                 </div>
-                                <div style={{ color: '#888', fontSize: '0.78em', marginTop: 2 }}>
-                                    {totalCount > 0 ? `${revealedCount}/${totalCount} clues revealed` : 'No clues'}
-                                    {topic.dcRevealed && topic.dc
-                                        ? ` · DC ${topic.dc}`
-                                        : topic.dcRevealed ? '' : ' · DC ???'}
+                                <div style={{ color: '#888', fontSize: '0.78em', marginTop: 3, display: 'flex', gap: 10 }}>
+                                    {revealedCount > 0
+                                        ? <span>{revealedCount} clue{revealedCount !== 1 ? 's' : ''} revealed</span>
+                                        : <span>No clues revealed</span>}
+                                    {topic.dcRevealed && topic.dc != null
+                                        ? <span>DC {topic.dc}</span>
+                                        : <span>DC ???</span>}
                                 </div>
                             </div>
-                            <div style={{ color: '#c5a059', fontSize: '0.85em', fontWeight: 'bold', textAlign: 'right' }}>
-                                <div>{topic.currentPoints || 0} pts</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                                <div style={{ color: '#c5a059', fontSize: '0.85em', fontWeight: 'bold' }}>
+                                    {topic.currentPoints || 0} pts
+                                </div>
+                                {mod != null && mod !== 0 && (
+                                    <div style={{
+                                        color: mod < 0 ? '#4caf50' : '#e53935',
+                                        fontSize: '0.78em', fontWeight: 'bold',
+                                    }}>
+                                        mod {mod > 0 ? '+' : ''}{mod}
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <ProgressBar
-                            current={topic.currentPoints || 0}
-                            max={maxPts}
-                            color="#3b82f6"
-                            showText={false}
-                        />
                     </button>
                 );
             })}
@@ -260,34 +303,55 @@ function ResearchTab({ data }) {
                 onClose={() => setSelected(null)}
                 title={selectedTopic?.name}
             >
-                {selectedTopic && (
-                    <div style={{ padding: '0 16px 24px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                            <div style={{ color: '#888', fontSize: '0.85em' }}>
-                                Research Points: <span style={{ color: '#c5a059', fontWeight: 'bold' }}>
-                                    {selectedTopic.currentPoints || 0} / {selectedTopic.maxPoints || 10}
-                                </span>
-                            </div>
-                            <div style={{ color: '#888', fontSize: '0.85em' }}>
-                                DC: <span style={{ color: selectedTopic.dcRevealed ? '#e8e8e8' : '#555' }}>
-                                    {selectedTopic.dcRevealed && selectedTopic.dc ? selectedTopic.dc : '???'}
-                                </span>
-                            </div>
-                        </div>
-                        <ProgressBar
-                            current={selectedTopic.currentPoints || 0}
-                            max={selectedTopic.maxPoints || 10}
-                            color="#3b82f6"
-                        />
-                        {(selectedTopic.infoPoints || []).length > 0 && (
-                            <>
-                                <div style={{ marginTop: 20, marginBottom: 10, color: '#c5a059', fontWeight: 'bold', fontSize: '0.9em' }}>
-                                    REVEALED INFORMATION
+                {selectedTopic && (() => {
+                    const mod = selectedTopic.dcModified;
+                    const modColor = mod != null && mod < 0 ? '#4caf50' : mod != null && mod > 0 ? '#e53935' : '#888';
+                    const revealedPts = (selectedTopic.infoPoints || []).filter(p => p.revealed);
+                    return (
+                        <div style={{ padding: '0 16px 24px' }}>
+                            {/* Stats row */}
+                            <div style={{
+                                display: 'flex', gap: 16, marginBottom: 20,
+                                padding: '12px 14px', background: '#1a1a1a',
+                                borderRadius: 10, border: '1px solid #2a2a2a',
+                                flexWrap: 'wrap',
+                            }}>
+                                <div>
+                                    <div style={{ color: '#666', fontSize: '0.72em', marginBottom: 2 }}>RESEARCH PTS</div>
+                                    <div style={{ color: '#c5a059', fontWeight: 'bold', fontSize: '1.05em' }}>
+                                        {selectedTopic.currentPoints || 0}
+                                    </div>
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                    {(selectedTopic.infoPoints || [])
-                                        .filter(p => p.revealed)
-                                        .map((pt, i) => (
+                                <div>
+                                    <div style={{ color: '#666', fontSize: '0.72em', marginBottom: 2 }}>DC</div>
+                                    <div style={{ color: selectedTopic.dcRevealed ? '#e8e8e8' : '#444', fontWeight: 'bold', fontSize: '1.05em' }}>
+                                        {selectedTopic.dcRevealed && selectedTopic.dc != null ? selectedTopic.dc : '???'}
+                                    </div>
+                                </div>
+                                {mod != null && (
+                                    <div>
+                                        <div style={{ color: '#666', fontSize: '0.72em', marginBottom: 2 }}>DC MODIFIED</div>
+                                        <div style={{ color: modColor, fontWeight: 'bold', fontSize: '1.05em' }}>
+                                            {mod > 0 ? '+' : ''}{mod}
+                                        </div>
+                                    </div>
+                                )}
+                                <div>
+                                    <div style={{ color: '#666', fontSize: '0.72em', marginBottom: 2 }}>CLUES</div>
+                                    <div style={{ color: '#e8e8e8', fontWeight: 'bold', fontSize: '1.05em' }}>
+                                        {revealedPts.length} revealed
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Revealed info points */}
+                            {revealedPts.length > 0 ? (
+                                <>
+                                    <div style={{ marginBottom: 10, color: '#c5a059', fontWeight: 'bold', fontSize: '0.9em' }}>
+                                        REVEALED INFORMATION
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        {revealedPts.map((pt, i) => (
                                             <div key={pt.id || i} style={{
                                                 background: '#1a1a1a', border: '1px solid #2a2a2a',
                                                 borderRadius: 8, padding: '10px 12px',
@@ -296,16 +360,16 @@ function ResearchTab({ data }) {
                                                 {pt.text}
                                             </div>
                                         ))}
-                                </div>
-                                {(selectedTopic.infoPoints || []).filter(p => p.revealed).length === 0 && (
-                                    <div style={{ color: '#555', textAlign: 'center', padding: '16px 0', fontSize: '0.85em' }}>
-                                        No information revealed yet.
                                     </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                )}
+                                </>
+                            ) : (
+                                <div style={{ color: '#555', textAlign: 'center', padding: '16px 0', fontSize: '0.85em' }}>
+                                    No information revealed yet.
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
             </BottomSheet>
         </div>
     );
@@ -318,14 +382,10 @@ function CalciferTab({ data }) {
     const stages = [...(calcifer.stages || [])].sort((a, b) => a.threshold - b.threshold);
     const currentProgress = calcifer.currentProgress || 0;
 
-    // Determine active stage
-    let activeStage = null;
-    for (const s of stages) {
-        if (currentProgress >= s.threshold) activeStage = s;
-    }
+    const activeStage = getActiveEntry(currentProgress, stages);
     const nextStage = stages.find(s => s.threshold > currentProgress);
-    const maxProgress = stages.length > 0 ? Math.max(...stages.map(s => s.threshold)) : 100;
-    const pct = maxProgress > 0 ? Math.min(100, (currentProgress / maxProgress) * 100) : 0;
+    const thresholds = stages.map(s => s.threshold);
+    const { seg, segMax, atMax } = getSegmentProgress(currentProgress, thresholds);
 
     return (
         <div style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -348,34 +408,20 @@ function CalciferTab({ data }) {
                 </div>
             </div>
 
-            {/* Flame Progress Bar */}
+            {/* Flame Progress Bar — segment-relative */}
             <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '0.8em', marginBottom: 5 }}>
                     <span>Sustenance</span>
-                    <span>{currentProgress} / {maxProgress}</span>
+                    <span>{seg} / {segMax}</span>
                 </div>
                 <div style={{ height: 14, borderRadius: 7, background: '#1a0800', overflow: 'hidden', border: '1px solid #5a2500' }}>
                     <div style={{
-                        width: `${pct}%`, height: '100%',
+                        width: `${segMax > 0 ? Math.min(100, (seg / segMax) * 100) : 100}%`,
+                        height: '100%',
                         background: 'linear-gradient(90deg, #ea580c, #f97316, #fbbf24)',
                         borderRadius: 7, transition: 'width 0.4s ease',
                     }} />
                 </div>
-                {/* Stage markers */}
-                {stages.length > 1 && (
-                    <div style={{ position: 'relative', height: 16, marginTop: 2 }}>
-                        {stages.map((s, i) => {
-                            const markerPct = maxProgress > 0 ? (s.threshold / maxProgress) * 100 : 0;
-                            return (
-                                <div key={i} style={{
-                                    position: 'absolute', left: `${markerPct}%`,
-                                    transform: 'translateX(-50%)',
-                                    width: 1, height: 6, background: '#5a2500', top: 0,
-                                }} />
-                            );
-                        })}
-                    </div>
-                )}
             </div>
 
             {/* Creature Card */}
@@ -455,7 +501,6 @@ function MaterialsTab({ data }) {
         return <EmptyState icon="⚗️" text="No elements configured yet." />;
     }
 
-    // Get active tier (highest tier whose threshold <= currentProgress)
     function getActiveTier(element) {
         const tiers = [...(element.tiers || [])].sort((a, b) => a.threshold - b.threshold);
         let active = null;
@@ -472,8 +517,10 @@ function MaterialsTab({ data }) {
         <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {elements.map(element => {
                 const color = element.color || ELEMENT_COLORS[element.name?.toLowerCase()] || '#c5a059';
-                const maxPts = element.maxProgress || 100;
                 const tier = getActiveTier(element);
+                const thresholds = (element.tiers || []).map(t => t.threshold);
+                const { seg, segMax } = getSegmentProgress(element.currentProgress || 0, thresholds);
+
                 return (
                     <button
                         key={element.id}
@@ -497,15 +544,10 @@ function MaterialsTab({ data }) {
                                 )}
                             </div>
                             <div style={{ color: '#888', fontSize: '0.82em' }}>
-                                {element.currentProgress || 0} / {maxPts}
+                                {seg} / {segMax}
                             </div>
                         </div>
-                        <ProgressBar
-                            current={element.currentProgress || 0}
-                            max={maxPts}
-                            color={color}
-                            showText={false}
-                        />
+                        <ProgressBar seg={seg} segMax={segMax} color={color} label={false} />
                     </button>
                 );
             })}
@@ -517,21 +559,24 @@ function MaterialsTab({ data }) {
             >
                 {selectedElement && (() => {
                     const color = selectedElement.color || ELEMENT_COLORS[selectedElement.name?.toLowerCase()] || '#c5a059';
+                    const thresholds = (selectedElement.tiers || []).map(t => t.threshold);
+                    const { seg, segMax, atMax, next } = getSegmentProgress(selectedElement.currentProgress || 0, thresholds);
                     return (
                         <div style={{ padding: '0 16px 24px' }}>
-                            <div style={{ marginBottom: 12 }}>
-                                <ProgressBar
-                                    current={selectedElement.currentProgress || 0}
-                                    max={selectedElement.maxProgress || 100}
-                                    color={color}
-                                />
+                            <div style={{ marginBottom: 4 }}>
+                                <ProgressBar seg={seg} segMax={segMax} color={color} />
                             </div>
+                            {!atMax && next != null && (
+                                <div style={{ color: '#666', fontSize: '0.78em', marginBottom: 12 }}>
+                                    {next - (selectedElement.currentProgress || 0)} more to next tier
+                                </div>
+                            )}
                             {activeTier && (
                                 <div style={{ color, fontSize: '0.9em', fontWeight: 'bold', marginBottom: 16 }}>
                                     Current Tier: {activeTier.name}
                                 </div>
                             )}
-                            {unlockedItems.length > 0 && (
+                            {unlockedItems.length > 0 ? (
                                 <>
                                     <div style={{ marginBottom: 10, color: '#c5a059', fontWeight: 'bold', fontSize: '0.9em' }}>
                                         UNLOCKED ITEMS
@@ -553,7 +598,7 @@ function MaterialsTab({ data }) {
                                                             href={item.link}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            style={{ color: color, fontSize: '0.78em' }}
+                                                            style={{ color, fontSize: '0.78em' }}
                                                         >
                                                             View Details ↗
                                                         </a>
@@ -563,8 +608,7 @@ function MaterialsTab({ data }) {
                                         ))}
                                     </div>
                                 </>
-                            )}
-                            {unlockedItems.length === 0 && (
+                            ) : (
                                 <div style={{ color: '#555', textAlign: 'center', padding: '16px 0', fontSize: '0.85em' }}>
                                     No items unlocked yet.
                                 </div>

@@ -49,8 +49,16 @@ function buildFoundryItem(ability) {
 
 const PAGE_SIZE = 100;
 
-export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = null }) {
-    const allAbilities = getAllAbilities();
+export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = null, customAbilities = [] }) {
+    // Merge custom abilities (from DB) with the static index; custom takes priority by name
+    const allAbilities = useMemo(() => {
+        const indexed = getAllAbilities();
+        const customNames = new Set(customAbilities.map(a => a.name));
+        return [
+            ...customAbilities.map(a => ({ ...a, isCustom: true })),
+            ...indexed.filter(a => !customNames.has(a.name)),
+        ];
+    }, [customAbilities]);
     const [search, setSearch]         = useState('');
     const [typeFilter, setTypeFilter]   = useState(defaultTypeFilter);
     const [traitFilter, setTraitFilter] = useState([]);
@@ -151,7 +159,12 @@ export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = n
                                 <span style={{ width: 28, textAlign: 'center', fontSize: '0.8em', color: '#888', flexShrink: 0 }}>
                                     {typeLabel(a.typeCode)}
                                 </span>
-                                <span style={{ color: '#ddd', flex: 1 }}>{a.name}</span>
+                                <span style={{ color: '#ddd', flex: 1 }}>
+                                    {a.name}
+                                    {a.isCustom && (
+                                        <span style={{ marginLeft: 6, fontSize: '0.7em', color: '#c5a059', verticalAlign: 'middle' }}>✦ custom</span>
+                                    )}
+                                </span>
                                 {a.traits.length > 0 && (
                                     <span style={{ color: '#555', fontSize: '0.75em' }}>
                                         {a.traits.slice(0, 3).join(', ')}{a.traits.length > 3 ? '…' : ''}
@@ -159,10 +172,15 @@ export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = n
                                 )}
                             </div>
                         ))}
-                        {allAbilities.length === 0 && (
+                        {filtered.length === 0 && allAbilities.length === 0 && (
                             <div style={{ color: '#555', textAlign: 'center', padding: 40, fontSize: '0.9em' }}>
-                                No abilities indexed yet.<br />
-                                Run <code>npm run build:abilities</code> to build the index.
+                                No abilities found.<br />
+                                Create custom abilities in the Abilities tab, or run <code>npm run build:abilities</code> to build the index.
+                            </div>
+                        )}
+                        {filtered.length === 0 && allAbilities.length > 0 && (
+                            <div style={{ color: '#555', textAlign: 'center', padding: 40, fontSize: '0.9em' }}>
+                                No abilities match your search.
                             </div>
                         )}
                         {totalPages > 1 && (
