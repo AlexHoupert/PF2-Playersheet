@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
-import { FEAT_INDEX_FILTER_OPTIONS } from '../../shared/catalog/featIndex';
+import { FEAT_INDEX_FILTER_OPTIONS, fetchFeatDetailBySourceFile } from '../../shared/catalog/featIndex';
 
 export default function FeatEditor({ initialItem, onSave, onCancel }) {
     const [formData, setFormData] = useState({
@@ -17,6 +17,7 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
     });
 
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -36,6 +37,28 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
                 description: initialItem.description || '',
                 sourceFile: initialItem.sourceFile || null
             });
+
+            // Fetch full details if sourceFile exists (index items lack description)
+            if (initialItem.sourceFile) {
+                setIsLoading(true);
+                fetchFeatDetailBySourceFile(initialItem.sourceFile)
+                    .then(details => {
+                        setFormData(prev => ({
+                            ...prev,
+                            description: details.description || prev.description || '',
+                            prerequisites: details.prerequisites
+                                ? (Array.isArray(details.prerequisites) ? details.prerequisites.join(', ') : details.prerequisites)
+                                : prev.prerequisites || '',
+                            actionType: details.actionType || prev.actionType || '',
+                        }));
+                        setIsLoading(false);
+                    })
+                    .catch(err => {
+                        console.error("Failed to load feat details", err);
+                        setError("Failed to load feat details.");
+                        setIsLoading(false);
+                    });
+            }
         }
     }, [initialItem]);
 
@@ -108,6 +131,7 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
         <div className="editor-container" style={{ padding: 20, background: '#222', height: '100%', overflowY: 'auto' }}>
             <h2>{initialItem ? 'Edit Feat' : 'Create Feat'}</h2>
 
+            {isLoading && <div style={{ color: '#c5a059', marginBottom: 10 }}>Loading feat details...</div>}
             {error && <div className="error-banner" style={{ background: '#d32f2f', color: '#fff', padding: 10, marginBottom: 10 }}>{error}</div>}
 
             <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 20 }}>

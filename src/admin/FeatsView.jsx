@@ -1,22 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import FeatEditor from './editors/FeatEditor';
 import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
-import { FEAT_INDEX_FILTER_OPTIONS, FEAT_INDEX_ITEMS } from '../shared/catalog/featIndex';
+import BottomSheet from '../shared/components/BottomSheet';
+import ContentPreviewCard from './components/ContentPreviewCard';
+import { useWindowSize } from '../shared/hooks/useWindowSize';
+import { FEAT_INDEX_FILTER_OPTIONS, FEAT_INDEX_ITEMS, fetchFeatDetailBySourceFile } from '../shared/catalog/featIndex';
 
-const uniqueTypes = FEAT_INDEX_FILTER_OPTIONS.types;
 const uniqueRarities = FEAT_INDEX_FILTER_OPTIONS.rarities;
 const uniqueTraits = FEAT_INDEX_FILTER_OPTIONS.traits;
 const uniqueCategories = FEAT_INDEX_FILTER_OPTIONS.categories;
 
 export default function FeatsView({ onInspectItem }) {
+    const { isMobile } = useWindowSize();
+
     const [itemSearch, setItemSearch] = useState('');
-    const [filterType, setFilterType] = useState([]);
     const [filterRarity, setFilterRarity] = useState([]);
     const [filterTraits, setFilterTraits] = useState([]);
     const [filterCategory, setFilterCategory] = useState([]);
     const [itemPage, setItemPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(50);
-    const [visibleColumns, setVisibleColumns] = useState(['name', 'level', 'type', 'rarity', 'category']);
+    const [visibleColumns, setVisibleColumns] = useState(['name', 'level', 'rarity', 'category']);
     const [showColSelector, setShowColSelector] = useState(false);
 
     const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
@@ -26,16 +29,28 @@ export default function FeatsView({ onInspectItem }) {
     const [lastSelectedIndex, setLastSelectedIndex] = useState(-1);
     const [selectedItems, setSelectedItems] = useState([]);
 
+    // Preview state
+    const [previewItem, setPreviewItem] = useState(null);
+    const [loadedDetail, setLoadedDetail] = useState(null);
+
+    // Fetch full detail when preview item changes
+    useEffect(() => {
+        if (!previewItem?.sourceFile) { setLoadedDetail(null); return; }
+        setLoadedDetail(null);
+        fetchFeatDetailBySourceFile(previewItem.sourceFile)
+            .then(detail => setLoadedDetail(detail))
+            .catch(err => console.error('Failed to load feat detail', err));
+    }, [previewItem?.sourceFile]);
+
     const filteredItems = useMemo(() => {
         const searchLower = itemSearch.trim().toLowerCase();
         return FEAT_INDEX_ITEMS.filter(i => {
-            if (filterType.length && !filterType.includes(i.type)) return false;
             if (filterRarity.length && !filterRarity.includes(i.rarity)) return false;
             if (filterCategory.length && !filterCategory.includes(i.category)) return false;
             if (filterTraits.length && !filterTraits.every(t => i.traits.includes(t))) return false;
             return i.name.toLowerCase().includes(searchLower);
         });
-    }, [filterType, filterRarity, filterTraits, filterCategory, itemSearch]);
+    }, [filterRarity, filterTraits, filterCategory, itemSearch]);
 
     const sortedItems = useMemo(() => {
         const items = [...filteredItems];
@@ -69,7 +84,7 @@ export default function FeatsView({ onInspectItem }) {
     }, [currentPage, itemPage]);
 
     const allColumns = useMemo(
-        () => ['name', 'level', 'type', 'rarity', 'traits', 'category'],
+        () => ['name', 'level', 'rarity', 'traits', 'category'],
         []
     );
 
@@ -77,6 +92,20 @@ export default function FeatsView({ onInspectItem }) {
         let direction = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
         setSortConfig({ key, direction });
+    };
+
+    const handleRowClick = (item) => {
+        if (!isMobile) {
+            setPreviewItem(item);
+        }
+    };
+
+    const handleRowDoubleClick = (item) => {
+        if (isMobile) {
+            setPreviewItem(item);
+        } else {
+            setEditingItem(item);
+        }
     };
 
     const handleContextMenu = (e, item, index) => {
@@ -87,23 +116,22 @@ export default function FeatsView({ onInspectItem }) {
             setSelectedItems(newSelected);
             setLastSelectedIndex(index);
         }
-        setContextMenu({ x: e.clientX, y: e.clientY, items: newSelected });
+        setContextMenu({ x: e.clientX, y: e.clientY, items: newSelected, item });
     };
 
     const performContextAction = (action) => {
-        const targets = contextMenu?.items || [];
-        if (targets.length === 0) return;
-
-        const itemName = targets[0];
-        const item = sortedItems.find(i => i.name === itemName);
+        const item = contextMenu?.item;
+        if (!item) return;
 
         if (action === 'edit') {
-            if (item) setEditingItem(item);
+            setEditingItem(item);
+            setPreviewItem(null);
         } else if (action === 'clone') {
-            if (item) {
-                const cloned = { ...item, name: item.name + ' (Copy)' };
-                setEditingItem(cloned);
-            }
+            const cloned = { ...item, name: item.name + ' (Copy)' };
+            setEditingItem(cloned);
+            setPreviewItem(null);
+        } else if (action === 'preview') {
+            setPreviewItem(item);
         }
         setContextMenu(null);
     };
@@ -117,6 +145,16 @@ export default function FeatsView({ onInspectItem }) {
             />
         );
     }
+
+    // Preview content
+    const previewContent = previewItem ? (
+        <ContentPreviewCard
+            item={loadedDetail || previewItem}
+            entityType="feat"
+            onEdit={() => { setEditingItem(previewItem); setPreviewItem(null); }}
+            onClose={() => setPreviewItem(null)}
+        />
+    ) : null;
 
     return (
         <div className="admin-layout" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -136,12 +174,6 @@ export default function FeatsView({ onInspectItem }) {
                     + New Feat
                 </button>
 
-                <MultiSelectDropdown
-                    label="Type"
-                    options={uniqueTypes}
-                    selected={filterType}
-                    onChange={(next) => { setFilterType(next); setItemPage(1); }}
-                />
                 <MultiSelectDropdown
                     label="Rarity"
                     options={uniqueRarities}
@@ -198,6 +230,7 @@ export default function FeatsView({ onInspectItem }) {
                 </select>
             </div>
 
+            {/* Table + Side panel */}
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                 <div style={{ flex: 1, overflow: 'auto', padding: 10 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
@@ -220,10 +253,13 @@ export default function FeatsView({ onInspectItem }) {
                                     key={idx}
                                     style={{
                                         borderBottom: '1px solid #444',
-                                        background: (idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
+                                        background: previewItem?.name === item.name
+                                            ? 'rgba(197,160,89,0.1)'
+                                            : (idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
                                         cursor: 'pointer'
                                     }}
-                                    onDoubleClick={() => onInspectItem?.(item)}
+                                    onClick={() => handleRowClick(item)}
+                                    onDoubleClick={() => handleRowDoubleClick(item)}
                                     onContextMenu={(e) => handleContextMenu(e, item, idx)}
                                 >
                                     {visibleColumns.map(c => (
@@ -244,31 +280,52 @@ export default function FeatsView({ onInspectItem }) {
                         <button disabled={currentPage === totalPages} onClick={() => setItemPage(p => Math.min(totalPages, p + 1))}>Next</button>
                     </div>
                 </div>
+
+                {/* Desktop side preview panel */}
+                {!isMobile && previewItem && (
+                    <div style={{ width: 420, borderLeft: '1px solid #444', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <h4 style={{ margin: 0, color: '#aaa' }}>Preview</h4>
+                            <button onClick={() => setPreviewItem(null)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>✕</button>
+                        </div>
+                        {previewContent}
+                    </div>
+                )}
             </div>
 
+            {/* Mobile preview BottomSheet */}
+            {isMobile && (
+                <BottomSheet
+                    isOpen={!!previewItem}
+                    onClose={() => setPreviewItem(null)}
+                    title={previewItem?.name || 'Preview'}
+                    height="85vh"
+                >
+                    {previewContent}
+                </BottomSheet>
+            )}
 
-            {
-                contextMenu && (
-                    <div
-                        style={{
-                            position: 'fixed',
-                            top: contextMenu.y,
-                            left: contextMenu.x,
-                            background: '#2b2b2e',
-                            border: '1px solid #c5a059',
-                            borderRadius: 4,
-                            zIndex: 2000,
-                            minWidth: 150,
-                            boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #444' }} onClick={() => performContextAction('clone')}>📋 Clone Feat</div>
-                        <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer' }} onClick={() => performContextAction('edit')}>✏️ Edit Feat</div>
-                        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }} onClick={() => setContextMenu(null)}></div>
-                    </div>
-                )
-            }
+            {contextMenu && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: contextMenu.y,
+                        left: contextMenu.x,
+                        background: '#2b2b2e',
+                        border: '1px solid #c5a059',
+                        borderRadius: 4,
+                        zIndex: 2000,
+                        minWidth: 150,
+                        boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #444' }} onClick={() => performContextAction('preview')}>👁️ Preview</div>
+                    <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #444' }} onClick={() => performContextAction('clone')}>📋 Clone Feat</div>
+                    <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer' }} onClick={() => performContextAction('edit')}>✏️ Edit Feat</div>
+                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }} onClick={() => setContextMenu(null)}></div>
+                </div>
+            )}
         </div >
     );
 }

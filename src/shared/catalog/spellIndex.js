@@ -86,6 +86,20 @@ export async function fetchSpellDetailBySourceFile(sourceFile) {
     const data = await response.json();
     const sys = data.system || {};
 
+    // Convert area object to readable string, e.g. {type:"emanation", value:5} → "5-foot emanation"
+    let area = null;
+    if (sys.area) {
+        if (typeof sys.area === 'string') {
+            area = sys.area;
+        } else if (sys.area.value && sys.area.type) {
+            area = `${sys.area.value}-foot ${sys.area.type}`;
+        } else if (sys.area.value) {
+            area = `${sys.area.value} feet`;
+        } else if (sys.area.type) {
+            area = sys.area.type;
+        }
+    }
+
     return {
         sourceFile,
         img: data.img ? data.img.replace('systems/pf2e/', '') : null,
@@ -99,6 +113,9 @@ export async function fetchSpellDetailBySourceFile(sourceFile) {
         school: sys.school ? sys.school.value : null,
         range: sys.range ? sys.range.value : null,
         time: sys.time ? sys.time.value : null,
-        area: sys.area || null,
+        target: sys.target ? sys.target.value : null,
+        duration: sys.duration ? sys.duration.value : null,
+        defense: sys.defense?.save?.statistic || null,
+        area,
     };
 }

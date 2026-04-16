@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ImpulseEditor from './editors/ImpulseEditor';
 import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
-import { IMPULSE_INDEX_FILTER_OPTIONS, IMPULSE_INDEX_ITEMS } from '../shared/catalog/impulseIndex';
+import BottomSheet from '../shared/components/BottomSheet';
+import ContentPreviewCard from './components/ContentPreviewCard';
+import { useWindowSize } from '../shared/hooks/useWindowSize';
+import { IMPULSE_INDEX_FILTER_OPTIONS, IMPULSE_INDEX_ITEMS, fetchImpulseDetailBySourceFile } from '../shared/catalog/impulseIndex';
 
 const uniqueTypes = IMPULSE_INDEX_FILTER_OPTIONS.types;
 const uniqueRarities = IMPULSE_INDEX_FILTER_OPTIONS.rarities;
@@ -10,6 +13,8 @@ const uniqueTraits = IMPULSE_INDEX_FILTER_OPTIONS.traits;
 const uniqueSchools = IMPULSE_INDEX_FILTER_OPTIONS.schools;
 
 export default function ImpulsesView({ onInspectItem }) {
+    const { isMobile } = useWindowSize();
+
     const [itemSearch, setItemSearch] = useState('');
     const [filterType, setFilterType] = useState([]);
     const [filterRarity, setFilterRarity] = useState([]);
@@ -27,6 +32,19 @@ export default function ImpulsesView({ onInspectItem }) {
     const [contextMenu, setContextMenu] = useState(null);
     const [lastSelectedIndex, setLastSelectedIndex] = useState(-1);
     const [selectedItems, setSelectedItems] = useState([]);
+
+    // Preview state
+    const [previewItem, setPreviewItem] = useState(null);
+    const [loadedDetail, setLoadedDetail] = useState(null);
+
+    // Fetch full detail when preview item changes
+    useEffect(() => {
+        if (!previewItem?.sourceFile) { setLoadedDetail(null); return; }
+        setLoadedDetail(null);
+        fetchImpulseDetailBySourceFile(previewItem.sourceFile)
+            .then(detail => setLoadedDetail(detail))
+            .catch(err => console.error('Failed to load impulse detail', err));
+    }, [previewItem?.sourceFile]);
 
     const filteredItems = useMemo(() => {
         const searchLower = itemSearch.trim().toLowerCase();
@@ -82,6 +100,20 @@ export default function ImpulsesView({ onInspectItem }) {
         setSortConfig({ key, direction });
     };
 
+    const handleRowClick = (item) => {
+        if (!isMobile) {
+            setPreviewItem(item);
+        }
+    };
+
+    const handleRowDoubleClick = (item) => {
+        if (isMobile) {
+            setPreviewItem(item);
+        } else {
+            setEditingItem(item);
+        }
+    };
+
     const handleContextMenu = (e, item, index) => {
         e.preventDefault();
         let newSelected = [...selectedItems];
@@ -90,17 +122,18 @@ export default function ImpulsesView({ onInspectItem }) {
             setSelectedItems(newSelected);
             setLastSelectedIndex(index);
         }
-        setContextMenu({ x: e.clientX, y: e.clientY, items: newSelected });
+        setContextMenu({ x: e.clientX, y: e.clientY, items: newSelected, item });
     };
 
     const performContextAction = (action) => {
-        const targets = contextMenu?.items || [];
-        if (targets.length === 0) return;
+        const item = contextMenu?.item;
+        if (!item) return;
 
         if (action === 'edit') {
-            const itemName = targets[0];
-            const item = sortedItems.find(i => i.name === itemName);
-            if (item) setEditingItem(item);
+            setEditingItem(item);
+            setPreviewItem(null);
+        } else if (action === 'preview') {
+            setPreviewItem(item);
         }
         setContextMenu(null);
     };
@@ -114,6 +147,16 @@ export default function ImpulsesView({ onInspectItem }) {
             />
         );
     }
+
+    // Preview content
+    const previewContent = previewItem ? (
+        <ContentPreviewCard
+            item={loadedDetail || previewItem}
+            entityType="impulse"
+            onEdit={() => { setEditingItem(previewItem); setPreviewItem(null); }}
+            onClose={() => setPreviewItem(null)}
+        />
+    ) : null;
 
     return (
         <div className="admin-layout" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -145,7 +188,6 @@ export default function ImpulsesView({ onInspectItem }) {
                     selected={filterTraits}
                     onChange={(next) => { setFilterTraits(next); setItemPage(1); }}
                 />
-                {/* Impulses often don't user School/Traditions, but we leave them as optional filters */}
                 {uniqueSchools && uniqueSchools.length > 0 && <MultiSelectDropdown
                     label="School/Element"
                     options={uniqueSchools}
@@ -190,6 +232,7 @@ export default function ImpulsesView({ onInspectItem }) {
                 </select>
             </div>
 
+            {/* Table + Side panel */}
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                 <div style={{ flex: 1, overflow: 'auto', padding: 10 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
@@ -212,10 +255,13 @@ export default function ImpulsesView({ onInspectItem }) {
                                     key={idx}
                                     style={{
                                         borderBottom: '1px solid #444',
-                                        background: (idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
+                                        background: previewItem?.name === item.name
+                                            ? 'rgba(197,160,89,0.1)'
+                                            : (idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
                                         cursor: 'pointer'
                                     }}
-                                    onDoubleClick={() => onInspectItem?.(item)}
+                                    onClick={() => handleRowClick(item)}
+                                    onDoubleClick={() => handleRowDoubleClick(item)}
                                     onContextMenu={(e) => handleContextMenu(e, item, idx)}
                                 >
                                     {visibleColumns.map(c => (
@@ -237,30 +283,47 @@ export default function ImpulsesView({ onInspectItem }) {
                         <button disabled={currentPage === totalPages} onClick={() => setItemPage(p => Math.min(totalPages, p + 1))}>Next</button>
                     </div>
                 </div>
+
+                {/* Desktop side preview panel */}
+                {!isMobile && previewItem && (
+                    <div style={{ width: 420, borderLeft: '1px solid #444', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <h4 style={{ margin: 0, color: '#aaa' }}>Preview</h4>
+                            <button onClick={() => setPreviewItem(null)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>✕</button>
+                        </div>
+                        {previewContent}
+                    </div>
+                )}
             </div>
 
+            {/* Mobile preview BottomSheet */}
+            {isMobile && (
+                <BottomSheet
+                    isOpen={!!previewItem}
+                    onClose={() => setPreviewItem(null)}
+                    title={previewItem?.name || 'Preview'}
+                    height="85vh"
+                >
+                    {previewContent}
+                </BottomSheet>
+            )}
 
-            {
-                contextMenu && (
-                    <div
-                        style={{
-                            position: 'fixed',
-                            top: contextMenu.y,
-                            left: contextMenu.x,
-                            background: '#2b2b2e',
-                            border: '1px solid #c5a059',
-                            borderRadius: 4,
-                            zIndex: 2000,
-                            minWidth: 150,
-                            boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer' }} onClick={() => performContextAction('edit')}>Edit Impulse</div>
-                        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }} onClick={() => setContextMenu(null)}></div>
+            {contextMenu && (
+                <div
+                    style={{
+                        position: 'fixed', top: contextMenu.y, left: contextMenu.x,
+                        background: '#2b2b2e', border: '1px solid #c5a059', borderRadius: 4, zIndex: 2000,
+                        minWidth: 150, boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #444' }} onClick={() => performContextAction('preview')}>
+                        👁️ Preview
                     </div>
-                )
-            }
+                    <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer' }} onClick={() => performContextAction('edit')}>✏️ Edit Impulse</div>
+                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }} onClick={() => setContextMenu(null)}></div>
+                </div>
+            )}
         </div >
     );
 }

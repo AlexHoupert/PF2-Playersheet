@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
-import { SPELL_INDEX_FILTER_OPTIONS } from '../../shared/catalog/spellIndex';
+import { SPELL_INDEX_FILTER_OPTIONS, fetchSpellDetailBySourceFile } from '../../shared/catalog/spellIndex';
 
 export default function SpellEditor({ initialItem, onSave, onCancel }) {
     const [formData, setFormData] = useState({
         name: '',
         level: 1,
-        school: 'evocation',
         traditions: [],
         traits: [],
         rarity: 'common',
@@ -22,6 +21,7 @@ export default function SpellEditor({ initialItem, onSave, onCancel }) {
     });
 
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -29,7 +29,6 @@ export default function SpellEditor({ initialItem, onSave, onCancel }) {
             setFormData({
                 name: initialItem.name || '',
                 level: initialItem.level || 0,
-                school: initialItem.school || 'evocation',
                 traditions: initialItem.traditions || [],
                 traits: initialItem.traits || [],
                 rarity: initialItem.rarity || 'common',
@@ -42,6 +41,30 @@ export default function SpellEditor({ initialItem, onSave, onCancel }) {
                 description: initialItem.description || '',
                 sourceFile: initialItem.sourceFile || null
             });
+
+            // Fetch full details if sourceFile exists (index items lack description, target, etc.)
+            if (initialItem.sourceFile) {
+                setIsLoading(true);
+                fetchSpellDetailBySourceFile(initialItem.sourceFile)
+                    .then(details => {
+                        setFormData(prev => ({
+                            ...prev,
+                            description: details.description || prev.description || '',
+                            target: details.target || prev.target || '',
+                            area: details.area || prev.area || '',
+                            duration: details.duration || prev.duration || '',
+                            defense: details.defense || prev.defense || '',
+                            range: details.range || prev.range || '',
+                            time: details.time || prev.time || '',
+                        }));
+                        setIsLoading(false);
+                    })
+                    .catch(err => {
+                        console.error("Failed to load spell details", err);
+                        setError("Failed to load spell details.");
+                        setIsLoading(false);
+                    });
+            }
         }
     }, [initialItem]);
 
@@ -58,7 +81,6 @@ export default function SpellEditor({ initialItem, onSave, onCancel }) {
                 system: {
                     description: { value: formData.description },
                     level: { value: parseInt(formData.level) },
-                    school: { value: formData.school },
                     traits: {
                         value: formData.traits,
                         rarity: formData.rarity,
@@ -67,9 +89,9 @@ export default function SpellEditor({ initialItem, onSave, onCancel }) {
                     time: { value: formData.time },
                     range: { value: formData.range },
                     target: { value: formData.target },
-                    area: { value: formData.area }, // Area is often complex object in PF2e, simplifying to string or null logic
+                    area: { value: formData.area },
                     duration: { value: formData.duration },
-                    defense: { save: { statistic: formData.defense } } // Simplified structure
+                    defense: { save: { statistic: formData.defense } }
                 }
             };
 
@@ -116,6 +138,7 @@ export default function SpellEditor({ initialItem, onSave, onCancel }) {
         <div className="editor-container" style={{ padding: 20, background: '#222', height: '100%', overflowY: 'auto' }}>
             <h2>{initialItem ? 'Edit Spell' : 'Create Spell'}</h2>
 
+            {isLoading && <div style={{ color: '#c5a059', marginBottom: 10 }}>Loading spell details...</div>}
             {error && <div className="error-banner" style={{ background: '#d32f2f', color: '#fff', padding: 10, marginBottom: 10 }}>{error}</div>}
 
             <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 20 }}>
@@ -128,9 +151,9 @@ export default function SpellEditor({ initialItem, onSave, onCancel }) {
                     <input type="number" className="modal-input" value={formData.level} onChange={e => handleChange('level', e.target.value)} />
                 </div>
                 <div className="form-group">
-                    <label>School</label>
-                    <select className="modal-input" value={formData.school} onChange={e => handleChange('school', e.target.value)}>
-                        {SPELL_INDEX_FILTER_OPTIONS.schools.map(s => <option key={s} value={s}>{s}</option>)}
+                    <label>Rarity</label>
+                    <select className="modal-input" value={formData.rarity} onChange={e => handleChange('rarity', e.target.value)}>
+                        {['common', 'uncommon', 'rare', 'unique'].map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                 </div>
             </div>

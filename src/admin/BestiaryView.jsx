@@ -237,13 +237,18 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
     };
 
     const handleRowClick = (creature) => {
-        // On mobile: single tap opens preview sheet
-        if (isMobile) setPreviewCreature(creature);
+        // Single click: open preview (desktop side panel)
+        if (!isMobile) setPreviewCreature(creature);
     };
 
     const handleRowDoubleClick = (creature) => {
-        // On desktop: double-click opens preview side panel
-        if (!isMobile) setPreviewCreature(creature);
+        if (isMobile) {
+            // Mobile: double tap opens preview
+            setPreviewCreature(creature);
+        } else {
+            // Desktop: double-click opens edit dialog
+            handleEdit(creature);
+        }
     };
 
     const handleSave = (creatureData) => {

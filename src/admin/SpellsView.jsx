@@ -1,24 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import SpellEditor from './editors/SpellEditor';
 import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
-import { SPELL_INDEX_FILTER_OPTIONS, SPELL_INDEX_ITEMS } from '../shared/catalog/spellIndex';
+import BottomSheet from '../shared/components/BottomSheet';
+import ContentPreviewCard from './components/ContentPreviewCard';
+import { useWindowSize } from '../shared/hooks/useWindowSize';
+import { SPELL_INDEX_FILTER_OPTIONS, SPELL_INDEX_ITEMS, fetchSpellDetailBySourceFile } from '../shared/catalog/spellIndex';
 
 const uniqueTypes = SPELL_INDEX_FILTER_OPTIONS.types;
 const uniqueRarities = SPELL_INDEX_FILTER_OPTIONS.rarities;
 const uniqueTraditions = SPELL_INDEX_FILTER_OPTIONS.traditions;
 const uniqueTraits = SPELL_INDEX_FILTER_OPTIONS.traits;
-const uniqueSchools = SPELL_INDEX_FILTER_OPTIONS.schools;
 
 export default function SpellsView({ onInspectItem }) {
+    const { isMobile } = useWindowSize();
+
     const [itemSearch, setItemSearch] = useState('');
     const [filterType, setFilterType] = useState([]);
     const [filterRarity, setFilterRarity] = useState([]);
     const [filterTraditions, setFilterTraditions] = useState([]);
     const [filterTraits, setFilterTraits] = useState([]);
-    const [filterSchool, setFilterSchool] = useState([]);
     const [itemPage, setItemPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(50);
-    const [visibleColumns, setVisibleColumns] = useState(['name', 'level', 'traditions', 'school', 'rarity', 'scroll', 'wand']);
+    const [visibleColumns, setVisibleColumns] = useState(['name', 'level', 'traditions', 'rarity', 'scroll', 'wand']);
     const [showColSelector, setShowColSelector] = useState(false);
 
     const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
@@ -28,17 +31,29 @@ export default function SpellsView({ onInspectItem }) {
     const [lastSelectedIndex, setLastSelectedIndex] = useState(-1);
     const [selectedItems, setSelectedItems] = useState([]);
 
+    // Preview state
+    const [previewItem, setPreviewItem] = useState(null);
+    const [loadedDetail, setLoadedDetail] = useState(null);
+
+    // Fetch full detail when preview item changes
+    useEffect(() => {
+        if (!previewItem?.sourceFile) { setLoadedDetail(null); return; }
+        setLoadedDetail(null);
+        fetchSpellDetailBySourceFile(previewItem.sourceFile)
+            .then(detail => setLoadedDetail(detail))
+            .catch(err => console.error('Failed to load spell detail', err));
+    }, [previewItem?.sourceFile]);
+
     const filteredItems = useMemo(() => {
         const searchLower = itemSearch.trim().toLowerCase();
         return SPELL_INDEX_ITEMS.filter(i => {
             if (filterType.length && !filterType.includes(i.type)) return false;
             if (filterRarity.length && !filterRarity.includes(i.rarity)) return false;
-            if (filterSchool.length && !filterSchool.includes(i.school)) return false;
             if (filterTraditions.length && !filterTraditions.some(t => i.traditions.includes(t))) return false;
             if (filterTraits.length && !filterTraits.every(t => i.traits.includes(t))) return false;
             return i.name.toLowerCase().includes(searchLower);
         });
-    }, [filterType, filterRarity, filterTraditions, filterTraits, filterSchool, itemSearch]);
+    }, [filterType, filterRarity, filterTraditions, filterTraits, itemSearch]);
 
     const sortedItems = useMemo(() => {
         const items = [...filteredItems];
@@ -72,7 +87,7 @@ export default function SpellsView({ onInspectItem }) {
     }, [currentPage, itemPage]);
 
     const allColumns = useMemo(
-        () => ['name', 'level', 'type', 'traditions', 'school', 'rarity', 'traits', 'scroll', 'wand'],
+        () => ['name', 'level', 'type', 'traditions', 'rarity', 'traits', 'scroll', 'wand'],
         []
     );
 
@@ -117,12 +132,30 @@ export default function SpellsView({ onInspectItem }) {
             // 4. Rebuild Index
             await fetch('/api/admin/rebuild-index/spells', { method: 'POST' });
 
-            // 5. Reload (Optimistic update hard with static index)
+            // 5. Reload
             window.location.reload();
 
         } catch (err) {
             console.error(err);
             alert(`Error updating spell: ${err.message}`);
+        }
+    };
+
+    const handleRowClick = (item) => {
+        // Desktop: single click opens preview side panel
+        // Mobile: single click just selects
+        if (!isMobile) {
+            setPreviewItem(item);
+        }
+    };
+
+    const handleRowDoubleClick = (item) => {
+        if (isMobile) {
+            // Mobile: double tap opens preview
+            setPreviewItem(item);
+        } else {
+            // Desktop: double click opens editor
+            setEditingItem(item);
         }
     };
 
@@ -134,17 +167,18 @@ export default function SpellsView({ onInspectItem }) {
             setSelectedItems(newSelected);
             setLastSelectedIndex(index);
         }
-        setContextMenu({ x: e.clientX, y: e.clientY, items: newSelected });
+        setContextMenu({ x: e.clientX, y: e.clientY, items: newSelected, item });
     };
 
     const performContextAction = (action) => {
-        const targets = contextMenu?.items || [];
-        if (targets.length === 0) return;
+        const item = contextMenu?.item;
+        if (!item) return;
 
         if (action === 'edit') {
-            const itemName = targets[0];
-            const item = sortedItems.find(i => i.name === itemName);
-            if (item) setEditingItem(item);
+            setEditingItem(item);
+            setPreviewItem(null);
+        } else if (action === 'preview') {
+            setPreviewItem(item);
         }
         setContextMenu(null);
     };
@@ -158,6 +192,16 @@ export default function SpellsView({ onInspectItem }) {
             />
         );
     }
+
+    // Preview content
+    const previewContent = previewItem ? (
+        <ContentPreviewCard
+            item={loadedDetail || previewItem}
+            entityType="spell"
+            onEdit={() => { setEditingItem(previewItem); setPreviewItem(null); }}
+            onClose={() => setPreviewItem(null)}
+        />
+    ) : null;
 
     return (
         <div className="admin-layout" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -188,12 +232,6 @@ export default function SpellsView({ onInspectItem }) {
                     options={uniqueRarities}
                     selected={filterRarity}
                     onChange={(next) => { setFilterRarity(next); setItemPage(1); }}
-                />
-                <MultiSelectDropdown
-                    label="School"
-                    options={uniqueSchools}
-                    selected={filterSchool}
-                    onChange={(next) => { setFilterSchool(next); setItemPage(1); }}
                 />
                 <MultiSelectDropdown
                     label="Traditions"
@@ -245,6 +283,7 @@ export default function SpellsView({ onInspectItem }) {
                 </select>
             </div>
 
+            {/* Table + Side panel */}
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                 <div style={{ flex: 1, overflow: 'auto', padding: 10 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
@@ -267,10 +306,13 @@ export default function SpellsView({ onInspectItem }) {
                                     key={idx}
                                     style={{
                                         borderBottom: '1px solid #444',
-                                        background: (idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
+                                        background: previewItem?.name === item.name
+                                            ? 'rgba(197,160,89,0.1)'
+                                            : (idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
                                         cursor: 'pointer'
                                     }}
-                                    onDoubleClick={() => onInspectItem?.(item)}
+                                    onClick={() => handleRowClick(item)}
+                                    onDoubleClick={() => handleRowDoubleClick(item)}
                                     onContextMenu={(e) => handleContextMenu(e, item, idx)}
                                 >
                                     {visibleColumns.map(c => (
@@ -299,30 +341,51 @@ export default function SpellsView({ onInspectItem }) {
                         <button disabled={currentPage === totalPages} onClick={() => setItemPage(p => Math.min(totalPages, p + 1))}>Next</button>
                     </div>
                 </div>
+
+                {/* Desktop side preview panel */}
+                {!isMobile && previewItem && (
+                    <div style={{ width: 420, borderLeft: '1px solid #444', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <h4 style={{ margin: 0, color: '#aaa' }}>Preview</h4>
+                            <button onClick={() => setPreviewItem(null)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>✕</button>
+                        </div>
+                        {previewContent}
+                    </div>
+                )}
             </div>
 
+            {/* Mobile preview BottomSheet */}
+            {isMobile && (
+                <BottomSheet
+                    isOpen={!!previewItem}
+                    onClose={() => setPreviewItem(null)}
+                    title={previewItem?.name || 'Preview'}
+                    height="85vh"
+                >
+                    {previewContent}
+                </BottomSheet>
+            )}
 
-            {
-                contextMenu && (
-                    <div
-                        style={{
-                            position: 'fixed',
-                            top: contextMenu.y,
-                            left: contextMenu.x,
-                            background: '#2b2b2e',
-                            border: '1px solid #c5a059',
-                            borderRadius: 4,
-                            zIndex: 2000,
-                            minWidth: 150,
-                            boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer' }} onClick={() => performContextAction('edit')}>Edit Spell</div>
-                        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }} onClick={() => setContextMenu(null)}></div>
-                    </div>
-                )
-            }
+            {contextMenu && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: contextMenu.y,
+                        left: contextMenu.x,
+                        background: '#2b2b2e',
+                        border: '1px solid #c5a059',
+                        borderRadius: 4,
+                        zIndex: 2000,
+                        minWidth: 150,
+                        boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #444' }} onClick={() => performContextAction('preview')}>👁️ Preview</div>
+                    <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer' }} onClick={() => performContextAction('edit')}>✏️ Edit Spell</div>
+                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }} onClick={() => setContextMenu(null)}></div>
+                </div>
+            )}
         </div >
     );
 }

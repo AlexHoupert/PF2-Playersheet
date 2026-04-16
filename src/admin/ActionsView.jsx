@@ -1,13 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ActionEditor from './editors/ActionEditor';
 import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
-import { getAllActionIndexItems, ACTION_INDEX_FILTER_OPTIONS } from '../shared/catalog/actionIndex';
+import BottomSheet from '../shared/components/BottomSheet';
+import ContentPreviewCard from './components/ContentPreviewCard';
+import { useWindowSize } from '../shared/hooks/useWindowSize';
+import { getAllActionIndexItems, ACTION_INDEX_FILTER_OPTIONS, fetchActionDetailBySourceFile } from '../shared/catalog/actionIndex';
 
 const uniqueTypes = ACTION_INDEX_FILTER_OPTIONS.types;
 const uniqueSubtypes = ACTION_INDEX_FILTER_OPTIONS.subtypes;
 
 export default function ActionsView({ onInspectItem }) {
-    // Migrated to File-System. No more DB actions.
+    const { isMobile } = useWindowSize();
 
     const [itemSearch, setItemSearch] = useState('');
     const [filterType, setFilterType] = useState([]);
@@ -18,28 +21,18 @@ export default function ActionsView({ onInspectItem }) {
     const [editingItem, setEditingItem] = useState(null);
     const [contextMenu, setContextMenu] = useState(null);
 
-    // Source of Truth is now the Index directly
-    // The server/script merges system and user actions into one index
-    // However, we still need to distinguish "Custom" actions for UI (Edit/Delete vs Clone/View).
-    // The index item has `sourceFile`. If it starts with `actions/`, it's likely custom if it's in our user folder.
-    // Actually, `generate_action_index.js` scans `ressources/actions`. 
-    // And system actions? `generate_action_index.js` ONLY scans `ressources/actions`??
-    // Wait. `action_index.json` previously contained system actions.
-    // Let's re-read `generate_action_index.js`.
-    // It filters `fs.readdirSync(ACTIONS_DIR)`.
-    // Does `ACTIONS_DIR` contain system actions?
-    // If I overwrote the index logic to ONLY scan `ressources/actions`, I might have lost system actions if they weren't in that folder!
-    // The previous index might have been static or generated from system compendiums.
-    // `action_index.json` has `dict` and `items`.
-    // If `ressources/actions` is empty (except for my new files), then the index will only have my files.
-    // I need to ensure SYSTEM actions are preserved or also scanned.
-    // Assuming for now the user has system actions in `ressources/actions` or I need to handle "System" vs "Custom".
-    // "Custom" actions usually reside in `ressources/actions`. System might be elsewhere or pre-loaded.
-    // But for the View, we just display what's in the index.
+    // Preview state
+    const [previewItem, setPreviewItem] = useState(null);
+    const [loadedDetail, setLoadedDetail] = useState(null);
 
-    // For "Is Custom": we can check if sourceFile starts with `actions/`.
-    // System actions often come from `systems/pf2e/...` or similar if copied.
-    // Let's assume anything in `ressources/actions` is editable.
+    // Fetch full detail when preview item changes
+    useEffect(() => {
+        if (!previewItem?.sourceFile) { setLoadedDetail(null); return; }
+        setLoadedDetail(null);
+        fetchActionDetailBySourceFile(previewItem.sourceFile)
+            .then(detail => setLoadedDetail(detail))
+            .catch(err => console.error('Failed to load action detail', err));
+    }, [previewItem?.sourceFile]);
 
     const allActions = getAllActionIndexItems();
 
@@ -63,6 +56,20 @@ export default function ActionsView({ onInspectItem }) {
     const totalPages = Math.max(1, Math.ceil(sortedItems.length / itemsPerPage));
     const paginatedItems = sortedItems.slice((itemPage - 1) * itemsPerPage, itemPage * itemsPerPage);
 
+    const handleRowClick = (item) => {
+        if (!isMobile) {
+            setPreviewItem(item);
+        }
+    };
+
+    const handleRowDoubleClick = (item) => {
+        if (isMobile) {
+            setPreviewItem(item);
+        } else {
+            setEditingItem(item);
+        }
+    };
+
     // Context Menu Handler
     const handleContextMenu = (e, item) => {
         e.preventDefault();
@@ -85,7 +92,6 @@ export default function ActionsView({ onInspectItem }) {
             // Rebuild
             await fetch('/api/admin/rebuild-index/actions', { method: 'POST' });
 
-            // Reload page or force refresh context (simplest is reload for pure file-based systems without live socket)
             window.location.reload();
         } catch (err) {
             alert(`Error deleting action: ${err.message}`);
@@ -98,12 +104,22 @@ export default function ActionsView({ onInspectItem }) {
                 initialItem={editingItem}
                 onSave={() => {
                     setEditingItem(null);
-                    window.location.reload(); // Reload to fetch new index
+                    window.location.reload();
                 }}
                 onCancel={() => setEditingItem(null)}
             />
         );
     }
+
+    // Preview content
+    const previewContent = previewItem ? (
+        <ContentPreviewCard
+            item={loadedDetail || previewItem}
+            entityType="action"
+            onEdit={() => { setEditingItem(previewItem); setPreviewItem(null); }}
+            onClose={() => setPreviewItem(null)}
+        />
+    ) : null;
 
     return (
         <div className="admin-layout" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -141,51 +157,79 @@ export default function ActionsView({ onInspectItem }) {
                 />
             </div>
 
-            {/* Table */}
-            <div style={{ flex: 1, overflow: 'auto', padding: 10 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
-                    <thead>
-                        <tr style={{ background: '#333', textAlign: 'left' }}>
-                            <th style={{ padding: 8 }}>Name</th>
-                            <th style={{ padding: 8 }}>Cost</th>
-                            <th style={{ padding: 8 }}>Type</th>
-                            <th style={{ padding: 8 }}>Subtype</th>
-                            <th style={{ padding: 8 }}>Feat Prereq</th>
-                            <th style={{ padding: 8 }}>Source</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {paginatedItems.map((item, idx) => (
-                            <tr
-                                key={item.name}
-                                style={{
-                                    borderBottom: '1px solid #444',
-                                    background: (idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
-                                    cursor: 'pointer'
-                                }}
-                                onDoubleClick={() => setEditingItem(item)}
-                                onContextMenu={(e) => handleContextMenu(e, item)}
-                            >
-                                <td style={{ padding: 8, color: (item.sourceFile && item.sourceFile.startsWith('actions/')) ? 'var(--text-gold)' : 'inherit' }}>
-                                    {item.name}
-                                </td>
-                                <td style={{ padding: 8 }}>{item.typeCode || '-'}</td>
-                                <td style={{ padding: 8 }}>{item.userType || item.type}</td>
-                                <td style={{ padding: 8 }}>{item.userSubtype || item.subtype}</td>
-                                <td style={{ padding: 8, color: '#aaa', fontStyle: 'italic' }}>{item.feat || '-'}</td>
-                                <td style={{ padding: 8 }}>
-                                    {(item.sourceFile && item.sourceFile.startsWith('actions/')) ? 'Custom' : 'System'}
-                                </td>
+            {/* Table + Side panel */}
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                <div style={{ flex: 1, overflow: 'auto', padding: 10 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
+                        <thead>
+                            <tr style={{ background: '#333', textAlign: 'left' }}>
+                                <th style={{ padding: 8 }}>Name</th>
+                                <th style={{ padding: 8 }}>Cost</th>
+                                <th style={{ padding: 8 }}>Type</th>
+                                <th style={{ padding: 8 }}>Subtype</th>
+                                <th style={{ padding: 8 }}>Feat Prereq</th>
+                                <th style={{ padding: 8 }}>Source</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-                <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center' }}>
-                    <button disabled={itemPage === 1} onClick={() => setItemPage(p => Math.max(1, p - 1))}>Prev</button>
-                    <span>Page {itemPage} of {totalPages}</span>
-                    <button disabled={itemPage === totalPages} onClick={() => setItemPage(p => Math.min(totalPages, p + 1))}>Next</button>
+                        </thead>
+                        <tbody>
+                            {paginatedItems.map((item, idx) => (
+                                <tr
+                                    key={item.name}
+                                    style={{
+                                        borderBottom: '1px solid #444',
+                                        background: previewItem?.name === item.name
+                                            ? 'rgba(197,160,89,0.1)'
+                                            : (idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={() => handleRowClick(item)}
+                                    onDoubleClick={() => handleRowDoubleClick(item)}
+                                    onContextMenu={(e) => handleContextMenu(e, item)}
+                                >
+                                    <td style={{ padding: 8, color: (item.sourceFile && item.sourceFile.startsWith('actions/')) ? 'var(--text-gold)' : 'inherit' }}>
+                                        {item.name}
+                                    </td>
+                                    <td style={{ padding: 8 }}>{item.typeCode || '-'}</td>
+                                    <td style={{ padding: 8 }}>{item.userType || item.type}</td>
+                                    <td style={{ padding: 8 }}>{item.userSubtype || item.subtype}</td>
+                                    <td style={{ padding: 8, color: '#aaa', fontStyle: 'italic' }}>{item.feat || '-'}</td>
+                                    <td style={{ padding: 8 }}>
+                                        {(item.sourceFile && item.sourceFile.startsWith('actions/')) ? 'Custom' : 'System'}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center' }}>
+                        <button disabled={itemPage === 1} onClick={() => setItemPage(p => Math.max(1, p - 1))}>Prev</button>
+                        <span>Page {itemPage} of {totalPages}</span>
+                        <button disabled={itemPage === totalPages} onClick={() => setItemPage(p => Math.min(totalPages, p + 1))}>Next</button>
+                    </div>
                 </div>
+
+                {/* Desktop side preview panel */}
+                {!isMobile && previewItem && (
+                    <div style={{ width: 420, borderLeft: '1px solid #444', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <h4 style={{ margin: 0, color: '#aaa' }}>Preview</h4>
+                            <button onClick={() => setPreviewItem(null)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>✕</button>
+                        </div>
+                        {previewContent}
+                    </div>
+                )}
             </div>
+
+            {/* Mobile preview BottomSheet */}
+            {isMobile && (
+                <BottomSheet
+                    isOpen={!!previewItem}
+                    onClose={() => setPreviewItem(null)}
+                    title={previewItem?.name || 'Preview'}
+                    height="85vh"
+                >
+                    {previewContent}
+                </BottomSheet>
+            )}
 
             {contextMenu && (
                 <div
@@ -196,12 +240,15 @@ export default function ActionsView({ onInspectItem }) {
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
+                    <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #444' }} onClick={() => { setPreviewItem(contextMenu.item); setContextMenu(null); }}>
+                        👁️ Preview
+                    </div>
                     <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer' }} onClick={() => { setEditingItem(contextMenu.item); setContextMenu(null); }}>
-                        {contextMenu.item.sourceFile && contextMenu.item.sourceFile.startsWith('actions/') ? 'Edit Action' : 'Clone/Override Action'}
+                        {contextMenu.item.sourceFile && contextMenu.item.sourceFile.startsWith('actions/') ? '✏️ Edit Action' : '📋 Clone/Override Action'}
                     </div>
                     {contextMenu.item.sourceFile && contextMenu.item.sourceFile.startsWith('actions/') && (
                         <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer', color: '#ff5252' }} onClick={() => { deleteAction(contextMenu.item); setContextMenu(null); }}>
-                            Delete Action
+                            🗑️ Delete Action
                         </div>
                     )}
                     <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }} onClick={() => setContextMenu(null)}></div>

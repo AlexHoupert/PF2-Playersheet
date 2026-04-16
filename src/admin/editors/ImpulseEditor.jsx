@@ -5,7 +5,7 @@ import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 // Impulses share many traits/traditions (Primal/Elemental) logic, though strictly they are "Kineticist" traits.
 // For now, we'll import from spellIndex for reuse of Schools/Traditions lists if they apply, 
 // or define custom ones. Impulse index might have generated options too.
-import { IMPULSE_INDEX_FILTER_OPTIONS } from '../../shared/catalog/impulseIndex';
+import { IMPULSE_INDEX_FILTER_OPTIONS, fetchImpulseDetailBySourceFile } from '../../shared/catalog/impulseIndex';
 
 export default function ImpulseEditor({ initialItem, onSave, onCancel }) {
     const [formData, setFormData] = useState({
@@ -26,6 +26,7 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel }) {
     });
 
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -33,7 +34,7 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel }) {
             setFormData({
                 name: initialItem.name || '',
                 level: initialItem.level || 0,
-                school: initialItem.school || '', // Often unused for Impulses
+                school: initialItem.school || '',
                 traditions: initialItem.traditions || [],
                 traits: initialItem.traits || [],
                 rarity: initialItem.rarity || 'common',
@@ -46,6 +47,30 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel }) {
                 description: initialItem.description || '',
                 sourceFile: initialItem.sourceFile || null
             });
+
+            // Fetch full details if sourceFile exists (index items lack description, target, etc.)
+            if (initialItem.sourceFile) {
+                setIsLoading(true);
+                fetchImpulseDetailBySourceFile(initialItem.sourceFile)
+                    .then(details => {
+                        setFormData(prev => ({
+                            ...prev,
+                            description: details.description || prev.description || '',
+                            target: details.target || prev.target || '',
+                            area: details.area || prev.area || '',
+                            duration: details.duration || prev.duration || '',
+                            defense: details.defense || prev.defense || '',
+                            range: details.range || prev.range || '',
+                            time: details.time || prev.time || '',
+                        }));
+                        setIsLoading(false);
+                    })
+                    .catch(err => {
+                        console.error("Failed to load impulse details", err);
+                        setError("Failed to load impulse details.");
+                        setIsLoading(false);
+                    });
+            }
         }
     }, [initialItem]);
 
@@ -120,6 +145,7 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel }) {
         <div className="editor-container" style={{ padding: 20, background: '#222', height: '100%', overflowY: 'auto' }}>
             <h2>{initialItem ? 'Edit Impulse' : 'Create Impulse'}</h2>
 
+            {isLoading && <div style={{ color: '#c5a059', marginBottom: 10 }}>Loading impulse details...</div>}
             {error && <div className="error-banner" style={{ background: '#d32f2f', color: '#fff', padding: 10, marginBottom: 10 }}>{error}</div>}
 
             <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 20 }}>

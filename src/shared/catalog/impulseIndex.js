@@ -85,6 +85,20 @@ export async function fetchImpulseDetailBySourceFile(sourceFile) {
     const sys = data.system || {};
     const isAttack = (sys.traits?.value || []).includes('attack');
 
+    // Convert area object to readable string
+    let area = null;
+    if (sys.area) {
+        if (typeof sys.area === 'string') {
+            area = sys.area;
+        } else if (sys.area.value && sys.area.type) {
+            area = `${sys.area.value}-foot ${sys.area.type}`;
+        } else if (sys.area.value) {
+            area = `${sys.area.value} feet`;
+        } else if (sys.area.type) {
+            area = sys.area.type;
+        }
+    }
+
     return {
         sourceFile,
         img: data.img ? data.img.replace('systems/pf2e/', '') : null,
@@ -98,7 +112,9 @@ export async function fetchImpulseDetailBySourceFile(sourceFile) {
         school: sys.school ? sys.school.value : null,
         range: sys.range ? sys.range.value : null,
         time: sys.time ? sys.time.value : null,
-        area: sys.area || null,
+        target: sys.target ? sys.target.value : null,
+        duration: sys.duration ? sys.duration.value : null,
+        area,
         defense: sys.defense?.save?.statistic || (isAttack ? 'ac' : null),
     };
 }
