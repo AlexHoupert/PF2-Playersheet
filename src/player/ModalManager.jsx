@@ -74,7 +74,8 @@ export function ModalManager({
     // Callbacks
     toggleBloodmagic,
     removeFromCharacter,
-    saveNewAction
+    saveNewAction,
+    onDailyPrep
 }) {
 
     if (!modalMode) return null;
@@ -97,6 +98,7 @@ export function ModalManager({
                 setModalMode={setModalMode}
                 toggleBloodmagic={toggleBloodmagic}
                 removeFromCharacter={removeFromCharacter}
+                onDailyPrep={onDailyPrep}
             />
         );
     }

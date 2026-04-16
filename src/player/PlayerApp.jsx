@@ -311,6 +311,55 @@ export default function PlayerApp({ db, setDb }) {
         /^(arrows?|bolts?|rounds?\s*\()/i.test(item?.name || '') ||
         ((item?.type || '').toLowerCase() === 'ammunition' && /\b(arrow|bolt|round)\b/i.test(item?.name || ''));
 
+    const performDailyPrep = () => {
+        const feats = character.feats || [];
+        const hasQuickAlchemy = feats.includes("Quick Alchemy");
+        const slotKeys = ['f', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+
+        updateCharacter(c => {
+            // 1. Refill all spell slots (set used count back to 0)
+            if (c.magic?.slots) {
+                slotKeys.forEach(k => {
+                    if ((c.magic.slots[k + "_max"] || 0) > 0) {
+                        c.magic.slots[k + "_curr"] = 0;
+                    }
+                });
+            }
+
+            // 2. Refill equipped staff charges
+            (c.inventory || []).forEach(item => {
+                if (!item.equipped) return;
+                const rawTraits = item.system?.traits?.value || item.traits || [];
+                const traitsList = (Array.isArray(rawTraits) ? rawTraits : []).map(t => String(t).toLowerCase());
+                const isStaff = traitsList.includes('staff') || (item.name || '').toLowerCase().includes('staff');
+                if (!isStaff) return;
+                let maxCharges = item.system?.staff?.max || 0;
+                if (!maxCharges && c.magic?.slots) {
+                    for (let i = 10; i >= 1; i--) {
+                        if ((c.magic.slots[`${i}_max`] || 0) > 0) { maxCharges = i; break; }
+                    }
+                }
+                if (!item.system) item.system = {};
+                if (!item.system.staff) item.system.staff = {};
+                item.system.staff.charges = maxCharges;
+                item.system.staff.max = maxCharges;
+            });
+
+            // 3. Remove all temporary (prepared) items
+            c.inventory = (c.inventory || []).filter(i => !i.prepared);
+
+            // 4. Add 4 Versatile Vials if character has Quick Alchemy
+            if (hasQuickAlchemy) {
+                const vialBase = getShopIndexItemByName('Versatile Vial') || { name: 'Versatile Vial' };
+                c.inventory.push({ ...vialBase, qty: 4, prepared: true, addedAt: Date.now() });
+            }
+        });
+
+        // 5. Clear daily prep queue
+        setDailyPrepQueue([]);
+        setModalMode(null);
+    };
+
     const executeBuy = (item, qty) => {
         updateCharacter(c => {
             const cost = (item.price || 0) * qty;
@@ -1659,6 +1708,7 @@ export default function PlayerApp({ db, setDb }) {
                 toggleBloodmagic={toggleBloodmagic}
                 removeFromCharacter={removeFromCharacter}
                 saveNewAction={saveNewAction}
+                onDailyPrep={performDailyPrep}
             />
 
 

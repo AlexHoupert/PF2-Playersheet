@@ -712,7 +712,7 @@ export function AddActionModal({ onSave, onClose }) {
  * @param {Function} props.removeFromCharacter - Callback to remove item from character.
  * @returns {JSX.Element}
  */
-export function ContextModal({ character, modalData, updateCharacter, onClose, setModalMode, toggleBloodmagic, removeFromCharacter }) {
+export function ContextModal({ character, modalData, updateCharacter, onClose, setModalMode, toggleBloodmagic, removeFromCharacter, onDailyPrep }) {
     const type = modalData?.type;
     const item = modalData?.item;
     const title = item?.name || item?.title || (type ? type.replace(/_/g, ' ').toUpperCase() : 'OPTIONS');
@@ -772,6 +772,19 @@ export function ContextModal({ character, modalData, updateCharacter, onClose, s
                         <>
                             <button className="set-btn" onClick={() => setModalMode('edit_level')}>Change Character Level</button>
                             <button className="set-btn" style={{ marginTop: 10, background: '#222', border: '1px solid #c5a059', color: '#c5a059' }} onClick={() => setModalMode('quicksheet')}>Open Quick Sheet</button>
+                            {onDailyPrep && (
+                                <button
+                                    className="set-btn"
+                                    style={{ marginTop: 10, background: '#1a3a1a', border: '1px solid #4caf50', color: '#81c784' }}
+                                    onClick={() => {
+                                        if (confirm('Perform Daily Preparation?\n\n• Refill spell slots\n• Refill equipped staff charges\n• Remove temporary items\n• Refresh crafting queue\n• Restore Versatile Vials (if Quick Alchemy)')) {
+                                            onDailyPrep();
+                                        }
+                                    }}
+                                >
+                                    Daily Preparation
+                                </button>
+                            )}
                         </>
                     )}
 

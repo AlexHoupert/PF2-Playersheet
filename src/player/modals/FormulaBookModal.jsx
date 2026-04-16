@@ -77,7 +77,7 @@ export function FormulaBookModal({
                                             setDailyPrepQueue(prev => {
                                                 const existing = prev.find(p => p.name === item.name);
                                                 if (existing) {
-                                                    return prev.map(p => p.name === item.name ? { ...p, batches: p.batches + 1 } : p);
+                                                    return prev.map(p => p.name === item.name ? { ...p, batches: p.batches + 1, batchSize } : p);
                                                 }
                                                 return [...prev, { ...item, batches: 1, batchSize }];
                                             });
@@ -129,13 +129,15 @@ export function FormulaBookModal({
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                {dailyPrepQueue.map((qItem, idx) => (
+                                {dailyPrepQueue.map((qItem, idx) => {
+                                    const effectiveBatchSize = isAmmoItem(qItem) ? 4 : 1;
+                                    return (
                                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#30204a', padding: '5px 8px', borderRadius: 4 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                             {qItem.img && <img src={`ressources/${qItem.img}`} style={{ width: 24, height: 24 }} alt="" />}
                                             <div>
                                                 <div style={{ fontSize: '0.95em' }}>{qItem.name}</div>
-                                                <div style={{ fontSize: '0.75em', color: '#bbb' }}>{qItem.batches} batch(es) x {qItem.batchSize || 1} = <span style={{ color: '#fff' }}>{qItem.batches * (qItem.batchSize || 1)} items</span></div>
+                                                <div style={{ fontSize: '0.75em', color: '#bbb' }}>{qItem.batches} batch(es) x {effectiveBatchSize} = <span style={{ color: '#fff' }}>{qItem.batches * effectiveBatchSize} items</span></div>
                                             </div>
                                         </div>
                                         <div style={{ display: 'flex', gap: 5 }}>
@@ -151,7 +153,8 @@ export function FormulaBookModal({
                                             </button>
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
 
                                 <button
                                     className="btn-buy"
@@ -160,7 +163,8 @@ export function FormulaBookModal({
                                         if (confirm(`Create ${currentBatches} batches of items?`)) {
                                             updateCharacter(c => {
                                                 dailyPrepQueue.forEach(qItem => {
-                                                    const totalQty = qItem.batches * (qItem.batchSize || 1);
+                                                    const effectiveBatchSize = isAmmoItem(qItem) ? 4 : 1;
+                                                    const totalQty = qItem.batches * effectiveBatchSize;
                                                     c.inventory.push({
                                                         ...qItem,
                                                         qty: totalQty,
