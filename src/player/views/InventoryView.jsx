@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useCampaign } from '../../shared/context/CampaignContext';
 import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
+import BottomSheet from '../../shared/components/BottomSheet';
 import { getShopItemRowMeta } from '../../shared/catalog/shopRowMeta';
 import { shouldStack } from '../../shared/utils/inventoryUtils';
 import { deepClone } from '../../shared/utils/deepClone';
@@ -25,6 +26,7 @@ export function InventoryView({
     onSplitGold
 }) {
     const [itemSubTab, setItemSubTab] = useState('Equipment');
+    const [vialActivation, setVialActivation] = useState(null); // item being converted via Versatile Vial
     const equipTapRef = useRef({ key: null, time: 0 });
     const equipTapTimeoutRef = useRef(null);
     const { activeCampaign } = useCampaign();
@@ -124,7 +126,11 @@ export function InventoryView({
 
                 if (isDoubleTap) {
                     equipTapRef.current = { key: null, time: 0 };
-                    onToggleEquip(merged);
+                    if (item.name === 'Versatile Vial') {
+                        setVialActivation(merged);
+                    } else {
+                        onToggleEquip(merged);
+                    }
                     return;
                 }
 
@@ -156,7 +162,11 @@ export function InventoryView({
                     equipTapTimeoutRef.current = null;
                 }
 
-                if (isDoubleTap && (item.type === 'Consumable' || item.consumable || item.type === 'consumable')) {
+                if (isDoubleTap && item.name === 'Versatile Vial') {
+                    equipTapRef.current = { key: null, time: 0 };
+                    setVialActivation(merged);
+                    return;
+                } else if (isDoubleTap && (item.type === 'Consumable' || item.consumable || item.type === 'consumable')) {
                     // Consumption Confirmation
                     if (window.confirm(`Consume 1 ${item.name}?`)) {
                         if (onConsumeItem) {
@@ -453,6 +463,14 @@ export function InventoryView({
                 </div>
             ))}
 
+            {/* ── Versatile Vial Formula Selector ── */}
+            <VersatileVialSheet
+                activation={vialActivation}
+                formulas={character.formulaBook || []}
+                onClose={() => setVialActivation(null)}
+                onUpdateCharacter={onUpdateCharacter}
+            />
+
             {itemSubTab === 'Loot' && (
                 (() => {
                     const visibleBags = (activeCampaign?.lootBags || []).filter(b => !b.isLocked);
@@ -562,5 +580,90 @@ export function InventoryView({
                 </button>
             </div>
         </div>
+    );
+}
+
+// ── Versatile Vial Formula Selector ─────────────────────────────────────────
+
+function isAmmoFormula(item) {
+    return (item?.type || '').toLowerCase() === 'ammunition' ||
+        (item?.category || '').toLowerCase().includes('ammo') ||
+        (item?.group || '').toLowerCase() === 'ammunition' ||
+        /arrow|bolt|round|cartridge|shot/i.test(item?.name || '');
+}
+
+function VersatileVialSheet({ activation, formulas, onClose, onUpdateCharacter }) {
+    if (!activation) return null;
+
+    const handleSelect = (formulaName) => {
+        const formulaItem = getShopIndexItemByName(formulaName) || { name: formulaName };
+        const qty = isAmmoFormula(formulaItem) ? 4 : 1;
+
+        onUpdateCharacter(c => {
+            // Remove 1 Versatile Vial
+            const vialIdx = c.inventory.findIndex(i => i.name === 'Versatile Vial');
+            if (vialIdx >= 0) {
+                const q = c.inventory[vialIdx].qty || 1;
+                if (q <= 1) c.inventory.splice(vialIdx, 1);
+                else c.inventory[vialIdx] = { ...c.inventory[vialIdx], qty: q - 1 };
+            }
+            // Add temporary crafted item
+            c.inventory.push({
+                ...formulaItem,
+                qty,
+                prepared: true,
+                addedAt: Date.now(),
+            });
+        });
+        onClose();
+    };
+
+    return (
+        <BottomSheet
+            isOpen={true}
+            onClose={onClose}
+            title="🧪 Versatile Vial — Select Formula"
+            height="70vh"
+        >
+            <div style={{ padding: '0 4px 24px' }}>
+                {formulas.length === 0 && (
+                    <div style={{ color: '#666', textAlign: 'center', padding: '32px 0', fontSize: '0.9em' }}>
+                        No known formulas.<br />Buy formulas from the shop first.
+                    </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {formulas.map(fName => {
+                        const item = getShopIndexItemByName(fName) || { name: fName };
+                        const ammo = isAmmoFormula(item);
+                        return (
+                            <button
+                                key={fName}
+                                onClick={() => handleSelect(fName)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 12,
+                                    background: '#1a1a1a', border: '1px solid #2a2a2a',
+                                    borderRadius: 8, padding: '10px 12px',
+                                    cursor: 'pointer', textAlign: 'left', width: '100%',
+                                }}
+                            >
+                                {item.img
+                                    ? <img src={`ressources/${item.img}`} style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} alt="" />
+                                    : <div style={{ width: 32, height: 32, background: '#2a2a2a', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>⚗️</div>
+                                }
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ color: '#e8e8e8', fontWeight: 'bold', fontSize: '0.95em' }}>{item.name}</div>
+                                    <div style={{ color: '#888', fontSize: '0.78em', marginTop: 2 }}>
+                                        {item.level ? `Level ${item.level}` : ''}{item.level && item.price ? ' · ' : ''}{item.price ? `${item.price} gp` : ''}
+                                    </div>
+                                </div>
+                                <div style={{ color: '#c5a059', fontSize: '0.8em', fontWeight: 'bold', flexShrink: 0 }}>
+                                    +{ammo ? 4 : 1} {ammo ? 'rounds' : 'temp'}
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        </BottomSheet>
     );
 }

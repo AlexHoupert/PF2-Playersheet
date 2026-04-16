@@ -137,6 +137,9 @@ export default function ItemActionsModal({ mode, item, characters, activeCharInd
         else if (mode === 'TRANSFER') onTransfer(item, targetCharId, val);
     };
 
+    const isBasicAmmo = /^(arrows?|bolts?|rounds?\s*\()/i.test(item?.name || '') ||
+        ((item?.type || '').toLowerCase() === 'ammunition' && /\b(arrow|bolt|round)\b/i.test(item?.name || ''));
+
     const price = item.price || 0;
     const totalCost = (price * val).toFixed(2);
 
@@ -182,7 +185,7 @@ export default function ItemActionsModal({ mode, item, characters, activeCharInd
                     {/* Presets (Only for Buy/Restock/Transfer where you add val, not set absolute) */}
                     {(mode === 'BUY_RESTOCK' || mode === 'TRANSFER') && (
                         <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 15 }}>
-                            {[1, 5, 10].map(n => (
+                            {(mode === 'BUY_RESTOCK' && isBasicAmmo ? [1, 5, 10] : [1, 5, 10]).map(n => (
                                 <button key={n} onClick={() => setVal(n)} style={{
                                     background: '#444', border: '1px solid #666', color: '#ccc',
                                     padding: '5px 10px', borderRadius: 4, cursor: 'pointer'
@@ -195,6 +198,11 @@ export default function ItemActionsModal({ mode, item, characters, activeCharInd
                     {mode === 'BUY_RESTOCK' && (
                         <div style={{ color: '#aaa' }}>
                             Total Price: <span style={{ color: '#d32f2f', fontWeight: 'bold' }}>{totalCost} gp</span>
+                            {isBasicAmmo && (
+                                <div style={{ marginTop: 4, color: '#8bc34a', fontSize: '0.85em' }}>
+                                    ×10 per purchase → {val * 10} {item.name}
+                                </div>
+                            )}
                         </div>
                     )}
 

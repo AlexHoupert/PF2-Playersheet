@@ -307,16 +307,21 @@ export default function PlayerApp({ db, setDb }) {
         };
     };
 
+    const isBasicAmmo = (item) =>
+        /^(arrows?|bolts?|rounds?\s*\()/i.test(item?.name || '') ||
+        ((item?.type || '').toLowerCase() === 'ammunition' && /\b(arrow|bolt|round)\b/i.test(item?.name || ''));
+
     const executeBuy = (item, qty) => {
         updateCharacter(c => {
             const cost = (item.price || 0) * qty;
             if (c.gold >= cost) {
                 c.gold -= cost;
-                // Add item
+                // Basic ammo (arrows/bolts/rounds) yields 10 units per purchase
+                const receivedQty = isBasicAmmo(item) ? qty * 10 : qty;
                 const stackable = shouldStack(item);
                 const existing = stackable ? c.inventory.find(i => i.name === item.name) : null;
-                if (existing) existing.qty = (existing.qty || 1) + qty;
-                else c.inventory.push({ ...item, qty: qty });
+                if (existing) existing.qty = (existing.qty || 1) + receivedQty;
+                else c.inventory.push({ ...item, qty: receivedQty });
             } else {
                 alert("Not enough gold!");
             }

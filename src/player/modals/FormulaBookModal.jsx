@@ -1,6 +1,13 @@
 import React from 'react';
 import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
 
+function isAmmoItem(item) {
+    return (item?.type || '').toLowerCase() === 'ammunition' ||
+        (item?.category || '').toLowerCase().includes('ammo') ||
+        (item?.group || '').toLowerCase() === 'ammunition' ||
+        /arrow|bolt|round|cartridge|shot/i.test(item?.name || '');
+}
+
 export function FormulaBookModal({
     character,
     updateCharacter,
@@ -64,10 +71,7 @@ export function FormulaBookModal({
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            const isAmmo = (item.type || '').toLowerCase() === 'ammunition' ||
-                                                (item.group || '').toLowerCase() === 'ammunition' ||
-                                                /arrow|bolt|round|cartridge|shot/i.test(item.name);
-                                            const batchSize = isAmmo ? 4 : 1;
+                                            const batchSize = isAmmoItem(item) ? 4 : 1;
 
                                             // Add to queue logic
                                             setDailyPrepQueue(prev => {
@@ -91,7 +95,7 @@ export function FormulaBookModal({
                                         title="Prepare Batch (Use Daily Crafting)"
                                     >
                                         <span style={{ fontSize: '1.1em' }}>⚡</span>
-                                        Prep +{((item.type || '').toLowerCase() === 'ammunition' || (item.group || '').toLowerCase() === 'ammunition' || /arrow|bolt|round|cartridge|shot/i.test(item.name)) ? 4 : 1}
+                                        Prep +{isAmmoItem(item) ? 4 : 1}
                                     </button>
                                 )}
                             </div>
