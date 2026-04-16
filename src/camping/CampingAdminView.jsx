@@ -84,9 +84,22 @@ export default function CampingAdminView() {
                 width: editing ? '340px' : '100%', flexShrink: 0,
                 overflowY: 'auto', padding: '20px', borderRight: editing ? '1px solid #333' : 'none'
             }}>
-                <h2 style={{ margin: '0 0 16px 0', fontFamily: 'Cinzel, serif', color: '#c5a059' }}>
-                    Camping System
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <h2 style={{ margin: 0, fontFamily: 'Cinzel, serif', color: '#c5a059' }}>
+                        Camping System
+                    </h2>
+                    <button
+                        onClick={() => window.open('?camp=true', 'pf2e-camp', 'width=800,height=700')}
+                        style={{
+                            padding: '6px 14px', background: '#1a2a1a', border: '1px solid #4caf50',
+                            color: '#81c784', borderRadius: 4, cursor: 'pointer', fontSize: '0.85em',
+                            display: 'flex', alignItems: 'center', gap: 6
+                        }}
+                        title="Open Camp Screen in a separate window"
+                    >
+                        🏕️ Open Camp Screen
+                    </button>
+                </div>
 
                 {/* DC Settings */}
                 <div style={{ background: '#1a1a1d', border: '1px solid #333', borderRadius: 6, padding: 14, marginBottom: 20 }}>

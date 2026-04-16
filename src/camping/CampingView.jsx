@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { getMergedActivities, getActivityDC, getDegreeOfSuccess, getEffectText, DC_TYPE_LABELS } from './campingData';
 import { parseFoundry } from '../shared/utils/foundryParser';
+import CampScreen from './CampScreen';
 
 const DEGREE_COLORS = { crit: '#4caf50', success: '#c5a059', critFail: '#e53935' };
 const DEGREE_LABELS = { crit: 'Critical Success', success: 'Success', critFail: 'Failure' };
@@ -15,6 +16,7 @@ export default function CampingView({ character }) {
     const [selected, setSelected] = useState(null); // currently open activity
     const [rollInput, setRollInput] = useState('');
     const [localResult, setLocalResult] = useState(null); // { degree, effectText }
+    const [showOverview, setShowOverview] = useState(false);
 
     const openActivity = (act) => {
         setSelected(act);
@@ -92,6 +94,20 @@ export default function CampingView({ character }) {
 
     return (
         <div style={{ paddingBottom: 20 }}>
+            {/* Camp Overview Button */}
+            <button
+                onClick={() => setShowOverview(true)}
+                style={{
+                    width: '100%', padding: '8px 12px', marginBottom: 12,
+                    background: '#1a1a2a', border: '1px solid #444', color: '#aaa',
+                    borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    fontSize: '0.85em'
+                }}
+            >
+                <span>🏕️ Camp Overview</span>
+                <span style={{ color: '#555' }}>→</span>
+            </button>
+
             {/* Activity List */}
             {activities.map(act => {
                 const assignment = assignments[act.id];
@@ -130,6 +146,34 @@ export default function CampingView({ character }) {
                     </div>
                 );
             })}
+
+            {/* Camp Overview Overlay */}
+            {showOverview && (
+                <div
+                    style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.9)', zIndex: 2000,
+                        display: 'flex', flexDirection: 'column'
+                    }}
+                    onClick={() => setShowOverview(false)}
+                >
+                    <div
+                        style={{
+                            background: '#1a1a1d', borderBottom: '1px solid #333',
+                            padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <span style={{ fontFamily: 'Cinzel, serif', color: '#c5a059', fontWeight: 'bold' }}>
+                            🏕️ Camp Overview
+                        </span>
+                        <button onClick={() => setShowOverview(false)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.3em' }}>✕</button>
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }} onClick={e => e.stopPropagation()}>
+                        <CampScreen />
+                    </div>
+                </div>
+            )}
 
             {/* Detail Modal */}
             {selected && (
