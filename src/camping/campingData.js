@@ -13,6 +13,7 @@ export const DEFAULT_CAMPING_ACTIVITIES = [
         customDC: null,
         effectCrit: '',
         effectSuccess: '',
+        effectFail: '',
         effectCritFail: '',
         description: ''
     },
@@ -25,6 +26,7 @@ export const DEFAULT_CAMPING_ACTIVITIES = [
         customDC: null,
         effectCrit: '',
         effectSuccess: '',
+        effectFail: '',
         effectCritFail: '',
         description: ''
     },
@@ -37,6 +39,7 @@ export const DEFAULT_CAMPING_ACTIVITIES = [
         customDC: null,
         effectCrit: '',
         effectSuccess: '',
+        effectFail: '',
         effectCritFail: '',
         description: ''
     },
@@ -49,6 +52,7 @@ export const DEFAULT_CAMPING_ACTIVITIES = [
         customDC: null,
         effectCrit: '',
         effectSuccess: '',
+        effectFail: '',
         effectCritFail: '',
         description: ''
     },
@@ -61,6 +65,7 @@ export const DEFAULT_CAMPING_ACTIVITIES = [
         customDC: null,
         effectCrit: '',
         effectSuccess: '',
+        effectFail: '',
         effectCritFail: '',
         description: ''
     },
@@ -73,6 +78,7 @@ export const DEFAULT_CAMPING_ACTIVITIES = [
         customDC: null,
         effectCrit: '',
         effectSuccess: '',
+        effectFail: '',
         effectCritFail: '',
         description: ''
     },
@@ -85,6 +91,7 @@ export const DEFAULT_CAMPING_ACTIVITIES = [
         customDC: null,
         effectCrit: '',
         effectSuccess: '',
+        effectFail: '',
         effectCritFail: '',
         description: ''
     },
@@ -97,6 +104,7 @@ export const DEFAULT_CAMPING_ACTIVITIES = [
         customDC: null,
         effectCrit: '',
         effectSuccess: '',
+        effectFail: '',
         effectCritFail: '',
         description: ''
     },
@@ -109,6 +117,7 @@ export const DEFAULT_CAMPING_ACTIVITIES = [
         customDC: null,
         effectCrit: '',
         effectSuccess: '',
+        effectFail: '',
         effectCritFail: '',
         description: ''
     },
@@ -121,6 +130,7 @@ export const DEFAULT_CAMPING_ACTIVITIES = [
         customDC: null,
         effectCrit: '',
         effectSuccess: '',
+        effectFail: '',
         effectCritFail: '',
         description: ''
     },
@@ -133,6 +143,7 @@ export const DEFAULT_CAMPING_ACTIVITIES = [
         customDC: null,
         effectCrit: '',
         effectSuccess: '',
+        effectFail: '',
         effectCritFail: '',
         description: ''
     },
@@ -145,6 +156,7 @@ export const DEFAULT_CAMPING_ACTIVITIES = [
         customDC: null,
         effectCrit: '',
         effectSuccess: '',
+        effectFail: '',
         effectCritFail: '',
         description: ''
     }
@@ -174,18 +186,21 @@ export function getActivityDC(activity, campingSettings = {}) {
 }
 
 /**
- * Determine degree of success (3-tier: crit, success, critFail).
+ * Determine degree of success (4-tier PF2: critSuccess, success, fail, critFail).
  */
 export function getDegreeOfSuccess(roll, dc) {
     if (roll >= dc + 10) return 'crit';
-    if (roll >= dc) return 'success';
-    return 'critFail';
+    if (roll >= dc)      return 'success';
+    if (roll <= dc - 10) return 'critFail';
+    return 'fail';
 }
 
 export function getEffectText(activity, degree) {
-    if (degree === 'crit') return activity.effectCrit || '(No critical success effect defined)';
-    if (degree === 'success') return activity.effectSuccess || '(No success effect defined)';
-    return activity.effectCritFail || '(No failure effect defined)';
+    if (degree === 'crit')     return activity.effectCrit     || '(No critical success effect defined)';
+    if (degree === 'success')  return activity.effectSuccess  || '(No success effect defined)';
+    if (degree === 'fail')     return activity.effectFail     || '(No failure effect defined)';
+    if (degree === 'critFail') return activity.effectCritFail || '(No critical failure effect defined)';
+    return '';
 }
 
 export const DC_TYPE_LABELS = {

@@ -3,8 +3,8 @@ import { useCampaign } from '../shared/context/CampaignContext';
 import { getMergedActivities, getActivityDC, DC_TYPE_LABELS } from './campingData';
 import { parseFoundry } from '../shared/utils/foundryParser';
 
-const DEGREE_COLORS = { crit: '#4caf50', success: '#c5a059', critFail: '#e53935' };
-const DEGREE_LABELS = { crit: 'Critical Success', success: 'Success', critFail: 'Failure' };
+const DEGREE_COLORS = { crit: '#4caf50', success: '#c5a059', fail: '#ff8f00', critFail: '#e53935' };
+const DEGREE_LABELS = { crit: 'Critical Success', success: 'Success', fail: 'Failure', critFail: 'Critical Failure' };
 
 export default function CampScreen() {
     const { activeCampaign } = useCampaign();

@@ -286,9 +286,18 @@ export default function CampingAdminView() {
 
                         <Field label="Effect — Failure">
                             <RichTextEditor
+                                value={editing.effectFail}
+                                onChange={v => setEditing(prev => ({ ...prev, effectFail: v }))}
+                                placeholder="What happens on a failure..."
+                                style={{ minHeight: 80, background: '#111', border: '1px solid #3a2a1a' }}
+                            />
+                        </Field>
+
+                        <Field label="Effect — Critical Failure">
+                            <RichTextEditor
                                 value={editing.effectCritFail}
                                 onChange={v => setEditing(prev => ({ ...prev, effectCritFail: v }))}
-                                placeholder="What happens on a failure..."
+                                placeholder="What happens on a critical failure..."
                                 style={{ minHeight: 80, background: '#111', border: '1px solid #3a1a1a' }}
                             />
                         </Field>

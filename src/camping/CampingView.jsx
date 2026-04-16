@@ -4,8 +4,8 @@ import { getMergedActivities, getActivityDC, getDegreeOfSuccess, getEffectText, 
 import { parseFoundry } from '../shared/utils/foundryParser';
 import CampScreen from './CampScreen';
 
-const DEGREE_COLORS = { crit: '#4caf50', success: '#c5a059', critFail: '#e53935' };
-const DEGREE_LABELS = { crit: 'Critical Success', success: 'Success', critFail: 'Failure' };
+const DEGREE_COLORS = { crit: '#4caf50', success: '#c5a059', fail: '#ff8f00', critFail: '#e53935' };
+const DEGREE_LABELS = { crit: 'Critical Success', success: 'Success', fail: 'Failure', critFail: 'Critical Failure' };
 
 export default function CampingView({ character }) {
     const { activeCampaign, updateActiveCampaign } = useCampaign();
@@ -221,7 +221,7 @@ export default function CampingView({ character }) {
 
                         {/* Effect previews */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-                            {[['crit', selected.effectCrit], ['success', selected.effectSuccess], ['critFail', selected.effectCritFail]].map(([key, text]) => text ? (
+                            {[['crit', selected.effectCrit], ['success', selected.effectSuccess], ['fail', selected.effectFail], ['critFail', selected.effectCritFail]].map(([key, text]) => text ? (
                                 <div key={key} style={{ padding: '6px 10px', borderRadius: 4, borderLeft: `3px solid ${DEGREE_COLORS[key]}`, background: '#1a1a1d', fontSize: '0.82em' }}>
                                     <span style={{ color: DEGREE_COLORS[key], fontWeight: 'bold', marginRight: 6 }}>{DEGREE_LABELS[key]}:</span>
                                     <span style={{ color: '#ccc' }} dangerouslySetInnerHTML={{ __html: parseFoundry(text) }} />
