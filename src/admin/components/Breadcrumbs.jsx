@@ -18,7 +18,8 @@ const BREADCRUMB_MAP = {
     'lore': ['Story', 'Lore'],
     'quests': ['Story', 'Quests'],
     'maps':     ['Story', 'Maps'],
-    'progress': ['Story', 'Progress']
+    'progress': ['Story', 'Progress'],
+    'camping':  ['Story', 'Camping']
 };
 
 export default function Breadcrumbs({ activeTab }) {

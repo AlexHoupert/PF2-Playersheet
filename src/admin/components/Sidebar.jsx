@@ -39,10 +39,11 @@ const NAV_GROUPS = [
     {
         label: 'Story',
         items: [
-            { id: 'lore',   label: 'Lore',   icon: '📖' },
-            { id: 'quests', label: 'Quests', icon: '📜' },
-            { id: 'maps',      label: 'Maps',     icon: '🗺️' },
-            { id: 'progress',  label: 'Progress', icon: '📊' }
+            { id: 'lore',     label: 'Lore',     icon: '📖' },
+            { id: 'quests',   label: 'Quests',   icon: '📜' },
+            { id: 'maps',     label: 'Maps',     icon: '🗺️' },
+            { id: 'progress', label: 'Progress', icon: '📊' },
+            { id: 'camping',  label: 'Camping',  icon: '🏕️' }
         ]
     }
 ];

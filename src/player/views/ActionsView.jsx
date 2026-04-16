@@ -3,6 +3,7 @@ import { getAllActionIndexItems } from '../../shared/catalog/actionIndex';
 import { calculateStat } from '../../utils/rules';
 import { parseFoundry, ACTION_ICONS } from '../../shared/utils/foundryParser';
 import { LongPressable } from '../../shared/components/LongPressable';
+import CampingView from '../../camping/CampingView';
 
 export function ActionsView({ character, onOpenModal, onLongPress }) {
     const [activeTab, setActiveTab] = useState('Combat');
@@ -104,10 +105,19 @@ export function ActionsView({ character, onOpenModal, onLongPress }) {
                         {t === 'Other' ? 'Exploration' : t}
                     </button>
                 ))}
+                <button
+                    className={`sub-tab-btn ${activeTab === 'Camping' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('Camping')}
+                >
+                    Camping
+                </button>
             </div>
 
+            {/* Camping Tab */}
+            {activeTab === 'Camping' && <CampingView character={character} />}
+
             {/* List */}
-            {sortedSubtypes.map(sub => (
+            {activeTab !== 'Camping' && sortedSubtypes.map(sub => (
                 <div key={sub}>
                     {sub !== "General" && sortedSubtypes.length > 1 && (
                         <div className="action-subtype-header">{sub}</div>

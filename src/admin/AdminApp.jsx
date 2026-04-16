@@ -38,6 +38,7 @@ import EncounterView from './EncounterView';
 
 import MapAdminView from './MapAdminView';
 import ProgressAdminView from './ProgressAdminView';
+import CampingAdminView from '../camping/CampingAdminView';
 import FirebaseMigrator from './FirebaseMigrator';
 import SessionManager from './views/SessionManager';
 
@@ -384,6 +385,7 @@ export default function AdminApp({ db, setDb }) {
                         {activeTab === 'lore' && <LoreAdminView db={db} setDb={setDb} />}
                         {activeTab === 'maps' && <MapAdminView />}
                         {activeTab === 'progress' && <ProgressAdminView />}
+                        {activeTab === 'camping' && <CampingAdminView />}
 
                         {/* Bestiary Routes */}
                         {(activeTab === 'bestiary' || activeTab === 'bestiary_overview') && <BestiaryView db={db} setDb={setDb} onContentLinkClick={handleContentLinkClick} />}

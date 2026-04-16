@@ -33,6 +33,7 @@ import PlayerQuestsView from './views/PlayerQuestsView';
 import LoreView from './views/LoreView';
 import MapsView from './views/MapsView';
 import ProgressView from './views/ProgressView';
+import CampScreen from '../camping/CampScreen';
 import { isEquipableInventoryItem, getWeaponCapacity } from '../shared/utils/combatUtils';
 import { ModalManager } from './ModalManager';
 // Top of file
@@ -1189,7 +1190,7 @@ export default function PlayerApp({ db, setDb }) {
     // --- SWIPE LOGIC ---
     const mainTabs = useMemo(() => {
         if (appMode === 'story') {
-            return ['quests', 'lore', 'maps', 'progress'];
+            return ['quests', 'lore', 'maps', 'progress', 'camp'];
         }
         // Character Mode
         const tabs = ['stats', 'actions', 'feats'];
@@ -1424,6 +1425,7 @@ export default function PlayerApp({ db, setDb }) {
 
                 {activeTab === 'maps' && <MapsView />}
                 {activeTab === 'progress' && <ProgressView />}
+                {activeTab === 'camp' && <CampScreen />}
             </div>
 
             {/* MODALS / FULL PAGE VIEWS */}

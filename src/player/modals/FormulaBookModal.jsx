@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
 
 function isAmmoItem(item) {
@@ -18,6 +18,30 @@ export function FormulaBookModal({
     onClose
 }) {
     const formulas = character.formulaBook || [];
+    const [typeFilter, setTypeFilter] = useState('all');
+
+    // Resolve all formula items once
+    const formulaItems = useMemo(() =>
+        formulas.map(fName => getShopIndexItemByName(fName) || { name: fName }),
+        [formulas]
+    );
+
+    // Collect unique types present in the formula book
+    const availableTypes = useMemo(() => {
+        const types = new Set();
+        formulaItems.forEach(item => {
+            const t = (item.type || item.category || '').trim();
+            if (t) types.add(t);
+        });
+        return [...types].sort();
+    }, [formulaItems]);
+
+    const visibleItems = typeFilter === 'all'
+        ? formulaItems
+        : formulaItems.filter(item => {
+            const t = (item.type || item.category || '').trim();
+            return t === typeFilter;
+        });
 
     // Daily Crafting Logic
     const hasMunitionsCrafter = (character.feats || []).includes("Munitions Crafter");
@@ -47,12 +71,31 @@ export function FormulaBookModal({
                 <h2>Formula Book ({formulas.length})</h2>
                 {formulas.length === 0 && <div style={{ color: '#888', fontStyle: 'italic' }}>No known formulas. Buy them effectively from the shop.</div>}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 15, maxHeight: '40vh', overflowY: 'auto' }}>
-                    {formulas.map(fName => {
-                        const item = getShopIndexItemByName(fName) || { name: fName };
+                {availableTypes.length > 1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                        <span style={{ fontSize: '0.85em', color: '#888', flexShrink: 0 }}>Filter:</span>
+                        <select
+                            value={typeFilter}
+                            onChange={e => setTypeFilter(e.target.value)}
+                            style={{
+                                flex: 1, background: '#1a1a1d', color: '#e0e0e0',
+                                border: '1px solid #555', borderRadius: 4, padding: '4px 6px',
+                                fontSize: '0.85em', cursor: 'pointer'
+                            }}
+                        >
+                            <option value="all">All Types ({formulas.length})</option>
+                            {availableTypes.map(t => {
+                                const count = formulaItems.filter(i => (i.type || i.category || '').trim() === t).length;
+                                return <option key={t} value={t}>{t} ({count})</option>;
+                            })}
+                        </select>
+                    </div>
+                )}
 
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10, maxHeight: '40vh', overflowY: 'auto' }}>
+                    {visibleItems.map(item => {
                         return (
-                            <div key={fName}
+                            <div key={item.name}
                                 style={{ background: '#333', padding: 8, borderRadius: 4, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
                                 onClick={() => { setModalData(item); setModalMode('item'); }}
                             >
