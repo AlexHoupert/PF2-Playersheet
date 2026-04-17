@@ -34,6 +34,7 @@ import LoreView from './views/LoreView';
 import MapsView from './views/MapsView';
 import ProgressView from './views/ProgressView';
 import CampScreen from '../camping/CampScreen';
+import PactView from '../pacts/PactView';
 import { isEquipableInventoryItem, getWeaponCapacity } from '../shared/utils/combatUtils';
 import { ModalManager } from './ModalManager';
 // Top of file
@@ -1197,8 +1198,9 @@ export default function PlayerApp({ db, setDb }) {
         if (character.isCaster || character.magic?.list?.length > 0) tabs.push('magic');
         if (character.isKineticist) tabs.push('impulses');
         tabs.push('items');
+        if (character.pact?.pactId && db?.pacts?.[character.pact.pactId]) tabs.push('pact');
         return tabs;
-    }, [appMode, character.isCaster, character.magic, character.isKineticist]);
+    }, [appMode, character.isCaster, character.magic, character.isKineticist, character.pact?.pactId, db?.pacts]);
 
     const { handlers: swipeHandlers, ref: swipeRef } = useSwipe({
         // Swipe Left -> Next Tab
@@ -1426,6 +1428,7 @@ export default function PlayerApp({ db, setDb }) {
                 {activeTab === 'maps' && <MapsView />}
                 {activeTab === 'progress' && <ProgressView />}
                 {activeTab === 'camp' && <CampScreen />}
+                {activeTab === 'pact' && <PactView character={character} db={db} />}
             </div>
 
             {/* MODALS / FULL PAGE VIEWS */}

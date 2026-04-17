@@ -543,7 +543,9 @@ export function ItemDetailModal({
 
                 {/* Weapon Damage Box (Dynamic) */}
                 {(() => {
-                    const damageData = (isShopItem && (modalData.type === 'Weapon' || modalData.group) && character)
+                    const isWeaponItem = modalData.type === 'Weapon' ||
+                        (modalData.group && !['Armor', 'Shield', 'Equipment', 'Consumable', 'Treasure'].includes(modalData.type));
+                    const damageData = (isShopItem && isWeaponItem && character)
                         ? calculateWeaponDamage(modalData, character)
                         : null;
 

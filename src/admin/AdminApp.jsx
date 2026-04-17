@@ -39,6 +39,8 @@ import EncounterView from './EncounterView';
 import MapAdminView from './MapAdminView';
 import ProgressAdminView from './ProgressAdminView';
 import CampingAdminView from '../camping/CampingAdminView';
+import DeviantAbilitiesAdminView from '../pacts/DeviantAbilitiesAdminView';
+import PactAdminView from '../pacts/PactAdminView';
 import FirebaseMigrator from './FirebaseMigrator';
 import SessionManager from './views/SessionManager';
 
@@ -386,6 +388,8 @@ export default function AdminApp({ db, setDb }) {
                         {activeTab === 'maps' && <MapAdminView />}
                         {activeTab === 'progress' && <ProgressAdminView />}
                         {activeTab === 'camping' && <CampingAdminView />}
+                        {activeTab === 'deviant_abilities' && <DeviantAbilitiesAdminView db={db} setDb={setDb} />}
+                        {activeTab === 'pacts' && <PactAdminView db={db} setDb={setDb} />}
 
                         {/* Bestiary Routes */}
                         {(activeTab === 'bestiary' || activeTab === 'bestiary_overview') && <BestiaryView db={db} setDb={setDb} onContentLinkClick={handleContentLinkClick} />}

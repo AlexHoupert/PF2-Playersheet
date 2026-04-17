@@ -19,10 +19,12 @@ const NAV_GROUPS = [
             { id: 'items', label: 'Items', icon: '🎒' },
             {
                 id: 'magic', label: 'Magic', icon: '✨', children: [
-                    { id: 'spells',   label: 'Spells',   icon: '📜' },
-                    { id: 'impulses', label: 'Impulses', icon: '🌩️' }
+                    { id: 'spells',            label: 'Spells',           icon: '📜' },
+                    { id: 'impulses',          label: 'Impulses',         icon: '🌩️' },
+                    { id: 'deviant_abilities', label: 'Deviant Abilities', icon: '🔮' }
                 ]
             },
+            { id: 'pacts', label: 'Pacts', icon: '🌀' },
             {
                 id: 'bestiary', label: 'Bestiary', icon: '🐉', children: [
                     { id: 'bestiary_creatures', label: 'Creatures', icon: '👾' },
