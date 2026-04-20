@@ -120,24 +120,33 @@ export const getWeaponAttackBonus = (item, character) => {
     // 3. Level (If Trained+)
     const level = (profScore > 0) ? (parseInt(character.level) || 0) : 0;
 
-    // 4. Item Bonus (Potency Runes)
-    let itemBonus = 0;
-    if (item.system?.runes?.potency) itemBonus = parseInt(item.system.runes.potency) || 0;
-    else if (item.bonus) itemBonus = parseInt(item.bonus) || 0; // Fallback
-    else if (item.name.includes('+1')) itemBonus = 1;
-    else if (item.name.includes('+2')) itemBonus = 2;
-    else if (item.name.includes('+3')) itemBonus = 3;
+    // 4. Item Bonus (Potency Runes) — counts as an item bonus, does not stack with other item bonuses
+    let runeItemBonus = 0;
+    if (item.system?.runes?.potency) runeItemBonus = parseInt(item.system.runes.potency) || 0;
+    else if (item.bonus) runeItemBonus = parseInt(item.bonus) || 0; // Fallback
+    else if (item.name.includes('+1')) runeItemBonus = 1;
+    else if (item.name.includes('+2')) runeItemBonus = 2;
+    else if (item.name.includes('+3')) runeItemBonus = 3;
 
-    const baseWithoutAttribute = profScore + level + itemBonus;
+    const baseWithoutAttribute = profScore + level; // item bonus handled separately to prevent stacking
 
     const getOption = (attributeName, attributeMod, attrLabel, specificAttackType = "Attack") => {
         const cond = getConditionEffects(character, specificAttackType, attributeName);
+        // Item bonuses don't stack: take the highest item bonus across both the rune and any condition item bonuses.
+        // cond.breakdown.item is the net condition item modifier (max bonus + min penalty from conditions).
+        const condItemNet = cond.breakdown.item || 0;
+        const condItemBonus = Math.max(0, condItemNet);    // positive part (e.g. mutagen)
+        const condItemPenalty = Math.min(0, condItemNet);  // negative part (rare for attacks)
+        const effectiveItemBonus = Math.max(runeItemBonus, condItemBonus) + condItemPenalty;
+        // Rebuild total: base (no item) + effective item + attribute + all non-item condition mods
+        const condTotalWithoutItem = cond.total - condItemNet;
         return {
             attributeName,
             attributeMod,
             attrLabel,
             cond,
-            total: baseWithoutAttribute + attributeMod + cond.total
+            effectiveItemBonus,
+            total: baseWithoutAttribute + effectiveItemBonus + attributeMod + condTotalWithoutItem
         };
     };
 
@@ -160,14 +169,16 @@ export const getWeaponAttackBonus = (item, character) => {
         return cur.attributeMod > acc.attributeMod ? cur : acc;
     }, null);
 
+    // Build breakdown: spread condition breakdown but override item with the effective (non-stacking) value
+    const { item: _condItem, ...condBreakdownWithoutItem } = best.cond.breakdown;
     return {
         total: best.total,
         breakdown: {
             proficiency: profScore,
             level: level,
             attribute: best.attributeMod,
-            item: itemBonus,
-            ...best.cond.breakdown
+            ...(best.effectiveItemBonus !== 0 ? { item: best.effectiveItemBonus } : {}),
+            ...condBreakdownWithoutItem
         },
         source: {
             profRaw: profScore,
@@ -175,7 +186,7 @@ export const getWeaponAttackBonus = (item, character) => {
             attrName: best.attrLabel,
             levelVal: character.level
         },
-        penalty: best.cond.total
+        penalty: best.cond.total - (best.cond.breakdown.item || 0)
     };
 };
 
