@@ -319,28 +319,34 @@ export default function PlayerApp({ db, setDb }) {
         const slotKeys = ['f', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
         updateCharacter(c => {
-            // 1. Refill all spell slots (set used count back to 0)
+            // 1. Refill all spell slots (_curr = available remaining, so reset to max)
             if (c.magic?.slots) {
                 slotKeys.forEach(k => {
-                    if ((c.magic.slots[k + "_max"] || 0) > 0) {
-                        c.magic.slots[k + "_curr"] = 0;
+                    const max = c.magic.slots[k + "_max"] || 0;
+                    if (max > 0) {
+                        c.magic.slots[k + "_curr"] = max;
                     }
                 });
             }
 
             // 2. Refill equipped staff charges
+            // Derive highest spell slot level for staff charge calculation
+            let highestSlotLevel = 0;
+            if (c.magic?.slots) {
+                for (let i = 10; i >= 1; i--) {
+                    if ((c.magic.slots[`${i}_max`] || 0) > 0) { highestSlotLevel = i; break; }
+                }
+            }
             (c.inventory || []).forEach(item => {
                 if (!item.equipped) return;
                 const rawTraits = item.system?.traits?.value || item.traits || [];
                 const traitsList = (Array.isArray(rawTraits) ? rawTraits : []).map(t => String(t).toLowerCase());
-                const isStaff = traitsList.includes('staff') || (item.name || '').toLowerCase().includes('staff');
+                const isStaff = traitsList.includes('staff')
+                    || (item.name || '').toLowerCase().includes('staff')
+                    || (item.system?.staff?.max > 0);
                 if (!isStaff) return;
-                let maxCharges = item.system?.staff?.max || 0;
-                if (!maxCharges && c.magic?.slots) {
-                    for (let i = 10; i >= 1; i--) {
-                        if ((c.magic.slots[`${i}_max`] || 0) > 0) { maxCharges = i; break; }
-                    }
-                }
+                const maxCharges = item.system?.staff?.max || highestSlotLevel;
+                if (!maxCharges) return;
                 if (!item.system) item.system = {};
                 if (!item.system.staff) item.system.staff = {};
                 item.system.staff.charges = maxCharges;
