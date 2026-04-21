@@ -19,6 +19,7 @@ const InitiativeCard = forwardRef(function InitiativeCard({
     onHpChange,
     creatureData,        // full creature stats from catalog (for creatures)
     characterData,       // character object from campaign (for players)
+    revealState,         // { hp: 'precise'|'estimate'|'hidden' } — only relevant for creatures on player screen
 }, ref) {
     const [editingInit, setEditingInit] = useState(false);
     const [editingHp, setEditingHp] = useState(false);
@@ -26,10 +27,16 @@ const InitiativeCard = forwardRef(function InitiativeCard({
     const [tempHp, setTempHp] = useState('');
 
     const name = combatant.name + (combatant.instanceLabel > 1 ? ` #${combatant.instanceLabel}` : '');
-    const hpPct = combatant.maxHp > 0 ? Math.max(0, Math.min(100, (combatant.currentHp / combatant.maxHp) * 100)) : 100;
-    const hpColor = hpPct > 60 ? '#4caf50' : hpPct > 30 ? '#ff9800' : '#f44336';
     const isHidden = !combatant.visible;
     const isPlayer = combatant.type === 'player';
+
+    // HP display: GM and players always see their own HP precisely.
+    // Creatures on the player screen respect revealState.hp.
+    const hpReveal = (isGM || isPlayer) ? 'precise' : (revealState?.hp || 'hidden');
+    const rawHpPct = combatant.maxHp > 0 ? Math.max(0, Math.min(100, (combatant.currentHp / combatant.maxHp) * 100)) : 100;
+    const hpBarPct = hpReveal === 'precise' ? rawHpPct : 100; // estimate and hidden both show a full bar
+    const hpColor = hpReveal === 'hidden' ? '#555' : (rawHpPct > 60 ? '#4caf50' : rawHpPct > 30 ? '#ff9800' : '#f44336');
+    const hpText = hpReveal === 'precise' ? `${combatant.currentHp}/${combatant.maxHp}` : '?/?';
 
     // Gather stat values
     const ac = isPlayer
@@ -129,14 +136,14 @@ const InitiativeCard = forwardRef(function InitiativeCard({
                 </div>
 
                 {/* Row 2: HP bar */}
-                <div className="init-card__hp-row" onClick={handleHpClick}>
+                <div className="init-card__hp-row" onClick={isGM ? handleHpClick : undefined}>
                     <div className="init-card__hp-bar-bg">
                         <div
                             className="init-card__hp-bar-fill"
-                            style={{ width: `${hpPct}%`, background: hpColor }}
+                            style={{ width: `${hpBarPct}%`, background: hpColor }}
                         />
                     </div>
-                    {editingHp ? (
+                    {isGM && editingHp ? (
                         <input
                             autoFocus
                             className="init-card__hp-input"
@@ -147,9 +154,7 @@ const InitiativeCard = forwardRef(function InitiativeCard({
                             onClick={(e) => e.stopPropagation()}
                         />
                     ) : (
-                        <span className="init-card__hp-text">
-                            {combatant.currentHp}/{combatant.maxHp}
-                        </span>
+                        <span className="init-card__hp-text">{hpText}</span>
                     )}
                 </div>
 

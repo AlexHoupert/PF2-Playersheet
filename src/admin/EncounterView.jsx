@@ -242,6 +242,22 @@ export default function EncounterView({ db, setDb }) {
         });
     };
 
+    const rollInitiativeAll = () => {
+        if (!activeEncounter) return;
+        updateEncounter(activeEncounter.id, enc => {
+            enc.combatants.forEach(c => {
+                if (c.type === 'player') return;
+                const cData = creatureDataCache[c.creatureId];
+                const perception = parseInt(
+                    cData?.system?.perception?.value ??
+                    cData?.system?.attributes?.perception?.value ??
+                    cData?.perception ?? 0
+                ) || 0;
+                c.initiative = Math.floor(Math.random() * 20) + 1 + perception;
+            });
+        });
+    };
+
     // Active combatant is always the first in the rotated list
     const activeTurnId = sortedCombatants[0]?.id;
 
@@ -420,6 +436,7 @@ export default function EncounterView({ db, setDb }) {
                             <div className="enc-toolbar__actions">
                                 <button className="enc-btn enc-btn--gold" onClick={endTurn}>End Turn ⏭</button>
                                 <button className="enc-btn enc-btn--small" onClick={resetRound} title="Reset to top of round">↺</button>
+                                <button className="enc-btn enc-btn--small" onClick={rollInitiativeAll} title="Roll initiative for all creatures (d20 + Perception)">🎲</button>
                                 {!isMobile && <button className="enc-btn enc-btn--small" onClick={openPartyScreen} title="Open Party Screen">📺</button>}
                             </div>
                         </>

@@ -95,6 +95,7 @@ export default function PartyScreen({ db }) {
                                 isGM={false}
                                 creatureData={combatant.type === 'creature' ? creatureDataCache[combatant.creatureId] : null}
                                 characterData={combatant.type === 'player' ? characters.find(c => c.id === combatant.playerId) : null}
+                                revealState={combatant.type === 'creature' ? getRevealState(combatant.creatureId) : {}}
                             />
                         ))}
                     </AnimatePresence>
