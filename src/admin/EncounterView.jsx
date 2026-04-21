@@ -23,18 +23,19 @@ function makeEncounter(name) {
 
 function makeCombatant(type, data) {
     if (type === 'player') {
+        const maxHp = data.stats?.hp?.max ?? data.hp?.max ?? 0;
+        const currentHp = data.stats?.hp?.current ?? data.hp?.current ?? maxHp;
         return {
             id: uuid(), type: 'player', playerId: data.id, creatureId: null,
             name: data.name, instanceLabel: 1,
-            initiative: 0, currentHp: data.hp?.current ?? data.hp?.max ?? 0,
-            maxHp: data.hp?.max ?? 0, conditions: [], visible: true,
+            initiative: 0, currentHp, maxHp, conditions: [], visible: true,
         };
     }
     // creature
     const hp = data?.system?.attributes?.hp?.max ?? data?.hp?.max ?? 0;
     return {
         id: uuid(), type: 'creature', creatureId: data._catalogId || data.id || data.name,
-        name: data.name, instanceLabel: 1,
+        name: data.name, unknownName: data.unknownName || '???', instanceLabel: 1,
         initiative: 0, currentHp: hp, maxHp: hp, conditions: [], visible: true, playerId: null,
     };
 }

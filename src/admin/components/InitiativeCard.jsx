@@ -6,6 +6,8 @@
  */
 import React, { useState, forwardRef } from 'react';
 import { motion } from 'framer-motion';
+import { calculateStat } from '../../utils/rules';
+import { getArmorClassData } from '../../shared/hooks/useCharacterStats';
 import './InitiativeCard.css';
 
 const InitiativeCard = forwardRef(function InitiativeCard({
@@ -26,30 +28,47 @@ const InitiativeCard = forwardRef(function InitiativeCard({
     const [tempInit, setTempInit] = useState('');
     const [tempHp, setTempHp] = useState('');
 
-    const name = combatant.name + (combatant.instanceLabel > 1 ? ` #${combatant.instanceLabel}` : '');
+    const instanceSuffix = combatant.instanceLabel > 1 ? ` #${combatant.instanceLabel}` : '';
     const isHidden = !combatant.visible;
     const isPlayer = combatant.type === 'player';
+    const nameRevealed = isGM || isPlayer || revealState?.name === 'precise';
+    const displayName = (nameRevealed ? combatant.name : (combatant.unknownName || '???')) + instanceSuffix;
+
+    // For player combatants, use live characterData HP when available
+    const liveMaxHp = isPlayer && characterData ? (characterData.stats?.hp?.max ?? characterData.hp?.max ?? combatant.maxHp) : combatant.maxHp;
+    const liveCurrentHp = isPlayer && characterData ? (characterData.stats?.hp?.current ?? characterData.hp?.current ?? combatant.currentHp) : combatant.currentHp;
 
     // HP display: GM and players always see their own HP precisely.
     // Creatures on the player screen respect revealState.hp.
     const hpReveal = (isGM || isPlayer) ? 'precise' : (revealState?.hp || 'hidden');
-    const rawHpPct = combatant.maxHp > 0 ? Math.max(0, Math.min(100, (combatant.currentHp / combatant.maxHp) * 100)) : 100;
+    const rawHpPct = liveMaxHp > 0 ? Math.max(0, Math.min(100, (liveCurrentHp / liveMaxHp) * 100)) : 100;
     const hpBarPct = hpReveal === 'precise' ? rawHpPct : 100; // estimate and hidden both show a full bar
     const hpColor = hpReveal === 'hidden' ? '#555' : (rawHpPct > 60 ? '#4caf50' : rawHpPct > 30 ? '#ff9800' : '#f44336');
-    const hpText = hpReveal === 'precise' ? `${combatant.currentHp}/${combatant.maxHp}` : '?/?';
+    const hpText = hpReveal === 'precise' ? `${liveCurrentHp}/${liveMaxHp}` : '?/?';
 
     // Gather stat values
-    const ac = isPlayer
-        ? (characterData?.ac ?? '?')
-        : (creatureData?.system?.attributes?.ac?.value ?? creatureData?.ac ?? '?');
+    let ac;
+    if (isPlayer && characterData) {
+        try { ac = getArmorClassData(characterData).totalAC; } catch { ac = '?'; }
+    } else {
+        ac = creatureData?.system?.attributes?.ac?.value ?? creatureData?.ac ?? '?';
+    }
+
+    const computePlayerSave = (saveKey) => {
+        if (!characterData?.stats?.saves) return '?';
+        const profRank = characterData.stats.saves[saveKey] ?? 0;
+        try { return calculateStat(characterData, saveKey.charAt(0).toUpperCase() + saveKey.slice(1), profRank).total; }
+        catch { return profRank || '?'; }
+    };
+
     const fort = isPlayer
-        ? (characterData?.saves?.fortitude ?? '?')
+        ? computePlayerSave('fortitude')
         : (creatureData?.system?.saves?.fortitude?.value ?? creatureData?.saves?.fortitude ?? '?');
     const ref_ = isPlayer
-        ? (characterData?.saves?.reflex ?? '?')
+        ? computePlayerSave('reflex')
         : (creatureData?.system?.saves?.reflex?.value ?? creatureData?.saves?.reflex ?? '?');
     const will = isPlayer
-        ? (characterData?.saves?.will ?? '?')
+        ? computePlayerSave('will')
         : (creatureData?.system?.saves?.will?.value ?? creatureData?.saves?.will ?? '?');
 
     const handleInitiativeClick = (e) => {
@@ -131,7 +150,7 @@ const InitiativeCard = forwardRef(function InitiativeCard({
                 {/* Row 1: name + icon */}
                 <div className="init-card__name-row">
                     <span className="init-card__type-icon">{isPlayer ? '🧑' : '👹'}</span>
-                    <span className="init-card__name">{name}</span>
+                    <span className="init-card__name">{displayName}</span>
                     {isHidden && isGM && <span className="init-card__hidden-icon" title="Hidden from players">👁️‍🗨️</span>}
                 </div>
 

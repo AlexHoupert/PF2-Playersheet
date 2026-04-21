@@ -326,17 +326,47 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
         setPreviewCreature(null);
     };
 
-    const toggleBestiary = (id) => {
-        setDb(prev => ({
-            ...prev,
-            bestiary: {
-                ...prev.bestiary,
-                creatures: {
-                    ...prev.bestiary?.creatures,
-                    [id]: { ...prev.bestiary?.creatures?.[id], bestiary: !prev.bestiary?.creatures?.[id]?.bestiary }
+    const toggleBestiary = (creature) => {
+        const id = creature.id;
+        setDb(prev => {
+            const existing = prev.bestiary?.creatures?.[id];
+            const newEntry = existing
+                ? { ...existing, bestiary: !existing.bestiary }
+                : {
+                    id,
+                    group: creature.group || 'Uncategorized',
+                    bestiary: true,
+                    revealState: { ...DEFAULT_REVEAL_STATE },
+                    falseData: generateFalseData({ hp: 0, fortitude: 0, reflex: 0, will: 0, ac: 10, perception: 0 }, creature.level ?? 0)
+                };
+            return {
+                ...prev,
+                bestiary: {
+                    ...prev.bestiary,
+                    creatures: { ...prev.bestiary?.creatures, [id]: newEntry }
                 }
-            }
-        }));
+            };
+        });
+    };
+
+    const handleSetGroup = (creature) => {
+        const newGroup = prompt('Enter group name:', creature.group || 'Uncategorized');
+        if (newGroup === null) return;
+        const id = creature.id;
+        setDb(prev => {
+            const existing = prev.bestiary?.creatures?.[id];
+            const newEntry = existing
+                ? { ...existing, group: newGroup.trim() || 'Uncategorized' }
+                : { id, group: newGroup.trim() || 'Uncategorized', bestiary: false, revealState: { ...DEFAULT_REVEAL_STATE } };
+            return {
+                ...prev,
+                bestiary: {
+                    ...prev.bestiary,
+                    creatures: { ...prev.bestiary?.creatures, [id]: newEntry }
+                }
+            };
+        });
+        setContextMenu(null);
     };
 
     const updateRevealState = (id, field, state) => {
@@ -588,7 +618,7 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
                                                 <input
                                                     type="checkbox"
                                                     checked={creature.bestiary || false}
-                                                    onChange={() => toggleBestiary(creature.id)}
+                                                    onChange={() => toggleBestiary(creature)}
                                                     onClick={e => e.stopPropagation()}
                                                 />
                                             ) : c === 'traits' ? (
@@ -649,6 +679,7 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
                 >
                     {[
                         { label: '📎 Copy Reference', onClick: () => { copyRef('creature', contextMenu.creature); showToast('Reference copied'); setContextMenu(null); } },
+                        { label: '📁 Set Group', onClick: () => handleSetGroup(contextMenu.creature) },
                         contextMenu.creature.isCustom && {
                             label: '📥 Paste Referenced Ability',
                             disabled: getInMemoryRef()?.type !== 'ability',

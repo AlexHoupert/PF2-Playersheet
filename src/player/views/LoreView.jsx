@@ -147,13 +147,12 @@ export default function LoreView({ lore, bestiary }) {
     // Bestiary creatures (only those with bestiary: true)
     const [selectedCreatureId, setSelectedCreatureId] = useState(null);
 
-    // Merge INDEX data with db metadata - show only creatures with bestiary=true
-    // Full creature data is fetched on-demand when viewing a creature
+    // Merge INDEX data + custom creatures with db metadata - show only creatures with bestiary=true
     const bestiaryCreatures = useMemo(() => {
         const indexItems = getAllCreatures();
         const dbMetadata = bestiary?.creatures || {};
 
-        return indexItems
+        const catalogEntries = indexItems
             .filter(item => dbMetadata[item.id]?.bestiary)
             .map(item => {
                 const meta = dbMetadata[item.id] || {};
@@ -161,18 +160,37 @@ export default function LoreView({ lore, bestiary }) {
                     id: item.id,
                     sourceFile: item.sourceFile,
                     type: item.type || 'npc',
-                    // From index (lightweight)
                     name: item.name || 'Unknown',
                     level: item.level ?? 0,
-                    // From db metadata
                     group: meta.group || 'Uncategorized',
                     bestiary: meta.bestiary,
                     revealState: meta.revealState,
-                    falseData: meta.falseData
+                    falseData: meta.falseData,
+                    isCustom: false,
                 };
-            })
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [bestiary?.creatures]);
+            });
+
+        const customEntries = Object.values(bestiary?.customCreatures || {})
+            .filter(cc => dbMetadata[cc.id]?.bestiary)
+            .map(cc => {
+                const meta = dbMetadata[cc.id] || {};
+                const sys = cc.data?.system || {};
+                return {
+                    id: cc.id,
+                    sourceFile: null,
+                    type: cc.type || 'npc',
+                    name: cc.name || 'Unknown',
+                    level: sys.details?.level?.value ?? 0,
+                    group: meta.group || 'Uncategorized',
+                    bestiary: meta.bestiary,
+                    revealState: meta.revealState,
+                    falseData: meta.falseData,
+                    isCustom: true,
+                };
+            });
+
+        return [...customEntries, ...catalogEntries].sort((a, b) => a.name.localeCompare(b.name));
+    }, [bestiary?.creatures, bestiary?.customCreatures]);
 
     // Group creatures by their group field
     const groupedCreatures = useMemo(() => {
@@ -203,10 +221,13 @@ export default function LoreView({ lore, bestiary }) {
             setLoadedCreatureData(null);
             return;
         }
+        const customData = bestiary?.customCreatures?.[selectedCreatureId]?.data;
+        if (customData) {
+            setLoadedCreatureData(customData);
+            return;
+        }
         fetchCreatureData(selectedCreatureId).then(data => {
-            if (data) {
-                setLoadedCreatureData(data);
-            }
+            if (data) setLoadedCreatureData(data);
         });
     }, [selectedCreatureId]);
 

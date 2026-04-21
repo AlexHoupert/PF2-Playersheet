@@ -52,9 +52,15 @@ export default function PartyScreen({ db }) {
         activeEncounter.combatants
             .filter(c => c.type === 'creature' && c.visible && c.creatureId && !creatureDataCache[c.creatureId])
             .forEach(c => {
+                // Custom creatures first — no fetch needed
+                const customData = db?.bestiary?.customCreatures?.[c.creatureId]?.data;
+                if (customData) {
+                    setCreatureDataCache(prev => ({ ...prev, [c.creatureId]: customData }));
+                    return;
+                }
                 const catalogEntry = allCreatures.find(cat => cat.id === c.creatureId || cat.name === c.creatureId);
-                if (catalogEntry?.sourceFile) {
-                    fetchCreatureData(catalogEntry.sourceFile).then(data => {
+                if (catalogEntry?.id) {
+                    fetchCreatureData(catalogEntry.id).then(data => {
                         if (data) setCreatureDataCache(prev => ({ ...prev, [c.creatureId]: data }));
                     });
                 }
@@ -106,7 +112,11 @@ export default function PartyScreen({ db }) {
             {selectedCombatant && (
                 <div className="party-info">
                     <div className="party-info__header">
-                        <h2>{selectedCombatant.name}</h2>
+                        <h2>
+                            {selectedCombatant.type === 'creature' && getRevealState(selectedCombatant.creatureId)?.name !== 'precise'
+                                ? (selectedCombatant.unknownName || '???')
+                                : selectedCombatant.name}
+                        </h2>
                     </div>
                     <div className="party-info__body">
                         {selectedCombatant.type === 'creature' && infoCreatureData && (

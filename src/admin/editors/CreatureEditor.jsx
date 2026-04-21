@@ -50,6 +50,7 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
 
     // Form state - basic info
     const [name, setName] = useState('');
+    const [unknownName, setUnknownName] = useState('???');
     const [level, setLevel] = useState(0);
     const [type, setType] = useState('npc');
     const [rarity, setRarity] = useState('common');
@@ -111,6 +112,7 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
             const sys = data.system || {};
 
             setName(data.name || '');
+            setUnknownName(data.unknownName || '???');
             setLevel(sys.details?.level?.value ?? 0);
             setType(data.type === 'hazard' ? 'hazard' : 'npc');
             setRarity(sys.traits?.rarity || 'common');
@@ -144,6 +146,7 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
         return {
             _id: initialCreature?.id || `custom-${Date.now()}`,
             name,
+            unknownName,
             type,
             img: initialCreature?.data?.img || "systems/pf2e/icons/default-icons/npc.svg",
             system: {
@@ -181,7 +184,7 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
         id: initialCreature?.id || 'preview',
         type,
         data: buildCreatureJson()
-    }), [name, level, type, rarity, size, traits, hp, ac, fortitude, reflex, will, perception, speed, immunities, resistances, weaknesses, skills, items, description]);
+    }), [name, unknownName, level, type, rarity, size, traits, hp, ac, fortitude, reflex, will, perception, speed, immunities, resistances, weaknesses, skills, items, description]);
 
     const handleSave = async () => {
         if (!name) return setError("Name is required");
@@ -471,6 +474,10 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
                     <div>
                         <label style={labelStyle}>Name</label>
                         <input className="modal-input" value={name} onChange={e => setName(e.target.value)} style={{ width: '100%' }} />
+                    </div>
+                    <div>
+                        <label style={labelStyle}>Unknown Name (shown to players)</label>
+                        <input className="modal-input" value={unknownName} onChange={e => setUnknownName(e.target.value)} style={{ width: '100%' }} placeholder="???" />
                     </div>
                     <div>
                         <label style={labelStyle}>Level</label>
