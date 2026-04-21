@@ -5,7 +5,7 @@ import ItemDetailContent from '../../shared/components/ItemDetailContent';
 import ImagePicker from '../../shared/components/ImagePicker';
 import { SHOP_INDEX_FILTER_OPTIONS } from '../../shared/catalog/shopIndex';
 
-export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb }) {
+export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, dbOnly = false }) {
     const [formData, setFormData] = useState({
         name: '',
         level: 0,
@@ -97,6 +97,21 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb }
                     group: formData.group
                 }
             };
+
+            // If dbOnly, skip the file API entirely and go straight to DB
+            if (dbOnly) {
+                if (!onSaveToDb) { setError("No save handler provided."); setIsSaving(false); return; }
+                const safeId = itemJson.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                const hasDamage = formData.damages && formData.damages.length > 0 && formData.damages.some(d => d.dice > 0);
+                const dbItem = {
+                    ...itemJson, _id: safeId, sourceFile: null, isCustom: true,
+                    system: { ...itemJson.system, level: { value: parseInt(formData.level) }, price: { value: { gp: parseFloat(formData.price) } }, damage: hasDamage ? itemJson.system.damage : null }
+                };
+                try { await onSaveToDb(dbItem); onSave({ success: true, data: dbItem }); }
+                catch (err) { setError(err.message); }
+                finally { setIsSaving(false); }
+                return;
+            }
 
             // Determine Path
             let filePath = formData.sourceFile;
