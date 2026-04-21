@@ -180,6 +180,7 @@ export default function LoreView({ lore, bestiary }) {
                     sourceFile: null,
                     type: cc.type || 'npc',
                     name: cc.name || 'Unknown',
+                    unknownName: cc.data?.unknownName || '???',
                     level: sys.details?.level?.value ?? 0,
                     group: meta.group || 'Uncategorized',
                     bestiary: meta.bestiary,
@@ -458,7 +459,10 @@ export default function LoreView({ lore, bestiary }) {
                                         {/* Group Content */}
                                         {isExpanded && (
                                             <div style={{ marginLeft: 12, borderLeft: '1px solid #333', paddingLeft: 5 }}>
-                                                {creatures.map(creature => (
+                                                {creatures.map(creature => {
+                                                    const nameVisible = creature.revealState?.name === 'precise';
+                                                    const listName = nameVisible ? creature.name : (creature.unknownName || '???');
+                                                    return (
                                                     <div
                                                         key={creature.id}
                                                         onClick={() => setSelectedCreatureId(creature.id)}
@@ -478,12 +482,15 @@ export default function LoreView({ lore, bestiary }) {
                                                             gap: 8
                                                         }}
                                                     >
-                                                        <span>{creature.name}</span>
-                                                        <span style={{ fontSize: '0.8em', color: '#666' }}>
-                                                            Lv. {creature.level}
-                                                        </span>
+                                                        <span>{listName}</span>
+                                                        {nameVisible && (
+                                                            <span style={{ fontSize: '0.8em', color: '#666' }}>
+                                                                Lv. {creature.level}
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
