@@ -154,7 +154,7 @@ export default function QuickSheetModal({ character, updateCharacter, onClose })
 
             <div className="qs-section">
                 <h3>Class Options</h3>
-                <div style={{ display: 'flex', gap: 30, justifyContent: 'center' }}>
+                <div style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap' }}>
                     <div
                         style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#ccc', cursor: 'pointer' }}
                         onClick={() => updateCharacter(c => c.isKineticist = !c.isKineticist)}
@@ -173,6 +173,16 @@ export default function QuickSheetModal({ character, updateCharacter, onClose })
                             <div className="qs-slider"></div>
                         </div>
                         Spellcaster
+                    </div>
+
+                    <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#ccc', cursor: 'pointer' }}
+                        onClick={() => updateCharacter(c => c.has_companion = !c.has_companion)}
+                    >
+                        <div className={`qs-switch ${character.has_companion ? 'active' : ''}`}>
+                            <div className="qs-slider"></div>
+                        </div>
+                        Familiar / Companion
                     </div>
                 </div>
             </div>

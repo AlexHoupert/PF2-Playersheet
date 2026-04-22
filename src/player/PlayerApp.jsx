@@ -31,6 +31,7 @@ import { FeatsView } from './views/FeatsView';
 import { ImpulsesView } from './views/ImpulsesView';
 import PlayerQuestsView from './views/PlayerQuestsView';
 import LoreView from './views/LoreView';
+import CompanionTab from './views/CompanionTab';
 import MapsView from './views/MapsView';
 import ProgressView from './views/ProgressView';
 import CampScreen from '../camping/CampScreen';
@@ -1204,9 +1205,10 @@ export default function PlayerApp({ db, setDb }) {
         if (character.isCaster || character.magic?.list?.length > 0) tabs.push('magic');
         if (character.isKineticist) tabs.push('impulses');
         tabs.push('items');
+        if (character.has_companion) tabs.push('companion');
         if (character.pact?.pactId && db?.pacts?.[character.pact.pactId]) tabs.push('pact');
         return tabs;
-    }, [appMode, character.isCaster, character.magic, character.isKineticist, character.pact?.pactId, db?.pacts]);
+    }, [appMode, character.isCaster, character.magic, character.isKineticist, character.has_companion, character.pact?.pactId, db?.pacts]);
 
     const { handlers: swipeHandlers, ref: swipeRef } = useSwipe({
         // Swipe Left -> Next Tab
@@ -1434,6 +1436,7 @@ export default function PlayerApp({ db, setDb }) {
                 {activeTab === 'maps' && <MapsView />}
                 {activeTab === 'progress' && <ProgressView />}
                 {activeTab === 'camp' && <CampScreen />}
+                {activeTab === 'companion' && <CompanionTab character={character} updateCharacter={updateCharacter} />}
                 {activeTab === 'pact' && <PactView character={character} db={db} />}
             </div>
 
