@@ -3,6 +3,7 @@ import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import ItemDetailContent from '../../shared/components/ItemDetailContent';
 import ImagePicker from '../../shared/components/ImagePicker';
+import { useWindowSize } from '../../shared/hooks/useWindowSize';
 import { SHOP_INDEX_FILTER_OPTIONS } from '../../shared/catalog/shopIndex';
 
 export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, dbOnly = false }) {
@@ -224,12 +225,15 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, 
     const DAMAGE_TYPES = ['slashing', 'piercing', 'bludgeoning', 'fire', 'cold', 'electricity', 'acid', 'sonic', 'force', 'void', 'vitality', 'poison', 'mental', 'bleed', 'spirit', 'untyped'];
     const DIE_OPTIONS = ['d4', 'd6', 'd8', 'd10', 'd12'];
 
+    const { isMobile } = useWindowSize();
+    const [showPreview, setShowPreview] = useState(false);
+
     const labelStyle = { display: 'block', color: '#888', fontSize: '0.8em', marginBottom: 4 };
 
     return (
-        <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100%', overflow: 'hidden' }}>
             {/* Left: Editor Form */}
-            <div className="editor-container" style={{ flex: 1, padding: 20, background: '#222', overflowY: 'auto' }}>
+            <div className="editor-container" style={{ flex: 1, padding: 20, background: '#222', overflowY: 'auto', minHeight: 0 }}>
                 <h2>{initialItem?.name ? 'Edit Item' : 'Create Item'}</h2>
 
                 {error && <div style={{ background: '#d32f2f', color: '#fff', padding: 10, marginBottom: 10, borderRadius: 4 }}>{error}</div>}
@@ -418,8 +422,24 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, 
             </div>
 
             {/* Right: Live Preview */}
-            <div style={{ width: 380, minWidth: 320, borderLeft: '1px solid #444', overflowY: 'auto', padding: 16, background: '#1a1a1a' }}>
-                <h4 style={{ marginTop: 0, color: '#aaa', marginBottom: 16 }}>Live Preview</h4>
+            <div style={{
+                width: isMobile ? '100%' : 380,
+                minWidth: isMobile ? 'unset' : 320,
+                borderLeft: isMobile ? 'none' : '1px solid #444',
+                borderTop: isMobile ? '1px solid #444' : 'none',
+                overflowY: 'auto',
+                background: '#1a1a1a',
+                flexShrink: 0,
+            }}>
+                <div
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', cursor: isMobile ? 'pointer' : 'default' }}
+                    onClick={isMobile ? () => setShowPreview(p => !p) : undefined}
+                >
+                    <h4 style={{ margin: 0, color: '#aaa' }}>Live Preview</h4>
+                    {isMobile && <span style={{ color: '#666', fontSize: '0.85em' }}>{showPreview ? '▲ hide' : '▼ show'}</span>}
+                </div>
+                {(!isMobile || showPreview) && (
+                <div style={{ padding: '0 16px 16px' }}>
                 <div style={{ background: '#2a2a2a', borderRadius: 8, padding: 16 }}>
                     <ItemDetailContent
                         item={{
@@ -442,6 +462,8 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, 
                         compact={false}
                     />
                 </div>
+                </div>
+                )}
             </div>
 
             {/* Image Picker Modal */}
