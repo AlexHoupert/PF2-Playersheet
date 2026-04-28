@@ -391,7 +391,18 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
             : (selectedSideItems.length > 0 ? selectedSideItems : [contextMenu?.item].filter(Boolean));
 
         if (action === 'edit') { setEditingItem(targets[0]); return; }
-        if (action === 'clone') { setEditingItem({ ...targets[0], name: `${targets[0].name} (Copy)`, isCustom: true }); return; }
+        if (action === 'clone') {
+            const base = targets[0];
+            const openClone = (extra = {}) => setEditingItem({ ...base, ...extra, sourceFile: null, name: `${base.name} (Copy)`, isCustom: true });
+            if (base.sourceFile) {
+                fetchShopItemDetailBySourceFile(base.sourceFile)
+                    .then(details => openClone(details || {}))
+                    .catch(() => openClone());
+            } else {
+                openClone();
+            }
+            return;
+        }
         if (action === 'newItem') { setEditingItem({ name: '', isCustom: true }); return; }
         if (action === 'inspect' && onInspectItem) { onInspectItem(targets[0]); return; }
 
@@ -822,9 +833,23 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                         <div className="items-view-scroll" style={{ maxHeight: 'calc(100vh - 40px)', overflow: 'auto', borderRadius: 8 }}>
                             <ItemEditor
                                 initialItem={Object.keys(editingItem).length > 0 ? editingItem : null}
-                                onSave={() => window.location.reload()}
+                                onSave={(result) => {
+                                    if (result?.message === 'Saved to Database') {
+                                        setEditingItem(null);
+                                    } else {
+                                        window.location.reload();
+                                    }
+                                }}
                                 onCancel={() => setEditingItem(null)}
-                                onSaveToDb={() => { }}
+                                onSaveToDb={(dbItem) => {
+                                    setDb(prev => {
+                                        const next = deepClone(prev);
+                                        if (!next.shop) next.shop = {};
+                                        if (!next.shop.customItems) next.shop.customItems = {};
+                                        next.shop.customItems[dbItem.name] = dbItem;
+                                        return next;
+                                    });
+                                }}
                             />
                         </div>
                     </div>
