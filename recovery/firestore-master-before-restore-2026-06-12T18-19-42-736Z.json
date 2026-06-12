@@ -1,0 +1,3157 @@
+{
+  "lootBags": [
+    {
+      "items": [],
+      "name": "Tset",
+      "isLocked": false,
+      "goldValue": 0,
+      "id": "89b50be9-a047-49b5-8af7-c7b60d3086d4"
+    }
+  ],
+  "rules": {},
+  "_lastWriteTimestamp": 1781286867410,
+  "users": {
+    "jrvelardejara@gmail.com": {
+      "role": "player",
+      "campaignId": "campaign_1766691475810",
+      "characterId": "96d386c0-b9bb-42a4-8fb7-fabf30a2d507"
+    },
+    "harleyjoker52@gmail.com": {
+      "role": "player",
+      "campaignId": "campaign_1766691475810",
+      "characterId": "4638038f-0dad-403d-bbd6-fd47efc356bc"
+    },
+    "alexander.houpert@gmail.com": {
+      "role": "gm",
+      "characterId": null,
+      "campaignId": "campaign_1766691475810"
+    },
+    "mayer.daniel87@gmail.com": {
+      "campaignId": "campaign_1766691475810",
+      "characterId": "08de1c24-cca9-47e6-be52-e6cb74719b4d",
+      "role": "player"
+    },
+    "akashirokrax@gmail.com": {
+      "campaignId": "campaign_1766691475810",
+      "characterId": "80094f76-ccae-4364-aa17-ce005db89703",
+      "role": "player"
+    }
+  },
+  "feats": {
+    "Sorcerous Potency": {
+      "description": "Because of the magical power inherent in your blood, your spells that hurt or cure are stronger than those of other spellcasters. When you Cast a Spell from your spell slots that either deals damage or restores Hit Points, you gain a status bonus to that spell's damage or healing equal to the spell's rank. This applies only to the initial damage or healing the spell deals when cast. An individual creature takes this damage or benefits from this healing only once per spell, even if the spell would damage or heal that creature multiple times.",
+      "name": "Sorcerous Potency",
+      "id": "c2823a57-8315-48be-89a5-e5b5c843d505",
+      "type": "Class"
+    },
+    "Ash-Piercing Gaze": {
+      "description": "Neither cinders nor winds shall prevent you from seeing those who need help. You automatically succeed at the flat check to target a concealed creature if that creature is concealed only by smoke or mist.",
+      "name": "Ash-Piercing Gaze",
+      "type": "Ancestry",
+      "id": "92140922-f53a-4f9f-b593-b8f9890fe1cb"
+    },
+    "Quick Alchemy": {
+      "name": "Quick Alchemy",
+      "description": "You can create up to 4 versatile vials during your daily preparation. You can use up a versatile vial to make another alchemical consumable at a moment's notice. Any effect created by an item made with Quick Alchemy that would have a duration longer than 10 minutes lasts for 10 minutes instead.\n\n<b>Create Consumable</b> [one-action]: You expend one of your versatile vials to create a single alchemical consumable item of your level or lower that's in your formula book. You don't have to spend the normal monetary cost in alchemical raw materials or need to attempt a Crafting check. This item has the infused trait, but it remains potent only until the start of your next turn. (As normal, you need only one formula for an item to create any level of that item.)\n",
+      "id": "71f827a3-e980-41d6-becd-9ec12c6f9f6b",
+      "type": "Class"
+    },
+    "Combat Climber": {
+      "id": "9d0f4a6e-b4ff-4a90-b253-bdb646c530fd",
+      "type": "Ancestry",
+      "description": "Your techniques allow you to fight as you climb. You’re not offguard while Climbing and can Climb with a hand occupied. You must still use another hand and both legs to Climb.",
+      "name": "Combat Climber"
+    },
+    "Burn it!": {
+      "id": "6222e64b-ff09-4622-b20d-4c80ab77db16",
+      "type": "Ancestry",
+      "description": "Your spells and alchemical items that deal fire damage gain a status bonus to damage equal to half the spell's rank or one-quarter the item's level (minimum bonus +1). You also gain a +1 status bonus to any persistent fire damage you deal.",
+      "name": "Burn it!"
+    },
+    "Unbowed, Unbroken": {
+      "type": "Ancestry",
+      "id": "7ccedde0-20b0-4550-b558-ac663b2e222f",
+      "name": "Unbowed, Unbroken",
+      "description": "Your connection to elemental wood manifests as resilience—towering trees, rough bark, deep roots, and patient determination. You gain the Unwavering Resilience reaction.\n\nUnwavering Resilience [reaction] Trigger You attempt a saving throw against a poison, disease, or mental effect, but you haven’t rolled yet. EffectYou tap into the power of the Plane of Wood, gaining strength and mental fortitude. You gain a +1 circumstance bonus on the triggering save. If you critically succeed at this saving throw, you become bolstered by your success; blossoms and new growth temporarily sprout all over your body, and you gain a number of temporary Hit Point equal to your level. These temporary Hit Points last for one minute. When there temporary Hit Points are lost, the verdant growth subsides."
+    },
+    "Munitions Crafter": {
+      "description": "You can use the advanced alchemy benefits to create a number of daily consumables equal to 4 + half your level (rounded up); these consumables must be bombs or alchemical ammunition. You create the ammunition in batches of 4",
+      "name": "Munitions Crafter",
+      "type": "Class",
+      "id": "4a322263-0ae6-4803-92a3-179fcd458d09"
+    },
+    "Crafter's Appraisal": {
+      "name": "Crafter's Appraisal",
+      "description": "Your knowledge of items' construction allows you to discern their magical effects as well. You can use Crafting instead of a skill associated with a magic tradition to Identify Magic on magic items, though not on any other sorts of magic.",
+      "type": "Skill",
+      "id": "ab255832-5728-4ff1-96e7-e88a59810833"
+    },
+    "Blood Magic": {
+      "name": "Blood Magic",
+      "description": "Casting a sorcerous gift spell granted by your bloodline or a bloodline spell allows you to benefit from a blood magic effect you know. You can typically only benefit from one blood magic effect at a time, though some feats and abilities may change this.\n\nElemental Fury Elemental energy wreathes your form and infuses your magic. Either you gain a +2 status bonus to Intimidation checks for 1 round, or a target takes 1 damage per spell rank; this damage type is listed under your elemental influence. If the spell already deals that type of damage, combine it with the spell's initial damage before determining weaknesses and resistances.",
+      "id": "7798fcc4-4f06-4cf5-9ab6-5eb9d21691c1",
+      "type": "Class"
+    },
+    "Natural Medicine": {
+      "id": "0ce080a5-780f-48b9-8852-9afaaaf4b5b7",
+      "type": "Skill",
+      "description": "You can apply natural cures to heal your allies. You can use Nature instead of Medicine to Treat Wounds, including higher Nature proficiency letting you attempt more difficult checks. It doesn’t replace Medicine for uses of the skill other than Treat Wounds or for feat prerequisites.\n\nIf you’re in the wilderness, you might have easier access to fresh ingredients, allowing you to gain a +2 circumstance bonus to your check to Treat Wounds using Nature, subject to the GM’s determination.",
+      "name": "Natural Medicine"
+    },
+    "Fake Out": {
+      "description": "<b>Trigger:</b> An ally is about to use an action that requires an attack roll, targeting a creature within your weapon's first range increment. \n<b>Requirements:</b> You're wielding a loaded firearm or crossbow. Fake Out does not require you to actually fire your weapon. \n\nWith a skilled flourish of your weapon, you force an enemy to acknowledge you as a threat. Make an attack roll to <b>[gold]Aid[/gold]</b> the triggering attack. If you dealt damage to that enemy with the same weapon since the start of your last turn, you gain a +1 circumstance bonus to this roll.",
+      "name": "Fake Out",
+      "id": "f7e19870-ffa4-4473-b2c3-fee6f62d44e7",
+      "type": "Class"
+    },
+    "Reach Spell": {
+      "type": "Class",
+      "id": "35ad7492-1165-44be-962d-3a1531ad1338",
+      "description": "You can extend your spells’ range. If the next action you use is to Cast a Spell that has a range, increase that spell’s range by 30 feet. As is standard for increasing spell ranges, if the spell normally has a range of touch, you extend its range to 30 feet.",
+      "name": "Reach Spell"
+    }
+  },
+  "notificationQueue": [],
+  "shop": {
+    "traders": [
+      {
+        "inventory": [
+          "Acid Flask (Lesser)",
+          "Alchemist's Fire (Lesser)",
+          "Blasting Stone (Lesser)",
+          "Blight Bomb (Lesser)",
+          "Bottled Lightning (Lesser)",
+          "Dread Ampoule (Lesser)",
+          "Ghost Charge (Lesser)",
+          "Glue Bomb (Lesser)",
+          "Necrotic Bomb (Lesser)",
+          "Skunk Bomb (Lesser)",
+          "Sticky Algae Bomb (Lesser)",
+          "Versatile Vial",
+          "Bottled Sunlight (Lesser)",
+          "Acid Flask (Moderate)",
+          "Alchemist's Fire (Moderate)",
+          "Blasting Stone (Moderate)",
+          "Blight Bomb (Moderate)",
+          "Bottled Lightning (Moderate)",
+          "Dread Ampoule (Moderate)",
+          "Frost Vial (Moderate)",
+          "Ghost Charge (Moderate)",
+          "Glue Bomb (Moderate)",
+          "Necrotic Bomb (Moderate)",
+          "Skunk Bomb (Moderate)",
+          "Sticky Algae Bomb (Moderate)",
+          "Bottled Sunlight (Moderate)",
+          "Crystal Shards (Moderate)",
+          "Frost Vial (Lesser)",
+          "Rounds (Universal)",
+          "Bane Ammunition (Lesser)",
+          "Elemental Ammunition (Lesser, Acid)",
+          "Elemental Ammunition (Lesser, Cold)",
+          "Elemental Ammunition (Lesser, Electricity)",
+          "Elemental Ammunition (Lesser, Fire)",
+          "Elemental Ammunition (Lesser, Poison)",
+          "Shining Ammunition",
+          "Explosive Ammunition",
+          "Juggernaut Mutagen (Lesser)",
+          "Bendy-Arm Mutagen (Lesser)",
+          "Bestial Mutagen (Lesser)",
+          "Cognitive Mutagen (Lesser)",
+          "Deadweight Mutagen (Lesser)",
+          "Drakeheart Mutagen (Lesser)",
+          "Energy Mutagen (Lesser)",
+          "Quicksilver Mutagen (Lesser)",
+          "Sanguine Mutagen (Lesser)",
+          "Serene Mutagen (Lesser)",
+          "Silvertongue Mutagen (Lesser)",
+          "Bendy-Arm Mutagen (Moderate)",
+          "Bestial Mutagen (Moderate)",
+          "Cognitive Mutagen (Moderate)",
+          "Deadweight Mutagen (Moderate)",
+          "Drakeheart Mutagen (Moderate)",
+          "Energy Mutagen (Moderate)",
+          "Juggernaut Mutagen (Moderate)",
+          "Quicksilver Mutagen (Moderate)",
+          "Sanguine Mutagen (Moderate)",
+          "Serene Mutagen (Moderate)",
+          "Silvertongue Mutagen (Moderate)",
+          "Preserving Shot",
+          "Freeze Ammunition",
+          "Elemental Ammunition (Moderate, Electricity)",
+          "Exsanguinating Ammunition",
+          "Ooze Ammunition (Lesser)",
+          "Life Shot (Minor)",
+          "Aromatic Ammunition",
+          "Life Shot (Lesser)",
+          "Ooze Ammunition (Moderate)",
+          "Alchemical Fuse",
+          "Cheetah's Elixir (Lesser)",
+          "Eagle Eye Elixir (Lesser)",
+          "Forensic Dye",
+          "Ghost Ink",
+          "Giant Centipede Venom",
+          "Glow Rod",
+          "Lady's Blessing Oil",
+          "Leaper's Elixir (Lesser)",
+          "Matchstick",
+          "Missive Mint",
+          "Numbing Tonic (Minor)",
+          "Bloodhound Mask (Lesser)",
+          "Bottled Catharsis (Minor)",
+          "Bravo's Brew (Lesser)",
+          "Cat's Eye Elixir",
+          "Comprehension Elixir (Lesser)",
+          "Cooperative Waffles",
+          "Darkvision Elixir (Lesser)",
+          "Emetic Paste (Lesser)",
+          "Infiltrator's Elixir",
+          "Mender's Soup",
+          "Origin Unguent",
+          "Silver Salve",
+          "Surging Serum (Minor)",
+          "Wasul Reed Mask",
+          "Auric Noodles",
+          "Colorful Coating (Indigo)",
+          "Colorful Coating (Orange)",
+          "Colorful Coating (Red)",
+          "Colorful Coating (Yellow)",
+          "Diplomat's Charcuterie",
+          "Drowsy Sun Eye Drops",
+          "Ectoplasmic Tracer",
+          "Olfactory Obfuscator (Lesser)",
+          "Revealing Mist (Lesser)"
+        ],
+        "name": "Alchemy",
+        "id": 1766670355879,
+        "category": "Alchemy"
+      },
+      {
+        "name": "Blacksmith",
+        "inventory": [
+          "Leather Armor",
+          "Longsword",
+          "Buckler",
+          "Bolts",
+          "Crossbow",
+          "Hand Crossbow",
+          "Heavy Crossbow",
+          "Aldori Dueling Sword",
+          "Asp Coil",
+          "Bastard Sword",
+          "Bladesweeper",
+          "Blood-Drinker Blade",
+          "Butterfly Sword",
+          "Buugeng",
+          "Chain Sword",
+          "Cooperative Blade",
+          "Dandpatta",
+          "Dogslicer",
+          "Elven Curve Blade",
+          "Exquisite Sword Cane",
+          "Falcata",
+          "Falchion",
+          "Flashblade",
+          "Gladius",
+          "Greatsword",
+          "Hook Sword",
+          "Infiltrator's Accessory",
+          "Machete",
+          "Nodachi",
+          "Polytool",
+          "Protector's Final Gift",
+          "Radiant Victory",
+          "Rapier",
+          "Reaper's Lancet",
+          "Rhoka Sword",
+          "Sawtooth Saber",
+          "Scimitar",
+          "Shortsword",
+          "Sickle-saber",
+          "Singing Sword",
+          "Smoking Sword",
+          "Sparkblade",
+          "Spiral Rapier",
+          "Sword Cane",
+          "Talwar",
+          "Temple Sword",
+          "Tengu Gale Blade",
+          "Umbrella Injector",
+          "Wakizashi",
+          "Wheel Blades",
+          "Wish Blade",
+          "Zulfikar",
+          "Heavy Barding (Large)"
+        ],
+        "category": "Blacksmith",
+        "id": 1766670442549
+      },
+      {
+        "id": 1766670448376,
+        "category": "Remedies",
+        "inventory": [
+          "Addiction Suppressant (Lesser)",
+          "Affliction Suppressant (Lesser)",
+          "Antidote (Lesser)",
+          "Antiplague (Lesser)",
+          "Elixir of Life (Minor)",
+          "Healing Potion (Minor)",
+          "Vaccine (Minor)",
+          "Antivenom Potion",
+          "Soothing Tonic (Lesser)",
+          "Healing Potion (Lesser)",
+          "Healer's Toolkit",
+          "Healer's Toolkit (Expanded)",
+          "Merciful Balm",
+          "Artevil Suspension"
+        ],
+        "name": "Remedies"
+      },
+      {
+        "category": "Magic",
+        "id": 1767395475723,
+        "name": "Magic",
+        "inventory": [
+          "Scroll of 1st-rank Spell",
+          "Scroll of 2nd-rank Spell",
+          "Scroll of 3rd-rank Spell",
+          "Magic Wand (1st-Rank Spell)",
+          "Magic Wand (2nd-Rank Spell)",
+          "Conduit Shot (Lesser)",
+          "Battering Ammunition",
+          "Trustworthy Round",
+          "Beacon Shot",
+          "Bola Shot",
+          "Depth Charge I",
+          "Freezing Ammunition",
+          "Dispersing Bullet",
+          "Fate Shot",
+          "Terrifying Ammunition",
+          "Gecko Potion",
+          "Marvelous Miniature (Campfire)",
+          "Marvelous Miniature (Ladder)",
+          "Merciful Balm",
+          "Nectar of Purification",
+          "Ogre Spider Filament",
+          "Oil of Unlife (Minor)",
+          "Potency Crystal",
+          "Potion of Electricity Retaliation (Minor)",
+          "Predator's Claw",
+          "Ration Tonic",
+          "Shielding Salve",
+          "Thunderbird Tuft (Lesser)",
+          "Transmuting Ingot (Cold Iron)",
+          "Transmuting Ingot (Silver)",
+          "Wolf Fang",
+          "Wolliped Fleece",
+          "Adaptive Cogwheel",
+          "Anticorrosion Oil",
+          "Bronze Bull Pendant",
+          "Effervescent Ampoule",
+          "Feather Token (Holly Bush)",
+          "Hand of Mercy",
+          "Hunter's Bane",
+          "Jade Cat",
+          "Kirin Echo Chime",
+          "Mesmerizing Opal",
+          "Monkey Pin",
+          "Moonlit Spellgun (Minor)",
+          "Oil of Potency",
+          "Oil of Skating",
+          "Oil of Weightlessness",
+          "Onyx Panther",
+          "Savior Spike",
+          "Spun Cloud (White)",
+          "Alloy Orb (Low-Grade)",
+          "Deadlock Mint",
+          "Demolition Fulu (Lesser)",
+          "Ethereal Crescent",
+          "Feather Step Stone",
+          "Fulu of Flood Suppression",
+          "Feather Token (Bird)",
+          "Feather Token (Puddle)",
+          "Fulu of Fire Suppression",
+          "Hippogriff Feather",
+          "Indomitable Keepsake",
+          "Irritating Seedpod (Lesser)",
+          "Marvelous Miniature (Chest)",
+          "Matchmaker Fulu",
+          "Morph Jewel",
+          "Neophyte's Fipple",
+          "Oil of Mending",
+          "Oil of Ownership (Lesser)",
+          "Oil of Unlife (Lesser)",
+          "Potion of Water Breathing",
+          "Potion of Acid Retaliation (Lesser)",
+          "Potion of Cold Retaliation (Lesser)",
+          "Potion of Electricity Retaliation (Lesser)",
+          "Potion of Fire Retaliation (Lesser)",
+          "Psychic Warding Bracelet",
+          "Retrieval Prism",
+          "Seventh Prism (Triangular)",
+          "Serpent Oil (Lesser)"
+        ]
+      },
+      {
+        "name": "Back Alleys",
+        "inventory": [
+          "Grit",
+          "Refined Pesh",
+          "Belladonna",
+          "Black Adder Venom",
+          "Tatzlwyrm's Gasp",
+          "Toad Tears",
+          "Cytillesh Oil",
+          "Graveroot"
+        ],
+        "category": "Alchemy",
+        "id": 1767911033716
+      },
+      {
+        "inventory": [
+          "Spike Snare",
+          "Alarm Snare",
+          "Battering Snare",
+          "Caltrop Snare",
+          "Hampering Snare",
+          "Marking Snare",
+          "Poison Barbs Snare",
+          "Signaling Snare",
+          "Flare Snare",
+          "Thunder Snare",
+          "Detonating Gears Snare",
+          "Biting Snare",
+          "Trip Snare",
+          "Warning Snare",
+          "Bomb Snare",
+          "Nauseating Snare"
+        ],
+        "name": "Adventurers Gear",
+        "id": 1767911432988,
+        "category": "Adventuring"
+      },
+      {
+        "category": "Magic",
+        "id": 1767912799491,
+        "name": "Temple",
+        "inventory": [
+          "Crying Angel Pendant"
+        ]
+      }
+    ],
+    "availableItems": [
+      "Acid Flask (Lesser)",
+      "Alchemist's Fire (Lesser)",
+      "Blasting Stone (Lesser)",
+      "Blight Bomb (Lesser)",
+      "Bottled Lightning (Lesser)",
+      "Dread Ampoule (Lesser)",
+      "Ghost Charge (Lesser)",
+      "Glue Bomb (Lesser)",
+      "Necrotic Bomb (Lesser)",
+      "Skunk Bomb (Lesser)",
+      "Sticky Algae Bomb (Lesser)",
+      "Versatile Vial",
+      "Bottled Sunlight (Lesser)",
+      "Acid Flask (Moderate)",
+      "Alchemist's Fire (Moderate)",
+      "Blasting Stone (Moderate)",
+      "Blight Bomb (Moderate)",
+      "Bottled Lightning (Moderate)",
+      "Dread Ampoule (Moderate)",
+      "Frost Vial (Moderate)",
+      "Ghost Charge (Moderate)",
+      "Glue Bomb (Moderate)",
+      "Necrotic Bomb (Moderate)",
+      "Skunk Bomb (Moderate)",
+      "Sticky Algae Bomb (Moderate)",
+      "Bottled Sunlight (Moderate)",
+      "Crystal Shards (Moderate)",
+      "Frost Vial (Lesser)",
+      "Rounds (Universal)",
+      "Bane Ammunition (Lesser)",
+      "Elemental Ammunition (Lesser, Acid)",
+      "Elemental Ammunition (Lesser, Cold)",
+      "Elemental Ammunition (Lesser, Electricity)",
+      "Elemental Ammunition (Lesser, Fire)",
+      "Elemental Ammunition (Lesser, Poison)",
+      "Shining Ammunition",
+      "Addiction Suppressant (Lesser)",
+      "Affliction Suppressant (Lesser)",
+      "Antidote (Lesser)",
+      "Antiplague (Lesser)",
+      "Elixir of Life (Minor)",
+      "Healing Potion (Minor)",
+      "Vaccine (Minor)",
+      "Antivenom Potion",
+      "Soothing Tonic (Lesser)",
+      "Healing Potion (Lesser)",
+      "Leather Armor",
+      "Longsword",
+      "Buckler",
+      "Healer's Toolkit",
+      "Healer's Toolkit (Expanded)",
+      "Crossbow",
+      "Pepperbox",
+      "Hand Crossbow",
+      "Bolts",
+      "Explosive Ammunition",
+      "Heavy Crossbow",
+      "Aerekostes",
+      "Aldori Dueling Sword",
+      "Asp Coil",
+      "Azarim",
+      "Bastard Sword",
+      "Blade of Four Energies (Greater)",
+      "Blade of Four Energies",
+      "Blade of the Black Sovereign",
+      "Blade of the Rabbit Prince",
+      "Bladesweeper",
+      "Blood-Drinker Blade (Greater)",
+      "Blood-Drinker Blade",
+      "Blood-Drinker",
+      "Briar",
+      "Brilliant Rapier",
+      "Butterfly Sword",
+      "Buugeng",
+      "Castrovel's Beacon",
+      "Celestial Peachwood Sword",
+      "Chain Sword",
+      "Chalice of Justice",
+      "Cooperative Blade",
+      "Crimson Bluff",
+      "Crimson Brand",
+      "Dandpatta",
+      "Dogslicer",
+      "Elven Curve Blade",
+      "Exquisite Sword Cane",
+      "Falcata",
+      "Falchion",
+      "Final Rest",
+      "Final Stand",
+      "Flashblade (Greater)",
+      "Flashblade (Major)",
+      "Flashblade",
+      "Fleshrender",
+      "Four-Tiger Blade",
+      "Four-Ways Dogslicer",
+      "Frost Brand",
+      "Gladius",
+      "Gloaming Arc",
+      "Gloom Blade",
+      "Greatsword",
+      "Hook Sword",
+      "Infiltrator's Accessory",
+      "Jian of Life's Duality",
+      "Machete",
+      "Mageslayer",
+      "Morning Glow",
+      "Nexian Sealing Blade (Greater)",
+      "Nexian Sealing Blade",
+      "Nodachi",
+      "North Wind's Night Verse",
+      "Orb Shard",
+      "Ovinrbaane",
+      "Piereta",
+      "Polytool",
+      "Protector's Final Gift",
+      "Radiant Victory",
+      "Rapier",
+      "Reaper's Lancet",
+      "Rhoka Sword",
+      "Ridill",
+      "Righteous Fury",
+      "Rime Foil",
+      "Sawtooth Saber",
+      "Scimitar",
+      "Searing Blade (Greater)",
+      "Searing Blade",
+      "Serithtial",
+      "Shortsword",
+      "Sickle-saber",
+      "Singing Sword",
+      "Skyrider Sword (Greater)",
+      "Skyrider Sword",
+      "Smoking Sword",
+      "Soulcutter (Heroic)",
+      "Soulcutter",
+      "South Wind's Scorch Song",
+      "Sparkblade",
+      "Spellcutter",
+      "Spiral Rapier",
+      "Storm Flash (Greater)",
+      "Storm Flash",
+      "Sword Cane",
+      "Talonstrike Blade (Greater)",
+      "Talonstrike Blade",
+      "Talwar",
+      "Temple Sword",
+      "Tengu Gale Blade",
+      "Thundering Fury Dadao",
+      "Timeflaying Blade",
+      "Umbrella Injector",
+      "Vashu's Ninth Life",
+      "Viper Rapier",
+      "Wakizashi",
+      "Wheel Blades",
+      "Wish Blade",
+      "Zulfikar",
+      "Scroll of Rank 1",
+      "Scroll of Rank 2",
+      "Scroll of Rank 3",
+      "Scroll of 1st-rank Spell",
+      "Scroll of 2nd-rank Spell",
+      "Scroll of 3rd-rank Spell",
+      "Magic Wand (1st-Rank Spell)",
+      "Silvertongue Mutagen (Moderate)",
+      "Quicksilver Mutagen (Moderate)",
+      "Sanguine Mutagen (Moderate)",
+      "Serene Mutagen (Moderate)",
+      "Juggernaut Mutagen (Moderate)",
+      "Quicksilver Mutagen (Lesser)",
+      "Sanguine Mutagen (Lesser)",
+      "Serene Mutagen (Lesser)",
+      "Silvertongue Mutagen (Lesser)",
+      "Bendy-Arm Mutagen (Moderate)",
+      "Bestial Mutagen (Moderate)",
+      "Cognitive Mutagen (Moderate)",
+      "Deadweight Mutagen (Moderate)",
+      "Drakeheart Mutagen (Moderate)",
+      "Energy Mutagen (Moderate)",
+      "Juggernaut Mutagen (Lesser)",
+      "Bendy-Arm Mutagen (Lesser)",
+      "Bestial Mutagen (Lesser)",
+      "Cognitive Mutagen (Lesser)",
+      "Deadweight Mutagen (Lesser)",
+      "Drakeheart Mutagen (Lesser)",
+      "Energy Mutagen (Lesser)",
+      "Preserving Shot",
+      "Aromatic Ammunition",
+      "Life Shot (Minor)",
+      "Ooze Ammunition (Lesser)",
+      "Beacon Shot",
+      "Ranging Shot",
+      "Trustworthy Round",
+      "Exsanguinating Ammunition",
+      "Battering Ammunition",
+      "Bane Ammunition (Moderate)",
+      "Blister Ammunition (Lesser)",
+      "Depth Charge I",
+      "Elemental Ammunition (Moderate, Acid)",
+      "Elemental Ammunition (Moderate, Cold)",
+      "Elemental Ammunition (Moderate, Electricity)",
+      "Elemental Ammunition (Moderate, Fire)",
+      "Elemental Ammunition (Moderate, Poison)",
+      "Bola Shot",
+      "Freezing Ammunition",
+      "Freeze Ammunition",
+      "Conduit Shot (Lesser)",
+      "Dispersing Bullet",
+      "Fate Shot",
+      "Life Shot (Lesser)",
+      "Ooze Ammunition (Moderate)",
+      "Terrifying Ammunition",
+      "Battering Snare",
+      "Caltrop Snare",
+      "Alchemical Fuse",
+      "Cheetah's Elixir (Lesser)",
+      "Eagle Eye Elixir (Lesser)",
+      "Forensic Dye",
+      "Gecko Potion",
+      "Ghost Ink",
+      "Giant Centipede Venom",
+      "Glow Rod",
+      "Grit",
+      "Hampering Snare",
+      "Lady's Blessing Oil",
+      "Leaper's Elixir (Lesser)",
+      "Marking Snare",
+      "Marvelous Miniature (Campfire)",
+      "Marvelous Miniature (Ladder)",
+      "Matchstick",
+      "Merciful Balm",
+      "Missive Mint",
+      "Nectar of Purification",
+      "Numbing Tonic (Minor)",
+      "Ogre Spider Filament",
+      "Oil of Unlife (Minor)",
+      "Poison Barbs Snare",
+      "Potency Crystal",
+      "Potion of Acid Retaliation (Minor)",
+      "Potion of Cold Retaliation (Minor)",
+      "Potion of Electricity Retaliation (Minor)",
+      "Potion of Emergency Escape",
+      "Potion of Fire Retaliation (Minor)",
+      "Potion of Shared Memories",
+      "Predator's Claw",
+      "Ration Tonic",
+      "Refined Pesh",
+      "Shielding Salve",
+      "Signaling Snare",
+      "Spike Snare",
+      "Flare Snare",
+      "Thunder Snare",
+      "Detonating Gears Snare",
+      "Nauseating Snare",
+      "Bomb Snare",
+      "Warning Snare",
+      "Trip Snare",
+      "Biting Snare",
+      "Alarm Snare",
+      "Thunderbird Tuft (Lesser)",
+      "Transmuting Ingot (Cold Iron)",
+      "Transmuting Ingot (Silver)",
+      "Wolf Fang",
+      "Wolliped Fleece",
+      "Adaptive Cogwheel",
+      "Anticorrosion Oil",
+      "Belladonna",
+      "Black Adder Venom",
+      "Bloodhound Mask (Lesser)",
+      "Bottled Catharsis (Minor)",
+      "Bravo's Brew (Lesser)",
+      "Bronze Bull Pendant",
+      "Cat's Eye Elixir",
+      "Comprehension Elixir (Lesser)",
+      "Cooperative Waffles",
+      "Crying Angel Pendant",
+      "Darkvision Elixir (Lesser)",
+      "Effervescent Ampoule",
+      "Emetic Paste (Lesser)",
+      "Feather Token (Holly Bush)",
+      "Hand of Mercy",
+      "Hunter's Bane",
+      "Infiltrator's Elixir",
+      "Jade Cat",
+      "Kirin Echo Chime",
+      "Mender's Soup",
+      "Mesmerizing Opal",
+      "Monkey Pin",
+      "Moonlit Spellgun (Minor)",
+      "Oil of Potency",
+      "Oil of Skating",
+      "Oil of Weightlessness",
+      "Onyx Panther",
+      "Origin Unguent",
+      "Savior Spike",
+      "Silver Salve",
+      "Spun Cloud (White)",
+      "Surging Serum (Minor)",
+      "Tatzlwyrm's Gasp",
+      "Toad Tears",
+      "Wasul Reed Mask",
+      "Alloy Orb (Low-Grade)",
+      "Artevil Suspension",
+      "Auric Noodles",
+      "Colorful Coating (Indigo)",
+      "Colorful Coating (Orange)",
+      "Colorful Coating (Red)",
+      "Colorful Coating (Yellow)",
+      "Cytillesh Oil",
+      "Deadlock Mint",
+      "Demolition Fulu (Lesser)",
+      "Diplomat's Charcuterie",
+      "Ectoplasmic Tracer",
+      "Drowsy Sun Eye Drops",
+      "Feather Step Stone",
+      "Ethereal Crescent",
+      "Fulu of Flood Suppression",
+      "Feather Token (Bird)",
+      "Feather Token (Puddle)",
+      "Fulu of Fire Suppression",
+      "Graveroot",
+      "Hippogriff Feather",
+      "Indomitable Keepsake",
+      "Irritating Seedpod (Lesser)",
+      "Marvelous Miniature (Chest)",
+      "Matchmaker Fulu",
+      "Morph Jewel",
+      "Neophyte's Fipple",
+      "Oil of Mending",
+      "Oil of Ownership (Lesser)",
+      "Oil of Unlife (Lesser)",
+      "Olfactory Obfuscator (Lesser)",
+      "Potion of Water Breathing",
+      "Potion of Acid Retaliation (Lesser)",
+      "Potion of Cold Retaliation (Lesser)",
+      "Potion of Electricity Retaliation (Lesser)",
+      "Potion of Fire Retaliation (Lesser)",
+      "Psychic Warding Bracelet",
+      "Retrieval Prism",
+      "Revealing Mist (Lesser)",
+      "Seventh Prism (Triangular)",
+      "Serpent Oil (Lesser)"
+    ],
+    "availableFormulas": [
+      "Acid Flask (Lesser)",
+      "Alchemist's Fire (Lesser)",
+      "Blasting Stone (Lesser)",
+      "Blight Bomb (Lesser)",
+      "Bottled Lightning (Lesser)",
+      "Dread Ampoule (Lesser)",
+      "Ghost Charge (Lesser)",
+      "Glue Bomb (Lesser)",
+      "Necrotic Bomb (Lesser)",
+      "Skunk Bomb (Lesser)",
+      "Sticky Algae Bomb (Lesser)",
+      "Versatile Vial",
+      "Bottled Sunlight (Lesser)",
+      "Acid Flask (Moderate)",
+      "Alchemist's Fire (Moderate)",
+      "Blasting Stone (Moderate)",
+      "Blight Bomb (Moderate)",
+      "Bottled Lightning (Moderate)",
+      "Dread Ampoule (Moderate)",
+      "Frost Vial (Moderate)",
+      "Ghost Charge (Moderate)",
+      "Glue Bomb (Moderate)",
+      "Necrotic Bomb (Moderate)",
+      "Skunk Bomb (Moderate)",
+      "Sticky Algae Bomb (Moderate)",
+      "Bottled Sunlight (Moderate)",
+      "Crystal Shards (Moderate)",
+      "Frost Vial (Lesser)",
+      "Rounds (Universal)",
+      "Bane Ammunition (Lesser)",
+      "Elemental Ammunition (Lesser, Acid)",
+      "Elemental Ammunition (Lesser, Cold)",
+      "Elemental Ammunition (Lesser, Electricity)",
+      "Elemental Ammunition (Lesser, Fire)",
+      "Elemental Ammunition (Lesser, Poison)",
+      "Shining Ammunition",
+      "Addiction Suppressant (Lesser)",
+      "Affliction Suppressant (Lesser)",
+      "Antidote (Lesser)",
+      "Antiplague (Lesser)",
+      "Elixir of Life (Minor)",
+      "Healing Potion (Minor)",
+      "Vaccine (Minor)",
+      "Antivenom Potion",
+      "Soothing Tonic (Lesser)",
+      "Healing Potion (Lesser)",
+      "Leather Armor",
+      "Longsword",
+      "Buckler",
+      "Crossbow",
+      "Hand Crossbow",
+      "Heavy Crossbow",
+      "Scroll of Rank 1",
+      "Scroll of Rank 2",
+      "Scroll of Rank 3",
+      "Scroll of 1st-rank Spell",
+      "Scroll of 2nd-rank Spell",
+      "Scroll of 3rd-rank Spell",
+      "Magic Wand (1st-Rank Spell)",
+      "Silvertongue Mutagen (Moderate)",
+      "Quicksilver Mutagen (Moderate)",
+      "Sanguine Mutagen (Moderate)",
+      "Serene Mutagen (Moderate)",
+      "Juggernaut Mutagen (Moderate)",
+      "Quicksilver Mutagen (Lesser)",
+      "Sanguine Mutagen (Lesser)",
+      "Serene Mutagen (Lesser)",
+      "Silvertongue Mutagen (Lesser)",
+      "Bendy-Arm Mutagen (Moderate)",
+      "Bestial Mutagen (Moderate)",
+      "Cognitive Mutagen (Moderate)",
+      "Deadweight Mutagen (Moderate)",
+      "Drakeheart Mutagen (Moderate)",
+      "Energy Mutagen (Moderate)",
+      "Juggernaut Mutagen (Lesser)",
+      "Bendy-Arm Mutagen (Lesser)",
+      "Bestial Mutagen (Lesser)",
+      "Cognitive Mutagen (Lesser)",
+      "Deadweight Mutagen (Lesser)",
+      "Drakeheart Mutagen (Lesser)",
+      "Energy Mutagen (Lesser)",
+      "Preserving Shot",
+      "Battering Ammunition",
+      "Exsanguinating Ammunition",
+      "Bane Ammunition (Moderate)",
+      "Blister Ammunition (Lesser)",
+      "Bola Shot",
+      "Depth Charge I",
+      "Elemental Ammunition (Moderate, Acid)",
+      "Elemental Ammunition (Moderate, Cold)",
+      "Elemental Ammunition (Moderate, Electricity)",
+      "Elemental Ammunition (Moderate, Fire)",
+      "Elemental Ammunition (Moderate, Poison)",
+      "Freeze Ammunition",
+      "Freezing Ammunition",
+      "Conduit Shot (Lesser)",
+      "Trustworthy Round",
+      "Beacon Shot",
+      "Ooze Ammunition (Lesser)",
+      "Life Shot (Minor)",
+      "Aromatic Ammunition",
+      "Dispersing Bullet",
+      "Fate Shot",
+      "Life Shot (Lesser)",
+      "Ooze Ammunition (Moderate)",
+      "Terrifying Ammunition",
+      "Battering Snare",
+      "Caltrop Snare",
+      "Alchemical Fuse",
+      "Cheetah's Elixir (Lesser)",
+      "Eagle Eye Elixir (Lesser)",
+      "Forensic Dye",
+      "Gecko Potion",
+      "Ghost Ink",
+      "Glow Rod",
+      "Grit",
+      "Hampering Snare",
+      "Lady's Blessing Oil",
+      "Leaper's Elixir (Lesser)",
+      "Marking Snare",
+      "Marvelous Miniature (Campfire)",
+      "Marvelous Miniature (Ladder)",
+      "Matchstick",
+      "Merciful Balm",
+      "Missive Mint",
+      "Nectar of Purification",
+      "Numbing Tonic (Minor)",
+      "Ogre Spider Filament",
+      "Oil of Unlife (Minor)",
+      "Poison Barbs Snare",
+      "Potency Crystal",
+      "Potion of Acid Retaliation (Minor)",
+      "Potion of Shared Memories",
+      "Potion of Fire Retaliation (Minor)",
+      "Potion of Emergency Escape",
+      "Potion of Electricity Retaliation (Minor)",
+      "Potion of Cold Retaliation (Minor)",
+      "Predator's Claw",
+      "Ration Tonic",
+      "Shielding Salve",
+      "Signaling Snare",
+      "Spike Snare",
+      "Flare Snare",
+      "Thunder Snare",
+      "Detonating Gears Snare",
+      "Biting Snare",
+      "Trip Snare",
+      "Warning Snare",
+      "Bomb Snare",
+      "Nauseating Snare",
+      "Alarm Snare",
+      "Thunderbird Tuft (Lesser)",
+      "Transmuting Ingot (Cold Iron)",
+      "Transmuting Ingot (Silver)",
+      "Wolf Fang",
+      "Wolliped Fleece",
+      "Adaptive Cogwheel",
+      "Anticorrosion Oil",
+      "Bloodhound Mask (Lesser)",
+      "Bottled Catharsis (Minor)",
+      "Bravo's Brew (Lesser)",
+      "Bronze Bull Pendant",
+      "Cat's Eye Elixir",
+      "Comprehension Elixir (Lesser)",
+      "Cooperative Waffles",
+      "Darkvision Elixir (Lesser)",
+      "Effervescent Ampoule",
+      "Emetic Paste (Lesser)",
+      "Feather Token (Holly Bush)",
+      "Hand of Mercy",
+      "Hunter's Bane",
+      "Infiltrator's Elixir",
+      "Jade Cat",
+      "Kirin Echo Chime",
+      "Mender's Soup",
+      "Mesmerizing Opal",
+      "Monkey Pin",
+      "Moonlit Spellgun (Minor)",
+      "Oil of Potency",
+      "Oil of Skating",
+      "Oil of Weightlessness",
+      "Onyx Panther",
+      "Origin Unguent",
+      "Savior Spike",
+      "Silver Salve",
+      "Spun Cloud (White)",
+      "Surging Serum (Minor)",
+      "Wasul Reed Mask",
+      "Alloy Orb (Low-Grade)",
+      "Artevil Suspension",
+      "Auric Noodles",
+      "Colorful Coating (Yellow)",
+      "Colorful Coating (Red)",
+      "Colorful Coating (Orange)",
+      "Colorful Coating (Indigo)",
+      "Demolition Fulu (Lesser)",
+      "Diplomat's Charcuterie",
+      "Drowsy Sun Eye Drops",
+      "Ectoplasmic Tracer",
+      "Ethereal Crescent",
+      "Feather Step Stone",
+      "Feather Token (Bird)",
+      "Feather Token (Puddle)",
+      "Fulu of Fire Suppression",
+      "Fulu of Flood Suppression",
+      "Hippogriff Feather",
+      "Indomitable Keepsake",
+      "Irritating Seedpod (Lesser)",
+      "Marvelous Miniature (Chest)",
+      "Oil of Unlife (Lesser)",
+      "Oil of Ownership (Lesser)",
+      "Oil of Mending",
+      "Neophyte's Fipple",
+      "Morph Jewel",
+      "Matchmaker Fulu",
+      "Olfactory Obfuscator (Lesser)",
+      "Potion of Acid Retaliation (Lesser)",
+      "Potion of Cold Retaliation (Lesser)",
+      "Potion of Electricity Retaliation (Lesser)",
+      "Potion of Fire Retaliation (Lesser)",
+      "Potion of Water Breathing",
+      "Psychic Warding Bracelet",
+      "Retrieval Prism",
+      "Revealing Mist (Lesser)",
+      "Serpent Oil (Lesser)",
+      "Seventh Prism (Triangular)"
+    ]
+  },
+  "lore": {
+    "articles": [
+      {
+        "group": "Regional",
+        "image": "ressources/icons/cards/history.webp",
+        "title": "Velran (History)",
+        "tags": [
+          "intro"
+        ],
+        "sortOrder": 2,
+        "id": "1",
+        "content": "Some 30 years ago Velran began it’s existence as a research outpost of the Merchant Republic of [[Amn]] , excavating ruins of the ancient Empire of [[Netheril]] . The discovery of elementally charged minerals however, buried in the soil and mountains of the surrounding area, quickly changed its fate. As the value of these minerals became apparent, savy merchants began pouring money into extensive mining operations, and the promise of riches lured thousands to the newly established town.\n\nEver keen on securing natural resources and expanding it’s influence, the Council of Six, ruling over Amn, quickly sent emissaries to claim the land, establish government structures and manage the construction of necessary infrastructure. Since then, plenty of smaller satelite-villages have been established around the area, providing mostly agricultural goods, making Velran less dependant on imports.\n\nSee also: [[Velran]]",
+        "category": "history"
+      },
+      {
+        "group": "Antiquity",
+        "image": null,
+        "title": "Netheril",
+        "tags": [],
+        "sortOrder": 1,
+        "id": "2",
+        "category": "history",
+        "content": "Netheril was an ancient, magocratic human empire of Faerûn, whose influence was felt across the Realms for thousands of years. The Netherese people lived in a strict hierarchy for hundreds of years, split into the nobles of High Netheril, living in flying enclaves miles above Toril, and the commoners of Low Netheril settled in demesnes on the ground. During its glory years, the Empire of Magic would spread across a great stretch of Faerûn.\n\nThe empire was the pinnacle of human civilization during the first half of the Age of Humanity. Although they had humble roots as mere fishermen and farmers, the Netherese were introduced to the Art by the elves and came to harness this arcane power in ways that would shape Toril for generations. Over the next thousand years they discovered the long lost Nether Scrolls, developed the creation and use of mythallars and created the first of their flying citie. The arrogance of Netheril grew to the point where they attempted to attain the divinity of magic, and wound up killing the God of Magic and destroying the Weave (see [[Karsus's Folly]]. In the resulting maelstrom, the Faerûnian pantheon was altered and most of the flying cities of Netheril came crashing to the earth."
+      },
+      {
+        "content": "A dense forest....lorem ipsum",
+        "category": "locations",
+        "image": "ressources/icons/cards/locations.webp",
+        "group": "Elfharrow",
+        "title": "Elfharrow Forest",
+        "sortOrder": 9,
+        "tags": [
+          "Velran"
+        ],
+        "id": "3"
+      },
+      {
+        "id": "ff3f5a21-7057-4cb5-abc2-2ef4806efc40",
+        "group": "Antiquity",
+        "image": null,
+        "title": "Karsus's Folly",
+        "tags": [],
+        "sortOrder": 2,
+        "content": "In −339 DR, the Magistocratic empire of [[Netheril]] ended with an event that came to be known as Karsus's Folly, an attempt by the brilliant arcanist Karsus to steal the power of the goddess of magic Mystryl and ascend to godhood. He cast an incredibly complicated, six-hour long spell of his own creation called Karsus's avatar, which finally tore apart the Weave, forcing Mystryl to sacrifice herself to keep it intact.",
+        "category": "history"
+      },
+      {
+        "tags": [
+          "Velran"
+        ],
+        "image": null,
+        "group": "Velran & Surroundings",
+        "content": "\nWedged between the endless green Expanse of the [[Elfharrow Forest]] and the massive Mountains of the North Wall stands the proud city of Velran . Behind it’s impressive walls more than 30.000 souls have made their home in this bastion of civilization in the middle of nowhere.\n\n# Life in the City\nLife in Velran has been mostly peaceful since it’s establishment. The city itself is divided into different districts, with most of it’s inhabitants being craftsmen or public service provider. The government and residences of the wealthy merchant elite, are situated in a separate inner-city, on the highest part of the upwards sloping city inaccesible to most residents. In Velran, ‘moving up’ is often a very literal description. Outside of the massive outer walls, countless, mostly wooden buildings have sprung up where less successfull merchants, manual labourers and newcomers to the city have made their homes. Most buildings in the city proper are constructed from stone or half-timber and strongly resemble the architectural style of Amn despite the diversity of it’s inhabitants. The demographic composition of Velens citizens is more colorful than typical in the large cities of the west and it is not uncommon to see goblins, orcs and other species, often shunned in more ‘civilized’ places walking by without being given so much as a second glance.\n\n# Outside of the City\nThe city is connected to the rest of civilization by a constant stream of caravans, bringing in goods and news from Amn and other places, and shipping off the precious minerals collected as well as the occasional artifact uncovered in the ruins of the ancient Netherese city, on whose remains Velran was built. Governor Von Wiedendorff who has been in charge of the city for the last 27 years has managed to established friendly relationships with a neighboring tribe of Dwarves ([[Barak'kor]]), making great use of their skill in the construction of the city, and managed to remain neutral to the nomadic tribes of elves inhabiting the forest despite initial conflicts. The occasional sightings of Fey: Sprites, dryads and other mysterious phenomena has become deeply ingrained in local folclore, but while it is not uncommon for mothers to threaten their children with child-stealing Fey, actual incidents regarding the reclusive denizens of the forest have so far remained more urban myth than real life danger.\n\n# Districts of Velran\nVelran in seperated into districts with very different athmospheres, functions and demographics:\n[[Velran - Commercial District]]\n[[Velran - Industrial District]]\n[[Velran - Eastern District]]\n[[Velran - Western District]]\n[[Velran - Park District]]\n[[Velran - Upper District]]\n[[Velran - Government District]]\n[[Velran - The Outskirts]]",
+        "infobox": "Region: Elfharrow\nPopulation: 31.716\nFounded: tbd\nGovernment: [[Amn]], [[Gov. Demerius Wiedendorff]]",
+        "id": "e341010a-c2c5-4e65-aa6d-9a390c9d7920",
+        "title": "Velran",
+        "sortOrder": 1,
+        "category": "locations"
+      },
+      {
+        "tags": [
+          "Velran"
+        ],
+        "group": "Velran & Surroundings",
+        "image": null,
+        "content": "see: [[Velran]]\n\nThe Commercial District Often just called \"The Market\" is the central district of the lowest plateau and home to the largest market place in Velran. Here Citizens and Travelers alike can find almost everything, at mostly competitive prices. Most of the Streets are lined with stores, both large and small. Once a week a large market on the the central plaza offers the frehest produce from the surrounding villages.\n\n# Noteworthy Locations:\nLeuetreu's World of Alchemy\n\n# Noteworthy Individuals: \n[[Nathaniel Leuetreu]]\n",
+        "infobox": "Population: ~6000\nType: Trade",
+        "id": "1fc08dcb-2051-43cb-8d17-b8bcc2df08ec",
+        "sortOrder": 1,
+        "title": "Velran - Commercial District",
+        "category": "locations"
+      },
+      {
+        "title": "Velran - Industrial District",
+        "sortOrder": 2,
+        "id": "a7651d88-4676-4051-aae1-6286e0857a8a",
+        "category": "locations",
+        "tags": [
+          "Velran"
+        ],
+        "image": null,
+        "group": "Velran & Surroundings",
+        "infobox": "Population: ~5500\nType: Industry, Craftsmen",
+        "content": "see: [[Velran]]\n\nThe Industrial District, colloquially referred to as \"The Smokehouse\" due to the smoke rising up from the smithies, produces most of the goods, being sold in the Commercial District. It is home to everything from tiny goldsmiths, to large warehouses with advanced manufactories. Apart from industry it is also home to several government offices like the post-office.\n\n# Noteworthy Locations:\nPost-Office\n\n# Noteworthy Individuals: \n[Halgrim groscho Hallosch]]\n[[Cara groscho Hallosch]]\n[[Walter Moncrief]]\n\n"
+      },
+      {
+        "content": "see: [[Velran]]\n\nOften considered the industrial districts appendix, this district houses a mix of warehouses, craftsmen and residential quarters. A lively quarter with plenty of variety, that became infamous for the tragedy of Bellflower Street that was burned down almost completely in a tragic awakening and has since been called \"Black Street\" by many of the citizens.\n\n# Noteworthy Locations:\nBlack Street (Bellflower Street)\n\n# Noteworthy Individuals: \n/\n",
+        "infobox": "Population: ~3000\nType: Industrial, Residential",
+        "tags": [
+          "Velran"
+        ],
+        "image": null,
+        "group": "Velran & Surroundings",
+        "category": "locations",
+        "id": "dc3e8fb3-ca4b-40b1-b36a-6727f39eec91",
+        "title": "Velran - Eastern District",
+        "sortOrder": 3
+      },
+      {
+        "group": "Regional",
+        "image": "ressources/icons/cards/history.webp",
+        "sortOrder": 3,
+        "title": "War of the Elements",
+        "tags": [],
+        "id": "25462d03-2435-468f-bfc6-e537991b253c",
+        "category": "history",
+        "content": "More than 1000 years ago [[Kossuth]], a powerful and destructive Fire Primordial broke through they veils that separate the Primordial Plane (our world) from the [[Prime Elemental Plane]]. A group of [[Netheril|Netherese]]Wizards, the 'Venerable Brothers of the Eternal Flame' thought to harness the might of primordial magic but ended up bringing death to thousands. After Kossuth, other Primordials emerged and either stood against him or took his side...\n\nThe confilct left the area a wasteland, the once majestic forest reduced to ash and nothing left but ruins of a proud and powerful enclave of Netheril."
+      },
+      {
+        "id": "42660f0d-5e27-446f-a146-9bac9d6180a9",
+        "sortOrder": 4,
+        "title": "Velran - Western District",
+        "category": "locations",
+        "tags": [
+          "Velran"
+        ],
+        "image": null,
+        "group": "Velran & Surroundings",
+        "content": "see: [[Velran]]\n\nTo be done\n\n# Noteworthy Locations:\n/\n\n# Noteworthy Individuals: \n/\n",
+        "infobox": "Population: ~11000\nType: Residential"
+      },
+      {
+        "content": "see: [[Velran]]\n\nThe most \"colorful\" of all the districts, here the rich and beautiful mingle with the simple folk, the large park, that gives the district it's name is an important place for events and relaxation for most citizens and the commodities range from simple stores to exquisite tea houses but tend to be more expensive than those in the lower districts, while still affordable for most workers.\n\n# Noteworthy Locations:\nGrand Park\nLast Hope Inn\nDruid Enclave\n\n# Noteworthy Individuals: \n[[Martain]]\n[[Lilliana Silverwind]]",
+        "infobox": "Population: 3500\nType: Residential",
+        "tags": [
+          "Velran"
+        ],
+        "group": "Velran & Surroundings",
+        "image": null,
+        "category": "locations",
+        "id": "ffdc60da-6d43-43e4-a99a-aba841796eec",
+        "title": "Velran - Park District",
+        "sortOrder": 5
+      },
+      {
+        "id": "ee1059fe-f2e7-47ab-bd0b-a47629dc92c1",
+        "sortOrder": 5,
+        "title": "Velran - Upper District",
+        "category": "locations",
+        "group": "Velran & Surroundings",
+        "image": null,
+        "tags": [
+          "Velran"
+        ],
+        "content": "see: [[Velran]]\n\nto be done\n\n# Noteworthy Locations:\n/\n\n# Noteworthy Individuals: \n/",
+        "infobox": "Population: 1500\nType: Residential, Shopping, Magic"
+      },
+      {
+        "tags": [
+          "Velran"
+        ],
+        "image": null,
+        "group": "Velran & Surroundings",
+        "infobox": "Population: 1200\nType: Government",
+        "content": "see: [[Velran]]\n\nto be done\n\n# Noteworthy Locations:\n/\n\n# Noteworthy Individuals: \n/",
+        "title": "Velran - Government District",
+        "sortOrder": 5,
+        "id": "1f4f9d58-3e19-4dfe-a00a-35c66d96eab6",
+        "category": "locations"
+      },
+      {
+        "tags": [
+          "Velran"
+        ],
+        "group": "Velran & Surroundings",
+        "image": null,
+        "infobox": "Population: 5000\nType: Residential, Commercial",
+        "content": "see: [[Velran]]\n\nto be done\n\n# Noteworthy Locations:\n/\n\n# Noteworthy Individuals: \n/",
+        "sortOrder": 5,
+        "title": "Velran - Outskirts",
+        "id": "fb4df54c-fc22-40b8-9cc2-0f3c1043f2e9",
+        "category": "locations"
+      },
+      {
+        "sortOrder": 10,
+        "title": "Beren's Outpost",
+        "id": "05121348-eaa4-456c-b020-d41294cd4aec",
+        "category": "locations",
+        "group": "Elfharrow",
+        "image": "ressources/icons/cards/locations.webp",
+        "tags": [
+          "Velran"
+        ],
+        "infobox": "Region: Elfharrow\nPopulation: 5",
+        "content": "Founded by Berens Grandfather, this logging post has since been turned in more of a general travellers rest, offering beds, food and various goods to weary travellers. It also serves as a hidden outpost for the city watch.\n\n# Noteworthy individuals:\n[[Beren Rastol]]\n[[Tellen]]\n[[Torros]]"
+      },
+      {
+        "category": "locations",
+        "content": "",
+        "infobox": "Region: North Wall\nPopulation: 11.000\nFounded: ???\nGovernment: ???",
+        "id": "b09d2f81-7ec3-40cc-81e4-f09a1ba69a67",
+        "group": "North Wall",
+        "image": null,
+        "tags": [
+          "Dwarves"
+        ],
+        "title": "Barak'Kor"
+      }
+    ]
+  },
+  "actions": {
+    "Escape [one-action]": {
+      "skill": "Athletics,Acrobatics",
+      "name": "Escape [one-action]",
+      "description": "You attempt to escape from being grabbed, immobilized, or restrained. Choose one creature, object, spell effect, hazard, or other impediment imposing any of those conditions on you. Attempt a check using your unarmed attack modifier against the DC of the effect. This is typically the Athletics DC of a creature grabbing you, the Thievery DC of a creature who tied you up, the spell DC for a spell effect, or the listed Escape DC of an object, hazard, or other impediment. You can attempt an Acrobatics or Athletics check instead of using your attack modifier if you choose (but this action still has the attack trait).\n\n<b>[gold]Critical Success[/gold]</b>  You get free and remove the grabbed, immobilized, and restrained conditions imposed by your chosen target. You can then Stride up to 5 feet.\n<b>[gold]Success[/gold]</b>  You get free and remove the grabbed, immobilized, and restrained conditions imposed by your chosen target.\n<b>[gold]Critical Failure[/gold]</b>  You don't get free, and you can't attempt to Escape again until your next turn.",
+      "feat": null,
+      "subtype": "Defense",
+      "type": "Combat",
+      "id": "3b54c800-2087-4dbf-81b7-58bc4e36faeb"
+    },
+    "Long Jump [two-actions]": {
+      "skill": "Athletics",
+      "description": "You Stride, then attempt a DC 15 Athletics check to make a long jump in the direction you were Striding. If you didn't Stride at least 10 feet, you automatically fail your check. The GM might increase or decrease this DC depending on the situation.\n\n<b>[gold]Success[/gold]</b> You Leap up to a distance equal to your check result rounded down to the nearest 5 feet. You can't jump farther than your land Speed.\n<b>[gold]Failure[/gold]</b> You make a normal horizontal Leap.\n<b>[gold]Critical Failure[/gold]</b> You make a normal horizontal Leap, then fall and land prone.",
+      "name": "Long Jump [two-actions]",
+      "feat": null,
+      "subtype": "Jump",
+      "type": "Movement",
+      "id": "9c5992e3-7425-4d80-9a84-3839bc2ff19e"
+    },
+    "Stride [one-action]": {
+      "type": "Movement",
+      "id": "8a928bf7-a925-43df-95d6-12dfbc8f4a74",
+      "subtype": "Ground",
+      "skill": null,
+      "feat": null,
+      "description": "You move up to your Speed",
+      "name": "Stride [one-action]"
+    },
+    "[gold]Fake Out[/gold] [reaction]": {
+      "skill": null,
+      "description": "<b>Trigger:</b> An ally is about to use an action that requires an attack roll, targeting a creature within your weapon's first range increment. \n<b>Requirements:</b> You're wielding a loaded firearm or crossbow. Fake Out does not require you to actually fire your weapon. \n\nWith a skilled flourish of your weapon, you force an enemy to acknowledge you as a threat. Make an attack roll to <b>[gold]Aid[/gold]</b> the triggering attack. If you dealt damage to that enemy with the same weapon since the start of your last turn, you gain a +1 circumstance bonus to this roll.",
+      "name": "[gold]Fake Out[/gold] [reaction]",
+      "feat": "Fake Out",
+      "subtype": "Reaction",
+      "type": "Combat",
+      "id": "d9b61d2a-490c-40b1-b514-900c24abebbf"
+    },
+    "Strike [one-action]": {
+      "feat": null,
+      "description": "You attack with a weapon you’re wielding within its given range. If you critically succeed on the attack roll, you deal double damage*.",
+      "name": "Strike [one-action]",
+      "skill": null,
+      "id": "4b257f9a-c7fb-4623-b2bf-7a864d642baa",
+      "type": "Combat",
+      "subtype": "Attack"
+    },
+    "Leap [one-action]": {
+      "subtype": "Jump",
+      "id": "598bd379-66c2-41fd-9da9-a6ed7a84c4a5",
+      "type": "Movement",
+      "name": "Leap [one-action]",
+      "description": "You take a short horizontal or vertical jump. Jumping a greater distance requires using the Athletics skill for a High Jump or Long Jump.\n\n<b>[gold]Horizontal Jump[/gold]</b>up to 10 feet horizontally if your Speed is at least 15 feet, or up to 15 feet horizontally if your Speed is at least 30 feet. You land in the space where your Leap ends (meaning you can typically clear a 5-foot gap, or a 10-foot gap if your Speed is 30 feet or more). You can't make a horizontal Leap if your Speed is less than 15 feet.\n\n<b>[gold]Vertical Jump[/gold]</b> up to 3 feet vertically and 5 feet horizontally onto an elevated surface.",
+      "feat": null,
+      "skill": null
+    },
+    "Trip [one-action]": {
+      "feat": null,
+      "description": "<b>Requirements:</b> You have at least one hand free. Your target can't be more than one size larger than you. \n\nYou try to knock a creature to the ground. Attempt an Athletics check against the target's Reflex DC. \n\n<b>[gold]Critical Success[/gold]</b> The target falls, lands prone, and takes 1d6 bludgeoning damage. \n<b>[gold]Success[/gold]</b> The target falls and lands prone. \n<b>[gold]Critical Failure[/gold]</b> You lose your balance, fall, and land prone.",
+      "name": "Trip [one-action]",
+      "skill": "Athletics",
+      "type": "Combat",
+      "id": "7d9af7dc-7a39-491a-8319-0a2cf0c42c86",
+      "subtype": "Attack"
+    },
+    "Bon Mot": {
+      "type": "Combat",
+      "id": "a72be877-ae82-45d4-91ae-f20ea4d15814",
+      "subtype": "Social",
+      "skill": "Diplomacy",
+      "feat": "Bon Mot",
+      "name": "Bon Mot",
+      "description": "You launch an insightful quip at a foe, distracting them. Choose a foe within 30 feet and roll a Diplomacy check against the target's Will DC.\n\n<b>[gold]Critical Success[/gold]</b> The target is distracted and takes a –3 status penalty to Perception and Will saves for 1 minute. The target can end the effect early with a retort to your Bon Mot. This can either be a single action that has the concentrate trait or an appropriate skill action to frame their retort. The GM determines which skill actions qualify, though they must take at least 1 action. Typically, the retort needs to use a linguistic Charisma-based skill action.\n<b>[gold]Success[/gold]</b> As critical success, but the penalty is –2.\n<b>[gold]Critical Failure[/gold]</b> Your quip is atrocious. You take the same penalty an enemy would take had you succeeded. This ends after 1 minute or if you issue another Bon Mot and succeed."
+    },
+    "Stand [one-action]": {
+      "subtype": "Prone",
+      "type": "Movement",
+      "id": "f1943f9a-5fb2-43ce-a0c9-16d40105a939",
+      "skill": null,
+      "name": "Stand [one-action]",
+      "description": "You stand up from prone. \n\nStanding up counts as moving for the purpose of effects such as Reactive Strike",
+      "feat": null
+    },
+    "Create a Diversion [one-action]": {
+      "id": "7f518be0-d415-44ed-9785-07e762ca451c",
+      "type": "Combat",
+      "subtype": "Social",
+      "skill": "Deception",
+      "feat": null,
+      "name": "Create a Diversion [one-action]",
+      "description": "With a gesture, a trick, or some distracting words, you can create a diversion that draws creatures' attention elsewhere. If you use a gesture or trick, this action gains the manipulate trait. If you use distracting words, it gains the auditory and linguistic traits.\n\nAttempt a single Deception check and compare it to the Perception DCs of the creatures whose attention you're trying to divert. Whether or not you succeed, creatures you attempt to divert gain a +4 circumstance bonus to their Perception DCs against your attempts to Create a Diversion for 1 minute.\n\n<b>[gold]Success[/gold]</b> You become hidden to each creature whose Perception DC is less than or equal to your result. (The hidden condition allows you to Sneak away) This lasts until the end of your turn or until you do anything except Step or use the Stealth skill to Hide or Sneak. If you Strike a creature, the creature remains off-guard against that attack, and you then become observed. If you do anything else, you become observed just before you act unless the GM determines otherwise.\n<b>[gold]Failure[/gold]</b> You don't divert the attention of any creatures whose Perception DC exceeds your result, and those creatures are aware you were trying to trick them."
+    },
+    "Avert Gaze [one-action]": {
+      "type": "Combat",
+      "id": "cbca4b19-2794-4773-be68-7b065de02721",
+      "subtype": "Defense",
+      "skill": null,
+      "feat": null,
+      "name": "Avert Gaze [one-action]",
+      "description": null
+    },
+    "Grapple [one-action]": {
+      "skill": "Athletics",
+      "feat": null,
+      "description": "<b>Requirements:</b> You have at least one free hand and your target is no more than one size larger than you.\n\nAttempt an Athletics check against the target's Fortitude DC. You can Grapple a target you already have grabbed or restrained without having a hand free.\n\n<b>[gold]Critical Success[/gold]</b> Your target is restrained until the end of your next turn unless you move or your target Escapes.\n<b>[gold]Success[/gold]</b> Your target is grabbed until the end of your next turn unless you move or your target Escapes.\n<b>[gold]Failure[/gold]</b> You fail to grab your target. If you already had the target grabbed or restrained using a Grapple, those conditions on the target end.\n<b>[gold]Critical Failure[/gold]</b> If you already had the target grabbed or restrained, it breaks free. Your target can either grab you, as if it succeeded at using the Grapple action against you, or force you to fall and land prone.",
+      "name": "Grapple [one-action]",
+      "id": "e65b17ff-e706-4347-a1eb-ca1548ce15c2",
+      "type": "Combat",
+      "subtype": "Attack"
+    },
+    "Raise a Shield [one-action]": {
+      "type": "Combat",
+      "id": "31bb7c53-b0f7-480d-a2bd-014546e841e1",
+      "subtype": "Defense",
+      "feat": null,
+      "description": "You position your shield to protect yourself. When you have Raised a Shield, you gain its listed circumstance bonus to AC. Your shield remains raised until the start of your next turn.",
+      "name": "Raise a Shield [one-action]",
+      "skill": null
+    },
+    "Disarm [one-action]": {
+      "type": "Combat",
+      "id": "7f3f9bc8-6af6-4974-9b0e-c8f36084105c",
+      "subtype": "Attack",
+      "skill": "Athletics",
+      "feat": null,
+      "name": "Disarm [one-action]",
+      "description": "<b>Requirements:</b> You have at least one hand free. The target can't be more than one size larger than you. \n\nYou try to knock an item out of a creature's grasp. Attempt an Athletics check against the target's Reflex DC. \n\n<b>[gold]Critical Success[/gold]</b> You knock the item out of the target's grasp. It falls to the ground in the target's space. \n<b>[gold]Success[/gold]</b> You weaken your target's grasp on the item. Further attempts to Disarm the target of that item gain a +2 circumstance bonus, and the target takes a –2 circumstance penalty to attacks with the item or other checks requiring a firm grasp on the item. The creature can end the effect by Interacting to change its grip on the item; otherwise, it lasts as long as the creature holds the item. \n<b>[gold]Critical Failure[/gold]</b> You lose your balance and become off-guard until the start of your next turn."
+    },
+    "Shield Block [reaction]": {
+      "type": "Combat",
+      "id": "7655ae7c-a6b5-4f7f-acb4-9d5deeb977e6",
+      "subtype": "Defense",
+      "skill": null,
+      "feat": "\"Shield Block\"",
+      "description": "<b>Trigger:</b> While you have your shield raised, you would take physical damage (bludgeoning, piercing, or slashing) from an attack. \n\nYou snap your shield in place to ward off a blow. Your shield prevents you from taking an amount of damage up to the shield’s Hardness. You and the shield each take any remaining damage, possibly breaking or destroying the shield.",
+      "name": "Shield Block [reaction]"
+    },
+    "Take Cover [one-action]": {
+      "id": "6069f4e2-baad-4b6e-87d8-792b4bfa88f1",
+      "type": "Combat",
+      "subtype": "Defense",
+      "feat": null,
+      "name": "Take Cover [one-action]",
+      "description": "<b>Requirements:</b> You are benefiting from cover, are near a feature that allows you to take cover, or are prone.\n\nYou press yourself against a wall or duck behind an obstacle to take better advantage of cover. If you would have standard cover, you instead gain greater cover, which provides a +4 circumstance bonus to AC; to Reflex saves against area effects; and to Stealth checks to Hide, Sneak, or otherwise avoid detection. Otherwise, you gain the benefits of standard cover (a +2 circumstance bonus instead). This lasts until you move from your current space, use an attack action, become unconscious, or end this effect as a free action.",
+      "skill": null
+    },
+    "Shove [one-action]": {
+      "feat": null,
+      "description": "<b>Requirements:</b> You have at least one hand free. The target can't be more than one size larger than you.\n\nYou push a creature away from you. Attempt an Athletics check against your target's Fortitude DC.\n\n<b>[gold]Critical Success[/gold]</b> You push your target up to 10 feet away from you. You can Stride after it, but you must move the same distance and in the same direction.\n<b>[gold]Success[/gold]</b> You push your target back 5 feet. You can Stride after it, but you must move the same distance and in the same direction.\n<b>[gold]Critical Failure[/gold]</b> You lose your balance, fall, and land prone.",
+      "name": "Shove [one-action]",
+      "skill": "Athletics",
+      "type": "Combat",
+      "id": "d48f3dc2-d2ac-4756-875f-ee834f1ff368",
+      "subtype": "Attack"
+    },
+    "Crawl [one-action]": {
+      "description": "While you are prone, you are unable to Stride or Step. Instead, you Crawl 5ft (if speed is more than 5ft).",
+      "name": "Crawl [one-action]",
+      "feat": null,
+      "skill": null,
+      "subtype": "Prone",
+      "type": "Movement",
+      "id": "7313a892-bb33-47b4-9811-0ce3828edef4"
+    },
+    "[gold]Reach Spell[/gold] [one-action]": {
+      "feat": "Reach Spell",
+      "description": "You can extend your spell’s range. If the next action you use is to Cast a Spell that has a range, increase that spell’s range by 30 feet. As is standard for increasing spell ranges, if the spell normally has a range of touch, you extend its range to 30 feet.",
+      "name": "[gold]Reach Spell[/gold] [one-action]",
+      "skill": null,
+      "id": "47c605f3-c910-4aaf-b6f1-c5a3bb34d72b",
+      "type": "Combat",
+      "subtype": "Feat"
+    },
+    "Feint [one-action]": {
+      "subtype": "Attack",
+      "type": "Combat",
+      "id": "e3ead862-d04a-456f-bee3-42971f6c9425",
+      "name": "Feint [one-action]",
+      "description": "<b>Requirements:</b> You are within melee reach of the target you attempt to Feint.\n\nWith a misleading flourish, you leave an opponent unprepared for your real attack. Attempt a Deception check against your target's Perception DC.\n\n<b>[gold]Critical Success[/gold]</b> You throw your enemy's defenses against you entirely off. The target is off-guard against melee attacks that you attempt against it until the end of your next turn.\n<b>[gold]Success[/gold]</b> Your foe is fooled, but only momentarily. The target is off-guard against the next melee attack that you attempt against it before the end of your current turn.\n<b>[gold]Critical Failure[/gold]</b> Your feint backfires. You are off-guard against melee attacks the target attempts against you until the end of your next turn.",
+      "feat": null,
+      "skill": "Deception"
+    },
+    "Step [one-action]": {
+      "id": "0be99e22-983e-4507-b753-4f9ba1b6a8ec",
+      "type": "Movement",
+      "subtype": "Ground",
+      "feat": null,
+      "description": "You carefully move 5 feet. Unlike most types of movement, Stepping doesn't trigger reactions, such as Reactive Strike, that can be triggered by move actions or upon leaving or entering a square.\n\nYou can't Step into difficult terrain, and you can't Step using a Speed other than your land Speed.",
+      "name": "Step [one-action]",
+      "skill": null
+    },
+    "Interact [one-action]": {
+      "skill": null,
+      "description": "You can grab an unattended or stored object, open a door, etc.. You might have to attempt a skill check to determine if successful. This action generally provokes reactions such as Attack of Opportunity.\n",
+      "name": "Interact [one-action]",
+      "feat": null,
+      "id": "a58269a3-9069-4c3d-8d21-bffae26e9d5f",
+      "type": "Other"
+    },
+    "Fly [one-action]": {
+      "feat": null,
+      "description": "You move through the air up to your fly Speed. Moving upward (straight up or diagonally) uses the rules for moving through difficult terrain. You can move straight down 10 feet for every 5 feet of movement you spend. If you Fly to the ground, you don't take falling damage. You can use an action to Fly 0 feet to hover in place. If you're airborne at the end of your turn and didn't use a Fly action this round, you fall.",
+      "name": "Fly [one-action]",
+      "skill": null,
+      "type": "Movement",
+      "id": "97ca2221-cd87-4faa-ab2d-2b8a72b9a8a2",
+      "subtype": "Other"
+    },
+    "Demoralize [one-action]": {
+      "skill": "Intimidate",
+      "feat": null,
+      "description": "With a sudden shout, a well-timed taunt, or a cutting put-down, you can shake an enemy's resolve. Choose a creature within 30 feet of you who you're aware of. Attempt an Intimidation check against that target's Will DC. If the target doesn't understand the language you are speaking, or you're not speaking a language, you take a –4 circumstance penalty to the check. Regardless of your result, the target is temporarily immune to your attempts to Demoralize it for 10 minutes.\n\n<b>[gold]Critical Success[/gold]</b> The target becomes frightened 2.\n<b>[gold]Success[/gold]</b> The target becomes frightened 1.",
+      "name": "Demoralize [one-action]",
+      "type": "Combat",
+      "id": "2a157815-7278-4b87-a4bb-4ce97069a2bc",
+      "subtype": "Social"
+    },
+    "Burrow [one-action]": {
+      "subtype": "Other",
+      "id": "e7c988e4-eabb-41b4-a2bb-7087156988d5",
+      "type": "Movement",
+      "name": "Burrow [one-action]",
+      "description": "You dig your way through dirt, sand, or a similar loose material at a rate up to your burrow Speed. You can't burrow through rock or other substances denser than dirt unless you have an ability that allows you to do so.",
+      "feat": null,
+      "skill": null
+    }
+  },
+  "runes": {
+    "\"+3\"": {
+      "id": "16704b2c-567f-4507-9e06-3b540d40287b",
+      "type": "Fundamental",
+      "name": "\"+3\"",
+      "description": null
+    },
+    "\"+2\"": {
+      "name": "\"+2\"",
+      "description": null,
+      "type": "Fundamental",
+      "id": "dcca5097-eda6-4182-b361-0181eda52db1"
+    },
+    "\"+1\"": {
+      "name": "\"+1\"",
+      "description": null,
+      "type": "Fundamental",
+      "id": "d9f53cdb-421a-4661-b341-6fea2e49ea42"
+    }
+  },
+  "library": {},
+  "characters": [],
+  "campaigns": {
+    "campaign_1766691475810": {
+      "characters": [
+        {
+          "impulses": [],
+          "name": "Nozzik",
+          "senses": [
+            "Nightvision"
+          ],
+          "magic": {
+            "proficiency": null,
+            "list": [],
+            "attribute": null,
+            "slots": {
+              "2_max": 0,
+              "2_curr": 0,
+              "10_curr": 0,
+              "f_max": 0,
+              "f_curr": 0,
+              "3_max": 0,
+              "4_max": 0,
+              "6_curr": 0,
+              "6_max": 0,
+              "9_curr": 0,
+              "5_max": 0,
+              "7_max": 0,
+              "4_curr": 0,
+              "10_max": 0,
+              "5_curr": 0,
+              "9_max": 0,
+              "3_curr": 0,
+              "1_curr": 0,
+              "7_curr": 0,
+              "1_max": 0,
+              "8_curr": 0,
+              "8_max": 0
+            }
+          },
+          "skills": {
+            "Crafting": 4,
+            "Diplomacy": 0,
+            "Lore_3": null,
+            "Lore_2": null,
+            "Thievery": 0,
+            "Nature": 2,
+            "Acrobatics": 0,
+            "Occultism": 0,
+            "Religion": 0,
+            "Survival": 2,
+            "Deception": 4,
+            "Medicine": 0,
+            "Arcana": 0,
+            "Athletics": 2,
+            "Lore_4": null,
+            "Society": 2,
+            "Stealth": 2,
+            "Performance": 0,
+            "Intimidation": 2,
+            "Lore_1": 2
+          },
+          "stats": {
+            "proficiencies": {
+              "unarmored": 2,
+              "medium": 0,
+              "light": 2
+            },
+            "spell_proficiency": 0,
+            "saves": {
+              "fortitude": 4,
+              "reflex": 4,
+              "will": 4
+            },
+            "hp": {
+              "temp": 0,
+              "max": 30,
+              "current": 23
+            },
+            "attributes": {
+              "wisdom": 0,
+              "charisma": 2,
+              "constitution": 0,
+              "intelligence": 2,
+              "strength": 0,
+              "dexterity": 4
+            },
+            "impulse_proficiency": 0,
+            "speed": {
+              "fly": 0,
+              "climb": 10,
+              "swim": 10,
+              "land": 25
+            },
+            "perception": 4,
+            "ac": {
+              "armor_equipped": false,
+              "shield_hardness": 5,
+              "shield_max": 50,
+              "value": 10,
+              "shield": 0,
+              "shield_hp": 6,
+              "last_armor": "Leather Armor",
+              "shield_raised": false,
+              "shield_equipped": true,
+              "armor": 20,
+              "base": 19,
+              "shield_bonus": 2
+            },
+            "class_dc": 19
+          },
+          "feats": [
+            "Burn it!",
+            "Munitions Crafter",
+            "Quick Alchemy",
+            "Combat Climber",
+            "Crafter's Appraisal",
+            "Fake Out",
+            "Way of the Pistolero",
+            "Alchemical Crafting",
+            "Stubborn",
+            "Tailed Goblin",
+            "Slinger's Precision"
+          ],
+          "gold": "1940.19",
+          "initiative": 0,
+          "proficiencies": {
+            "Firearms": 4,
+            "Sword": 0,
+            "Heavy": 0,
+            "Bombs": 2,
+            "Simple": 0,
+            "Light": 2,
+            "Unarmored": 2,
+            "Medium": 0,
+            "Crossbows": 0
+          },
+          "isKineticist": false,
+          "id": "08de1c24-cca9-47e6-be52-e6cb74719b4d",
+          "formulaBook": [
+            "Acid Flask (Lesser)",
+            "Alchemist's Fire (Lesser)",
+            "Glue Bomb (Lesser)",
+            "Skunk Bomb (Lesser)",
+            "Blight Bomb (Lesser)",
+            "Bottled Lightning (Lesser)"
+          ],
+          "isCaster": false,
+          "inventory": [
+            {
+              "group": null,
+              "type": "Ammo",
+              "level": 0,
+              "sourceFile": "rounds-universal.json",
+              "img": "icons/weapons/ammunition/shot-round-lead.webp",
+              "price": 0.1,
+              "traits": {
+                "value": [
+                  "alchemical",
+                  "consumable"
+                ],
+                "rarity": "common"
+              },
+              "qty": 26,
+              "rarity": "common",
+              "name": "Rounds (Universal)",
+              "category": null
+            },
+            {
+              "equipped": false,
+              "name": "Leather Armor",
+              "qty": 1
+            },
+            {
+              "acBonus": 1,
+              "level": 0,
+              "group": null,
+              "strength": null,
+              "checkPenalty": null,
+              "rarity": "common",
+              "dexCap": null,
+              "system": {
+                "quantity": 1,
+                "rules": [],
+                "speedPenalty": 0,
+                "hardness": 3,
+                "grade": null,
+                "traits": {
+                  "rarity": "common",
+                  "value": [],
+                  "integrated": null
+                },
+                "price": {
+                  "value": {
+                    "gp": 1
+                  }
+                },
+                "bulk": {
+                  "value": 0.1
+                },
+                "containerId": null,
+                "hp": {
+                  "max": 6,
+                  "value": 6
+                },
+                "material": {
+                  "grade": null,
+                  "type": null
+                },
+                "publication": {
+                  "license": "ORC",
+                  "title": "Pathfinder Player Core",
+                  "remaster": true
+                },
+                "description": {
+                  "value": "<p>This very small shield is a favorite of duelists and quick, lightly armored warriors. It's typically made of steel and strapped to your forearm. You can @UUID[Compendium.pf2e.actionspf2e.Item.Raise a Shield] with your buckler as long as you have that hand free or are holding a light object that's not a weapon in that hand.</p><table class=\"pf2e remaster\"><thead><tr><th>Hardness</th><th>HP</th><th>BT</th></tr></thead><tbody><tr><td>3</td><td>6</td><td>3</td></tr></tbody></table>"
+                },
+                "acBonus": 1,
+                "size": "med",
+                "level": {
+                  "value": 0
+                },
+                "runes": {
+                  "reinforcing": 0
+                },
+                "baseItem": "buckler"
+              },
+              "hpMax": 6,
+              "equipped": false,
+              "type": "Shield",
+              "name": "Buckler",
+              "qty": 1,
+              "speedPenalty": 0,
+              "category": null,
+              "hardness": 3,
+              "img": "icons/equipment/shield/buckler-wooden-boss-brown.webp",
+              "sourceFile": "buckler.json",
+              "traits": {
+                "value": [],
+                "rarity": "common"
+              },
+              "price": 1
+            },
+            {
+              "equipped": true,
+              "loaded": [
+                {
+                  "isSpecial": false,
+                  "id": "std",
+                  "name": "Rounds (Universal)"
+                },
+                {
+                  "name": "Rounds (Universal)",
+                  "id": "std",
+                  "isSpecial": false
+                },
+                {
+                  "name": "Bane Ammunition (Lesser)",
+                  "isSpecial": true,
+                  "id": "std"
+                }
+              ],
+              "qty": 1,
+              "name": "Pepperbox"
+            },
+            {
+              "level": 1,
+              "group": null,
+              "type": "Ammo",
+              "name": "Bane Ammunition (Lesser)",
+              "qty": 7,
+              "rarity": "common",
+              "category": null,
+              "img": "icons/default-icons/ammo.svg",
+              "sourceFile": "bane-ammunition-lesser.json",
+              "traits": {
+                "rarity": "common",
+                "value": [
+                  "alchemical",
+                  "consumable",
+                  "poison"
+                ]
+              },
+              "price": 3
+            },
+            {
+              "name": "Elemental Ammunition (Lesser, Acid)",
+              "rarity": "common",
+              "qty": 5,
+              "category": null,
+              "img": "icons/magic/acid/dissolve-drip-droplet-smoke.webp",
+              "sourceFile": "elemental-ammunition-lesser-acid.json",
+              "traits": {
+                "value": [
+                  "acid",
+                  "alchemical",
+                  "consumable",
+                  "splash"
+                ],
+                "rarity": "common"
+              },
+              "price": 3,
+              "level": 1,
+              "group": null,
+              "type": "Ammo"
+            },
+            {
+              "sourceFile": "shining-ammunition.json",
+              "img": "icons/equipment/consumables/ammunition/shining-ammunition.webp",
+              "price": 3,
+              "traits": {
+                "rarity": "common",
+                "value": [
+                  "consumable",
+                  "light",
+                  "magical"
+                ]
+              },
+              "rarity": "common",
+              "qty": 9,
+              "name": "Shining Ammunition",
+              "category": null,
+              "group": null,
+              "type": "Ammo",
+              "level": 1
+            },
+            {
+              "equipped": true,
+              "loaded": [
+                {
+                  "name": "Rounds (Universal)",
+                  "id": "std",
+                  "isSpecial": false
+                },
+                {
+                  "id": "std",
+                  "isSpecial": true,
+                  "name": "Elemental Ammunition (Lesser, Acid)"
+                },
+                null
+              ],
+              "qty": 1,
+              "name": "Pepperbox"
+            },
+            {
+              "rarity": "common",
+              "qty": 2,
+              "name": "Quicksilver Mutagen (Lesser)",
+              "category": "mutagen",
+              "sourceFile": "quicksilver-mutagen-lesser.json",
+              "img": "icons/equipment/alchemical-items/alchemical-elixirs/quicksilver-mutagen.webp",
+              "price": 4,
+              "traits": {
+                "rarity": "common",
+                "value": [
+                  "alchemical",
+                  "consumable",
+                  "elixir",
+                  "mutagen",
+                  "polymorph"
+                ]
+              },
+              "level": 1,
+              "group": null,
+              "type": "Consumable"
+            },
+            {
+              "type": "Consumable",
+              "group": null,
+              "level": 3,
+              "price": 12,
+              "traits": {
+                "value": [
+                  "alchemical",
+                  "consumable",
+                  "elixir",
+                  "mutagen",
+                  "polymorph"
+                ],
+                "rarity": "common"
+              },
+              "sourceFile": "quicksilver-mutagen-moderate.json",
+              "img": "icons/equipment/alchemical-items/alchemical-elixirs/quicksilver-mutagen.webp",
+              "category": "mutagen",
+              "qty": 2,
+              "rarity": "common",
+              "name": "Quicksilver Mutagen (Moderate)"
+            },
+            {
+              "level": 0,
+              "group": null,
+              "type": "Consumable",
+              "name": "Chalk",
+              "qty": 1,
+              "rarity": "common",
+              "category": "other",
+              "img": "icons/equipment/adventuring-gear/chalk.webp",
+              "sourceFile": "chalk.json",
+              "traits": {
+                "value": [],
+                "rarity": "common"
+              },
+              "price": 0.01
+            },
+            {
+              "level": 0,
+              "type": "Consumable",
+              "group": null,
+              "category": "other",
+              "name": "Candle",
+              "qty": 1,
+              "rarity": "common",
+              "traits": {
+                "value": [],
+                "rarity": "common"
+              },
+              "price": 0.01,
+              "img": "icons/sundries/lights/candle-unlit-grey.webp",
+              "sourceFile": "candle.json"
+            },
+            {
+              "group": null,
+              "type": "Consumable",
+              "level": 0,
+              "img": "icons/equipment/alchemical-items/drugs/alcohol.webp",
+              "sourceFile": "alcohol.json",
+              "traits": {
+                "value": [
+                  "alchemical",
+                  "consumable",
+                  "drug",
+                  "ingested",
+                  "poison"
+                ],
+                "rarity": "common"
+              },
+              "price": 0.01,
+              "name": "Alcohol",
+              "rarity": "common",
+              "qty": 1,
+              "category": "drug"
+            },
+            {
+              "group": null,
+              "type": "Ammo",
+              "level": 0,
+              "sourceFile": "bolts.json",
+              "img": "icons/equipment/weapons/bolts.webp",
+              "price": 0.1,
+              "traits": {
+                "value": [
+                  "consumable"
+                ],
+                "rarity": "common"
+              },
+              "rarity": "common",
+              "qty": 2,
+              "name": "Bolts",
+              "category": null
+            },
+            {
+              "traits": {
+                "value": [
+                  "consumable"
+                ],
+                "rarity": "common"
+              },
+              "price": 0.1,
+              "img": "icons/weapons/ammunition/arrows-broadhead-white.webp",
+              "sourceFile": "arrows.json",
+              "category": null,
+              "name": "Arrows",
+              "rarity": "common",
+              "qty": 50,
+              "type": "Ammo",
+              "group": null,
+              "level": 0
+            },
+            {
+              "type": "Consumable",
+              "traits": {
+                "value": [
+                  "alchemical",
+                  "consumable",
+                  "elixir",
+                  "healing"
+                ],
+                "rarity": "common"
+              },
+              "price": 3,
+              "img": "icons/equipment/alchemical-items/alchemical-elixirs/elixir-of-life.webp",
+              "sourceFile": "elixir-of-life-minor.json",
+              "category": "elixir",
+              "name": "Elixir of Life (Minor)",
+              "damage": {
+                "dice": null,
+                "persistent": null,
+                "die": null,
+                "damageType": ""
+              },
+              "qty": 1,
+              "group": null,
+              "level": 1,
+              "splashDamage": null,
+              "range": null,
+              "rarity": "common"
+            }
+          ],
+          "level": 3,
+          "xp": {
+            "current": 565,
+            "max": 1200
+          },
+          "languages": [
+            "Common",
+            "Dwarfen",
+            "Goblin",
+            "Gnomish"
+          ],
+          "conditions": [
+            {
+              "name": "Fast Healing",
+              "level": 0
+            },
+            {
+              "level": 0,
+              "name": "Blessed"
+            }
+          ],
+          "money": {
+            "gp": 180,
+            "sp": 0,
+            "cp": 0,
+            "pp": 0
+          }
+        },
+        {
+          "level": 3,
+          "xp": {
+            "max": 1200,
+            "current": 565
+          },
+          "inventory": [
+            {
+              "itemId": "0991b7c7-443a-4399-8a56-fe1b9cba63c8",
+              "equipped": 1,
+              "name": "Dagger of the Cinderblessed"
+            },
+            {
+              "qty": 1,
+              "name": "Healer's Toolkit"
+            },
+            {
+              "price": 4,
+              "system": {
+                "spell": {
+                  "time": "10 minutes",
+                  "type": "Spell",
+                  "wand_available": false,
+                  "scroll_available": true,
+                  "name": "Alarm",
+                  "traits": [
+                    "concentrate",
+                    "manipulate"
+                  ],
+                  "sourceFile": "spells/1st-rank/alarm.json",
+                  "traditions": [
+                    "arcane",
+                    "divine",
+                    "occult",
+                    "primal"
+                  ],
+                  "img": "icons/spells/alarm.webp",
+                  "level": 1,
+                  "rarity": "common",
+                  "school": null,
+                  "defense": null,
+                  "range": "touch"
+                }
+              },
+              "traits": {
+                "value": [
+                  "consumable",
+                  "magical",
+                  "scroll"
+                ],
+                "rarity": "common"
+              },
+              "sourceFile": "scroll-of-1st-rank-spell.json",
+              "img": "icons/sundries/scrolls/scroll-symbol-eye-brown.webp",
+              "category": "scroll",
+              "rarity": "common",
+              "qty": 1,
+              "name": "Scroll of Alarm (Rank 1)",
+              "type": "Consumable",
+              "group": null,
+              "level": 1
+            }
+          ],
+          "isCaster": true,
+          "languages": [
+            "Elvish",
+            "Fey",
+            "Netherese"
+          ],
+          "conditions": [],
+          "money": {
+            "pp": 0,
+            "sp": 0,
+            "cp": 0,
+            "gp": 30
+          },
+          "id": "4638038f-0dad-403d-bbd6-fd47efc356bc",
+          "isKineticist": false,
+          "initiative": 0,
+          "gold": 80,
+          "proficiencies": {
+            "Heavy": 0,
+            "Medium": 0,
+            "Unarmored": 2,
+            "Light": 0
+          },
+          "impulses": [],
+          "name": "Nimwe",
+          "feats": [
+            "Natural Medicine",
+            "Reach Spell",
+            "Unbowed, Unbroken",
+            "Ash-Piercing Gaze",
+            "Blood Magic",
+            "Sorcerous Potency"
+          ],
+          "stats": {
+            "perception": 2,
+            "ac": {
+              "shield_equipped": false,
+              "shield": 0,
+              "value": 10,
+              "shield_hp": null,
+              "shield_hardness": null,
+              "shield_max": null,
+              "armor_equipped": false,
+              "shield_bonus": null,
+              "base": 16,
+              "armor": 17
+            },
+            "class_dc": 19,
+            "saves": {
+              "fortitude": 2,
+              "reflex": 2,
+              "will": 4
+            },
+            "proficiencies": {
+              "unarmored": 2
+            },
+            "spell_proficiency": 0,
+            "hp": {
+              "max": 29,
+              "temp": 0,
+              "current": 29
+            },
+            "attributes": {
+              "strength": 0,
+              "dexterity": 1,
+              "intelligence": 1,
+              "constitution": 1,
+              "charisma": 4,
+              "wisdom": 2
+            },
+            "impulse_proficiency": 0,
+            "speed": {
+              "land": 25,
+              "swim": 10,
+              "fly": 0,
+              "climb": 10
+            }
+          },
+          "senses": [
+            "Nightvision",
+            "Ash-Piercing Gaze"
+          ],
+          "magic": {
+            "slots": {
+              "3_curr": 0,
+              "9_max": 0,
+              "5_curr": 0,
+              "1_curr": 4,
+              "8_curr": 0,
+              "8_max": 0,
+              "7_curr": 0,
+              "1_max": 4,
+              "f_max": 1,
+              "10_curr": 0,
+              "2_max": 3,
+              "2_curr": 3,
+              "f_curr": 1,
+              "4_curr": 0,
+              "7_max": 0,
+              "9_curr": 0,
+              "5_max": 0,
+              "6_max": 0,
+              "6_curr": 0,
+              "3_max": 0,
+              "4_max": 0,
+              "10_max": 0
+            },
+            "bloodmagic": "Elemental Fury",
+            "list": [
+              {
+                "name": "Scatter Scree",
+                "level": "0"
+              },
+              {
+                "name": "Glamorize",
+                "level": "0"
+              },
+              {
+                "level": "0",
+                "name": "Needle Darts"
+              },
+              {
+                "name": "Root Reading",
+                "level": "0"
+              },
+              {
+                "level": "0",
+                "name": "Tangle Vine"
+              },
+              {
+                "name": "Bullhorn",
+                "level": "0"
+              },
+              {
+                "name": "Figment",
+                "level": "0"
+              },
+              {
+                "level": "0",
+                "name": "Guidance"
+              },
+              {
+                "name": "Grease",
+                "level": "1"
+              },
+              {
+                "name": "Interposing Earth",
+                "level": "1"
+              },
+              {
+                "name": "Charm",
+                "Bloodmagic": true,
+                "level": "1"
+              },
+              {
+                "name": "Briarbirth",
+                "Bloodmagic": true,
+                "level": "2"
+              },
+              {
+                "level": "2",
+                "name": "Scorching Ray"
+              },
+              {
+                "level": "2",
+                "name": "Resist Energy"
+              },
+              {
+                "name": "Heal",
+                "level": "2"
+              },
+              {
+                "level": "Focus",
+                "Bloodmagic": true,
+                "name": "Elemental Toss"
+              },
+              {
+                "name": "Heal",
+                "Bloodmagic": false,
+                "level": "1"
+              }
+            ],
+            "proficiency": 2,
+            "attribute": "Charisma"
+          },
+          "skills": {
+            "Crafting": 0,
+            "Diplomacy": 0,
+            "Lore_3": null,
+            "Religion": 0,
+            "Occultism": 2,
+            "Survival": 2,
+            "Lore_2": null,
+            "Thievery": 0,
+            "Nature": 2,
+            "Acrobatics": 0,
+            "Athletics": 0,
+            "Medicine": 2,
+            "Deception": 2,
+            "Arcana": 0,
+            "Lore_1": 2,
+            "Lore_4": null,
+            "Performance": 4,
+            "Intimidation": 2,
+            "Stealth": 0,
+            "Society": 0
+          }
+        },
+        {
+          "initiative": 0,
+          "gold": "231.19",
+          "proficiencies": {
+            "Unarmed": 2,
+            "Heavy": 0,
+            "Medium": 0,
+            "Martial": 2,
+            "Simple": 2,
+            "Firearm": 2,
+            "Unarmored": 0,
+            "Light": 0
+          },
+          "name": "Kairos",
+          "impulses": [
+            {
+              "name": "Base Kinesis",
+              "rarity": "common",
+              "img": "icons/actions/TwoActions.webp",
+              "defense": null,
+              "range": null,
+              "traditions": [],
+              "sourceFile": "spells/impulses/base-kinesis.json",
+              "school": null,
+              "traits": [
+                "impulse",
+                "kineticist",
+                "primal"
+              ],
+              "time": "2",
+              "level": 0,
+              "type": "Impulse"
+            },
+            {
+              "type": "Impulse",
+              "level": 1,
+              "time": "1",
+              "sourceFile": "spells/impulses/elemental-blast.json",
+              "school": null,
+              "traditions": [],
+              "range": "30 feet",
+              "img": "icons/sundries/books/book-red-exclamation.webp",
+              "defense": "ac",
+              "traits": [
+                "attack",
+                "composite",
+                "impulse",
+                "kineticist",
+                "fire",
+                "water",
+                "earth",
+                "air",
+                "metal",
+                "wood"
+              ],
+              "rarity": "common",
+              "name": "Elemental Blast"
+            },
+            {
+              "name": "Extract Element",
+              "rarity": "common",
+              "traits": [
+                "impulse",
+                "kineticist",
+                "primal"
+              ],
+              "defense": null,
+              "range": null,
+              "img": "icons/actions/OneAction.webp",
+              "traditions": [],
+              "sourceFile": "spells/impulses/extract-element.json",
+              "school": null,
+              "time": "1",
+              "level": 0,
+              "type": "Impulse"
+            },
+            {
+              "sourceFile": "spells/impulses/flashforge.json",
+              "traditions": [],
+              "school": null,
+              "range": null,
+              "img": "icons/sundries/books/book-red-exclamation.webp",
+              "defense": null,
+              "traits": [
+                "impulse",
+                "kineticist",
+                "metal",
+                "primal"
+              ],
+              "rarity": "common",
+              "name": "Flashforge",
+              "type": "Impulse",
+              "level": 1,
+              "time": "2"
+            },
+            {
+              "type": "Impulse",
+              "level": 1,
+              "time": "1",
+              "traits": [
+                "impulse",
+                "kineticist",
+                "metal",
+                "primal"
+              ],
+              "traditions": [],
+              "school": null,
+              "sourceFile": "spells/impulses/metal-carapace.json",
+              "defense": null,
+              "range": null,
+              "img": "icons/sundries/books/book-red-exclamation.webp",
+              "rarity": "common",
+              "name": "Metal Carapace"
+            },
+            {
+              "level": 1,
+              "time": "2",
+              "type": "Impulse",
+              "rarity": "common",
+              "name": "Shard Strike",
+              "traits": [
+                "impulse",
+                "kineticist",
+                "metal",
+                "primal"
+              ],
+              "traditions": [],
+              "sourceFile": "spells/impulses/shard-strike.json",
+              "school": null,
+              "range": null,
+              "defense": "reflex",
+              "img": "icons/sundries/books/book-red-exclamation.webp"
+            },
+            {
+              "type": "Impulse",
+              "level": 1,
+              "time": null,
+              "traits": [
+                "infusion",
+                "kineticist"
+              ],
+              "sourceFile": "spells/impulses/weapon-infusion.json",
+              "school": null,
+              "traditions": [],
+              "range": null,
+              "defense": null,
+              "img": "icons/sundries/books/book-red-exclamation.webp",
+              "rarity": "common",
+              "name": "Weapon Infusion"
+            }
+          ],
+          "spells": null,
+          "stats": {
+            "attributes": {
+              "con": 0,
+              "dex": 0,
+              "strength": 2,
+              "wis": 0,
+              "str": 0,
+              "constitution": 4,
+              "wisdom": 1,
+              "int": 0,
+              "dexterity": 1,
+              "intelligence": 1,
+              "cha": 0
+            },
+            "impulse_proficiency": 2,
+            "speed": {
+              "land": 25
+            },
+            "saves": {
+              "will": 4,
+              "fortitude": 4,
+              "reflex": 4
+            },
+            "proficiencies": {
+              "medium": 2,
+              "light": 2,
+              "heavy": 2,
+              "unarmored": 2
+            },
+            "spell_proficiency": 0,
+            "hp": {
+              "current": 44,
+              "max": 44,
+              "temp": 0
+            },
+            "classDC": {
+              "value": 10,
+              "label": "Class DC"
+            },
+            "class_dc": 19,
+            "perception": 2,
+            "ac": {
+              "armor_equipped": false,
+              "value": 10
+            }
+          },
+          "feats": [
+            "Fast Recovery",
+            "Haughty Obstinacy",
+            "Flashforge",
+            "Kinetic Aura"
+          ],
+          "senses": [],
+          "skills": {
+            "acrobatics": 0,
+            "deception": 2,
+            "diplomacy": 0,
+            "performance": 0,
+            "society": 0,
+            "thievery": 2,
+            "intimidation": 0,
+            "stealth": 0,
+            "medicine": 0,
+            "arcana": 0,
+            "athletics": 2,
+            "occultism": 0,
+            "survival": 2,
+            "crafting": 0,
+            "nature": 2,
+            "lore": 2,
+            "religion": 2
+          },
+          "isCaster": false,
+          "inventory": [
+            {
+              "qty": 7,
+              "name": "Bane Ammunition (Lesser)"
+            },
+            {
+              "level": 0,
+              "type": "Ammo",
+              "group": null,
+              "category": null,
+              "name": "Rounds (Universal)",
+              "rarity": "common",
+              "qty": 32,
+              "traits": {
+                "rarity": "common",
+                "value": [
+                  "alchemical",
+                  "consumable"
+                ]
+              },
+              "price": 0.1,
+              "img": "icons/weapons/ammunition/shot-round-lead.webp",
+              "sourceFile": "rounds-universal.json"
+            },
+            {
+              "traits": {
+                "value": [
+                  "alchemical",
+                  "consumable",
+                  "fire",
+                  "splash"
+                ],
+                "rarity": "common"
+              },
+              "price": 3,
+              "img": "icons/magic/fire/barrier-shield-explosion-yellow.webp",
+              "sourceFile": "elemental-ammunition-lesser-fire.json",
+              "category": null,
+              "name": "Elemental Ammunition (Lesser, Fire)",
+              "rarity": "common",
+              "qty": 4,
+              "type": "Ammo",
+              "group": null,
+              "level": 1
+            },
+            {
+              "name": "Bolts",
+              "qty": 10,
+              "rarity": "common",
+              "category": null,
+              "img": "icons/equipment/weapons/bolts.webp",
+              "sourceFile": "bolts.json",
+              "traits": {
+                "rarity": "common",
+                "value": [
+                  "consumable"
+                ]
+              },
+              "price": 0.1,
+              "level": 0,
+              "group": null,
+              "type": "Ammo"
+            },
+            {
+              "type": "Consumable",
+              "category": "potion",
+              "qty": 3,
+              "name": "Healing Potion (Minor)",
+              "damage": {
+                "damageType": "",
+                "die": null,
+                "dice": null
+              },
+              "_index": 5,
+              "price": 4,
+              "traits": {
+                "rarity": "common",
+                "value": [
+                  "consumable",
+                  "healing",
+                  "magical",
+                  "potion",
+                  "vitality"
+                ]
+              },
+              "sourceFile": "healing-potion-minor.json",
+              "img": "icons/consumables/potions/bottle-round-corked-orante-red.webp",
+              "level": 1,
+              "group": null,
+              "rarity": "common",
+              "range": null
+            }
+          ],
+          "level": 3,
+          "xp": {
+            "current": 565,
+            "max": 1000
+          },
+          "weapons": [],
+          "languages": [
+            "Common",
+            "Talican (Metal)"
+          ],
+          "conditions": [],
+          "money": {
+            "pp": 0,
+            "cp": 0,
+            "sp": 0,
+            "gp": 30
+          },
+          "armor": [],
+          "id": "96d386c0-b9bb-42a4-8fb7-fabf30a2d507",
+          "isKineticist": true
+        },
+        {
+          "isCaster": false,
+          "xp": {
+            "current": 565,
+            "max": 1000
+          },
+          "level": 3,
+          "inventory": [
+            {
+              "equipped": true,
+              "name": "Agent's Blade",
+              "qty": 1
+            },
+            {
+              "name": "Agent's Blade",
+              "qty": 1,
+              "equipped": true
+            },
+            {
+              "sourceFile": "healing-potion-minor.json",
+              "img": "icons/consumables/potions/bottle-round-corked-orante-red.webp",
+              "_index": 10,
+              "price": 4,
+              "traits": {
+                "rarity": "common",
+                "value": [
+                  "consumable",
+                  "healing",
+                  "magical",
+                  "potion",
+                  "vitality"
+                ]
+              },
+              "qty": 1,
+              "damage": {
+                "die": null,
+                "damageType": "",
+                "dice": null,
+                "persistent": null
+              },
+              "name": "Healing Potion (Minor)",
+              "category": "potion",
+              "type": "Consumable",
+              "range": null,
+              "splashDamage": null,
+              "rarity": "common",
+              "group": null,
+              "level": 1
+            }
+          ],
+          "conditions": [],
+          "money": {
+            "cp": 0,
+            "sp": 0,
+            "pp": 0,
+            "gp": 30
+          },
+          "languages": [
+            "Common",
+            "Aklo",
+            "Elven",
+            "Fey",
+            "Goblin",
+            "Pyric"
+          ],
+          "weapons": [],
+          "armor": [],
+          "isKineticist": false,
+          "id": "80094f76-ccae-4364-aa17-ce005db89703",
+          "gold": 45,
+          "initiative": 0,
+          "proficiencies": {
+            "Light": 0,
+            "Unarmored": 0,
+            "Medium": 0,
+            "Heavy": 0,
+            "Sword": 0,
+            "Advanced": 2
+          },
+          "name": "Zath",
+          "impulses": [],
+          "spells": null,
+          "senses": [],
+          "skills": {
+            "acrobatics": 0,
+            "deception": 2,
+            "diplomacy": 2,
+            "performance": 0,
+            "society": 4,
+            "stealth": 2,
+            "thievery": 0,
+            "intimidation": 2,
+            "medicine": 0,
+            "arcana": 0,
+            "athletics": 2,
+            "occultism": 2,
+            "survival": 0,
+            "crafting": 0,
+            "nature": 2,
+            "lore": 2,
+            "religion": 2
+          },
+          "stats": {
+            "proficiencies": {
+              "unarmored": 2
+            },
+            "saves": {
+              "will": 4,
+              "fortitude": 2,
+              "reflex": 4
+            },
+            "spell_proficiency": 0,
+            "classDC": {
+              "label": "Class DC",
+              "value": 10
+            },
+            "hp": {
+              "temp": 0,
+              "max": 38,
+              "current": 38
+            },
+            "impulse_proficiency": 0,
+            "attributes": {
+              "dex": 0,
+              "strength": 3,
+              "wis": 0,
+              "str": 0,
+              "con": 0,
+              "int": 0,
+              "dexterity": 1,
+              "cha": 0,
+              "constitution": 2,
+              "charisma": 2,
+              "wisdom": 1
+            },
+            "speed": {
+              "land": 25,
+              "swim": 10,
+              "climb": 10
+            },
+            "perception": 4,
+            "ac": {
+              "value": 10
+            },
+            "class_dc": 18
+          },
+          "feats": [
+            "Nimble Dodge",
+            "Twin Feint",
+            "Read Lips",
+            "Secret Speech",
+            "Terrain Stalker",
+            "Nephilim Eyes",
+            "Sneak Attack",
+            "Deny Advantage",
+            "Primal Avenger Dedication"
+          ]
+        }
+      ],
+      "lootBags": [],
+      "xpNotification": {
+        "amount": 15,
+        "id": 1767570257722
+      },
+      "xp": 565,
+      "createdAt": 1766691475810,
+      "name": "War of the Elements",
+      "id": "campaign_1766691475810",
+      "quests": []
+    }
+  },
+  "quests": [
+    {
+      "id": "034ca8bd-55fc-4c10-b25f-29dc6b89f47e",
+      "title": "Dancing with tears in my eyes",
+      "descriptionGM": "",
+      "tempObjectivesText": "Stop whatever it is that makes the people dance",
+      "parentId": null,
+      "status": "Completed",
+      "rewards": {
+        "reputation": [
+          {
+            "faction": "Velran",
+            "value": 1
+          }
+        ],
+        "items": "",
+        "xp": 25,
+        "gold": 0
+      },
+      "shortDescription": "Something's off at the concert....",
+      "type": "Side",
+      "descriptionPublic": "Some people seem to enjoy Lilliana's music more than others, and some seem like they literally can't stop dancing.",
+      "objectives": [
+        {
+          "text": "Stop whatever it is that makes the people dance",
+          "hidden": false,
+          "completed": false
+        }
+      ],
+      "subquests": []
+    },
+    {
+      "rewards": {
+        "gold": 0,
+        "xp": 100,
+        "items": "",
+        "reputation": [
+          {
+            "faction": "Velran",
+            "value": 1
+          }
+        ]
+      },
+      "status": "Completed",
+      "parentId": null,
+      "tempObjectivesText": "Defend the outpost",
+      "title": "Attack on the Outpost",
+      "descriptionGM": "",
+      "id": "ff535786-1655-4651-8823-92625e5c01cb",
+      "objectives": [
+        {
+          "completed": false,
+          "hidden": false,
+          "text": "Defend the outpost"
+        }
+      ],
+      "subquests": [],
+      "descriptionPublic": "Beren's outpost is under attack, help him defend it or make him leave.",
+      "shortDescription": "Beren's outpost is under attack",
+      "type": "Main"
+    },
+    {
+      "descriptionPublic": "World famous bard Lilliana Silverwind has been kidnapped, will someone go safe her?",
+      "type": "Main",
+      "shortDescription": "Lilliana the Bard has been kidnapped",
+      "objectives": [
+        {
+          "hidden": false,
+          "text": "Find out what happened to Lilliana",
+          "completed": false
+        },
+        {
+          "hidden": false,
+          "text": "Follow the tracks",
+          "completed": false
+        },
+        {
+          "completed": false,
+          "text": "Get Lilliana safely back to town",
+          "hidden": false
+        }
+      ],
+      "subquests": [],
+      "title": "Save the Bard",
+      "descriptionGM": "",
+      "id": "1465f2eb-6fa5-4ecb-bc37-4ce8c5de5bd2",
+      "rewards": {
+        "reputation": [
+          {
+            "faction": "Velran",
+            "value": 1
+          }
+        ],
+        "items": "",
+        "xp": 150,
+        "gold": 0
+      },
+      "parentId": null,
+      "status": "Completed",
+      "tempObjectivesText": "Find out what happened to Lilliana\nFollow the tracks\nGet Lilliana safely back to town"
+    },
+    {
+      "descriptionPublic": "The Cult of Kossuth is up to something, after failing to kidnap Lilliana their followers were let lose into the City. Where did they go?",
+      "type": "Main",
+      "subquests": [],
+      "objectives": [
+        {
+          "completed": false,
+          "text": "Wait for your contacts to provide more information",
+          "hidden": false
+        },
+        {
+          "completed": false,
+          "hidden": false,
+          "text": "Find out where the cult is hiding"
+        },
+        {
+          "hidden": false,
+          "text": "Stop whatever it is the cult is doing",
+          "completed": false
+        }
+      ],
+      "descriptionGM": "",
+      "title": "A Cult of Fire",
+      "id": "0995d448-2491-42e4-a5b3-2fe694782739",
+      "status": "Completed",
+      "parentId": null,
+      "rewards": {
+        "reputation": [
+          {
+            "value": 1,
+            "faction": "Velran"
+          }
+        ],
+        "items": "",
+        "xp": 175,
+        "gold": 50
+      },
+      "tempObjectivesText": "Wait for your contacts to provide more information\nFind out where the cult is hiding\nStop whatever it is the cult is doing"
+    },
+    {
+      "objectives": [
+        {
+          "text": "Find out what keeps the dwarves from trading",
+          "hidden": false,
+          "completed": false
+        }
+      ],
+      "subquests": [],
+      "descriptionPublic": "The Dwarves of [[Barak'Kor]] have been Velrans most important trading partner for most of it's existance. Now they have suddenly started sending vague excuses instead of ore. Something is amiss…",
+      "shortDescription": "The Dwarves have stopped trading",
+      "type": "Main",
+      "status": "Hidden",
+      "parentId": null,
+      "rewards": {
+        "reputation": [
+          {
+            "value": 1,
+            "faction": "Velran"
+          }
+        ],
+        "items": "",
+        "gold": 20,
+        "xp": 150
+      },
+      "tempObjectivesText": "Find out what keeps the dwarves from trading\n",
+      "title": "Rolling in the Deep",
+      "descriptionGM": "",
+      "id": "f2af7fb2-6424-4907-843c-9b7d812194fb"
+    },
+    {
+      "subquests": [],
+      "objectives": [
+        {
+          "hidden": false,
+          "text": "Escort the logging party to the designated spot",
+          "completed": false
+        },
+        {
+          "completed": false,
+          "text": "Protect the party until they establish an outpost",
+          "hidden": false
+        }
+      ],
+      "shortDescription": "Escort the loggers",
+      "type": "Side",
+      "descriptionPublic": "The local loggers have grown restless. Due to the dangers outside of town theyve been out of work for a while now. \nAfter the most recent attack on a logging camp, the Loggers union has collected a respectable sum and  is willing to hire mercenaries to escort tem to a promising logging place several days away from Velran.",
+      "tempObjectivesText": "Escort the logging party to the designated spot\nProtect the party until they establish an outpost",
+      "status": "Hidden",
+      "parentId": null,
+      "rewards": {
+        "items": "",
+        "reputation": [
+          {
+            "value": 1,
+            "faction": "Velran"
+          }
+        ],
+        "xp": 150,
+        "gold": 40
+      },
+      "id": "0243a478-a662-4496-a354-70f2de1ca3b8",
+      "descriptionGM": "",
+      "title": "Logging in"
+    },
+    {
+      "id": "07a9ab9e-5b95-4db5-b759-f74c994d2f67",
+      "title": "Toothless",
+      "descriptionGM": "",
+      "tempObjectivesText": "Find out what happened to the toothless {xp:50}\nStop the theft of teeth {xp:100}\n[h][or:tree] Proved Vessra's innocence rep(\"Summer Court\",1)\n[h][or:tree] Drive away or kill the Nymph",
+      "status": "Active",
+      "parentId": null,
+      "rewards": {
+        "xp": 0,
+        "gold": 0,
+        "reputation": [],
+        "items": ""
+      },
+      "shortDescription": "Investige the strange rumors",
+      "type": "Side",
+      "descriptionPublic": "Rumors speak of strange happenings in the outskirts of town, as if the poor folk there didn't have enough troubles, some people wake up to find some of their teeth missing.",
+      "objectives": [
+        {
+          "text": "Find out what happened to the toothless",
+          "failed": false,
+          "choiceGroup": null,
+          "completed": false,
+          "gold": 0,
+          "hidden": false,
+          "xp": 50,
+          "reputation": []
+        },
+        {
+          "text": "Stop the theft of teeth",
+          "completed": false,
+          "choiceGroup": null,
+          "failed": false,
+          "xp": 100,
+          "gold": 0,
+          "hidden": false,
+          "reputation": []
+        },
+        {
+          "hidden": true,
+          "gold": 0,
+          "xp": 0,
+          "reputation": [
+            {
+              "value": 1,
+              "faction": "Summer Court"
+            }
+          ],
+          "text": "Proved Vessra's innocence",
+          "failed": false,
+          "choiceGroup": "tree",
+          "completed": false
+        },
+        {
+          "text": "Drive away or kill the Nymph",
+          "completed": false,
+          "failed": false,
+          "choiceGroup": "tree",
+          "xp": 0,
+          "gold": 0,
+          "hidden": true,
+          "reputation": []
+        }
+      ],
+      "subquests": []
+    },
+    {
+      "shortDescription": "Help Lilliana found her church",
+      "type": "Side",
+      "descriptionPublic": "Lilliana seems intend on establishing her goddess as a proper religion, unfortunately paying thousands of bar tabs has drained even her impressive coffers, leaving her broke and clueless as how to proceeed. Her funancial situation leaves her with only a few options.",
+      "objectives": [
+        {
+          "completed": false,
+          "text": "Help Lilliana scout out the prospective church locations",
+          "hidden": false
+        }
+      ],
+      "subquests": [],
+      "id": "13b8e266-6168-455e-9890-18c840933c77",
+      "title": "True Believer",
+      "descriptionGM": "",
+      "tempObjectivesText": "Help Lilliana scout out the prospective church locations",
+      "parentId": null,
+      "rewards": {
+        "reputation": [],
+        "items": "",
+        "gold": 0,
+        "xp": 75
+      },
+      "status": "Active"
+    },
+    {
+      "id": "d09318f4-f6b3-454d-8582-ef3504aae785",
+      "descriptionGM": "",
+      "title": "The Green Knight rises",
+      "tempObjectivesText": "Investigate the destroyed logging camp",
+      "parentId": null,
+      "status": "Active",
+      "rewards": {
+        "gold": 25,
+        "xp": 100,
+        "reputation": [
+          {
+            "value": 1,
+            "faction": "Velran"
+          }
+        ],
+        "items": ""
+      },
+      "shortDescription": "Find out what happened to the outpost",
+      "type": "Side",
+      "descriptionPublic": "Despite warning of impending attacks the logging camp north-east of Velran was completely wiped out, someone should investigate and the City Guard doesn't have the men to spare /risk",
+      "subquests": [],
+      "objectives": [
+        {
+          "completed": false,
+          "hidden": false,
+          "text": "Investigate the destroyed logging camp"
+        }
+      ]
+    },
+    {
+      "objectives": [
+        {
+          "text": "Explore the Earth Mote",
+          "hidden": false,
+          "completed": false
+        }
+      ],
+      "subquests": [],
+      "descriptionPublic": "A massive earthmote occasionally passes over velran. Who knows what might be up there?",
+      "type": "Side",
+      "shortDescription": "Explore the Earth Mote",
+      "rewards": {
+        "xp": 125,
+        "gold": 0,
+        "reputation": [],
+        "items": ""
+      },
+      "parentId": null,
+      "status": "Hidden",
+      "tempObjectivesText": "Explore the Earth Mote",
+      "title": "Skyward",
+      "descriptionGM": "",
+      "id": "283f7cdb-b372-4d9b-ab3e-1793ec7565be"
+    },
+    {
+      "objectives": [
+        {
+          "completed": false,
+          "hidden": false,
+          "text": "Lay the undead to rest"
+        }
+      ],
+      "subquests": [],
+      "shortDescription": "Undead are attacking Greenrest",
+      "type": "Side",
+      "descriptionPublic": "The Village of Greenrest sends concerning reports of undead coming out of the forest at night, attacking lifestock and villagers alike.",
+      "tempObjectivesText": "Lay the undead to rest",
+      "parentId": null,
+      "status": "Hidden",
+      "rewards": {
+        "reputation": [
+          {
+            "faction": "Velran",
+            "value": 1
+          }
+        ],
+        "items": "",
+        "gold": 35,
+        "xp": 150
+      },
+      "id": "917d9015-208d-4131-bc80-a4129653e20d",
+      "title": "Dead Walking",
+      "descriptionGM": ""
+    }
+  ]
+}

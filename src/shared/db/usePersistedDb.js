@@ -13,12 +13,14 @@ const ECHO_SUPPRESSION_WINDOW_MS = 2000; // Ignore echoes within 2 seconds of ou
 
 export function usePersistedDb(defaultDb) {
     // 1. Always initialize with LocalStorage for offline/fast-load support
-    const [localDb, setLocalDb] = useLocalStorageJson(DB_STORAGE_KEY, () => deepClone(defaultDb), { migrate: migrateDb });
+    const [localDb] = useLocalStorageJson(DB_STORAGE_KEY, () => deepClone(defaultDb), { migrate: migrateDb });
     const [dbState, setDbState] = useState(localDb);
+    const dbStateRef = useRef(localDb);
 
     // Echo suppression state
     const lastWriteTimestampRef = useRef(0);
     const pendingWriteRef = useRef(false);
+    const hasRemoteSnapshotRef = useRef(!IS_FIREBASE_CONFIGURED);
 
     // 2. Sync State with LocalStorage wrapper (only on initial load)
     useEffect(() => {
@@ -32,19 +34,21 @@ export function usePersistedDb(defaultDb) {
 
         const unsub = onSnapshot(doc(firestore, "data", "master"), (docSnap) => {
             if (docSnap.exists()) {
-                const incomingData = docSnap.data();
+                const incomingData = migrateDb(docSnap.data());
                 const incomingTimestamp = incomingData._lastWriteTimestamp || 0;
                 const ourLastWrite = lastWriteTimestampRef.current;
+                const isFirstRemoteSnapshot = !hasRemoteSnapshotRef.current;
+                hasRemoteSnapshotRef.current = true;
 
                 // ECHO SUPPRESSION: Skip if this is our own write echoing back
-                if (incomingTimestamp === ourLastWrite && ourLastWrite > 0) {
+                if (!isFirstRemoteSnapshot && incomingTimestamp === ourLastWrite && ourLastWrite > 0) {
                     console.log("[Firebase] Skipping own echo (exact match)");
                     return;
                 }
 
                 // ECHO SUPPRESSION: Skip if we recently wrote and this data looks like our echo
                 const timeSinceOurWrite = Date.now() - ourLastWrite;
-                if (pendingWriteRef.current && timeSinceOurWrite < ECHO_SUPPRESSION_WINDOW_MS) {
+                if (!isFirstRemoteSnapshot && pendingWriteRef.current && timeSinceOurWrite < ECHO_SUPPRESSION_WINDOW_MS) {
                     // Check if incoming is same or older than what we wrote
                     if (incomingTimestamp <= ourLastWrite) {
                         console.log("[Firebase] Skipping stale echo within suppression window");
@@ -54,12 +58,13 @@ export function usePersistedDb(defaultDb) {
 
                 // INCOMING IS NEWER: Accept the update
                 // This handles the case where another client made a change
-                const currentTimestamp = dbState._lastWriteTimestamp || 0;
-                if (incomingTimestamp > currentTimestamp) {
+                const currentTimestamp = dbStateRef.current?._lastWriteTimestamp || 0;
+                if (isFirstRemoteSnapshot || incomingTimestamp > currentTimestamp) {
                     console.log("[Firebase] Accepting newer update from remote", {
                         incoming: incomingTimestamp,
                         current: currentTimestamp
                     });
+                    dbStateRef.current = incomingData;
                     setDbState(incomingData);
                     localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(incomingData));
                     pendingWriteRef.current = false;
@@ -72,6 +77,9 @@ export function usePersistedDb(defaultDb) {
                         current: currentTimestamp
                     });
                 }
+            } else {
+                hasRemoteSnapshotRef.current = true;
+                console.warn("[Firebase] Master document does not exist; using local fallback until first write");
             }
         });
 
@@ -81,6 +89,11 @@ export function usePersistedDb(defaultDb) {
     // 4. Custom Setter with Echo Suppression Metadata
     const setDb = useCallback((newValueOrFn) => {
         setDbState(currentState => {
+            if (IS_FIREBASE_CONFIGURED && !hasRemoteSnapshotRef.current) {
+                console.warn("[Firebase] Ignoring local write before initial cloud snapshot");
+                return currentState;
+            }
+
             // Calculate new value from current state (ensures we always have latest)
             let newValue;
             if (typeof newValueOrFn === 'function') {
@@ -92,6 +105,7 @@ export function usePersistedDb(defaultDb) {
             // Add timestamp for echo suppression
             const writeTimestamp = Date.now();
             newValue = { ...newValue, _lastWriteTimestamp: writeTimestamp };
+            dbStateRef.current = newValue;
 
             // Track our pending write
             lastWriteTimestampRef.current = writeTimestamp;
@@ -128,4 +142,3 @@ export function usePersistedDb(defaultDb) {
 
     return [dbState, setDb];
 }
-
