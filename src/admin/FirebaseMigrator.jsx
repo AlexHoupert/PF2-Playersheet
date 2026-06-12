@@ -3,8 +3,13 @@ import { db as firestore } from '../shared/db/firebase-config';
 import { doc, setDoc } from 'firebase/firestore';
 import { DB_STORAGE_KEY } from '../shared/db/usePersistedDb';
 
-export default function FirebaseMigrator() {
+function safeTimestamp() {
+    return new Date().toISOString().replace(/[:.]/g, '-');
+}
+
+export default function FirebaseMigrator({ db }) {
     const [status, setStatus] = useState(null); // idle, working, success, error
+    const [backupStatus, setBackupStatus] = useState(null);
 
     const handleUpload = async () => {
         if (!confirm("Overwrite cloud database with current LOCAL data?")) return;
@@ -44,6 +49,34 @@ export default function FirebaseMigrator() {
         }
     };
 
+    const handleDownloadBackup = () => {
+        setBackupStatus(null);
+        try {
+            let data = db;
+            if (!data) {
+                const rawData = localStorage.getItem(DB_STORAGE_KEY);
+                if (!rawData) throw new Error("No current data found.");
+                data = JSON.parse(rawData);
+            }
+
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `pf2e-data-backup-${safeTimestamp()}.json`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+            setBackupStatus('success');
+        } catch (err) {
+            console.error("Backup Error:", err);
+            setBackupStatus('error');
+            alert(`Backup Failed: ${err.message}`);
+        }
+    };
+
     const isConfigured = firestore && firestore.app.options.apiKey !== "YOUR_API_KEY";
 
     if (!isConfigured) return null; // Don't show if not configured
@@ -61,6 +94,19 @@ export default function FirebaseMigrator() {
                 {status === 'working' ? 'Uploading...' : 'Upload Data to Cloud'}
             </button>
             {status === 'error' && <p style={{ color: 'red' }}>Check console for errors.</p>}
+
+            <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #444' }}>
+                <h3>Manual Backup</h3>
+                <button
+                    onClick={handleDownloadBackup}
+                    className="set-btn"
+                    style={{ background: backupStatus === 'success' ? '#4caf50' : '#c5a059', color: '#111' }}
+                >
+                    Download Data Backup
+                </button>
+                {backupStatus === 'success' && <p style={{ color: '#8bc34a' }}>Backup downloaded.</p>}
+                {backupStatus === 'error' && <p style={{ color: 'red' }}>Backup failed.</p>}
+            </div>
         </div>
     );
 }
