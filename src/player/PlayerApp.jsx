@@ -1387,7 +1387,7 @@ export default function PlayerApp({ db, setDb }) {
                 )}
 
                 {activeTab === 'quests' && (
-                    <PlayerQuestsView quests={db?.quests || []} />
+                    <PlayerQuestsView quests={activeCampaign?.quests || db?.quests || []} />
                 )}
 
                 {activeTab === 'lore' && (

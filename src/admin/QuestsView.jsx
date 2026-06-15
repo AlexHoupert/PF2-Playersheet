@@ -6,11 +6,36 @@ import { useCampaign } from '../shared/context/CampaignContext';
 export default function QuestsView({ db, setDb }) {
     // Get activeCampaignId from context (this is CRITICAL for rewards distribution)
     const { activeCampaignId, activeCampaign } = useCampaign();
-    const quests = db?.quests || [];
+    const quests = activeCampaign?.quests || db?.quests || [];
     const [isEditing, setIsEditing] = useState(false);
     const [editingQuest, setEditingQuest] = useState(null);
     const [saveStatus, setSaveStatus] = useState(null);
     const [expandedQuestIds, setExpandedQuestIds] = useState(new Set());
+
+    const withQuestScope = (sourceDb, updatedQuests, extra = {}) => {
+        const nextDb = { ...sourceDb, ...extra, quests: updatedQuests };
+        if (activeCampaignId && sourceDb.campaigns?.[activeCampaignId]) {
+            nextDb.campaigns = {
+                ...sourceDb.campaigns,
+                [activeCampaignId]: {
+                    ...sourceDb.campaigns[activeCampaignId],
+                    ...extra.campaignOverride,
+                    quests: updatedQuests,
+                }
+            };
+        }
+        delete nextDb.campaignOverride;
+        return nextDb;
+    };
+
+    const persistDevDbFile = async (dbSnapshot) => {
+        if (!import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEV_FILE_WRITES !== 'true') return;
+        await fetch('/api/files/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filePath: 'src/data/new_db.json', content: dbSnapshot })
+        });
+    };
 
     // --- CONSTANTS ---
     const QUEST_TYPES = ['Main', 'Side', 'Bounty', 'Personal'];
@@ -21,15 +46,10 @@ export default function QuestsView({ db, setDb }) {
         setSaveStatus('saving');
         try {
             // Update Global State (propagates to PlayerApp)
-            setDb(prev => ({ ...prev, quests: newQuests }));
+            setDb(prev => withQuestScope(prev, newQuests));
 
             // Persist to File (for dev/reload)
-            const res = await fetch('/api/files/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filePath: 'src/data/new_db.json', content: { ...db, quests: newQuests } })
-            });
-            if (!res.ok) throw new Error("Failed to save DB");
+            await persistDevDbFile(withQuestScope(db, newQuests));
             setSaveStatus('success');
             setTimeout(() => setSaveStatus(null), 2000);
         } catch (err) {
@@ -203,13 +223,9 @@ export default function QuestsView({ db, setDb }) {
                 if (!activeCampaignId) {
                     console.warn('[QuestsView] No activeCampaignId available for reward distribution');
                     // No active campaign, just save the quest update
-                    const finalDb = { ...prevDb, quests: updatedQuests };
+                    const finalDb = withQuestScope(prevDb, updatedQuests);
 
-                    fetch('/api/files/save', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filePath: 'src/data/new_db.json', content: finalDb })
-                    }).catch(e => console.error(e));
+                    persistDevDbFile(finalDb).catch(e => console.error(e));
 
                     return finalDb;
                 }
@@ -235,7 +251,7 @@ export default function QuestsView({ db, setDb }) {
                 if (isCampaignsArray) {
                     updatedCampaigns = campaigns.map(c =>
                         c.id === activeCampaignId
-                            ? { ...c, characters: updatedChars, xp: updatedCampaignXp }
+                            ? { ...c, characters: updatedChars, xp: updatedCampaignXp, quests: updatedQuests }
                             : c
                     );
                 } else {
@@ -244,7 +260,8 @@ export default function QuestsView({ db, setDb }) {
                         [activeCampaignId]: {
                             ...campaign,
                             characters: updatedChars,
-                            xp: updatedCampaignXp
+                            xp: updatedCampaignXp,
+                            quests: updatedQuests
                         }
                     };
                 }
@@ -259,11 +276,7 @@ export default function QuestsView({ db, setDb }) {
 
                 // Side Effect: Persist to File
                 // Note: fetch is async, but we send the calculated state immediately.
-                fetch('/api/files/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filePath: 'src/data/new_db.json', content: finalDb })
-                }).catch(e => console.error(e));
+                persistDevDbFile(finalDb).catch(e => console.error(e));
 
                 return finalDb;
 
@@ -324,7 +337,7 @@ export default function QuestsView({ db, setDb }) {
                     if (isCampaignsArray) {
                         updatedCampaigns = campaigns.map(c =>
                             c.id === activeCampaignId
-                                ? { ...c, characters: updatedChars, xp: updatedCampaignXp }
+                                ? { ...c, characters: updatedChars, xp: updatedCampaignXp, quests: updatedQuests }
                                 : c
                         );
                     } else {
@@ -333,7 +346,8 @@ export default function QuestsView({ db, setDb }) {
                             [activeCampaignId]: {
                                 ...campaign,
                                 characters: updatedChars,
-                                xp: updatedCampaignXp
+                                xp: updatedCampaignXp,
+                                quests: updatedQuests
                             }
                         };
                     }
@@ -345,23 +359,15 @@ export default function QuestsView({ db, setDb }) {
                         notificationQueue: [...(prevDb.notificationQueue || []), ...notifications]
                     };
 
-                    fetch('/api/files/save', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filePath: 'src/data/new_db.json', content: finalDb })
-                    }).catch(e => console.error(e));
+                    persistDevDbFile(finalDb).catch(e => console.error(e));
 
                     return finalDb;
                 }
 
                 // No per-objective rewards, just save the update
-                const finalDb = { ...prevDb, quests: updatedQuests };
+                const finalDb = withQuestScope(prevDb, updatedQuests);
 
-                fetch('/api/files/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filePath: 'src/data/new_db.json', content: finalDb })
-                }).catch(e => console.error(e));
+                persistDevDbFile(finalDb).catch(e => console.error(e));
 
                 return finalDb;
             }

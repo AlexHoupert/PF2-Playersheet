@@ -1,4 +1,5 @@
 import { usePersistedDb } from './shared/db/usePersistedDb';
+import { useFirestoreV2Db } from './shared/db/v2/useFirestoreV2Db';
 import dbData from './data/new_db.json';
 import { CampaignProvider } from './shared/context/CampaignContext';
 import PlayerApp from './player/PlayerApp';
@@ -7,7 +8,27 @@ import PartyScreen from './player/PartyScreen';
 import CampScreen from './camping/CampScreen';
 
 export default function App() {
+    const queryParams = new URLSearchParams(window.location.search);
+    const dbMode = queryParams.get('db') || import.meta.env.VITE_DB_MODE || 'legacy';
+
+    if (dbMode === 'v2') {
+        return <FirestoreV2App />;
+    }
+
+    return <LegacyApp />;
+}
+
+function LegacyApp() {
     const [db, setDb] = usePersistedDb(dbData);
+    return <AppRoutes db={db} setDb={setDb} />;
+}
+
+function FirestoreV2App() {
+    const [db, setDb] = useFirestoreV2Db(dbData);
+    return <AppRoutes db={db} setDb={setDb} />;
+}
+
+function AppRoutes({ db, setDb }) {
     const queryParams = new URLSearchParams(window.location.search);
 
     if (!db) return <div style={{ color: '#fff' }}>Loading...</div>;

@@ -1,0 +1,117 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function adminPath() {
+      return /databases/$(database)/documents/admins/$(request.auth.token.email);
+    }
+
+    function isGlobalAdmin() {
+      return signedIn() && exists(adminPath());
+    }
+
+    function memberPath(campaignId) {
+      return /databases/$(database)/documents/campaigns/$(campaignId)/members/$(request.auth.token.email);
+    }
+
+    function isCampaignMember(campaignId) {
+      return signedIn() && exists(memberPath(campaignId));
+    }
+
+    function memberData(campaignId) {
+      return get(memberPath(campaignId)).data;
+    }
+
+    function isCampaignGm(campaignId) {
+      return isCampaignMember(campaignId) && memberData(campaignId).role in ['gm', 'admin'];
+    }
+
+    function isAssignedCharacter(campaignId, characterId) {
+      return isCampaignMember(campaignId) && memberData(campaignId).characterId == characterId;
+    }
+
+    match /admins/{email} {
+      allow read: if signedIn() && request.auth.token.email == email;
+      allow write: if false;
+    }
+
+    match /campaigns/{campaignId} {
+      allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
+      allow create: if isGlobalAdmin();
+      allow update, delete: if isCampaignGm(campaignId) || isGlobalAdmin();
+
+      match /members/{email} {
+        allow read: if isCampaignGm(campaignId) || request.auth.token.email == email || isGlobalAdmin();
+        allow create, update, delete: if isCampaignGm(campaignId) || isGlobalAdmin();
+      }
+
+      match /characters/{characterId} {
+        allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
+        allow create, delete: if isCampaignGm(campaignId) || isGlobalAdmin();
+        allow update: if isCampaignGm(campaignId) || isAssignedCharacter(campaignId, characterId) || isGlobalAdmin();
+      }
+
+      match /quests/{questId} {
+        allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
+        allow write: if isCampaignGm(campaignId) || isGlobalAdmin();
+      }
+
+      match /lootBags/{lootBagId} {
+        allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
+        allow create, delete: if isCampaignGm(campaignId) || isGlobalAdmin();
+        allow update: if isCampaignMember(campaignId) || isGlobalAdmin();
+      }
+
+      match /encounters/{encounterId} {
+        allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
+        allow write: if isCampaignGm(campaignId) || isGlobalAdmin();
+      }
+
+      match /maps/{mapId} {
+        allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
+        allow write: if isCampaignGm(campaignId) || isGlobalAdmin();
+      }
+    }
+
+    match /global/{documentId} {
+      allow read: if signedIn();
+      allow write: if isGlobalAdmin();
+    }
+
+    match /customItems/{documentId} {
+      allow read: if signedIn();
+      allow write: if isGlobalAdmin();
+    }
+
+    match /customCreatures/{documentId} {
+      allow read: if signedIn();
+      allow write: if isGlobalAdmin();
+    }
+
+    match /customActions/{documentId} {
+      allow read: if signedIn();
+      allow write: if isGlobalAdmin();
+    }
+
+    match /loreArticles/{documentId} {
+      allow read: if signedIn();
+      allow write: if isGlobalAdmin();
+    }
+
+    match /migrationBackups/{documentId} {
+      allow read, write: if isGlobalAdmin();
+
+      match /{document=**} {
+        allow read, write: if isGlobalAdmin();
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
