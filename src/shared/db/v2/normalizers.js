@@ -208,7 +208,7 @@ export function composeLegacyDbFromV2Documents(documents, baseDb = {}) {
         campaign.quests.sort(sortByTitleThenId);
         campaign.lootBags.sort(sortByNameThenId);
         campaign.encounters.sort(sortByNameThenId);
-        campaign.maps.sort(sortByNameThenId);
+        campaign.maps.sort(sortByOrderNameId);
     }
 
     const firstCampaign = Object.values(db.campaigns)[0];
@@ -552,6 +552,12 @@ function numberOr(value, fallback) {
 
 function sortByNameThenId(a, b) {
     return String(a.name || '').localeCompare(String(b.name || '')) || String(a.id || '').localeCompare(String(b.id || ''));
+}
+
+function sortByOrderNameId(a, b) {
+    const orderA = Number.isFinite(Number(a?.order)) ? Number(a.order) : Number.MAX_SAFE_INTEGER;
+    const orderB = Number.isFinite(Number(b?.order)) ? Number(b.order) : Number.MAX_SAFE_INTEGER;
+    return orderA - orderB || sortByNameThenId(a, b);
 }
 
 function sortByTitleThenId(a, b) {

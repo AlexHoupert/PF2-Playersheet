@@ -84,6 +84,10 @@ test('composes v2 documents back into the legacy projection used by existing scr
                 name: 'Campaign One',
                 characters: [{ id: 'char1', name: 'Hero' }],
                 quests: [{ id: 'quest1', title: 'Find the Key' }],
+                maps: [
+                    { id: 'map-last', name: 'Zeta', order: 2000 },
+                    { id: 'map-first', name: 'Alpha', order: 1000 },
+                ],
             },
         },
         users: {
@@ -99,6 +103,7 @@ test('composes v2 documents back into the legacy projection used by existing scr
     assert.equal(db.campaigns.camp1.name, 'Campaign One');
     assert.equal(db.campaigns.camp1.characters[0].id, 'char1');
     assert.equal(db.campaigns.camp1.quests[0].id, 'quest1');
+    assert.deepEqual(db.campaigns.camp1.maps.map(map => map.id), ['map-first', 'map-last']);
     assert.equal(db.quests[0].id, 'quest1');
     assert.deepEqual(db.users['player@example.com'], {
         role: 'player',

@@ -8,10 +8,11 @@ const DEGREE_COLORS = { crit: '#4caf50', success: '#c5a059', fail: '#ff8f00', cr
 const DEGREE_LABELS = { crit: 'Critical Success', success: 'Success', fail: 'Failure', critFail: 'Critical Failure' };
 
 export default function CampingView({ character }) {
-    const { activeCampaign, updateActiveCampaign } = useCampaign();
+    const { activeCampaign, dataActions } = useCampaign();
     const camping = activeCampaign?.camping || {};
     const activities = getMergedActivities(camping.activities || []);
     const assignments = camping.assignments || {};
+    const campaignId = activeCampaign?.id;
 
     const [selected, setSelected] = useState(null); // currently open activity
     const [rollInput, setRollInput] = useState('');
@@ -32,63 +33,43 @@ export default function CampingView({ character }) {
         }
     };
 
+    const runCampingAction = (action) => {
+        return Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
+    };
+
     const handleAssign = () => {
-        if (!selected) return;
-        updateActiveCampaign(c => ({
-            ...c,
-            camping: {
-                ...c.camping,
-                assignments: {
-                    ...(c.camping?.assignments || {}),
-                    [selected.id]: {
-                        ...(c.camping?.assignments?.[selected.id] || {}),
-                        characterName: character.name,
-                        roll: null,
-                        result: null
-                    }
-                }
-            }
-        }));
+        if (!selected || !campaignId) return;
+        runCampingAction(dataActions.camping.assignActivity(campaignId, selected.id, character));
     };
 
     const handleRoll = () => {
-        if (!selected) return;
+        if (!selected || !campaignId) return;
         const roll = parseInt(rollInput);
         if (isNaN(roll)) return;
         const dc = getActivityDC(selected, camping);
         const degree = getDegreeOfSuccess(roll, dc);
         const effectText = getEffectText(selected, degree);
         setLocalResult({ degree, effectText });
-        updateActiveCampaign(c => ({
-            ...c,
-            camping: {
-                ...c.camping,
-                assignments: {
-                    ...(c.camping?.assignments || {}),
-                    [selected.id]: {
-                        ...(c.camping?.assignments?.[selected.id] || {}),
-                        characterName: character.name,
-                        roll,
-                        degree,
-                        effectText
-                    }
-                }
-            }
+        runCampingAction(dataActions.camping.recordActivityRoll(campaignId, selected.id, character, {
+            roll,
+            degree,
+            effectText,
         }));
     };
 
     const handleUnassign = () => {
-        if (!selected) return;
-        updateActiveCampaign(c => {
-            const newAssignments = { ...(c.camping?.assignments || {}) };
-            delete newAssignments[selected.id];
-            return { ...c, camping: { ...c.camping, assignments: newAssignments } };
-        });
+        if (!selected || !campaignId) return;
+        runCampingAction(dataActions.camping.unassignActivity(campaignId, selected.id, character));
         setSelected(null);
     };
 
     const myAssignment = selected ? assignments[selected.id] : null;
-    const isMyActivity = myAssignment?.characterName === character.name;
+    const isMyActivity = myAssignment?.characterId
+        ? myAssignment.characterId === character.id
+        : myAssignment?.characterName === character.name;
     const dc = selected ? getActivityDC(selected, camping) : null;
     const dcLabel = selected ? DC_TYPE_LABELS[selected.dcType] || 'DC' : null;
 
@@ -111,8 +92,10 @@ export default function CampingView({ character }) {
             {/* Activity List */}
             {activities.map(act => {
                 const assignment = assignments[act.id];
-                const isAssigned = !!assignment?.characterName;
-                const isMine = assignment?.characterName === character.name;
+                const isAssigned = !!(assignment?.characterId || assignment?.characterName);
+                const isMine = assignment?.characterId
+                    ? assignment.characterId === character.id
+                    : assignment?.characterName === character.name;
                 return (
                     <div
                         key={act.id}

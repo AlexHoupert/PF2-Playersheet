@@ -1,6 +1,6 @@
 # Domain Actions
 
-Last updated: 2026-06-17.
+Last updated: 2026-06-18.
 
 ## Purpose
 
@@ -13,6 +13,9 @@ Location:
 - `src/shared/db/domain/campaignReducers.js`
 - `src/shared/db/domain/questReducers.js`
 - `src/shared/db/domain/encounterReducers.js`
+- `src/shared/db/domain/mapReducers.js`
+- `src/shared/db/domain/progressReducers.js`
+- `src/shared/db/domain/campingReducers.js`
 - `src/shared/db/domain/createDataActions.js`
 - `src/shared/db/v2/repositories.js`
 
@@ -95,6 +98,35 @@ The UI still reads the legacy-shaped projection, but migrated write paths call `
 - `rollInitiativeAll(campaignId, encounterId, creatureDataById)`
 - `addCondition(campaignId, encounterId, combatantId, condition)`
 
+`dataActions.map`:
+
+- `createMap(campaignId, nameOrMap)`
+- `updateMap(campaignId, mapId, updater)`
+- `softDeleteMap(campaignId, mapId)`
+- `restoreMap(campaignId, mapId)`
+- `reorderMaps(campaignId, orderedIds)`
+- `setImageUrl(campaignId, mapId, imageUrl)`
+- `upsertPin(campaignId, mapId, pin)`
+- `deletePin(campaignId, mapId, pinId)`
+- `setScale(campaignId, mapId, scale)`
+
+`dataActions.progress`:
+
+- `updateProgress(campaignId, patchOrUpdater)`
+- `softDeleteEntry(campaignId, section, entryId)`
+- `restoreEntry(campaignId, section, entryId)`
+
+`dataActions.camping`:
+
+- `updateSettings(campaignId, patchOrUpdater)`
+- `upsertActivity(campaignId, activity)`
+- `deleteActivity(campaignId, activityId)`
+- `restoreActivity(campaignId, activityId)`
+- `resetDefaultActivity(campaignId, activityId)`
+- `assignActivity(campaignId, activityId, character)`
+- `recordActivityRoll(campaignId, activityId, character, rollResult)`
+- `unassignActivity(campaignId, activityId, character)`
+
 ## Adapter Behavior
 
 Legacy mode:
@@ -110,6 +142,9 @@ Firestore V2 mode:
 - Uses targeted loot-bag document updates for loot bag create/update/add/remove/quantity.
 - Uses targeted quest, campaign, and character transactions for quest rewards.
 - Uses targeted encounter document updates for encounter CRUD, combatants, initiative, and turn state.
+- Uses targeted map document updates for map CRUD/archive/restore, ordering, pins, scale, and image URL writes.
+- Uses targeted campaign document updates for progress sections and top-level progress archives/restores.
+- Uses targeted campaign document updates for camping settings, custom activities, assignments, rolls, and reset/archive/restore behavior.
 - Does not route migrated writes through `writeLegacyDbDiffToV2`.
 
 If Firestore config is missing, the adapter falls back to legacy mode.
@@ -141,6 +176,9 @@ Soft delete:
 - `CampaignContext.campaigns` and `activeCampaign.characters` expose only active records.
 - `CampaignContext.archivedCampaigns` and `activeCampaign.archivedCharacters` expose archived records for restore UI.
 - Quests/Subquests and Encounters are also archived with the same metadata and exposed as `activeCampaign.archivedQuests` and `activeCampaign.archivedEncounters`.
+- Maps are archived with the same metadata and exposed as `activeCampaign.archivedMaps`.
+- Top-level Progress entries are archived with the same metadata: reputation factions, research topics, calcifer stages, and material elements.
+- Custom Camping activities are archived with the same metadata; default activity reset removes only the override record.
 - Quest rewards use `rewardAppliedAt`/`rewardAppliedBy` markers so objective and quest rewards are idempotent. Rewards are not automatically rolled back if an objective is later marked incomplete.
 - Quest reward notifications are campaign-scoped in `campaign.notificationQueue`; root `db.notificationQueue` remains a legacy fallback.
 
@@ -178,14 +216,37 @@ GM Encounters:
 - Initiative, HP, visibility, selected entity, turn end/reset, creature initiative rolls, and conditions.
 - CharacterCard edits inside the encounter detail panel use `dataActions.character.updateCharacter`.
 
+GM Maps:
+
+- Map create/update/archive/restore.
+- Map order changes.
+- Map image URL persistence after UI/server upload.
+- Pin add/update/delete.
+- Scale calibration persistence.
+
+GM/Player Progress:
+
+- Progress section updates for reputation, research, calcifer, and materials.
+- Archive/restore for top-level progress entries.
+- Player progress views read active-only progress data.
+
+GM/Player Camping:
+
+- Camping DC setting updates.
+- Custom/default activity edits.
+- Custom activity archive/restore.
+- Default activity override reset.
+- Player activity assignment, roll recording, and unassign.
+- Assignments store `characterId` plus legacy-compatible `characterName`.
+
 ## Remaining Direct Legacy Writes
 
-Expected after the quest/encounter wave:
+Expected after the maps/progress/camping wave:
 
-- Generic `updateActiveCampaign` remains a compatibility path because maps, camping, progress, and some pact/player-local flows still use it for non-migrated child collections.
-- Map, camping, progress, pact, custom content, bestiary reveal-state, and global catalog writes still have direct/broad `setDb` paths.
+- Generic `updateActiveCampaign` remains a compatibility path because some pact/player-local flows still use it for non-migrated child collections.
+- Pact, custom content, bestiary reveal-state, and global catalog writes still have direct/broad `setDb` paths.
 - Player-created custom item catalog registration still uses `onSetDb` for global custom item storage.
 - Some legacy fallback branches remain in `ItemsView` for trader/global behavior.
 - `useFirestoreV2Db` still keeps broad diff writes for non-migrated paths.
 
-Next migrations should add domain actions for maps, camping, progress, pacts, bestiary reveal-state, and global/custom content before switching V2 to default.
+Next migrations should add domain actions for pacts, bestiary reveal-state, and global/custom content before switching V2 to default.

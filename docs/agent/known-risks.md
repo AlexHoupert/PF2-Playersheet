@@ -1,6 +1,6 @@
 # Known Risks And Modernization Notes
 
-Last updated: 2026-06-17.
+Last updated: 2026-06-18.
 
 ## Highest-Impact Risks
 
@@ -18,7 +18,7 @@ Inventory and loot code sometimes uses `name`, sometimes `_index`, sometimes `in
 
 4. Whole-DB writes in normal UI paths
 
-Some v2 runtime writes still diff whole legacy DB snapshots. Campaign/Session, Character/Inventory/Loot, Quests/Rewards, and Encounters now use `dataActions` and targeted repositories, but map/camping/progress/pact/bestiary/global domains still need migration.
+Some v2 runtime writes still diff whole legacy DB snapshots. Campaign/Session, Character/Inventory/Loot, Quests/Rewards, Encounters, Maps, Progress, and Camping now use `dataActions` and targeted repositories, but pact/bestiary/global domains still need migration.
 
 5. Generated data size and source duplication
 
@@ -30,9 +30,9 @@ Generated catalog files are large. It is easy to accidentally import a full cata
 - Runtime character defaults in `PlayerApp.jsx` directly mutate the selected character object before render. Moving this into migration would be cleaner.
 - Root `quests` and `lootBags` still exist for compatibility. Some code paths may read them when campaign data is absent.
 - `InventoryView` still receives `onSetDb` for player-created custom item catalog registration. The immediate inventory add uses `onUpdateCharacter`, but global custom item storage remains legacy/global.
-- Campaign, character, quest/subquest, and encounter deletion is soft delete. Do not hard-delete these documents unless a future purge flow is explicitly designed and approved.
+- Campaign, character, quest/subquest, encounter, and map deletion is soft delete. Do not hard-delete these documents unless a future purge flow is explicitly designed and approved.
 - `CampaignContext.updateActiveCampaign` remains a broad compatibility helper for non-migrated campaign child domains. Do not use it for new Campaign/Session lifecycle work.
-- Maps, camping, progress, pacts, abilities, lore, bestiary custom content/reveal-state, and global catalog settings still have direct/broad `setDb` paths.
+- Pacts, abilities, lore, bestiary custom content/reveal-state, and global catalog settings still have direct/broad `setDb` paths.
 - Quest rewards are idempotent and not automatically rolled back when objectives are later marked incomplete.
 - Quest reward notifications are campaign-scoped; root `notificationQueue` remains only a legacy fallback.
 - `ItemsView` trader/global catalog behavior remains legacy/global. Loot-bag and character assignment paths have been moved to `dataActions`.
@@ -77,7 +77,7 @@ Short-term:
 Medium-term:
 
 - Introduce small domain services for campaign, character, inventory, and loot mutations.
-- Use v2 repository functions for remaining high-conflict actions like map/progress changes, bestiary reveal-state, and global/custom content updates.
+- Use v2 repository functions for remaining high-conflict actions like bestiary reveal-state and global/custom content updates.
 - Add smoke tests for catalog decoders and `parseFoundry`.
 - Add a minimal lint/format check to catch import and JSX issues.
 

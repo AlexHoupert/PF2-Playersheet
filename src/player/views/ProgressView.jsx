@@ -1,17 +1,9 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../../shared/context/CampaignContext';
 import BottomSheet from '../../shared/components/BottomSheet';
+import { getProgress } from '../../shared/db/domain/progressReducers';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function getProgressData(campaign) {
-    return campaign?.progress || {
-        reputation: { factions: [] },
-        research: { topics: [] },
-        calcifer: { currentProgress: 0, stages: [] },
-        materials: { elements: [] },
-    };
-}
 
 // Returns the active rank/stage/tier whose threshold has been met
 function getActiveEntry(currentPts, entries) {
@@ -637,7 +629,7 @@ function EmptyState({ icon, text }) {
 export default function ProgressView() {
     const { activeCampaign } = useCampaign();
     const [subTab, setSubTab] = useState('reputation');
-    const data = getProgressData(activeCampaign);
+    const data = getProgress(activeCampaign, { activeOnly: true });
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#111' }}>

@@ -21,15 +21,25 @@ function generateId(name) {
 }
 
 export default function CampingAdminView() {
-    const { activeCampaign, updateActiveCampaign } = useCampaign();
+    const { activeCampaign, dataActions } = useCampaign();
     const camping = activeCampaign?.camping || {};
     const activities = getMergedActivities(camping.activities || []);
+    const archivedActivities = (camping.activities || []).filter(a => a?.deletedAt);
+    const campaignId = activeCampaign?.id;
 
     const [editing, setEditing] = useState(null); // activity being edited
     const [isNew, setIsNew] = useState(false);
 
+    const runCampingAction = (action) => {
+        return Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
+    };
+
     const updateCampingField = (field, value) => {
-        updateActiveCampaign(c => ({ ...c, camping: { ...c.camping, [field]: value } }));
+        if (!campaignId) return;
+        runCampingAction(dataActions.camping.updateSettings(campaignId, { [field]: value }));
     };
 
     const openEdit = (act) => {
@@ -47,28 +57,26 @@ export default function CampingAdminView() {
         const id = editing.id || generateId(editing.name);
         const toSave = { ...editing, id };
 
-        const current = camping.activities || [];
-        const exists = current.findIndex(a => a.id === id);
-        const updated = exists >= 0
-            ? current.map(a => a.id === id ? toSave : a)
-            : [...current, toSave];
-
-        updateCampingField('activities', updated);
+        if (!campaignId) return;
+        runCampingAction(dataActions.camping.upsertActivity(campaignId, toSave));
         setEditing(null);
     };
 
     const deleteActivity = (id) => {
-        if (!confirm('Delete this activity?')) return;
-        const updated = (camping.activities || []).filter(a => a.id !== id);
-        updateCampingField('activities', updated);
+        if (!campaignId || !confirm('Archive this activity? It can be restored from the database if needed.')) return;
+        runCampingAction(dataActions.camping.deleteActivity(campaignId, id));
         if (editing?.id === id) setEditing(null);
     };
 
     const resetToDefault = (id) => {
-        if (!confirm('Reset this activity to its default values?')) return;
-        const updated = (camping.activities || []).filter(a => a.id !== id);
-        updateCampingField('activities', updated);
+        if (!campaignId || !confirm('Reset this activity to its default values?')) return;
+        runCampingAction(dataActions.camping.resetDefaultActivity(campaignId, id));
         if (editing?.id === id) setEditing(null);
+    };
+
+    const restoreActivity = (id) => {
+        if (!campaignId) return;
+        runCampingAction(dataActions.camping.restoreActivity(campaignId, id));
     };
 
     const isCustom = (id) => !DEFAULT_CAMPING_ACTIVITIES.find(d => d.id === id);
@@ -189,6 +197,24 @@ export default function CampingAdminView() {
                             </div>
                         );
                     })}
+                    {archivedActivities.length > 0 && (
+                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #333' }}>
+                            <div style={{ fontSize: '0.75em', color: '#777', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                                Archived Activities
+                            </div>
+                            {archivedActivities.map(act => (
+                                <div key={act.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', border: '1px solid #2a2a2a', borderRadius: 4, background: '#141414', marginBottom: 5 }}>
+                                    <span style={{ flex: 1, color: '#999', fontSize: '0.85em' }}>{act.name || '(untitled)'}</span>
+                                    <button
+                                        onClick={() => restoreActivity(act.id)}
+                                        style={{ padding: '3px 8px', background: '#1a2a1a', border: '1px solid #2e7d32', color: '#81c784', borderRadius: 3, cursor: 'pointer', fontSize: '0.75em' }}
+                                    >
+                                        Restore
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 

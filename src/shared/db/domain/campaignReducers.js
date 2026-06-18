@@ -62,12 +62,15 @@ export function buildCampaignViewModel(campaign) {
   const characterSplit = splitActiveArchived(next.characters || []);
   const questSplit = splitActiveArchived(next.quests || []);
   const encounterSplit = splitActiveArchived(next.encounters || []);
+  const mapSplit = splitActiveArchived(next.maps || []);
   next.characters = characterSplit.active;
   next.archivedCharacters = characterSplit.archived;
   next.quests = questSplit.active;
   next.archivedQuests = questSplit.archived;
   next.encounters = encounterSplit.active;
   next.archivedEncounters = encounterSplit.archived;
+  next.maps = mapSplit.active;
+  next.archivedMaps = mapSplit.archived;
   return next;
 }
 

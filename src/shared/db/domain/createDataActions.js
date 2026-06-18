@@ -1,5 +1,5 @@
 import { db as firestoreDb } from "../firebase-config.js";
-import { campaignRepo, characterRepo, encounterRepo, lootRepo, memberRepo, questRepo } from "../v2/repositories.js";
+import { campaignRepo, characterRepo, encounterRepo, lootRepo, mapRepo, memberRepo, questRepo } from "../v2/repositories.js";
 import {
   addPartyXpInCampaign,
   applyCampaignUpdate,
@@ -71,6 +71,33 @@ import {
   updateQuestInCampaign,
   upsertQuestInCampaign,
 } from "./questReducers.js";
+import {
+  createMapRecord,
+  deleteMapPinInCampaign,
+  reorderMapsInCampaign,
+  restoreMapInCampaign,
+  setMapImageUrlInCampaign,
+  setMapScaleInCampaign,
+  softDeleteMapInCampaign,
+  updateMapInCampaign,
+  upsertMapInCampaign,
+  upsertMapPinInCampaign,
+} from "./mapReducers.js";
+import {
+  restoreProgressEntryInCampaign,
+  softDeleteProgressEntryInCampaign,
+  updateProgressInCampaign,
+} from "./progressReducers.js";
+import {
+  assignCampingActivityInCampaign,
+  recordCampingActivityRollInCampaign,
+  resetDefaultCampingActivityInCampaign,
+  restoreCampingActivityInCampaign,
+  softDeleteCampingActivityInCampaign,
+  updateCampingInCampaign,
+  unassignCampingActivityInCampaign,
+  upsertCampingActivityInCampaign,
+} from "./campingReducers.js";
 
 export function createDataActions({
   db,
@@ -520,6 +547,239 @@ export function createDataActions({
       addConditionToCombatantInCampaign(campaign, id, combatantId, condition)
     );
 
+  const createMap = (campaignId, nameOrMap) => {
+    const campaignMaps = db?.campaigns?.[campaignId]?.maps || [];
+    const maxOrder = Math.max(0, ...campaignMaps.map((map) => Number(map?.order) || 0));
+    const map = createMapRecord(nameOrMap, {
+      createId: () => createDomainId("map"),
+      order: maxOrder + 1000,
+    });
+
+    if (useFirestoreV2) {
+      return mapRepo.createMap(firestore, campaignId, map).then(() => map.id);
+    }
+    return updateCampaignLegacy(campaignId, (campaign) =>
+      upsertMapInCampaign(campaign, map, { createId: () => createDomainId("map") })
+    ).then(() => map.id);
+  };
+
+  const updateMap = (campaignId, mapId, updater) => {
+    if (useFirestoreV2) {
+      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+        updateMapInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, updater).maps[0]
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => updateMapInCampaign(campaign, mapId, updater));
+  };
+
+  const softDeleteMap = (campaignId, mapId) => {
+    const options = { now: nowIso(), actorEmail: actor };
+    if (useFirestoreV2) {
+      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+        softDeleteMapInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, options).maps[0]
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => softDeleteMapInCampaign(campaign, mapId, options));
+  };
+
+  const restoreMap = (campaignId, mapId) => {
+    const options = { now: nowIso(), actorEmail: actor };
+    if (useFirestoreV2) {
+      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+        restoreMapInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, options).maps[0]
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => restoreMapInCampaign(campaign, mapId, options));
+  };
+
+  const reorderMaps = (campaignId, orderedIds) => {
+    if (useFirestoreV2) {
+      return mapRepo.updateMaps(firestore, campaignId, orderedIds, (mapsById) => {
+        const nextCampaign = reorderMapsInCampaign(
+          { maps: orderedIds.map((id) => ({ ...mapsById[id], id: mapsById[id]?.id || id })) },
+          orderedIds
+        );
+        return Object.fromEntries(nextCampaign.maps.map((map) => [map.id, map]));
+      });
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => reorderMapsInCampaign(campaign, orderedIds));
+  };
+
+  const setImageUrl = (campaignId, mapId, imageUrl) => {
+    if (useFirestoreV2) {
+      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+        setMapImageUrlInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, imageUrl).maps[0]
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => setMapImageUrlInCampaign(campaign, mapId, imageUrl));
+  };
+
+  const upsertPin = (campaignId, mapId, pin) => {
+    const options = { createId: () => createDomainId("pin") };
+    if (useFirestoreV2) {
+      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+        upsertMapPinInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, pin, options).maps[0]
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => upsertMapPinInCampaign(campaign, mapId, pin, options));
+  };
+
+  const deletePin = (campaignId, mapId, pinId) => {
+    if (useFirestoreV2) {
+      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+        deleteMapPinInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, pinId).maps[0]
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => deleteMapPinInCampaign(campaign, mapId, pinId));
+  };
+
+  const setScale = (campaignId, mapId, scale) => {
+    if (useFirestoreV2) {
+      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+        setMapScaleInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, scale).maps[0]
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => setMapScaleInCampaign(campaign, mapId, scale));
+  };
+
+  const updateProgress = (campaignId, patchOrUpdater) => {
+    if (useFirestoreV2) {
+      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+        stripChildCollections(updateProgressInCampaign({ ...campaign, id: campaign.id || campaignId }, patchOrUpdater))
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => updateProgressInCampaign(campaign, patchOrUpdater));
+  };
+
+  const softDeleteProgressEntry = (campaignId, section, entryId) => {
+    const options = { now: nowIso(), actorEmail: actor };
+    if (useFirestoreV2) {
+      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+        stripChildCollections(
+          softDeleteProgressEntryInCampaign({ ...campaign, id: campaign.id || campaignId }, section, entryId, options)
+        )
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) =>
+      softDeleteProgressEntryInCampaign(campaign, section, entryId, options)
+    );
+  };
+
+  const restoreProgressEntry = (campaignId, section, entryId) => {
+    const options = { now: nowIso(), actorEmail: actor };
+    if (useFirestoreV2) {
+      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+        stripChildCollections(
+          restoreProgressEntryInCampaign({ ...campaign, id: campaign.id || campaignId }, section, entryId, options)
+        )
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) =>
+      restoreProgressEntryInCampaign(campaign, section, entryId, options)
+    );
+  };
+
+  const updateCamping = (campaignId, patchOrUpdater) => {
+    if (useFirestoreV2) {
+      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+        stripChildCollections(updateCampingInCampaign({ ...campaign, id: campaign.id || campaignId }, patchOrUpdater))
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => updateCampingInCampaign(campaign, patchOrUpdater));
+  };
+
+  const upsertCampingActivity = (campaignId, activity) => {
+    const options = { createId: () => createDomainId("camping_activity") };
+    if (useFirestoreV2) {
+      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+        stripChildCollections(
+          upsertCampingActivityInCampaign({ ...campaign, id: campaign.id || campaignId }, activity, options)
+        )
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => upsertCampingActivityInCampaign(campaign, activity, options));
+  };
+
+  const deleteCampingActivity = (campaignId, activityId) => {
+    const options = { now: nowIso(), actorEmail: actor };
+    if (useFirestoreV2) {
+      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+        stripChildCollections(
+          softDeleteCampingActivityInCampaign({ ...campaign, id: campaign.id || campaignId }, activityId, options)
+        )
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => softDeleteCampingActivityInCampaign(campaign, activityId, options));
+  };
+
+  const restoreCampingActivity = (campaignId, activityId) => {
+    const options = { now: nowIso(), actorEmail: actor };
+    if (useFirestoreV2) {
+      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+        stripChildCollections(
+          restoreCampingActivityInCampaign({ ...campaign, id: campaign.id || campaignId }, activityId, options)
+        )
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => restoreCampingActivityInCampaign(campaign, activityId, options));
+  };
+
+  const resetDefaultCampingActivity = (campaignId, activityId) => {
+    if (useFirestoreV2) {
+      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+        stripChildCollections(resetDefaultCampingActivityInCampaign({ ...campaign, id: campaign.id || campaignId }, activityId))
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => resetDefaultCampingActivityInCampaign(campaign, activityId));
+  };
+
+  const assignCampingActivity = (campaignId, activityId, character) => {
+    const options = { now: nowIso(), actorEmail: actor };
+    if (useFirestoreV2) {
+      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+        stripChildCollections(
+          assignCampingActivityInCampaign({ ...campaign, id: campaign.id || campaignId }, activityId, character, options)
+        )
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) =>
+      assignCampingActivityInCampaign(campaign, activityId, character, options)
+    );
+  };
+
+  const recordCampingActivityRoll = (campaignId, activityId, character, rollResult) => {
+    const options = { now: nowIso(), actorEmail: actor };
+    if (useFirestoreV2) {
+      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+        stripChildCollections(
+          recordCampingActivityRollInCampaign(
+            { ...campaign, id: campaign.id || campaignId },
+            activityId,
+            character,
+            rollResult,
+            options
+          )
+        )
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) =>
+      recordCampingActivityRollInCampaign(campaign, activityId, character, rollResult, options)
+    );
+  };
+
+  const unassignCampingActivity = (campaignId, activityId, character) => {
+    if (useFirestoreV2) {
+      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+        stripChildCollections(
+          unassignCampingActivityInCampaign({ ...campaign, id: campaign.id || campaignId }, activityId, character)
+        )
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) =>
+      unassignCampingActivityInCampaign(campaign, activityId, character)
+    );
+  };
+
   const createCampaign = (name) => {
     const campaignId = `campaign_${Date.now()}`;
     const campaign = createCampaignRecord(name, { id: campaignId, now: Date.now() });
@@ -839,6 +1099,32 @@ export function createDataActions({
       resetRound,
       rollInitiativeAll,
       addCondition,
+    },
+    map: {
+      createMap,
+      updateMap,
+      softDeleteMap,
+      restoreMap,
+      reorderMaps,
+      setImageUrl,
+      upsertPin,
+      deletePin,
+      setScale,
+    },
+    progress: {
+      updateProgress,
+      softDeleteEntry: softDeleteProgressEntry,
+      restoreEntry: restoreProgressEntry,
+    },
+    camping: {
+      updateSettings: updateCamping,
+      upsertActivity: upsertCampingActivity,
+      deleteActivity: deleteCampingActivity,
+      restoreActivity: restoreCampingActivity,
+      resetDefaultActivity: resetDefaultCampingActivity,
+      assignActivity: assignCampingActivity,
+      recordActivityRoll: recordCampingActivityRoll,
+      unassignActivity: unassignCampingActivity,
     },
   };
 }

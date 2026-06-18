@@ -39,6 +39,32 @@ import {
     softDeleteEncounterInCampaign,
     updateCombatantInEncounterInCampaign,
 } from '../src/shared/db/domain/encounterReducers.js';
+import {
+    createMapRecord,
+    deleteMapPinInCampaign,
+    reorderMapsInCampaign,
+    restoreMapInCampaign,
+    setMapScaleInCampaign,
+    softDeleteMapInCampaign,
+    upsertMapInCampaign,
+    upsertMapPinInCampaign,
+} from '../src/shared/db/domain/mapReducers.js';
+import {
+    getProgress,
+    restoreProgressEntryInCampaign,
+    softDeleteProgressEntryInCampaign,
+    updateProgressInCampaign,
+} from '../src/shared/db/domain/progressReducers.js';
+import {
+    assignCampingActivityInCampaign,
+    recordCampingActivityRollInCampaign,
+    resetDefaultCampingActivityInCampaign,
+    restoreCampingActivityInCampaign,
+    softDeleteCampingActivityInCampaign,
+    unassignCampingActivityInCampaign,
+    updateCampingInCampaign,
+    upsertCampingActivityInCampaign,
+} from '../src/shared/db/domain/campingReducers.js';
 
 function idFactory() {
     let index = 0;
@@ -359,4 +385,141 @@ test('encounter reducer creates, activates, updates, archives, and restores enco
     const restored = restoreEncounterInCampaign(deleted, encounter.id, { now: '2026-01-02T00:00:00.000Z' });
     assert.equal(restored.encounters[0].deletedAt, undefined);
     assert.equal(restored.encounters[0].restoredAt, '2026-01-02T00:00:00.000Z');
+});
+
+test('map reducer creates, archives, restores, reorders, and edits map details', () => {
+    const createId = idFactory();
+    const map = createMapRecord('World Map', { createId, order: 1000 });
+    const campaign = upsertMapInCampaign({ id: 'camp1', maps: [] }, map, { createId });
+
+    assert.equal(campaign.maps[0].name, 'World Map');
+    assert.equal(campaign.maps[0].visibleToPlayers, false);
+
+    const withPin = upsertMapPinInCampaign(campaign, map.id, {
+        id: 'pin1',
+        label: 'Capital',
+        x: 0.25,
+        y: 0.75,
+        visibleToPlayers: true,
+    });
+    assert.equal(withPin.maps[0].pins.length, 1);
+
+    const scaled = setMapScaleInCampaign(withPin, map.id, {
+        pointA: { x: 0, y: 0 },
+        pointB: { x: 1, y: 0 },
+        realDistance: 500,
+        unit: 'km',
+    });
+    assert.equal(scaled.maps[0].scale.realDistance, 500);
+
+    const deletedPin = deleteMapPinInCampaign(scaled, map.id, 'pin1');
+    assert.equal(deletedPin.maps[0].pins.length, 0);
+
+    const archived = softDeleteMapInCampaign(deletedPin, map.id, { now: '2026-01-01T00:00:00.000Z' });
+    assert.equal(archived.maps[0].deletedAt, '2026-01-01T00:00:00.000Z');
+    assert.equal(archived.maps[0].visibleToPlayers, false);
+
+    const restored = restoreMapInCampaign(archived, map.id, { now: '2026-01-02T00:00:00.000Z' });
+    assert.equal(restored.maps[0].deletedAt, undefined);
+    assert.equal(restored.maps[0].restoredAt, '2026-01-02T00:00:00.000Z');
+
+    const withSecond = upsertMapInCampaign(restored, { id: 'map2', name: 'Dungeon', order: 2000 }, { createId });
+    const reordered = reorderMapsInCampaign(withSecond, ['map2', map.id]);
+    assert(reordered.maps.find(entry => entry.id === 'map2').order < reordered.maps.find(entry => entry.id === map.id).order);
+});
+
+test('progress reducer updates campaign progress and archives top-level entries', () => {
+    const campaign = {
+        id: 'camp1',
+        progress: {
+            reputation: {
+                factions: [
+                    { id: 'fac1', name: 'Guild', ranks: [{ id: 'rank1', title: 'Friend' }] },
+                ],
+            },
+            research: {
+                topics: [{ id: 'topic1', name: 'Ancient Door', infoPoints: [{ id: 'info1', text: 'Runes' }] }],
+            },
+            calcifer: {
+                currentProgress: 3,
+                stages: [{ id: 'stage1', name: 'Spark', boons: [{ id: 'boon1', name: 'Warmth' }] }],
+            },
+            materials: {
+                elements: [{ id: 'fire', name: 'Fire', tiers: [{ id: 'tier1', items: [{ id: 'item1', name: 'Coal' }] }] }],
+            },
+        },
+    };
+
+    const updated = updateProgressInCampaign(campaign, {
+        calcifer: { ...campaign.progress.calcifer, currentProgress: 8 },
+    });
+    assert.equal(updated.progress.calcifer.currentProgress, 8);
+
+    const archived = softDeleteProgressEntryInCampaign(updated, 'research', 'topic1', {
+        now: '2026-01-01T00:00:00.000Z',
+        actorEmail: 'gm@example.com',
+    });
+    assert.equal(archived.progress.research.topics[0].deletedAt, '2026-01-01T00:00:00.000Z');
+    assert.equal(archived.progress.research.topics[0].infoPoints[0].text, 'Runes');
+    assert.equal(getProgress(archived, { activeOnly: true }).research.topics.length, 0);
+
+    const restored = restoreProgressEntryInCampaign(archived, 'research', 'topic1', {
+        now: '2026-01-02T00:00:00.000Z',
+        actorEmail: 'gm@example.com',
+    });
+    assert.equal(restored.progress.research.topics[0].deletedAt, undefined);
+    assert.equal(restored.progress.research.topics[0].restoredAt, '2026-01-02T00:00:00.000Z');
+});
+
+test('camping reducer updates settings, archives activities, and guards assignments', () => {
+    const campaign = updateCampingInCampaign({ id: 'camp1' }, {
+        zoneDC: 18,
+        encounterDC: 20,
+        foragingDC: 15,
+    });
+    assert.equal(campaign.camping.zoneDC, 18);
+
+    const withActivity = upsertCampingActivityInCampaign(campaign, {
+        id: 'custom_watch',
+        name: 'Custom Watch',
+        skills: ['Perception'],
+        dcType: 'zone',
+    });
+    assert.equal(withActivity.camping.activities[0].name, 'Custom Watch');
+
+    const assigned = assignCampingActivityInCampaign(withActivity, 'custom_watch', {
+        id: 'char1',
+        name: 'Hero',
+    }, { now: '2026-01-01T00:00:00.000Z' });
+    assert.equal(assigned.camping.assignments.custom_watch.characterId, 'char1');
+
+    assert.throws(() => assignCampingActivityInCampaign(assigned, 'custom_watch', {
+        id: 'char2',
+        name: 'Other',
+    }));
+
+    const rolled = recordCampingActivityRollInCampaign(assigned, 'custom_watch', {
+        id: 'char1',
+        name: 'Hero',
+    }, { roll: 22, degree: 'success', effectText: 'Done' });
+    assert.equal(rolled.camping.assignments.custom_watch.roll, 22);
+    assert.equal(rolled.camping.assignments.custom_watch.effectText, 'Done');
+
+    const unassigned = unassignCampingActivityInCampaign(rolled, 'custom_watch', { id: 'char1', name: 'Hero' });
+    assert.equal(unassigned.camping.assignments.custom_watch, undefined);
+
+    const archived = softDeleteCampingActivityInCampaign(assigned, 'custom_watch', {
+        now: '2026-01-02T00:00:00.000Z',
+    });
+    assert.equal(archived.camping.activities[0].deletedAt, '2026-01-02T00:00:00.000Z');
+    assert.equal(archived.camping.assignments.custom_watch, undefined);
+
+    const restored = restoreCampingActivityInCampaign(archived, 'custom_watch', {
+        now: '2026-01-03T00:00:00.000Z',
+    });
+    assert.equal(restored.camping.activities[0].deletedAt, undefined);
+    assert.equal(restored.camping.activities[0].restoredAt, '2026-01-03T00:00:00.000Z');
+
+    const reset = resetDefaultCampingActivityInCampaign(restored, 'custom_watch');
+    assert.equal(reset.camping.activities.length, 0);
 });

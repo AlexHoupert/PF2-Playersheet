@@ -16,8 +16,8 @@ export default function CampScreen() {
     const foragingDC = camping.foragingDC ?? '—';
     const encounterDC = camping.encounterDC ?? '—';
 
-    const assigned = activities.filter(act => assignments[act.id]?.characterName);
-    const unassigned = activities.filter(act => !assignments[act.id]?.characterName);
+    const assigned = activities.filter(act => assignments[act.id]?.characterName || assignments[act.id]?.characterId);
+    const unassigned = activities.filter(act => !(assignments[act.id]?.characterName || assignments[act.id]?.characterId));
 
     return (
         <div style={{ padding: '0 4px', paddingBottom: 30, color: '#e0e0e0' }}>

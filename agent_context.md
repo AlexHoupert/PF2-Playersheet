@@ -1,6 +1,6 @@
 # Agent Context
 
-Last deep scan: 2026-06-17.
+Last deep scan: 2026-06-18.
 
 ## Project Identity
 
@@ -67,7 +67,7 @@ Firestore v2 mode:
 - Subscribes to normalized collections from `src/shared/db/v2/schema.js`.
 - Uses `composeLegacyDbFromV2Documents` to create the legacy projection.
 - Non-migrated runtime writes still diff whole legacy DBs via `writeLegacyDbDiffToV2`.
-- Campaign/Session, Character, Inventory, Loot, Quests/Rewards, and Encounters migrated writes now go through `CampaignContext.dataActions` and targeted v2 repositories/transactions.
+- Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, and Camping migrated writes now go through `CampaignContext.dataActions` and targeted v2 repositories/transactions.
 
 Firestore v2 collections include `campaigns`, campaign subcollections `characters`, `quests`, `lootBags`, `encounters`, `maps`, `members`, plus top-level `global`, `customItems`, `customCreatures`, `customActions`, `loreArticles`, and `migrationBackups`.
 
@@ -83,6 +83,9 @@ Current domain action files:
 - `src/shared/db/domain/lootReducers.js`: pure loot-bag, claim, and gold reducers.
 - `src/shared/db/domain/questReducers.js`: pure quest, objective, reward, notification, and quest soft-delete reducers.
 - `src/shared/db/domain/encounterReducers.js`: pure encounter, combatant, initiative, turn, condition, and encounter soft-delete reducers.
+- `src/shared/db/domain/mapReducers.js`: pure map, pin, scale, order, and map soft-delete reducers.
+- `src/shared/db/domain/progressReducers.js`: pure progress normalization, active-only filtering, section updates, and top-level progress soft-delete reducers.
+- `src/shared/db/domain/campingReducers.js`: pure camping settings, activity, assignment, roll, and custom activity soft-delete reducers.
 - `src/shared/db/v2/repositories.js`: targeted Firestore v2 document updates and transactions.
 
 Migrated paths:
@@ -99,12 +102,17 @@ Migrated paths:
 - GM ItemsView item/formula assignment to characters.
 - GM QuestsView quest create/update/archive/restore, objective toggles, secret reveal, and reward distribution.
 - GM EncounterView encounter create/archive/restore/activate, combatants, HP, initiative, turn state, selected entity, visibility, conditions, and CharacterCard edits.
+- GM MapAdminView map create/update/archive/restore, order changes, image URL persistence, pin edits, and scale calibration.
+- GM ProgressAdminView progress section updates and top-level archive/restore for factions, topics, stages, and elements.
+- Player ProgressView reads active-only Progress data.
+- GM/player Camping views update DC settings, custom/default activities, assignments, rolls, and unassigns through `dataActions.camping`.
+- Camping assignments store `characterId` plus `characterName`; old name-only assignments remain readable.
 
-Soft delete uses `deletedAt`/`deletedBy`; restore removes those fields and sets `restoredAt`/`restoredBy`. `CampaignContext.campaigns`, `activeCampaign.characters`, `activeCampaign.quests`, and `activeCampaign.encounters` expose active records; `archivedCampaigns`, `activeCampaign.archivedCharacters`, `activeCampaign.archivedQuests`, and `activeCampaign.archivedEncounters` expose archived records.
+Soft delete uses `deletedAt`/`deletedBy`; restore removes those fields and sets `restoredAt`/`restoredBy`. `CampaignContext.campaigns`, `activeCampaign.characters`, `activeCampaign.quests`, `activeCampaign.encounters`, and `activeCampaign.maps` expose active records; `archivedCampaigns`, `activeCampaign.archivedCharacters`, `activeCampaign.archivedQuests`, `activeCampaign.archivedEncounters`, and `activeCampaign.archivedMaps` expose archived records.
 
 Quest rewards are idempotent via applied markers and are not automatically rolled back if an objective is later marked incomplete. Quest reward notifications are campaign-scoped via `campaign.notificationQueue`; root `db.notificationQueue` remains a legacy fallback.
 
-`CampaignContext.updateActiveCampaign` intentionally remains a broad compatibility helper for non-migrated map/camping/progress style updates.
+`CampaignContext.updateActiveCampaign` intentionally remains a broad compatibility helper for non-migrated pact/player-local style updates.
 
 Remaining broad write paths are tracked in `docs/agent/domain-actions.md` and `docs/agent/known-risks.md`.
 
@@ -164,6 +172,7 @@ Important scripts:
 - `docs/agent/data-and-persistence.md`: legacy DB, Firestore v2, migration, rules.
 - `docs/agent/catalog-pipeline.md`: source resources, generated indexes, runtime fetching.
 - `docs/agent/domain-actions.md`: strangler layer for Campaign/Session, Character, Inventory, and Loot writes.
+- `docs/agent/migration-wave-maps-progress-camping.md`: current step-by-step wave status and assessments for Maps, Progress, and Camping.
 - `docs/agent/ui-flows.md`: player, GM/admin, party, camping, maps, pacts.
 - `docs/agent/known-risks.md`: current risks, cleanup candidates, modernization notes.
 

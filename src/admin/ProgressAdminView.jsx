@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { getProgress as getProgressState, splitProgressEntries } from '../shared/db/domain/progressReducers';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -116,6 +117,28 @@ function DeleteBtn({ onClick }) {
     );
 }
 
+function ArchivedEntries({ title, entries, onRestore }) {
+    if (!entries?.length) return null;
+    return (
+        <div style={{ marginTop: 18, paddingTop: 12, borderTop: '1px solid #2a2a2a' }}>
+            <div style={{ color: '#777', fontSize: '0.78em', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                {title}
+            </div>
+            {entries.map(entry => (
+                <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: '#141414', border: '1px solid #252525', borderRadius: 6, marginBottom: 6 }}>
+                    <span style={{ flex: 1, color: '#999', fontSize: '0.85em' }}>{entry.icon ? `${entry.icon} ` : ''}{entry.name || entry.title || '(untitled)'}</span>
+                    <button
+                        onClick={() => onRestore(entry.id)}
+                        style={{ padding: '4px 9px', background: '#1a2a1a', border: '1px solid #2e7d32', color: '#81c784', borderRadius: 4, cursor: 'pointer', fontSize: '0.78em' }}
+                    >
+                        Restore
+                    </button>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 // ─── Sub-Tab Nav ─────────────────────────────────────────────────────────────
 
 const SUBTABS = [
@@ -152,13 +175,14 @@ function SubTabBar({ active, onChange }) {
 
 // ─── REPUTATION ADMIN ─────────────────────────────────────────────────────────
 
-function ReputationAdmin({ progress, save }) {
+function ReputationAdmin({ progress, save, archiveEntry, restoreEntry }) {
     const [expandedFaction, setExpandedFaction] = useState(null);
     const [expandedRank, setExpandedRank] = useState({});
-    const factions = progress.reputation.factions;
+    const { active: factions, archived: archivedFactions } = splitProgressEntries(progress, 'reputation');
+    const allFactions = progress.reputation.factions;
 
     const updateFactions = (fn) => {
-        const next = [...factions];
+        const next = [...allFactions];
         fn(next);
         save({ reputation: { ...progress.reputation, factions: next } });
     };
@@ -178,8 +202,9 @@ function ReputationAdmin({ progress, save }) {
     };
 
     const deleteFaction = (id) => {
-        if (!window.confirm('Delete this faction?')) return;
-        updateFactions(f => { const i = f.findIndex(x => x.id === id); if (i >= 0) f.splice(i, 1); });
+        if (!window.confirm('Archive this faction? It can be restored later.')) return;
+        archiveEntry('reputation', id);
+        if (expandedFaction === id) setExpandedFaction(null);
     };
 
     const addRank = (factionId) => {
@@ -344,18 +369,20 @@ function ReputationAdmin({ progress, save }) {
                     )}
                 </Card>
             ))}
+            <ArchivedEntries title="Archived Factions" entries={archivedFactions} onRestore={id => restoreEntry('reputation', id)} />
         </div>
     );
 }
 
 // ─── RESEARCH ADMIN ───────────────────────────────────────────────────────────
 
-function ResearchAdmin({ progress, save }) {
+function ResearchAdmin({ progress, save, archiveEntry, restoreEntry }) {
     const [expanded, setExpanded] = useState(null);
-    const topics = progress.research.topics;
+    const { active: topics, archived: archivedTopics } = splitProgressEntries(progress, 'research');
+    const allTopics = progress.research.topics;
 
     const updateTopics = (fn) => {
-        const next = [...topics];
+        const next = [...allTopics];
         fn(next);
         save({ research: { ...progress.research, topics: next } });
     };
@@ -375,8 +402,9 @@ function ResearchAdmin({ progress, save }) {
     };
 
     const deleteTopic = (id) => {
-        if (!window.confirm('Delete this topic?')) return;
-        updateTopics(t => { const i = t.findIndex(x => x.id === id); if (i >= 0) t.splice(i, 1); });
+        if (!window.confirm('Archive this topic? It can be restored later.')) return;
+        archiveEntry('research', id);
+        if (expanded === id) setExpanded(null);
     };
 
     const addInfo = (topicId) => {
@@ -500,16 +528,18 @@ function ResearchAdmin({ progress, save }) {
                     )}
                 </Card>
             ))}
+            <ArchivedEntries title="Archived Topics" entries={archivedTopics} onRestore={id => restoreEntry('research', id)} />
         </div>
     );
 }
 
 // ─── CALCIFER ADMIN ───────────────────────────────────────────────────────────
 
-function CalciferAdmin({ progress, save }) {
+function CalciferAdmin({ progress, save, archiveEntry, restoreEntry }) {
     const [expandedStage, setExpandedStage] = useState(null);
     const calcifer = progress.calcifer;
-    const stages = [...(calcifer.stages || [])].sort((a, b) => a.threshold - b.threshold);
+    const { active: activeStages, archived: archivedStages } = splitProgressEntries(progress, 'calcifer');
+    const stages = [...activeStages].sort((a, b) => a.threshold - b.threshold);
 
     const updateCalcifer = (patch) => {
         save({ calcifer: { ...calcifer, ...patch } });
@@ -536,8 +566,9 @@ function CalciferAdmin({ progress, save }) {
     };
 
     const deleteStage = (id) => {
-        if (!window.confirm('Delete this stage?')) return;
-        updateStages(s => { const i = s.findIndex(x => x.id === id); if (i >= 0) s.splice(i, 1); });
+        if (!window.confirm('Archive this stage? It can be restored later.')) return;
+        archiveEntry('calcifer', id);
+        if (expandedStage === id) setExpandedStage(null);
     };
 
     const addBoon = (stageId) => {
@@ -704,6 +735,7 @@ function CalciferAdmin({ progress, save }) {
                     )}
                 </Card>
             ))}
+            <ArchivedEntries title="Archived Stages" entries={archivedStages} onRestore={id => restoreEntry('calcifer', id)} />
         </div>
     );
 }
@@ -724,13 +756,14 @@ const DEFAULT_ELEMENTS = [
     { name: 'Metal', icon: '⚙️', color: '#94a3b8' },
 ];
 
-function MaterialsAdmin({ progress, save }) {
+function MaterialsAdmin({ progress, save, archiveEntry, restoreEntry }) {
     const [expandedEl, setExpandedEl] = useState(null);
     const [expandedTier, setExpandedTier] = useState({});
-    const elements = progress.materials.elements;
+    const { active: elements, archived: archivedElements } = splitProgressEntries(progress, 'materials');
+    const allElements = progress.materials.elements;
 
     const updateElements = (fn) => {
-        const next = [...elements];
+        const next = [...allElements];
         fn(next);
         save({ materials: { ...progress.materials, elements: next } });
     };
@@ -751,8 +784,9 @@ function MaterialsAdmin({ progress, save }) {
     };
 
     const deleteElement = (id) => {
-        if (!window.confirm('Delete this element?')) return;
-        updateElements(e => { const i = e.findIndex(x => x.id === id); if (i >= 0) e.splice(i, 1); });
+        if (!window.confirm('Archive this element? It can be restored later.')) return;
+        archiveEntry('materials', id);
+        if (expandedEl === id) setExpandedEl(null);
     };
 
     const addTier = (elId) => {
@@ -936,6 +970,7 @@ function MaterialsAdmin({ progress, save }) {
                     </Card>
                 );
             })}
+            <ArchivedEntries title="Archived Elements" entries={archivedElements} onRestore={id => restoreEntry('materials', id)} />
         </div>
     );
 }
@@ -943,7 +978,7 @@ function MaterialsAdmin({ progress, save }) {
 // ─── Main Admin View ──────────────────────────────────────────────────────────
 
 export default function ProgressAdminView() {
-    const { activeCampaign, updateActiveCampaign } = useCampaign();
+    const { activeCampaign, dataActions } = useCampaign();
     const [subTab, setSubTab] = useState('reputation');
 
     if (!activeCampaign) {
@@ -955,23 +990,36 @@ export default function ProgressAdminView() {
         );
     }
 
-    const progress = getProgress(activeCampaign);
+    const progress = getProgressState(activeCampaign);
+    const campaignId = activeCampaign.id;
+
+    const runProgressAction = (action) => {
+        return Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
+    };
 
     const save = (sectionPatch) => {
-        updateActiveCampaign(c => ({
-            ...c,
-            progress: { ...getProgress(c), ...sectionPatch },
-        }));
+        runProgressAction(dataActions.progress.updateProgress(campaignId, sectionPatch));
+    };
+
+    const archiveEntry = (section, id) => {
+        runProgressAction(dataActions.progress.softDeleteEntry(campaignId, section, id));
+    };
+
+    const restoreEntry = (section, id) => {
+        runProgressAction(dataActions.progress.restoreEntry(campaignId, section, id));
     };
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                 <SubTabBar active={subTab} onChange={setSubTab} />
-                {subTab === 'reputation' && <ReputationAdmin progress={progress} save={save} />}
-                {subTab === 'research'   && <ResearchAdmin   progress={progress} save={save} />}
-                {subTab === 'calcifer'   && <CalciferAdmin   progress={progress} save={save} />}
-                {subTab === 'materials'  && <MaterialsAdmin  progress={progress} save={save} />}
+                {subTab === 'reputation' && <ReputationAdmin progress={progress} save={save} archiveEntry={archiveEntry} restoreEntry={restoreEntry} />}
+                {subTab === 'research'   && <ResearchAdmin   progress={progress} save={save} archiveEntry={archiveEntry} restoreEntry={restoreEntry} />}
+                {subTab === 'calcifer'   && <CalciferAdmin   progress={progress} save={save} archiveEntry={archiveEntry} restoreEntry={restoreEntry} />}
+                {subTab === 'materials'  && <MaterialsAdmin  progress={progress} save={save} archiveEntry={archiveEntry} restoreEntry={restoreEntry} />}
             </div>
         </div>
     );

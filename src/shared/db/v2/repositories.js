@@ -293,6 +293,50 @@ export const encounterRepo = {
     },
 };
 
+export const mapRepo = {
+    async createMap(firestore, campaignId, map) {
+        const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.maps, String(map.id));
+        await setDoc(ref, cleanForFirestore(stampRuntime(map)));
+    },
+
+    async updateMap(firestore, campaignId, mapId, updater) {
+        const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.maps, mapId);
+        await runTransaction(firestore, async transaction => {
+            const snapshot = await transaction.get(ref);
+            if (!snapshot.exists()) throw new Error(`Map not found: ${mapId}`);
+            const current = snapshot.data();
+            const next = typeof updater === 'function' ? updater(current) : { ...current, ...updater };
+            transaction.set(ref, cleanForFirestore(stampRuntime(next)));
+        });
+    },
+
+    async updateMaps(firestore, campaignId, mapIds, updater) {
+        const uniqueIds = [...new Set(mapIds.filter(Boolean))];
+        const refsById = Object.fromEntries(
+            uniqueIds.map(mapId => [
+                mapId,
+                campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.maps, mapId),
+            ])
+        );
+
+        await runTransaction(firestore, async transaction => {
+            const entries = await Promise.all(
+                uniqueIds.map(async mapId => {
+                    const snapshot = await transaction.get(refsById[mapId]);
+                    if (!snapshot.exists()) throw new Error(`Map not found: ${mapId}`);
+                    return [mapId, snapshot.data()];
+                })
+            );
+            const currentById = Object.fromEntries(entries);
+            const nextById = typeof updater === 'function' ? updater(currentById) : updater;
+            Object.entries(nextById || currentById).forEach(([mapId, map]) => {
+                if (!refsById[mapId]) return;
+                transaction.set(refsById[mapId], cleanForFirestore(stampRuntime(map)));
+            });
+        });
+    },
+};
+
 export const lootRepo = {
     async createLootBag(firestore, campaignId, lootBag) {
         const lootRef = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.lootBags, String(lootBag.id));

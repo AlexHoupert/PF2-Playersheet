@@ -167,9 +167,10 @@ export const DEFAULT_CAMPING_ACTIVITIES = [
  * Campaign activities override matching defaults by id; new ids are appended.
  */
 export function getMergedActivities(campaignActivities = []) {
-    const overrides = new Map(campaignActivities.map(a => [a.id, a]));
+    const activeActivities = campaignActivities.filter(a => !a?.deletedAt);
+    const overrides = new Map(activeActivities.map(a => [a.id, a]));
     const merged = DEFAULT_CAMPING_ACTIVITIES.map(def => overrides.has(def.id) ? { ...def, ...overrides.get(def.id) } : def);
-    campaignActivities.forEach(a => {
+    activeActivities.forEach(a => {
         if (!DEFAULT_CAMPING_ACTIVITIES.find(d => d.id === a.id)) merged.push(a);
     });
     return merged;

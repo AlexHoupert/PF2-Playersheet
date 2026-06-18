@@ -436,7 +436,7 @@ function MapViewerOverlay({ map, onClose, onSavePin, onDeletePin, onSaveScale })
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function MapAdminView() {
-    const { activeCampaign, updateActiveCampaign } = useCampaign();
+    const { activeCampaign, activeCampaignId, dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
 
     const [selectedMapId, setSelectedMapId] = useState(null);
@@ -447,63 +447,76 @@ export default function MapAdminView() {
     const [uploading, setUploading]     = useState(false);
     const fileInputRef = useRef(null);
 
+    const campaignId = activeCampaignId || activeCampaign?.id;
     const maps = activeCampaign?.maps || [];
+    const archivedMaps = activeCampaign?.archivedMaps || [];
     const selectedMap = maps.find(m => m.id === selectedMapId) || null;
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    const updateMaps = (fn) => {
-        updateActiveCampaign(camp => ({ ...camp, maps: fn([...(camp.maps || [])]) }));
+    const runMapAction = (action) => {
+        return Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
     };
 
     const updateMap = (id, changes) => {
-        updateMaps(prev => prev.map(m => m.id === id ? { ...m, ...changes } : m));
+        if (!campaignId) return;
+        runMapAction(dataActions.map.updateMap(campaignId, id, changes));
     };
 
     const handleCreate = () => {
         const name = newMapName.trim();
-        if (!name) return;
-        const map = makeMap(name);
-        updateMaps(prev => [...prev, map]);
-        setSelectedMapId(map.id);
+        if (!name || !campaignId) return;
+        const action = dataActions.map.createMap(campaignId, name);
+        runMapAction(action).then(id => {
+            if (id) setSelectedMapId(id);
+        });
         setNewMapName('');
         if (isMobile) setShowList(false);
     };
 
     const handleDelete = (id) => {
-        if (!window.confirm('Delete this map and all its pins?')) return;
-        updateMaps(prev => prev.filter(m => m.id !== id));
+        if (!campaignId) return;
+        if (!window.confirm('Archive this map? It can be restored later.')) return;
+        runMapAction(dataActions.map.softDeleteMap(campaignId, id));
         if (selectedMapId === id) setSelectedMapId(null);
     };
 
+    const handleRestore = (id) => {
+        if (!campaignId) return;
+        runMapAction(dataActions.map.restoreMap(campaignId, id));
+        setSelectedMapId(id);
+        if (isMobile) setShowList(false);
+    };
+
     const handleMoveUp = (id) => {
-        updateMaps(prev => {
-            const idx = prev.findIndex(m => m.id === id);
-            if (idx <= 0) return prev;
-            const next = [...prev];
-            [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-            return next;
-        });
+        if (!campaignId) return;
+        const idx = maps.findIndex(m => m.id === id);
+        if (idx <= 0) return;
+        const next = [...maps];
+        [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+        runMapAction(dataActions.map.reorderMaps(campaignId, next.map(map => map.id)));
     };
 
     const handleMoveDown = (id) => {
-        updateMaps(prev => {
-            const idx = prev.findIndex(m => m.id === id);
-            if (idx < 0 || idx >= prev.length - 1) return prev;
-            const next = [...prev];
-            [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
-            return next;
-        });
+        if (!campaignId) return;
+        const idx = maps.findIndex(m => m.id === id);
+        if (idx < 0 || idx >= maps.length - 1) return;
+        const next = [...maps];
+        [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+        runMapAction(dataActions.map.reorderMaps(campaignId, next.map(map => map.id)));
     };
 
     const handleFileUpload = async (e) => {
         const file = e.target.files?.[0];
-        if (!file || !selectedMapId) return;
+        if (!file || !selectedMapId || !campaignId) return;
         setUploadError(null);
         setUploading(true);
         try {
             const url = await uploadMapImage(file);
-            updateMap(selectedMapId, { imageUrl: url });
+            runMapAction(dataActions.map.setImageUrl(campaignId, selectedMapId, url));
         } catch (err) {
             if (err.message !== 'Cancelled') setUploadError(err.message || 'Upload failed');
         } finally {
@@ -515,23 +528,24 @@ export default function MapAdminView() {
     // ── Pin save/delete handlers (called from viewer overlay) ─────────────────
 
     const handlePinSave = (savedPin, isEdit) => {
-        if (!selectedMap) return;
+        if (!selectedMap || !campaignId) return;
         const pins = isEdit
-            ? selectedMap.pins.map(p => p.id === savedPin.id ? savedPin : p)
+            ? (selectedMap.pins || []).map(p => p.id === savedPin.id ? savedPin : p)
             : [...(selectedMap.pins || []), savedPin];
-        updateMap(selectedMapId, { pins });
+        const pinToSave = isEdit ? pins.find(p => p.id === savedPin.id) : savedPin;
+        runMapAction(dataActions.map.upsertPin(campaignId, selectedMapId, pinToSave));
     };
 
     const handlePinDelete = (pinId) => {
-        if (!selectedMap) return;
-        updateMap(selectedMapId, { pins: selectedMap.pins.filter(p => p.id !== pinId) });
+        if (!selectedMap || !campaignId) return;
+        runMapAction(dataActions.map.deletePin(campaignId, selectedMapId, pinId));
     };
 
     // ── Scale calibration save ─────────────────────────────────────────────────
 
     const handleSaveScale = (scale) => {
-        if (!selectedMapId) return;
-        updateMap(selectedMapId, { scale });
+        if (!selectedMapId || !campaignId) return;
+        runMapAction(dataActions.map.setScale(campaignId, selectedMapId, scale));
     };
 
     // ── No campaign guard ─────────────────────────────────────────────────────
@@ -591,7 +605,7 @@ export default function MapAdminView() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={S.listItemName(selectedMapId === map.id)}>{map.name}</div>
                             <div style={{ fontSize: '0.72em', color: '#555' }}>
-                                {map.pins.length} pin{map.pins.length !== 1 ? 's' : ''} •{' '}
+                                {(map.pins || []).length} pin{(map.pins || []).length !== 1 ? 's' : ''} •{' '}
                                 {map.visibleToPlayers ? <span style={{ color: '#66bb6a' }}>visible</span> : 'hidden'}
                             </div>
                         </div>
@@ -606,6 +620,34 @@ export default function MapAdminView() {
                         </div>
                     </div>
                 ))}
+                {archivedMaps.length > 0 && (
+                    <div style={{ marginTop: 12, padding: '10px 14px', borderTop: '1px solid #333' }}>
+                        <div style={{ fontSize: '0.75em', color: '#777', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                            Archived
+                        </div>
+                        {archivedMaps.map(map => (
+                            <div key={map.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '0.85em', color: '#999', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {map.name || '(untitled)'}
+                                    </div>
+                                    {map.deletedAt && (
+                                        <div style={{ fontSize: '0.7em', color: '#555' }}>
+                                            {new Date(map.deletedAt).toLocaleString()}
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleRestore(map.id); }}
+                                    style={{ ...S.btnSmall, color: '#81c784', borderColor: '#2e7d32' }}
+                                    title="Restore map"
+                                >
+                                    Restore
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div style={S.createRow}>
@@ -745,7 +787,7 @@ export default function MapAdminView() {
                         {/* Pins */}
                         <div style={S.field}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                                <label style={{ ...S.label, marginBottom: 0 }}>Pins ({selectedMap.pins.length})</label>
+                                <label style={{ ...S.label, marginBottom: 0 }}>Pins ({(selectedMap.pins || []).length})</label>
                                 {selectedMap.imageUrl && (
                                     <button onClick={() => setViewerOpen(true)} style={{ ...S.btnBlue, padding: '5px 10px', fontSize: '0.8em' }}>
                                         + Add Pins in Viewer
@@ -753,13 +795,13 @@ export default function MapAdminView() {
                                 )}
                             </div>
 
-                            {selectedMap.pins.length === 0 ? (
+                            {(selectedMap.pins || []).length === 0 ? (
                                 <div style={S.empty}>
                                     No pins yet.{selectedMap.imageUrl ? ' Open the viewer and switch to Pin mode to place them.' : ' Add a map image first.'}
                                 </div>
                             ) : (
                                 <div>
-                                    {selectedMap.pins.map(pin => (
+                                    {(selectedMap.pins || []).map(pin => (
                                         <div key={pin.id} style={S.pinRow}>
                                             <span style={{ fontSize: '1.2em' }}>{pin.icon || '📍'}</span>
                                             <span style={{ flex: 1, fontSize: '0.85em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

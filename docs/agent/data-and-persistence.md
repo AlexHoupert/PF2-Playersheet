@@ -1,6 +1,6 @@
 # Data And Persistence
 
-Last updated: 2026-06-17.
+Last updated: 2026-06-18.
 
 ## Mental Model
 
@@ -104,7 +104,7 @@ Write path:
 
 Important limitation:
 
-- There are repository functions in `src/shared/db/v2/repositories.js`, but some non-migrated UI paths still call broad `setDb`. The repositories are now used by the domain-action waves for Campaign/Session, Character, Inventory, Loot, Quests/Rewards, and Encounters.
+- There are repository functions in `src/shared/db/v2/repositories.js`, but some non-migrated UI paths still call broad `setDb`. The repositories are now used by the domain-action waves for Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, and Camping.
 
 ## Domain Action Layer
 
@@ -116,6 +116,9 @@ Files:
 - `src/shared/db/domain/lootReducers.js`
 - `src/shared/db/domain/questReducers.js`
 - `src/shared/db/domain/encounterReducers.js`
+- `src/shared/db/domain/mapReducers.js`
+- `src/shared/db/domain/progressReducers.js`
+- `src/shared/db/domain/campingReducers.js`
 - `src/shared/db/v2/repositories.js`
 
 `CampaignContext` exposes `dataActions`, `dbMode`, and `dbStatus`.
@@ -129,14 +132,21 @@ Current migrated write paths:
 - GM item assignment to loot/characters and loot-bag edits through `dataActions`.
 - GM quest create/update/archive/restore, objective toggles, secret reveal, and reward distribution through `dataActions.quest`.
 - GM encounter create/archive/restore/activate, combatant updates, initiative, HP, turn state, and conditions through `dataActions.encounter`.
+- GM map create/update/archive/restore, ordering, pins, scale, and image URL persistence through `dataActions.map`.
+- GM progress section edits and top-level Progress archive/restore through `dataActions.progress`.
+- Player progress views read active-only Progress data through the domain reducer.
+- GM/player camping settings, activity edits, activity archive/restore, assignments, rolls, and unassign through `dataActions.camping`.
 - Player reward notifications read `campaign.notificationQueue` first and root `db.notificationQueue` only as a legacy fallback.
 
 Soft delete:
 
 - Campaign and character deletion is archival via `deletedAt` and optional `deletedBy`.
 - Quest/Subquest and Encounter deletion is also archival via `deletedAt` and optional `deletedBy`.
+- Map deletion is also archival via `deletedAt` and optional `deletedBy`.
+- Top-level Progress entry deletion is also archival via `deletedAt` and optional `deletedBy`.
+- Custom Camping Activity deletion is also archival via `deletedAt` and optional `deletedBy`.
 - Restore removes deletion fields and stamps `restoredAt`/`restoredBy`.
-- `CampaignContext` filters active Campaigns, Characters, Quests, and Encounters for normal screens and exposes archived records for restore UI.
+- `CampaignContext` filters active Campaigns, Characters, Quests, Encounters, and Maps for normal screens and exposes archived records for restore UI.
 - Firestore v2 keeps Campaign and Character documents; member assignments are cleared when a character is archived.
 - Quest rewards are idempotent via applied markers and are not automatically rolled back when objectives are later marked incomplete.
 
@@ -225,6 +235,9 @@ Tests cover:
 - Members, custom items/actions, and lore document paths.
 - Composition of v2 docs back into legacy projection.
 - Campaign/Character/Quest/Encounter soft delete and restore reducers.
+- Map soft delete, restore, order, pin, and scale reducers.
+- Progress update, active-only, top-level soft delete, and restore reducers.
+- Camping settings, custom activity archive/restore, assignment conflict, roll, and unassign reducers.
 - Quest objective and quest reward idempotency.
 - Encounter activation, combatants, initiative, turn state, and conditions.
 
