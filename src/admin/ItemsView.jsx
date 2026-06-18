@@ -53,8 +53,14 @@ const Card = ({ children, style, className, ...rest }) => (
 );
 
 export default function ItemsView({ db, setDb, onInspectItem }) {
-    const { activeCampaign } = useCampaign();
+    const { activeCampaign, dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
+    const runDataAction = (action) => {
+        Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
+    };
 
     // --- STATE ---
     const [search, setSearch] = useState('');
@@ -290,6 +296,15 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
         const data = e.dataTransfer.getData('app/items');
         if (!data) return;
         const { items, source } = JSON.parse(data);
+        if (targetType === 'loot' && targetId && activeCampaign) {
+            runDataAction(dataActions.loot.addItems(activeCampaign.id, targetId, items));
+            return;
+        }
+        if (targetType === 'global' && source === 'loot' && selectedLootId && activeCampaign) {
+            runDataAction(dataActions.loot.removeItems(activeCampaign.id, selectedLootId, items));
+            setSelectedSideItems([]);
+            return;
+        }
 
         setDb(prev => {
             const next = deepClone(prev);
@@ -347,6 +362,27 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
 
     // Helper: execute the actual item action (shared between performAction and spell selection callback)
     const executeItemAction = (action, arg, items) => {
+        if (action === 'addToLoot' && arg && activeCampaign) {
+            runDataAction(dataActions.loot.addItems(activeCampaign.id, arg, items.map(item => ({ ...item, qty: item.qty || 1 }))));
+            return;
+        }
+        if (action === 'giveToPlayer' && arg && activeCampaign) {
+            items.forEach(item => {
+                runDataAction(dataActions.inventory.addItem(activeCampaign.id, arg, item, { qty: item.qty || 1 }));
+            });
+            return;
+        }
+        if (action === 'giveFormulaToPlayer' && arg && activeCampaign) {
+            items.forEach(item => {
+                runDataAction(dataActions.character.updateCharacter(activeCampaign.id, arg, character => {
+                    const next = { ...character, formulaBook: [...(character.formulaBook || [])] };
+                    if (!next.formulaBook.includes(item.name)) next.formulaBook.push(item.name);
+                    return next;
+                }));
+            });
+            return;
+        }
+
         setDb(prev => {
             const next = deepClone(prev);
             if (!next.shop) next.shop = {};
@@ -408,6 +444,11 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
 
         // Side panel specific actions
         if (action === 'removeFromSide') {
+            if (source === 'loot' && selectedLootId && activeCampaign) {
+                runDataAction(dataActions.loot.removeItems(activeCampaign.id, selectedLootId, targets));
+                setSelectedSideItems([]);
+                return;
+            }
             setDb(prev => {
                 const next = deepClone(prev);
                 if (source === 'trader' && selectedTraderId) {
@@ -428,18 +469,9 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
             const newQty = prompt('Enter quantity:', targets[0].qty || 1);
             if (newQty === null) return;
             const qty = parseInt(newQty, 10) || 1;
-            setDb(prev => {
-                const next = deepClone(prev);
-                const campData = activeCampaign ? next.campaigns[activeCampaign.id] : null;
-                const b = campData?.lootBags?.find(x => x.id === selectedLootId);
-                if (b) {
-                    targets.forEach(t => {
-                        const item = b.items.find(x => x.instanceId === t.instanceId);
-                        if (item) item.qty = qty;
-                    });
-                }
-                return next;
-            });
+            if (activeCampaign && selectedLootId) {
+                runDataAction(dataActions.loot.setItemQuantity(activeCampaign.id, selectedLootId, targets, qty));
+            }
             return;
         }
 
@@ -474,13 +506,7 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
     const handleCreateLoot = () => {
         const name = prompt("Loot Bag Name:");
         if (!name || !activeCampaign) return;
-        setDb(prev => {
-            const next = deepClone(prev);
-            const campData = next.campaigns[activeCampaign.id];
-            if (!campData.lootBags) campData.lootBags = [];
-            campData.lootBags.push({ id: Date.now(), name, items: [], goldValue: 0 });
-            return next;
-        });
+        runDataAction(dataActions.loot.createLootBag(activeCampaign.id, { id: Date.now(), name, items: [], goldValue: 0 }));
     };
 
     // Double-click handler for info modal
@@ -743,14 +769,11 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                                         <button
                                             style={{ fontSize: '0.75em', background: activeLoot.isLocked ? '#443322' : '#334433', border: '1px solid #555', padding: '3px 8px', cursor: 'pointer', borderRadius: 4, color: activeLoot.isLocked ? '#c88' : '#8c8' }}
                                             onClick={() => {
-                                                setDb(prev => {
-                                                    const next = deepClone(prev);
-                                                    if (activeCampaign) {
-                                                        const bag = next.campaigns[activeCampaign.id]?.lootBags?.find(x => x.id === activeLoot.id);
-                                                        if (bag) bag.isLocked = !bag.isLocked;
-                                                    }
-                                                    return next;
-                                                });
+                                                if (!activeCampaign) return;
+                                                runDataAction(dataActions.loot.updateLootBag(activeCampaign.id, activeLoot.id, bag => ({
+                                                    ...bag,
+                                                    isLocked: !bag.isLocked
+                                                })));
                                             }}
                                         >
                                             {activeLoot.isLocked ? '🚫 Hidden' : '👁️ Visible'}
@@ -782,7 +805,14 @@ export default function ItemsView({ db, setDb, onInspectItem }) {
                                 <div style={{ padding: 5, borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', gap: 5 }}>
                                     <span style={{ color: '#ffd700', fontSize: '0.8em' }}>Gold:</span>
                                     <input type="number" className="modal-input" style={{ width: 80, padding: 2 }} value={activeLoot.goldValue || 0}
-                                        onChange={e => { const val = parseFloat(e.target.value) || 0; setDb(p => { const n = deepClone(p); if (activeCampaign) { const camp = n.campaigns[activeCampaign.id]; camp.lootBags.find(x => x.id === activeLoot.id).goldValue = val; } return n; }); }} />
+                                        onChange={e => {
+                                            const val = parseFloat(e.target.value) || 0;
+                                            if (!activeCampaign) return;
+                                            runDataAction(dataActions.loot.updateLootBag(activeCampaign.id, activeLoot.id, bag => ({
+                                                ...bag,
+                                                goldValue: val
+                                            })));
+                                        }} />
                                 </div>
                             )}
                             <div className="items-view-scroll" style={{ flex: 1, overflow: 'auto' }}>

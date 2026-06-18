@@ -41,7 +41,7 @@ function makeCombatant(type, data) {
 }
 
 export default function EncounterView({ db, setDb }) {
-    const { activeCampaign, updateActiveCampaign } = useCampaign();
+    const { activeCampaign, activeCampaignId, dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
 
     // Local UI state
@@ -52,6 +52,7 @@ export default function EncounterView({ db, setDb }) {
     const [creatureDataCache, setCreatureDataCache] = useState({});
 
     const encounters = activeCampaign?.encounters || [];
+    const archivedEncounters = activeCampaign?.archivedEncounters || [];
     const characters = activeCampaign?.characters || [];
     const activeEncounter = encounters.find(e => e.isActive) || null;
 
@@ -105,57 +106,60 @@ export default function EncounterView({ db, setDb }) {
             });
     }, [activeEncounter?.combatants?.length]);
 
-    // ── Campaign updaters ──
-    const updateEncounters = useCallback((fn) => {
-        updateActiveCampaign(campaign => {
-            const next = deepClone(campaign);
-            if (!next.encounters) next.encounters = [];
-            fn(next.encounters, next);
-            return next;
+    // ── Domain action runner ──
+    const runEncounterAction = useCallback((action) => {
+        Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
         });
-    }, [updateActiveCampaign]);
+    }, []);
 
-    const updateEncounter = useCallback((encId, fn) => {
-        updateEncounters((encs) => {
-            const enc = encs.find(e => e.id === encId);
-            if (enc) fn(enc);
-        });
-    }, [updateEncounters]);
+    const requireCampaignId = useCallback(() => {
+        if (!activeCampaignId) {
+            alert('No active campaign selected.');
+            return null;
+        }
+        return activeCampaignId;
+    }, [activeCampaignId]);
 
     // ── Encounter CRUD ──
     const createEncounter = () => {
+        const campaignId = requireCampaignId();
+        if (!campaignId) return;
         const name = prompt('Encounter name:');
         if (!name) return;
-        const enc = makeEncounter(name);
-        updateEncounters(encs => encs.push(enc));
-        setSelectedEncounterId(enc.id);
+        const action = dataActions.encounter.createEncounter(campaignId, name).then(id => {
+            if (id) setSelectedEncounterId(id);
+        });
+        runEncounterAction(action);
     };
 
     const deleteEncounter = (id) => {
-        if (!confirm('Delete this encounter?')) return;
-        updateEncounters(encs => {
-            const idx = encs.findIndex(e => e.id === id);
-            if (idx > -1) encs.splice(idx, 1);
-        });
+        const campaignId = requireCampaignId();
+        if (!campaignId || !confirm('Archive this encounter?')) return;
+        runEncounterAction(dataActions.encounter.softDeleteEncounter(campaignId, id));
         if (selectedEncounterId === id) setSelectedEncounterId(null);
     };
 
+    const restoreEncounter = (id) => {
+        const campaignId = requireCampaignId();
+        if (!campaignId) return;
+        runEncounterAction(dataActions.encounter.restoreEncounter(campaignId, id));
+    };
+
     const activateEncounter = (id) => {
-        updateEncounters(encs => {
-            encs.forEach(e => { e.isActive = e.id === id; });
-        });
+        const campaignId = requireCampaignId();
+        if (!campaignId) return;
+        runEncounterAction(dataActions.encounter.activateEncounter(campaignId, id));
     };
 
     // ── Combatant management ──
     const addCreatureToEncounter = (encId, catalogEntry) => {
         const applyData = (data) => {
+            const campaignId = requireCampaignId();
+            if (!campaignId) return;
             data._catalogId = catalogEntry.id;
-            updateEncounter(encId, enc => {
-                const existing = enc.combatants.filter(c => c.creatureId === catalogEntry.id);
-                const combatant = makeCombatant('creature', data);
-                combatant.instanceLabel = existing.length + 1;
-                enc.combatants.push(combatant);
-            });
+            runEncounterAction(dataActions.encounter.addCombatant(campaignId, encId, 'creature', data));
             setCreatureDataCache(prev => ({ ...prev, [catalogEntry.id]: data }));
         };
 
@@ -172,50 +176,51 @@ export default function EncounterView({ db, setDb }) {
     };
 
     const addAllPlayers = (encId) => {
-        updateEncounter(encId, enc => {
-            characters.forEach(char => {
-                // Don't double-add
-                if (enc.combatants.some(c => c.playerId === char.id)) return;
-                enc.combatants.push(makeCombatant('player', char));
-            });
-        });
+        const campaignId = requireCampaignId();
+        if (!campaignId) return;
+        runEncounterAction(dataActions.encounter.addAllPlayers(campaignId, encId));
     };
 
     const removeCombatant = (encId, combatantId) => {
-        updateEncounter(encId, enc => {
-            const idx = enc.combatants.findIndex(c => c.id === combatantId);
-            if (idx > -1) enc.combatants.splice(idx, 1);
-        });
+        const campaignId = requireCampaignId();
+        if (!campaignId) return;
+        runEncounterAction(dataActions.encounter.removeCombatant(campaignId, encId, combatantId));
     };
 
     const toggleVisibility = (encId, combatantId) => {
-        updateEncounter(encId, enc => {
-            const c = enc.combatants.find(c => c.id === combatantId);
-            if (c) c.visible = !c.visible;
-        });
+        const campaignId = requireCampaignId();
+        const encounter = encounters.find(enc => enc.id === encId);
+        const combatant = encounter?.combatants?.find(c => c.id === combatantId);
+        if (!campaignId || !combatant) return;
+        runEncounterAction(dataActions.encounter.updateCombatant(campaignId, encId, combatantId, {
+            visible: !combatant.visible,
+        }));
     };
 
     const setInitiative = (combatantId, value) => {
         if (!activeEncounter) return;
-        updateEncounter(activeEncounter.id, enc => {
-            const c = enc.combatants.find(c => c.id === combatantId);
-            if (c) c.initiative = value;
-        });
+        const campaignId = requireCampaignId();
+        if (!campaignId) return;
+        runEncounterAction(dataActions.encounter.updateCombatant(campaignId, activeEncounter.id, combatantId, {
+            initiative: value,
+        }));
     };
 
     const setHp = (combatantId, value) => {
         if (!activeEncounter) return;
-        updateEncounter(activeEncounter.id, enc => {
-            const c = enc.combatants.find(c => c.id === combatantId);
-            if (c) c.currentHp = Math.max(0, Math.min(value, c.maxHp));
-        });
+        const campaignId = requireCampaignId();
+        const combatant = activeEncounter.combatants.find(c => c.id === combatantId);
+        if (!campaignId || !combatant) return;
+        runEncounterAction(dataActions.encounter.updateCombatant(campaignId, activeEncounter.id, combatantId, {
+            currentHp: Math.max(0, Math.min(value, combatant.maxHp)),
+        }));
     };
 
     const selectEntity = (entityId) => {
         if (!activeEncounter) return;
-        updateEncounter(activeEncounter.id, enc => {
-            enc.selectedEntityId = enc.selectedEntityId === entityId ? null : entityId;
-        });
+        const campaignId = requireCampaignId();
+        if (!campaignId) return;
+        runEncounterAction(dataActions.encounter.selectEntity(campaignId, activeEncounter.id, entityId));
     };
 
     // ── Turn management ──
@@ -231,32 +236,23 @@ export default function EncounterView({ db, setDb }) {
         if (!activeEncounter) return;
         const total = activeEncounter.combatants.length;
         if (total === 0) return;
-        updateEncounter(activeEncounter.id, enc => {
-            enc.currentTurnIndex = ((enc.currentTurnIndex ?? 0) + 1) % total;
-        });
+        const campaignId = requireCampaignId();
+        if (!campaignId) return;
+        runEncounterAction(dataActions.encounter.endTurn(campaignId, activeEncounter.id));
     };
 
     const resetRound = () => {
         if (!activeEncounter) return;
-        updateEncounter(activeEncounter.id, enc => {
-            enc.currentTurnIndex = 0;
-        });
+        const campaignId = requireCampaignId();
+        if (!campaignId) return;
+        runEncounterAction(dataActions.encounter.resetRound(campaignId, activeEncounter.id));
     };
 
     const rollInitiativeAll = () => {
         if (!activeEncounter) return;
-        updateEncounter(activeEncounter.id, enc => {
-            enc.combatants.forEach(c => {
-                if (c.type === 'player') return;
-                const cData = creatureDataCache[c.creatureId];
-                const perception = parseInt(
-                    cData?.system?.perception?.value ??
-                    cData?.system?.attributes?.perception?.value ??
-                    cData?.perception ?? 0
-                ) || 0;
-                c.initiative = Math.floor(Math.random() * 20) + 1 + perception;
-            });
-        });
+        const campaignId = requireCampaignId();
+        if (!campaignId) return;
+        runEncounterAction(dataActions.encounter.rollInitiativeAll(campaignId, activeEncounter.id, creatureDataCache));
     };
 
     // Active combatant is always the first in the rotated list
@@ -323,12 +319,9 @@ export default function EncounterView({ db, setDb }) {
                     db={db}
                     setDb={setDb}
                     updateCharacter={(fn) => {
-                        updateActiveCampaign(campaign => {
-                            const next = deepClone(campaign);
-                            const idx = next.characters.findIndex(c => c.id === infoCharData.id);
-                            if (idx > -1) fn(next.characters[idx]);
-                            return next;
-                        });
+                        const campaignId = requireCampaignId();
+                        if (!campaignId) return;
+                        runEncounterAction(dataActions.character.updateCharacter(campaignId, infoCharData.id, fn));
                     }}
                     setModalMode={() => { }}
                     setModalData={() => { }}
@@ -364,6 +357,17 @@ export default function EncounterView({ db, setDb }) {
                 ))}
                 {encounters.length === 0 && <div className="enc-sidebar__empty">No encounters yet</div>}
             </div>
+            {archivedEncounters.length > 0 && (
+                <div className="enc-sidebar__list" style={{ borderTop: '1px solid #333', marginTop: 12, paddingTop: 12 }}>
+                    <div style={{ color: '#888', fontSize: '0.8em', textTransform: 'uppercase', marginBottom: 6 }}>Archived</div>
+                    {archivedEncounters.map(enc => (
+                        <div key={enc.id} className="enc-sidebar__item" style={{ opacity: 0.75 }}>
+                            <span className="enc-sidebar__item-name">{enc.name}</span>
+                            <button className="enc-btn enc-btn--tiny" onClick={() => restoreEncounter(enc.id)}>Restore</button>
+                        </div>
+                    ))}
+                </div>
+            )}
             {selectedEncounter && (
                 <div className="enc-sidebar__manage">
                     <div className="enc-sidebar__manage-header">
@@ -518,10 +522,15 @@ export default function EncounterView({ db, setDb }) {
                         <button onClick={() => {
                             const cond = prompt('Add condition (e.g. Poisoned, Off-Guard):');
                             if (cond) {
-                                updateEncounter(activeEncounter.id, enc => {
-                                    const c = enc.combatants.find(cb => cb.id === contextMenu.combatant.id);
-                                    if (c) { if (!c.conditions) c.conditions = []; c.conditions.push(cond.trim()); }
-                                });
+                                const campaignId = requireCampaignId();
+                                if (campaignId) {
+                                    runEncounterAction(dataActions.encounter.addCondition(
+                                        campaignId,
+                                        activeEncounter.id,
+                                        contextMenu.combatant.id,
+                                        cond
+                                    ));
+                                }
                             }
                             closeContextMenu();
                         }}>

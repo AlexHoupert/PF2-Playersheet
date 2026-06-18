@@ -57,13 +57,17 @@ const ARMOR_RANKS = [
 
 
 export default function PlayerApp({ db, setDb }) {
-    const { activeCampaign, myCharacter, updateActiveCampaign, isGM } = useCampaign();
+    const { activeCampaign, myCharacter, updateActiveCampaign, isGM, dataActions } = useCampaign();
     // const [db, setDb] = usePersistedDb(dbData);
     // const [db, setDb] = useState(dbData);
 
     const [activeCharIndex, setActiveCharIndex] = useState(0);
 
     const handleClearNotification = (id) => {
+        if (activeCampaign?.id && activeCampaign?.notificationQueue?.some(n => n.id === id)) {
+            runDataAction(dataActions.campaign.clearNotification(activeCampaign.id, id));
+            return;
+        }
         setDb(prev => {
             if (!prev.notificationQueue) return prev;
             return {
@@ -541,7 +545,8 @@ export default function PlayerApp({ db, setDb }) {
     };
 
     const handleUnloadAll = (weaponOrIndex) => {
-        const char = db.characters[activeCharIndex];
+        const char = character;
+        if (!char) return;
         let weaponIndex = weaponOrIndex;
         if (typeof weaponOrIndex === 'object') {
             weaponIndex = char.inventory.findIndex(i =>
@@ -622,58 +627,10 @@ export default function PlayerApp({ db, setDb }) {
         const targetInd = parseInt(targetIdx);
         if (isNaN(targetInd)) return;
 
-        updateActiveCampaign(camp => {
-            const chars = [...(camp.characters || [])];
-            const sender = { ...chars[activeCharIndex], inventory: [...(chars[activeCharIndex].inventory || [])] };
-            const recipient = { ...chars[targetInd], inventory: [...(chars[targetInd].inventory || [])] };
-
-            if (!sender || !recipient) return camp;
-
-            chars[activeCharIndex] = sender;
-            chars[targetInd] = recipient;
-
-            const sIdx = sender.inventory.findIndex(i =>
-                (item.instanceId && i.instanceId === item.instanceId) ||
-                (!item.instanceId && i.name === item.name)
-            );
-
-            if (sIdx === -1) {
-                alert("Error: Item not available.");
-                return camp;
-            }
-
-            const sItem = { ...sender.inventory[sIdx] };
-            if ((sItem.qty || 1) < qty) {
-                alert("Not enough qty");
-                return camp;
-            }
-
-            // Remove from sender
-            if ((sItem.qty || 1) > qty) {
-                sItem.qty = (sItem.qty || 1) - qty;
-                sender.inventory[sIdx] = sItem;
-            } else {
-                sender.inventory.splice(sIdx, 1);
-            }
-
-            // Add to recipient
-            if (shouldStack(item)) {
-                const existingIndex = recipient.inventory.findIndex(i => i.name === item.name);
-                if (existingIndex > -1) {
-                    const existing = { ...recipient.inventory[existingIndex] };
-                    existing.qty = (existing.qty || 1) + qty;
-                    recipient.inventory[existingIndex] = existing;
-                } else {
-                    recipient.inventory.push({ ...item, qty });
-                }
-            } else {
-                for (let i = 0; i < qty; i++) {
-                    recipient.inventory.push({ ...item, qty: 1, instanceId: crypto.randomUUID() });
-                }
-            }
-
-            return { ...camp, characters: chars };
-        });
+        const sender = characters[activeCharIndex];
+        const recipient = characters[targetInd];
+        if (!activeCampaign?.id || !sender?.id || !recipient?.id) return;
+        runDataAction(dataActions.inventory.transferItem(activeCampaign.id, sender.id, recipient.id, item, qty));
 
         setActionModal({ mode: null, item: null });
     };
@@ -943,28 +900,18 @@ export default function PlayerApp({ db, setDb }) {
     // --- STATE UPDATERS ---
 
 
-    const updateCharacter = (updater) => {
-        setDb(prev => {
-            const next = { ...prev };
-            const campaignId = activeCampaign?.id;
-            if (!campaignId || !next.campaigns?.[campaignId]) return prev;
-
-            const nextChars = [...next.campaigns[campaignId].characters];
-            const charClone = deepClone(nextChars[activeCharIndex]);
-
-            if (typeof updater === 'function') {
-                updater(charClone); // Allow mutation
-                nextChars[activeCharIndex] = charClone;
-            } else {
-                nextChars[activeCharIndex] = updater;
-            }
-
-            next.campaigns[campaignId] = {
-                ...next.campaigns[campaignId],
-                characters: nextChars
-            };
-            return next;
+    const runDataAction = (action) => {
+        Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
         });
+    };
+
+    const updateCharacter = (updater) => {
+        const campaignId = activeCampaign?.id;
+        const characterId = character?.id || activeCampaign?.characters?.[activeCharIndex]?.id;
+        if (!campaignId || !characterId) return;
+        runDataAction(dataActions.character.updateCharacter(campaignId, characterId, updater));
     };
 
     const buyFromCatalog = (item) => {
@@ -1461,110 +1408,16 @@ export default function PlayerApp({ db, setDb }) {
                             onLoadWeapon={loadWeapon}
                             onLongPress={handleLongPress}
                             onClaimLoot={(bag, item) => {
-                                setDb(prev => {
-                                    const next = { ...prev };
-                                    const campaignId = activeCampaign?.id;
-                                    if (!campaignId || !next.campaigns?.[campaignId]) return prev;
-
-                                    const nextChars = [...next.campaigns[campaignId].characters];
-                                    const charIndex = activeCharIndex;
-                                    const char = { ...nextChars[charIndex], inventory: [...nextChars[charIndex].inventory] };
-
-                                    // 1. Add to Inventory
-                                    const qtyToClaim = item.qty || 1;
-                                    const stackable = shouldStack(item);
-                                    const existing = stackable ? char.inventory.find(i => i.name === item.name) : null;
-                                    if (existing) {
-                                        existing.qty = (existing.qty || 1) + qtyToClaim;
-                                    } else {
-                                        // Ensure clean properties for new owned item
-                                        const newItem = { ...item, qty: qtyToClaim };
-                                        delete newItem.instanceId; // New ID will be generated or undefined
-                                        delete newItem.addedAt;
-                                        delete newItem.claimedBy;
-                                        char.inventory.push(newItem);
-                                    }
-
-                                    nextChars[charIndex] = char;
-                                    next.campaigns[campaignId].characters = nextChars;
-
-                                    // 2. Mark in Loot Bag (campaign-level)
-                                    const campData = next.campaigns[campaignId];
-                                    if (campData?.lootBags) {
-                                        const bags = deepClone(campData.lootBags);
-                                        const targetBag = bags.find(b => b.id === bag.id);
-                                        if (targetBag) {
-                                            const targetItem = targetBag.items.find(i => i.instanceId === item.instanceId);
-                                            if (targetItem) targetItem.claimedBy = char.name;
-                                        }
-                                        campData.lootBags = bags;
-                                    }
-
-                                    return next;
-                                });
+                                if (!activeCampaign?.id || !character?.id) return;
+                                runDataAction(dataActions.loot.claimItem(activeCampaign.id, bag.id, item, character.id));
                             }}
                             onClaimGold={(bagId, amount) => {
-                                setDb(prev => {
-                                    const next = { ...prev };
-                                    const campaignId = activeCampaign?.id;
-                                    if (!campaignId || !next.campaigns?.[campaignId]) return prev;
-
-                                    // Update Bag (campaign-level)
-                                    const campData = next.campaigns[campaignId];
-                                    const bags = deepClone(campData?.lootBags || []);
-                                    const bag = bags.find(b => b.id === bagId);
-                                    if (!bag || (bag.goldValue || 0) < amount) return prev;
-
-                                    bag.goldValue = Math.max(0, (bag.goldValue || 0) - amount);
-                                    campData.lootBags = bags;
-
-                                    // Update Character
-                                    const nextChars = [...next.campaigns[campaignId].characters];
-                                    const charIndex = activeCharIndex;
-                                    const char = { ...nextChars[charIndex] };
-
-                                    char.gold = (parseFloat(char.gold || 0) + parseFloat(amount)).toFixed(2);
-
-                                    nextChars[charIndex] = char;
-                                    next.campaigns[campaignId].characters = nextChars;
-
-                                    return next;
-                                });
+                                if (!activeCampaign?.id || !character?.id) return;
+                                runDataAction(dataActions.loot.claimGold(activeCampaign.id, bagId, character.id, amount));
                             }}
                             onSplitGold={(bagId) => {
-                                setDb(prev => {
-                                    const next = { ...prev };
-                                    const campaignId = activeCampaign?.id;
-                                    if (!campaignId || !next.campaigns?.[campaignId]) return prev;
-
-                                    // Update Bag (campaign-level)
-                                    const campData2 = next.campaigns[campaignId];
-                                    const bags = deepClone(campData2?.lootBags || []);
-                                    const bag = bags.find(b => b.id === bagId);
-                                    if (!bag || (bag.goldValue || 0) <= 0) return prev;
-
-                                    const totalGold = bag.goldValue;
-                                    bag.goldValue = 0;
-                                    campData2.lootBags = bags;
-
-                                    // Distribute to characters
-                                    const nextChars = [...next.campaigns[campaignId].characters];
-                                    const count = nextChars.length;
-                                    if (count === 0) return prev;
-
-                                    const share = Math.floor((totalGold / count) * 100) / 100; // Round down to 2 decimals
-                                    // Remainder lost or could be given to first player. Let's discard for simplicity or add to first?
-                                    // Let's just give share.
-
-                                    nextChars.forEach((c, i) => {
-                                        const newC = { ...c };
-                                        newC.gold = (parseFloat(newC.gold || 0) + share).toFixed(2);
-                                        nextChars[i] = newC;
-                                    });
-
-                                    next.campaigns[campaignId].characters = nextChars;
-                                    return next;
-                                });
+                                if (!activeCampaign?.id) return;
+                                runDataAction(dataActions.loot.splitGold(activeCampaign.id, bagId));
                             }}
                             onOpenShop={() => setActiveTab('shop')}
                         />
@@ -1727,7 +1580,10 @@ export default function PlayerApp({ db, setDb }) {
 
 
             {/* Notification Overlay */}
-            <NotificationOverlay queue={db.notificationQueue || []} onClear={handleClearNotification} />
+            <NotificationOverlay
+                queue={[...(activeCampaign?.notificationQueue || []), ...(db.notificationQueue || [])]}
+                onClear={handleClearNotification}
+            />
 
             {/* XP Overlay */}
             <XpOverlay xpNotification={activeCampaign?.xpNotification} />

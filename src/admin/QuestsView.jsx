@@ -3,58 +3,38 @@ import RichTextEditor from '../shared/components/RichTextEditor';
 import QuestCard from '../shared/components/QuestCard';
 import { useCampaign } from '../shared/context/CampaignContext';
 
-export default function QuestsView({ db, setDb }) {
+export default function QuestsView({ db }) {
     // Get activeCampaignId from context (this is CRITICAL for rewards distribution)
-    const { activeCampaignId, activeCampaign } = useCampaign();
-    const quests = activeCampaign?.quests || db?.quests || [];
+    const { activeCampaignId, activeCampaign, dataActions } = useCampaign();
+    const rawQuests = activeCampaign?.quests || db?.quests || [];
+    const quests = rawQuests.filter(q => !q.deletedAt);
+    const archivedQuests = activeCampaign?.archivedQuests || rawQuests.filter(q => q.deletedAt);
     const [isEditing, setIsEditing] = useState(false);
     const [editingQuest, setEditingQuest] = useState(null);
     const [saveStatus, setSaveStatus] = useState(null);
     const [expandedQuestIds, setExpandedQuestIds] = useState(new Set());
-
-    const withQuestScope = (sourceDb, updatedQuests, extra = {}) => {
-        const nextDb = { ...sourceDb, ...extra, quests: updatedQuests };
-        if (activeCampaignId && sourceDb.campaigns?.[activeCampaignId]) {
-            nextDb.campaigns = {
-                ...sourceDb.campaigns,
-                [activeCampaignId]: {
-                    ...sourceDb.campaigns[activeCampaignId],
-                    ...extra.campaignOverride,
-                    quests: updatedQuests,
-                }
-            };
-        }
-        delete nextDb.campaignOverride;
-        return nextDb;
-    };
-
-    const persistDevDbFile = async (dbSnapshot) => {
-        if (!import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEV_FILE_WRITES !== 'true') return;
-        await fetch('/api/files/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filePath: 'src/data/new_db.json', content: dbSnapshot })
-        });
-    };
 
     // --- CONSTANTS ---
     const QUEST_TYPES = ['Main', 'Side', 'Bounty', 'Personal'];
     const STATUS_OPTIONS = ['Active', 'Completed', 'Failed', 'Dormant', 'Hidden'];
 
     // --- ACTIONS ---
-    const saveQuests = async (newQuests) => {
+    const runQuestAction = async (operation) => {
+        if (!activeCampaignId) {
+            alert("No active campaign selected.");
+            return null;
+        }
         setSaveStatus('saving');
         try {
-            // Update Global State (propagates to PlayerApp)
-            setDb(prev => withQuestScope(prev, newQuests));
-
-            // Persist to File (for dev/reload)
-            await persistDevDbFile(withQuestScope(db, newQuests));
+            const result = await operation();
             setSaveStatus('success');
             setTimeout(() => setSaveStatus(null), 2000);
+            return result;
         } catch (err) {
             console.error(err);
             setSaveStatus('error');
+            alert(err?.message || String(err));
+            return null;
         }
     };
 
@@ -86,30 +66,30 @@ export default function QuestsView({ db, setDb }) {
     };
 
     const handleDelete = async (questId) => {
-        if (!window.confirm("Delete this quest AND its subquests?")) return;
-        const idsToDelete = new Set([questId]);
-        const collectChildren = (pid) => {
-            const children = quests.filter(q => q.parentId === pid);
-            children.forEach(c => {
-                idsToDelete.add(c.id);
-                collectChildren(c.id);
-            });
-        };
-        collectChildren(questId);
-        const updated = quests.filter(q => !idsToDelete.has(q.id));
-        await saveQuests(updated);
+        if (!rawQuests.some(q => q.id === questId)) {
+            setIsEditing(false);
+            setEditingQuest(null);
+            return;
+        }
+        if (!window.confirm("Archive this quest AND its subquests?")) return;
+        await runQuestAction(() => dataActions.quest.softDeleteQuest(activeCampaignId, questId));
         if (editingQuest?.id === questId) setIsEditing(false);
     };
 
-    const handleSaveEdit = () => {
+    const handleRestore = async (questId) => {
+        await runQuestAction(() => dataActions.quest.restoreQuest(activeCampaignId, questId));
+    };
+
+    const handleSaveEdit = async () => {
         if (!editingQuest.title) return alert("Title required");
-        let updated = [...quests];
-        const existingIdx = updated.findIndex(q => q.id === editingQuest.id);
-
-        if (existingIdx > -1) updated[existingIdx] = editingQuest;
-        else updated.push(editingQuest);
-
-        saveQuests(updated);
+        const questToSave = { ...editingQuest };
+        delete questToSave.tempObjectivesText;
+        const exists = rawQuests.some(q => q.id === questToSave.id);
+        await runQuestAction(() =>
+            exists
+                ? dataActions.quest.updateQuest(activeCampaignId, questToSave.id, () => questToSave)
+                : dataActions.quest.createQuest(activeCampaignId, questToSave)
+        );
         setIsEditing(false);
         setEditingQuest(null);
     };
@@ -121,49 +101,7 @@ export default function QuestsView({ db, setDb }) {
         setExpandedQuestIds(newSet);
     };
 
-    const distributeRewards = (quest, characters) => {
-        const rewards = quest.rewards || {};
-        const notifications = [];
-        let updatedChars = characters ? JSON.parse(JSON.stringify(characters)) : [];
-
-        // 1. Notify Quest Complete
-        notifications.push({ id: crypto.randomUUID(), type: 'quest', text: quest.title });
-
-        // 2. XP
-        if (rewards.xp > 0) {
-            updatedChars.forEach(c => {
-                if (!c.xp) c.xp = { current: 0, max: 1000 };
-                c.xp.current = (c.xp.current || 0) + rewards.xp;
-            });
-            notifications.push({ id: crypto.randomUUID(), type: 'xp', amount: rewards.xp });
-        }
-
-        // 3. Gold
-        if (rewards.gold > 0) {
-            updatedChars.forEach(c => {
-                let currentGold = parseFloat(c.gold || 0);
-                currentGold += parseFloat(rewards.gold);
-                c.gold = currentGold.toFixed(2);
-            });
-            notifications.push({ id: crypto.randomUUID(), type: 'gold', amount: rewards.gold });
-        }
-
-        // 4. Reputation
-        if (rewards.reputation && rewards.reputation.length > 0) {
-            rewards.reputation.forEach(rep => {
-                notifications.push({
-                    id: crypto.randomUUID(),
-                    type: 'reputation',
-                    faction: rep.faction,
-                    amount: rep.value
-                });
-            });
-        }
-
-        return { updatedChars, notifications };
-    };
-
-    const toggleObjective = (questId, objIndex) => {
+    const toggleObjective = async (questId, objIndex) => {
         const qIndex = quests.findIndex(q => q.id === questId);
         if (qIndex === -1) return;
 
@@ -175,206 +113,12 @@ export default function QuestsView({ db, setDb }) {
             : `Mark objective "${q.objectives[objIndex].text}" as Completed?`;
 
         if (!window.confirm(msg)) return;
-
-        // Use functional update to ensure concurrency safety
-        setDb(prevDb => {
-            const dbQuests = prevDb.quests || [];
-            const dbQIndex = dbQuests.findIndex(q => q.id === questId);
-
-            // Safety check: if quest disappeared in background
-            if (dbQIndex === -1) return prevDb;
-
-            const updatedQuests = [...dbQuests];
-            let updatedQ = { ...updatedQuests[dbQIndex] };
-            updatedQ.objectives = [...updatedQ.objectives];
-
-            // Enforce the intended toggle based on the UI state the user interacted with
-            // Using User Intent (!isCompleted) is safer for "Mark as Completed" actions.
-            updatedQ.objectives[objIndex] = {
-                ...updatedQ.objectives[objIndex],
-                completed: !isCompleted
-            };
-
-            // Auto-fail other objectives in the same choice group
-            const justCompleted = !isCompleted;
-            const choiceGroup = updatedQ.objectives[objIndex].choiceGroup;
-            if (justCompleted && choiceGroup) {
-                updatedQ.objectives = updatedQ.objectives.map((obj, i) => {
-                    if (i !== objIndex && obj.choiceGroup === choiceGroup && !obj.completed) {
-                        return { ...obj, failed: true };
-                    }
-                    return obj;
-                });
-            }
-
-            // Check completion: count non-failed objectives for "all complete" check
-            const nonFailedObjectives = updatedQ.objectives.filter(o => !o.failed);
-            const reallyAllComplete = nonFailedObjectives.length > 0 && nonFailedObjectives.every(o => o.completed);
-
-            // Logic: If just completing the last objective, and quest wasn't already marked Complete
-            if (!isCompleted && reallyAllComplete && updatedQ.status !== 'Completed') {
-                updatedQ.status = 'Completed';
-                updatedQuests[dbQIndex] = updatedQ;
-
-                // --- Distribute Rewards (Atomic with DB update) ---
-                // NOTE: activeCampaignId comes from useCampaign() hook closure, NOT prevDb
-                // This is critical because activeCampaignId is derived from localStorage in CampaignContext,
-                // not stored in the db object. Using prevDb.activeCampaignId would always be undefined.
-                if (!activeCampaignId) {
-                    console.warn('[QuestsView] No activeCampaignId available for reward distribution');
-                    // No active campaign, just save the quest update
-                    const finalDb = withQuestScope(prevDb, updatedQuests);
-
-                    persistDevDbFile(finalDb).catch(e => console.error(e));
-
-                    return finalDb;
-                }
-
-                const campaigns = prevDb.campaigns || {};
-
-                const isCampaignsArray = Array.isArray(campaigns);
-                let campaign = isCampaignsArray
-                    ? campaigns.find(c => c.id === activeCampaignId)
-                    : campaigns[activeCampaignId];
-
-                const campaignCharacters = campaign ? (campaign.characters || []) : [];
-
-                const { updatedChars, notifications } = distributeRewards(updatedQ, campaignCharacters);
-
-                // Also update campaign-level XP to stay in sync with character XP
-                // The campaign.xp field is used by the Admin XP control
-                const rewardXp = updatedQ.rewards?.xp || 0;
-                const updatedCampaignXp = (campaign?.xp || 0) + rewardXp;
-
-                // Reconstruct Campaigns with updated characters and XP
-                let updatedCampaigns;
-                if (isCampaignsArray) {
-                    updatedCampaigns = campaigns.map(c =>
-                        c.id === activeCampaignId
-                            ? { ...c, characters: updatedChars, xp: updatedCampaignXp, quests: updatedQuests }
-                            : c
-                    );
-                } else {
-                    updatedCampaigns = {
-                        ...campaigns,
-                        [activeCampaignId]: {
-                            ...campaign,
-                            characters: updatedChars,
-                            xp: updatedCampaignXp,
-                            quests: updatedQuests
-                        }
-                    };
-                }
-
-                const finalDb = {
-                    ...prevDb,
-                    quests: updatedQuests,
-                    campaigns: updatedCampaigns,
-                    // Append new notifications to existing queue, preventing overwrite of concurrent removals
-                    notificationQueue: [...(prevDb.notificationQueue || []), ...notifications]
-                };
-
-                // Side Effect: Persist to File
-                // Note: fetch is async, but we send the calculated state immediately.
-                persistDevDbFile(finalDb).catch(e => console.error(e));
-
-                return finalDb;
-
-            } else {
-                // --- Objective Update (potentially with per-objective rewards) ---
-                updatedQuests[dbQIndex] = updatedQ;
-
-                const objective = updatedQ.objectives[objIndex];
-                const hasObjRewards = !isCompleted && (objective.xp > 0 || objective.gold > 0 || objective.reputation?.length > 0);
-
-                // If completing an objective with rewards, distribute them
-                if (hasObjRewards && activeCampaignId) {
-                    const campaigns = prevDb.campaigns || {};
-                    const isCampaignsArray = Array.isArray(campaigns);
-                    let campaign = isCampaignsArray
-                        ? campaigns.find(c => c.id === activeCampaignId)
-                        : campaigns[activeCampaignId];
-
-                    const campaignCharacters = campaign ? (campaign.characters || []) : [];
-                    let updatedChars = JSON.parse(JSON.stringify(campaignCharacters));
-                    const notifications = [];
-
-                    // Distribute objective XP
-                    if (objective.xp > 0) {
-                        updatedChars.forEach(c => {
-                            if (!c.xp) c.xp = { current: 0, max: 1000 };
-                            c.xp.current = (c.xp.current || 0) + objective.xp;
-                        });
-                        notifications.push({ id: crypto.randomUUID(), type: 'xp', amount: objective.xp });
-                    }
-
-                    // Distribute objective Gold
-                    if (objective.gold > 0) {
-                        updatedChars.forEach(c => {
-                            let currentGold = parseFloat(c.gold || 0);
-                            currentGold += parseFloat(objective.gold);
-                            c.gold = currentGold.toFixed(2);
-                        });
-                        notifications.push({ id: crypto.randomUUID(), type: 'gold', amount: objective.gold });
-                    }
-
-                    // Distribute objective Reputation
-                    if (objective.reputation?.length > 0) {
-                        objective.reputation.forEach(rep => {
-                            notifications.push({
-                                id: crypto.randomUUID(),
-                                type: 'reputation',
-                                faction: rep.faction,
-                                amount: rep.value
-                            });
-                        });
-                    }
-
-                    // Update campaign-level XP
-                    const updatedCampaignXp = (campaign?.xp || 0) + (objective.xp || 0);
-
-                    let updatedCampaigns;
-                    if (isCampaignsArray) {
-                        updatedCampaigns = campaigns.map(c =>
-                            c.id === activeCampaignId
-                                ? { ...c, characters: updatedChars, xp: updatedCampaignXp, quests: updatedQuests }
-                                : c
-                        );
-                    } else {
-                        updatedCampaigns = {
-                            ...campaigns,
-                            [activeCampaignId]: {
-                                ...campaign,
-                                characters: updatedChars,
-                                xp: updatedCampaignXp,
-                                quests: updatedQuests
-                            }
-                        };
-                    }
-
-                    const finalDb = {
-                        ...prevDb,
-                        quests: updatedQuests,
-                        campaigns: updatedCampaigns,
-                        notificationQueue: [...(prevDb.notificationQueue || []), ...notifications]
-                    };
-
-                    persistDevDbFile(finalDb).catch(e => console.error(e));
-
-                    return finalDb;
-                }
-
-                // No per-objective rewards, just save the update
-                const finalDb = withQuestScope(prevDb, updatedQuests);
-
-                persistDevDbFile(finalDb).catch(e => console.error(e));
-
-                return finalDb;
-            }
-        });
+        await runQuestAction(() =>
+            dataActions.quest.toggleObjective(activeCampaignId, questId, objIndex, !isCompleted)
+        );
     };
 
-    const toggleObjectiveHidden = (questId, objIndex) => {
+    const toggleObjectiveHidden = async (questId, objIndex) => {
         const qIndex = quests.findIndex(q => q.id === questId);
         if (qIndex === -1) return;
 
@@ -386,28 +130,17 @@ export default function QuestsView({ db, setDb }) {
 
         if (!window.confirm(msg)) return;
 
-        const updatedQuests = [...quests];
-        const updatedQ = { ...updatedQuests[qIndex] };
-        updatedQ.objectives = [...updatedQ.objectives];
-        updatedQ.objectives[objIndex] = { ...updatedQ.objectives[objIndex], hidden: !isHidden };
-        updatedQuests[qIndex] = updatedQ;
-        saveQuests(updatedQuests);
+        await runQuestAction(() => dataActions.quest.toggleObjectiveHidden(activeCampaignId, questId, objIndex));
     };
 
-    const revealSecret = (questId, secretText) => {
+    const revealSecret = async (questId, secretText) => {
         const qIndex = quests.findIndex(q => q.id === questId);
         if (qIndex === -1) return;
-        const updatedQuests = [...quests];
-        const q = { ...updatedQuests[qIndex] };
+        const q = quests[qIndex];
 
-        // Replace ||secretText|| with secretText
-        // Escaping generic regex characters in secretText just in case
         const target = `||${secretText}||`;
-        if (q.descriptionPublic.includes(target)) {
-            // Replace all occurrences of this specific hidden block
-            q.descriptionPublic = q.descriptionPublic.replaceAll(target, secretText);
-            updatedQuests[qIndex] = q;
-            saveQuests(updatedQuests);
+        if ((q.descriptionPublic || '').includes(target)) {
+            await runQuestAction(() => dataActions.quest.revealSecret(activeCampaignId, questId, secretText));
         }
     };
 
@@ -721,6 +454,21 @@ export default function QuestsView({ db, setDb }) {
                                 onRevealSecret={revealSecret}
                                 isGM={true}
                             />
+                        ))}
+                    </div>
+                )}
+
+                {archivedQuests.length > 0 && (
+                    <div style={{ marginTop: 30, padding: 20, borderTop: '1px solid #333' }}>
+                        <h4 style={{ color: '#888' }}>Archived Quests</h4>
+                        {archivedQuests.map(q => (
+                            <div
+                                key={q.id}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 0', borderBottom: '1px solid #222' }}
+                            >
+                                <span style={{ color: '#aaa' }}>{q.title}</span>
+                                <button className="set-btn" onClick={() => handleRestore(q.id)}>Restore</button>
+                            </div>
                         ))}
                     </div>
                 )}

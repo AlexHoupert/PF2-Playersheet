@@ -20,15 +20,15 @@ export default function App() {
 
 function LegacyApp() {
     const [db, setDb] = usePersistedDb(dbData);
-    return <AppRoutes db={db} setDb={setDb} />;
+    return <AppRoutes db={db} setDb={setDb} dbMode="legacy" />;
 }
 
 function FirestoreV2App() {
-    const [db, setDb] = useFirestoreV2Db(dbData);
-    return <AppRoutes db={db} setDb={setDb} />;
+    const [db, setDb, status] = useFirestoreV2Db(dbData);
+    return <AppRoutes db={db} setDb={setDb} dbMode="firestore-v2" dbStatus={status} />;
 }
 
-function AppRoutes({ db, setDb }) {
+function AppRoutes({ db, setDb, dbMode, dbStatus }) {
     const queryParams = new URLSearchParams(window.location.search);
 
     if (!db) return <div style={{ color: '#fff' }}>Loading...</div>;
@@ -38,7 +38,7 @@ function AppRoutes({ db, setDb }) {
     const isCamp  = queryParams.get('camp')  === 'true';
 
     return (
-        <CampaignProvider db={db} setDb={setDb} isAdmin={isAdmin || isParty || isCamp}>
+        <CampaignProvider db={db} setDb={setDb} isAdmin={isAdmin || isParty || isCamp} dbMode={dbMode} dbStatus={dbStatus}>
             {isParty
                 ? <PartyScreen db={db} />
                 : isCamp

@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../auth/AuthProvider';
+import { createDataActions } from '../db/domain/createDataActions';
+import { buildCampaignViewModel, isSoftDeleted, normalizeEmail } from '../db/domain/campaignReducers';
 
 const CampaignContext = createContext();
 
@@ -7,15 +9,17 @@ export function useCampaign() {
     return useContext(CampaignContext);
 }
 
-export function CampaignProvider({ db, setDb, children, isAdmin = false }) {
+export function CampaignProvider({ db, setDb, children, isAdmin = false, dbMode = 'legacy', dbStatus = null }) {
     const { user } = useAuth();
+    const userEmail = normalizeEmail(user?.email);
+    const dataActions = useMemo(() => createDataActions({ db, setDb, mode: dbMode, actorEmail: userEmail }), [db, setDb, dbMode, userEmail]);
 
     // We need to determine:
     // 1. Is the user a GM? (Simple check for now: matching email or role in db)
     // 2. What is their assigned campaign?
     // 3. What is their assigned character?
 
-    const userInfo = user && db.users ? db.users[user.email] : null;
+    const userInfo = user && db.users ? (db.users[userEmail] || db.users[user.email]) : null;
     const isGM = (userInfo?.role === 'gm') || isAdmin; // Simple GM check or Admin View override
 
     // For Players: Resolve Campaign ID from assignment
@@ -25,34 +29,60 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false }) {
         return localStorage.getItem('gm_selected_campaign') || null;
     });
 
-    const setSelectedCampaignId = (id) => {
+    const setSelectedCampaignId = React.useCallback((id) => {
         setSelectedCampaignIdState(id);
         if (id) localStorage.setItem('gm_selected_campaign', id);
         else localStorage.removeItem('gm_selected_campaign');
-    };
+    }, []);
 
     // Auto-select for players
     useEffect(() => {
-        if (!isGM && userInfo?.campaignId) {
+        if (!isGM && userInfo?.campaignId && db.campaigns?.[userInfo.campaignId] && !isSoftDeleted(db.campaigns[userInfo.campaignId])) {
             setSelectedCampaignId(userInfo.campaignId);
         }
-    }, [isGM, userInfo]);
+    }, [isGM, userInfo, db.campaigns, setSelectedCampaignId]);
 
     // Derived Data
-    const campaigns = db.campaigns || {};
+    const rawCampaigns = db.campaigns || {};
+    const { campaigns, archivedCampaigns } = useMemo(() => {
+        const activeEntries = [];
+        const archivedEntries = [];
+        Object.entries(rawCampaigns).forEach(([id, campaign]) => {
+            const viewModel = buildCampaignViewModel(campaign);
+            if (isSoftDeleted(campaign)) archivedEntries.push([id, viewModel]);
+            else activeEntries.push([id, viewModel]);
+        });
+        return {
+            campaigns: Object.fromEntries(activeEntries),
+            archivedCampaigns: Object.fromEntries(archivedEntries),
+        };
+    }, [rawCampaigns]);
 
     // Active Campaign Object
     // If GM, use selected. If Player, use assigned.
     // If nothing selected/assigned, try to use "default" or first available?
     const targetCampaignId = isGM
-        ? (selectedCampaignId || Object.keys(campaigns)[0])
-        : (userInfo?.campaignId || selectedCampaignId); // Fallback to selected for GM previewing as player
+        ? (campaigns[selectedCampaignId] ? selectedCampaignId : Object.keys(campaigns)[0])
+        : (campaigns[userInfo?.campaignId] ? userInfo.campaignId : (campaigns[selectedCampaignId] ? selectedCampaignId : null)); // Fallback to selected for GM previewing as player
 
     const activeCampaign = campaigns[targetCampaignId] || null;
 
     // Active Character (User's specific character)
     const myCharacterId = userInfo?.characterId;
     const myCharacter = activeCampaign?.characters?.find(c => c.id === myCharacterId || c.name === myCharacterId); // Support ID or Name match
+
+    useEffect(() => {
+        if (selectedCampaignId && !campaigns[selectedCampaignId]) {
+            setSelectedCampaignId(null);
+        }
+    }, [selectedCampaignId, campaigns, setSelectedCampaignId]);
+
+    const runDataAction = React.useCallback((action) => {
+        return Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
+    }, []);
 
     // Actions
     const updateActiveCampaign = React.useCallback((updater) => {
@@ -70,51 +100,81 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false }) {
     }, [activeCampaign, targetCampaignId, setDb]);
 
     const createCampaign = React.useCallback((name) => {
-        const id = 'campaign_' + Date.now();
-        setDb(prev => ({
-            ...prev,
-            campaigns: {
-                ...prev.campaigns,
-                [id]: { id, name, characters: [], quests: [], lootBags: [], maps: [], createdAt: Date.now() }
-            }
-        }));
-        return id;
-    }, [setDb]);
+        const action = dataActions.campaign.createCampaign(name);
+        runDataAction(action).then(id => {
+            if (id) setSelectedCampaignId(id);
+        });
+        return action;
+    }, [dataActions, runDataAction, setSelectedCampaignId]);
 
     const deleteCampaign = React.useCallback((id) => {
-        setDb(prev => {
-            const next = { ...prev };
-            delete next.campaigns[id];
-            return next;
-        });
-        if (selectedCampaignId === id) setSelectedCampaignIdState(null);
-    }, [setDb, selectedCampaignId]);
+        runDataAction(dataActions.campaign.softDeleteCampaign(id));
+        if (selectedCampaignId === id) setSelectedCampaignId(null);
+    }, [dataActions, runDataAction, selectedCampaignId, setSelectedCampaignId]);
+
+    const restoreCampaign = React.useCallback((id) => {
+        runDataAction(dataActions.campaign.restoreCampaign(id));
+    }, [dataActions, runDataAction]);
 
     const assignUser = React.useCallback((email, campaignId, characterId, role = 'player') => {
-        setDb(prev => ({
-            ...prev,
-            users: {
-                ...prev.users,
-                [email]: { role, campaignId, characterId }
-            }
-        }));
-    }, [setDb]);
+        runDataAction(dataActions.member.assignUser(email, campaignId, characterId, role));
+    }, [dataActions, runDataAction]);
+
+    const revokeUser = React.useCallback((email) => {
+        runDataAction(dataActions.member.revokeUser(email));
+    }, [dataActions, runDataAction]);
+
+    const createCharacter = React.useCallback((campaignId, character) => {
+        runDataAction(dataActions.character.createCharacter(campaignId, character));
+    }, [dataActions, runDataAction]);
+
+    const deleteCharacter = React.useCallback((campaignId, characterId) => {
+        runDataAction(dataActions.character.softDeleteCharacter(campaignId, characterId));
+    }, [dataActions, runDataAction]);
+
+    const restoreCharacter = React.useCallback((campaignId, characterId) => {
+        runDataAction(dataActions.character.restoreCharacter(campaignId, characterId));
+    }, [dataActions, runDataAction]);
+
+    const importLegacyCharacter = React.useCallback((campaignId, character, legacyIndex) => {
+        runDataAction(dataActions.character.importLegacyCharacter(campaignId, character, legacyIndex));
+    }, [dataActions, runDataAction]);
+
+    const setPartyXp = React.useCallback((campaignId, xp) => {
+        runDataAction(dataActions.campaign.setPartyXp(campaignId, xp));
+    }, [dataActions, runDataAction]);
+
+    const addPartyXp = React.useCallback((campaignId, amount) => {
+        runDataAction(dataActions.campaign.addPartyXp(campaignId, amount));
+    }, [dataActions, runDataAction]);
 
     const value = useMemo(() => ({
         campaigns,
+        archivedCampaigns,
         activeCampaign,
         activeCampaignId: targetCampaignId,
         myCharacter,
         isGM,
         userInfo,
+        dbMode,
+        dbStatus,
+        dataActions,
         // GM Actions
         setSelectedCampaignId,
         createCampaign,
         deleteCampaign,
+        restoreCampaign,
         assignUser,
+        revokeUser,
+        createCharacter,
+        deleteCharacter,
+        restoreCharacter,
+        importLegacyCharacter,
+        setPartyXp,
+        addPartyXp,
         // Data Actions
         updateActiveCampaign
-    }), [campaigns, activeCampaign, targetCampaignId, myCharacter, isGM, userInfo, createCampaign, deleteCampaign, assignUser, updateActiveCampaign]);
+    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, myCharacter, isGM, userInfo, dbMode, dbStatus, dataActions, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setPartyXp, addPartyXp, updateActiveCampaign]);
 
     return (
         <CampaignContext.Provider value={value}>

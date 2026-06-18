@@ -1,4 +1,4 @@
-import { getShopIndexItemByName } from '../catalog/shopIndex';
+import { getShopIndexItemByName } from '../catalog/shopIndex.js';
 
 /**
  * Determines if an item should stack in the inventory.

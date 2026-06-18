@@ -55,7 +55,7 @@ import '../App.css';
 import './AdminApp.css';
 
 export default function AdminApp({ db, setDb }) {
-    const { activeCampaign, updateActiveCampaign, assignUser } = useCampaign();
+    const { activeCampaign, assignUser, revokeUser, setPartyXp, addPartyXp, dataActions } = useCampaign();
     const [activeTab, setActiveTab] = useState('sessions');
     const [playerTabMode, setPlayerTabMode] = useState('cards'); // 'cards' or 'users'
 
@@ -68,6 +68,12 @@ export default function AdminApp({ db, setDb }) {
     const shopItemDetailCacheRef = useRef(new Map());
     const [shopItemDetailLoading, setShopItemDetailLoading] = useState(false);
     const [shopItemDetailError, setShopItemDetailError] = useState(null);
+    const runDataAction = (action) => {
+        Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
+    };
 
     // --- EFFECT: Load Shop Details for Modal ---
     useEffect(() => {
@@ -120,17 +126,16 @@ export default function AdminApp({ db, setDb }) {
 
     // --- HELPERS ---
     const updateCharacter = (index, fn) => {
+        if (activeCampaign) {
+            const characterId = activeCampaign.characters?.[index]?.id;
+            if (!characterId) return;
+            runDataAction(dataActions.character.updateCharacter(activeCampaign.id, characterId, fn));
+            return;
+        }
+
         setDb(prev => {
             const next = { ...prev };
-            if (activeCampaign) {
-                const campId = activeCampaign.id;
-                const nextChars = [...next.campaigns[campId].characters];
-                if (!nextChars[index]) return prev;
-                const charClone = deepClone(nextChars[index]);
-                fn(charClone);
-                nextChars[index] = charClone;
-                next.campaigns[campId] = { ...next.campaigns[campId], characters: nextChars };
-            } else {
+            {
                 const nextChars = [...(next.characters || [])];
                 if (!nextChars[index]) return prev;
                 const charClone = deepClone(nextChars[index]);
@@ -254,15 +259,7 @@ export default function AdminApp({ db, setDb }) {
                                                     value={activeCampaign.xp || 0}
                                                     onChange={(e) => {
                                                         const v = parseInt(e.target.value) || 0;
-                                                        updateActiveCampaign(c => {
-                                                            const next = { ...c };
-                                                            next.xp = v;
-                                                            if (next.characters) next.characters.forEach(ch => {
-                                                                if (!ch.xp) ch.xp = { current: 0, max: 1000 };
-                                                                ch.xp.current = v;
-                                                            });
-                                                            return next;
-                                                        });
+                                                        setPartyXp(activeCampaign.id, v);
                                                     }}
                                                 />
                                             </div>
@@ -274,26 +271,7 @@ export default function AdminApp({ db, setDb }) {
                                                     if (!amtStr) return;
                                                     const amt = parseInt(amtStr);
                                                     if (isNaN(amt) || amt === 0) return;
-
-                                                    updateActiveCampaign(c => {
-                                                        const next = { ...c };
-                                                        const current = next.xp || 0;
-                                                        const newVal = current + amt;
-                                                        next.xp = newVal;
-
-                                                        // Update all characters
-                                                        if (next.characters) next.characters.forEach(ch => {
-                                                            if (!ch.xp) ch.xp = { current: 0, max: 1000 };
-                                                            ch.xp.current = newVal;
-                                                        });
-
-                                                        // Trigger Notification
-                                                        next.xpNotification = {
-                                                            id: Date.now(),
-                                                            amount: amt
-                                                        };
-                                                        return next;
-                                                    });
+                                                    addPartyXp(activeCampaign.id, amt);
                                                 }}
                                             >
                                                 + Add XP
@@ -360,13 +338,7 @@ export default function AdminApp({ db, setDb }) {
                                                             </select>
                                                         </td>
                                                         <td>
-                                                            <button onClick={() => {
-                                                                setDb(prev => {
-                                                                    const n = { ...prev };
-                                                                    delete n.users[email];
-                                                                    return n;
-                                                                });
-                                                            }}>Revoke</button>
+                                                            <button onClick={() => revokeUser(email)}>Revoke</button>
                                                         </td>
                                                     </tr>
                                                 ))}

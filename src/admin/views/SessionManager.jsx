@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../../shared/context/CampaignContext';
-import { deepClone } from '../../shared/utils/deepClone';
 import { useWindowSize } from '../../shared/hooks/useWindowSize';
 
 export default function SessionManager({ db, setDb }) {
     const { isMobile } = useWindowSize();
     const {
         campaigns,
+        archivedCampaigns,
         activeCampaign,
         activeCampaignId,
         createCampaign,
         deleteCampaign,
+        restoreCampaign,
         setSelectedCampaignId,
-        assignUser
+        assignUser,
+        createCharacter,
+        deleteCharacter,
+        restoreCharacter,
+        importLegacyCharacter
     } = useCampaign();
 
     const [newCampName, setNewCampName] = useState('');
@@ -83,32 +88,15 @@ export default function SessionManager({ db, setDb }) {
             } : null // Null magic hides the tab
         };
 
-        setDb(prev => {
-            const next = { ...prev };
-            const cmap = { ...next.campaigns[activeCampaignId] };
-            const chars = [...(cmap.characters || [])];
-            chars.push(newChar);
-
-            next.campaigns[activeCampaignId] = {
-                ...cmap,
-                characters: chars
-            };
-            return next;
-        });
+        createCharacter(activeCampaignId, newChar);
 
         setNewCharName('');
         setIsSpellcaster(false);
     };
 
     const handleDeleteChar = (charId) => {
-        if (!activeCampaignId || !confirm('Delete this character?')) return;
-        setDb(prev => {
-            const next = { ...prev };
-            const cmap = next.campaigns[activeCampaignId];
-            const chars = cmap.characters.filter(c => c.id !== charId);
-            next.campaigns[activeCampaignId] = { ...cmap, characters: chars };
-            return next;
-        });
+        if (!activeCampaignId || !confirm('Archive this character? It can be restored later.')) return;
+        deleteCharacter(activeCampaignId, charId);
     };
 
     return (
@@ -156,7 +144,7 @@ export default function SessionManager({ db, setDb }) {
                                         fontSize: '0.8em'
                                     }}
                                 >
-                                    Delete Campaign
+                                    Archive Campaign
                                 </button>
                             )}
                         </div>
@@ -177,6 +165,45 @@ export default function SessionManager({ db, setDb }) {
                     </div>
                 </div>
             </div>
+
+            {Object.values(archivedCampaigns || {}).length > 0 && (
+                <div style={{ marginBottom: 30, background: '#221f1f', padding: 15, borderRadius: 8, border: '1px solid #4a3333' }}>
+                    <h3 style={{ color: '#d7b38a' }}>Archived Campaigns</h3>
+                    <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 10 }}>
+                        {Object.values(archivedCampaigns).map(camp => (
+                            <div
+                                key={camp.id}
+                                style={{
+                                    background: '#1b1b1b',
+                                    border: '1px solid #553b3b',
+                                    padding: 15,
+                                    borderRadius: 8,
+                                    minWidth: 180,
+                                }}
+                            >
+                                <h3 style={{ margin: '0 0 5px 0', color: '#caa' }}>{camp.name}</h3>
+                                <div style={{ fontSize: '0.8em', color: '#888' }}>
+                                    Archived {camp.deletedAt ? new Date(camp.deletedAt).toLocaleDateString() : ''}
+                                </div>
+                                <button
+                                    onClick={() => restoreCampaign(camp.id)}
+                                    style={{
+                                        marginTop: 10,
+                                        background: '#333',
+                                        border: '1px solid #6a8f5a',
+                                        color: '#9ccc65',
+                                        cursor: 'pointer',
+                                        padding: '4px 8px',
+                                        fontSize: '0.8em'
+                                    }}
+                                >
+                                    Restore Campaign
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* ACTIVE CAMPAIGN DETAILS */}
             {activeCampaign && (
@@ -226,6 +253,27 @@ export default function SessionManager({ db, setDb }) {
                             {(!activeCampaign.characters?.length) && <div style={{ color: '#888', fontStyle: 'italic', textAlign: 'center' }}>No characters in this campaign yet.</div>}
                         </div>
 
+                        {activeCampaign.archivedCharacters?.length > 0 && (
+                            <div style={{ borderTop: '1px solid #444', paddingTop: 15, marginBottom: 20 }}>
+                                <h4 style={{ color: '#d7b38a', marginTop: 0 }}>Archived Characters</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                    {activeCampaign.archivedCharacters.map(char => (
+                                        <div key={char.id} style={{ display: 'flex', justifyContent: 'space-between', background: '#2b2424', padding: '10px', borderRadius: 4, alignItems: 'center' }}>
+                                            <span>
+                                                <strong>{char.name}</strong> <span style={{ opacity: 0.7, fontSize: '0.9em' }}>Lvl {char.level}</span>
+                                            </span>
+                                            <button
+                                                onClick={() => restoreCharacter(activeCampaignId, char.id)}
+                                                style={{ color: '#9ccc65', background: 'none', border: '1px solid #555', cursor: 'pointer', fontSize: '0.85em', padding: '3px 8px' }}
+                                            >
+                                                Restore
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* LEGACY / UNASSIGNED CHARACTERS IMPORT */}
                         {db.characters && db.characters.length > 0 && (
                             <div style={{ borderTop: '1px solid #444', paddingTop: 15 }}>
@@ -236,18 +284,7 @@ export default function SessionManager({ db, setDb }) {
                                         <div key={char.id || originalIndex} style={{ display: 'flex', justifyContent: 'space-between', background: '#2b2b2e', padding: '8px', borderRadius: 4, alignItems: 'center', border: '1px dashed #555' }}>
                                             <span style={{ color: '#aaa' }}>{char.name} (Lvl {char.level})</span>
                                             <button
-                                                onClick={() => {
-                                                    setDb(prev => {
-                                                        const next = deepClone(prev);
-                                                        // Add to campaign
-                                                        if (!next.campaigns[activeCampaignId].characters) next.campaigns[activeCampaignId].characters = [];
-                                                        next.campaigns[activeCampaignId].characters.push({ ...char, id: char.id || crypto.randomUUID() });
-
-                                                        // Remove from root
-                                                        next.characters = next.characters.filter((_, i) => i !== originalIndex);
-                                                        return next;
-                                                    });
-                                                }}
+                                                onClick={() => importLegacyCharacter(activeCampaignId, { ...char, id: char.id || crypto.randomUUID() }, originalIndex)}
                                                 style={{ fontSize: '0.8em', background: '#333', color: '#c5a059', border: '1px solid #c5a059', padding: '3px 8px', borderRadius: 4, cursor: 'pointer' }}
                                             >
                                                 Import 📥

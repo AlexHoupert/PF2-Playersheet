@@ -65,8 +65,12 @@ test('normalizes legacy master data into campaign-scoped v2 documents', () => {
     assert.deepEqual(characterDoc.conditions, [{ name: 'frightened', level: 1 }]);
     assert.equal(characterDoc.inventory[0].catalogRef.name, 'Rope');
     assert.equal(characterDoc.inventory[1].qty, 2);
+    assert(characterDoc.inventory.every(item => item.instanceId));
     assert.deepEqual(characterDoc.inventory[1].traits.value, ['ranged', 'martial']);
     assert.deepEqual(characterDoc.proficiencies, { Unarmored: 2 });
+
+    const lootDoc = result.documents.find(doc => doc.path === 'campaigns/camp1/lootBags/loot1').data;
+    assert(lootDoc.items.every(item => item.instanceId));
 
     assert.equal(result.report.movedFields.length, 2);
     assert(result.report.renamedFields.some(entry => entry.from.endsWith('.hp') && entry.to.endsWith('.stats.hp')));
