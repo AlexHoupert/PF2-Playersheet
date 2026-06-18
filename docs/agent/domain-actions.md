@@ -199,6 +199,9 @@ If Firestore config is missing, the adapter falls back to legacy mode.
 ## Identity Rules
 
 - Inventory and loot items are normalized with `instanceId` on every domain write.
+- Character runtime shape is normalized on load, V2 migration, create, and update through `normalizeCharacterRuntimeShape`.
+- Old skill keys `Intimidate`/`intimidate` and `Perform`/`perform` are migrated to `Intimidation` and `Performance`.
+- Missing player runtime fields such as `impulses`, caster flags, and spell/impulse proficiencies are defaulted before UI reads.
 - Mutations prefer `instanceId`.
 - Fallback matching by `id`, `_index`, name, equipment/prepared flags, and `addedAt` remains for old data.
 - New inventory instances get new `instanceId`s.

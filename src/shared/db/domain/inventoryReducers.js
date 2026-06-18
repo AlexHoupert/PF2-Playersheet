@@ -1,3 +1,5 @@
+import { normalizeCharacterRuntimeShape } from "./characterShape.js";
+
 export function cloneValue(value) {
   if (value === undefined || value === null) return value;
   if (typeof structuredClone === "function") {
@@ -27,7 +29,7 @@ export function normalizeInventoryItems(items = [], options = {}) {
 }
 
 export function normalizeCharacterInventory(character, options = {}) {
-  const next = cloneValue(character) || {};
+  const next = normalizeCharacterRuntimeShape(character);
   next.inventory = normalizeInventoryItems(next.inventory || [], options);
   return next;
 }

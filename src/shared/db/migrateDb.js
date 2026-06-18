@@ -1,3 +1,5 @@
+import { normalizeCharacterRuntimeShape } from "./domain/characterShape.js";
+
 export function migrateDb(db) {
     const next = db && typeof db === 'object' ? db : {};
 
@@ -78,10 +80,11 @@ export function migrateDb(db) {
     };
 
     const normalizeCharacter = (c) => {
+        const character = normalizeCharacterRuntimeShape(c);
         return {
-            ...c,
-            initiative: c.initiative ?? 0,
-            proficiencies: normalizeProficiencies(c.proficiencies)
+            ...character,
+            initiative: character.initiative ?? 0,
+            proficiencies: normalizeProficiencies(character.proficiencies)
         };
     };
 

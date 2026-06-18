@@ -14,6 +14,7 @@ test('normalizes legacy master data into campaign-scoped v2 documents', () => {
                     level: '3',
                     hp: { current: 12, max: 20 },
                     conditions: ['frightened'],
+                    skills: { Intimidate: 2, Perform: 4 },
                     inventory: [
                         'Rope',
                         { name: 'Shortbow', quantity: 2, traits: 'ranged, martial' },
@@ -75,6 +76,15 @@ test('normalizes legacy master data into campaign-scoped v2 documents', () => {
     assert.deepEqual(characterDoc.stats.hp, { current: 12, max: 20, temp: 0 });
     assert.equal(characterDoc.hp, undefined);
     assert.deepEqual(characterDoc.conditions, [{ name: 'frightened', level: 1 }]);
+    assert.equal(characterDoc.skills.Intimidation, 2);
+    assert.equal(characterDoc.skills.Performance, 4);
+    assert.equal(characterDoc.skills.Intimidate, undefined);
+    assert.equal(characterDoc.skills.Perform, undefined);
+    assert.deepEqual(characterDoc.impulses, []);
+    assert.equal(characterDoc.isKineticist, false);
+    assert.equal(characterDoc.isCaster, false);
+    assert.equal(characterDoc.stats.impulse_proficiency, 0);
+    assert.equal(characterDoc.stats.spell_proficiency, 0);
     assert.equal(characterDoc.inventory[0].catalogRef.name, 'Rope');
     assert.equal(characterDoc.inventory[1].qty, 2);
     assert(characterDoc.inventory.every(item => item.instanceId));

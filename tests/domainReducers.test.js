@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
     addItemToCharacter,
+    applyCharacterUpdate,
     transferInventoryItem,
 } from '../src/shared/db/domain/inventoryReducers.js';
 import {
@@ -13,6 +14,7 @@ import {
     addPartyXpInCampaign,
     assignUserInDb,
     buildCampaignViewModel,
+    createCharacterRecord,
     importLegacyCharacterInDb,
     restoreCampaignInDb,
     restoreCharacterInCampaign,
@@ -114,6 +116,39 @@ test('transfers item quantities between characters by item identity', () => {
     assert.equal(result.characters[0].inventory[0].qty, 2);
     assert.equal(result.characters[1].inventory.length, 1);
     assert.equal(result.characters[1].inventory[0].qty, 4);
+});
+
+test('normalizes character runtime shape on create and update', () => {
+    const created = createCharacterRecord({
+        name: 'Legacy Hero',
+        skills: { Intimidate: 2, perform: 4 },
+        inventory: [],
+    }, { createId: () => 'char1' });
+
+    assert.equal(created.id, 'char1');
+    assert.equal(created.skills.Intimidation, 2);
+    assert.equal(created.skills.Performance, 4);
+    assert.equal(created.skills.Intimidate, undefined);
+    assert.equal(created.skills.perform, undefined);
+    assert.deepEqual(created.impulses, []);
+    assert.equal(created.isKineticist, false);
+    assert.equal(created.isCaster, false);
+    assert.equal(created.stats.impulse_proficiency, 0);
+    assert.equal(created.stats.spell_proficiency, 0);
+
+    const updated = applyCharacterUpdate({
+        id: 'char1',
+        skills: { intimidate: 1, Perform: 3 },
+        stats: {},
+        inventory: [],
+    }, (char) => char);
+
+    assert.equal(updated.skills.Intimidation, 1);
+    assert.equal(updated.skills.Performance, 3);
+    assert.equal(updated.skills.intimidate, undefined);
+    assert.equal(updated.skills.Perform, undefined);
+    assert.equal(updated.stats.impulse_proficiency, 0);
+    assert.equal(updated.stats.spell_proficiency, 0);
 });
 
 test('claims loot once and records the claimant without duplicating inventory', () => {

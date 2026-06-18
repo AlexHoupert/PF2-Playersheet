@@ -36,7 +36,7 @@ Generated catalog files are large. It is easy to accidentally import a full cata
 ## Data And Migration Risks
 
 - `migrateDb` mutates the input object in place by design. Be careful when calling it with shared references.
-- Runtime character defaults in `PlayerAppController.jsx` directly mutate the selected character object before render. Moving this into migration would be cleaner.
+- Character runtime defaults and old skill names are normalized in `src/shared/db/domain/characterShape.js` during load, V2 migration, create, and update paths.
 - Root `quests` and `lootBags` still exist for compatibility. Some code paths may read them when campaign data is absent.
 - Player-created custom item catalog registration uses `dataActions.globalContent.saveCustomItem`. The immediate inventory add still uses `onUpdateCharacter`.
 - Campaign, character, quest/subquest, encounter, and map deletion is soft delete. Do not hard-delete these documents unless a future purge flow is explicitly designed and approved.

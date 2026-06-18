@@ -35,7 +35,6 @@ import { usePlayerCharacterActions } from './hooks/usePlayerCharacterActions';
 import { usePlayerInventoryActions } from './hooks/usePlayerInventoryActions';
 import { usePlayerModalState } from './hooks/usePlayerModalState';
 import { usePlayerNavigation } from './hooks/usePlayerNavigation';
-import { usePlayerRuntimeRepair } from './hooks/usePlayerRuntimeRepair';
 // Top of file
 import NotificationOverlay from './components/NotificationOverlay';
 import XpOverlay from './components/XpOverlay';
@@ -109,13 +108,6 @@ export default function PlayerAppController({ db, setDb }) {
         setModalMode,
     });
 
-    usePlayerRuntimeRepair({
-        activeCampaign,
-        dataActions,
-        myCharacter,
-        runDataAction,
-    });
-
     const {
         handleContentLinkClick,
         shopItemDetailError,
@@ -161,15 +153,6 @@ export default function PlayerAppController({ db, setDb }) {
         setModalMode,
         updateCharacter,
     });
-
-    // INITIALIZATION GUARD
-    if (character) {
-        if (!character.impulses) character.impulses = [];
-        if (!character.stats.impulse_proficiency) character.stats.impulse_proficiency = 0;
-        if (character.isKineticist === undefined) character.isKineticist = false;
-        if (character.isCaster === undefined) character.isCaster = false;
-        if (!character.stats.spell_proficiency) character.stats.spell_proficiency = 0;
-    }
 
     // If no character found (e.g. empty campaign), guard against crash
     if (!character) {

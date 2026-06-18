@@ -1,4 +1,5 @@
 import { V2_COLLECTIONS, V2_GLOBAL_CONFIG_PATH, V2_SCHEMA_VERSION, campaignPath, campaignSubPath } from './schema.js';
+import { normalizeCharacterRuntimeShape } from '../domain/characterShape.js';
 
 const MASTER_SOURCE = 'data/master';
 
@@ -304,7 +305,7 @@ function normalizeCampaign(campaign, campaignId, report) {
 }
 
 function normalizeCharacter(character, report, path) {
-    const next = cloneJson(character || {});
+    const next = normalizeCharacterRuntimeShape(character || {});
     next.id = safeDocId(next.id || next.name || path.split('.').pop(), `character_${path.split('.').pop()}`);
     next.name = next.name || 'Unnamed Character';
     next.level = numberOr(next.level, 1);
