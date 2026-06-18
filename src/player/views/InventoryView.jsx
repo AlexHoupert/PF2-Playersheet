@@ -5,7 +5,6 @@ import ItemEditor from '../../admin/editors/ItemEditor';
 import BottomSheet from '../../shared/components/BottomSheet';
 import { getShopItemRowMeta } from '../../shared/catalog/shopRowMeta';
 import { shouldStack } from '../../shared/utils/inventoryUtils';
-import { deepClone } from '../../shared/utils/deepClone';
 import { getWeaponCapacity, getWeaponAttackBonus, isEquipableInventoryItem, getInventoryBucket } from '../../shared/utils/combatUtils';
 import { calculateWeaponDamage } from '../../utils/rules/damage';
 
@@ -13,7 +12,7 @@ export function InventoryView({
     character,
     db,
     onUpdateCharacter,
-    onSetDb,
+    onSaveCustomItem,
     onOpenModal,
     onToggleEquip,
     onInspectItem,
@@ -597,15 +596,7 @@ export function InventoryView({
                         onCancel={() => setShowItemCreator(false)}
                         onSaveToDb={(dbItem) => {
                             // 1. Store in shared campaign custom items (visible to all players and shop)
-                            if (onSetDb) {
-                                onSetDb(prev => {
-                                    const next = { ...prev };
-                                    if (!next.shop) next.shop = {};
-                                    if (!next.shop.customItems) next.shop.customItems = {};
-                                    next.shop.customItems[dbItem.name] = { ...dbItem, playerCreated: true };
-                                    return next;
-                                });
-                            }
+                            onSaveCustomItem?.({ ...dbItem, playerCreated: true });
                             // 2. Add immediately to this character's inventory (qty 1)
                             onUpdateCharacter(c => {
                                 const flat = {

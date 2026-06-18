@@ -1,11 +1,13 @@
+import React, { Suspense, lazy } from 'react';
 import { usePersistedDb } from './shared/db/usePersistedDb';
 import { useFirestoreV2Db } from './shared/db/v2/useFirestoreV2Db';
 import dbData from './data/new_db.json';
 import { CampaignProvider } from './shared/context/CampaignContext';
-import PlayerApp from './player/PlayerApp';
-import AdminApp from './admin/AdminApp';
-import PartyScreen from './player/PartyScreen';
-import CampScreen from './camping/CampScreen';
+
+const PlayerApp = lazy(() => import('./player/PlayerApp'));
+const AdminApp = lazy(() => import('./admin/AdminApp'));
+const PartyScreen = lazy(() => import('./player/PartyScreen'));
+const CampScreen = lazy(() => import('./camping/CampScreen'));
 
 export default function App() {
     const queryParams = new URLSearchParams(window.location.search);
@@ -39,16 +41,22 @@ function AppRoutes({ db, setDb, dbMode, dbStatus }) {
 
     return (
         <CampaignProvider db={db} setDb={setDb} isAdmin={isAdmin || isParty || isCamp} dbMode={dbMode} dbStatus={dbStatus}>
-            {isParty
-                ? <PartyScreen db={db} />
-                : isCamp
-                    ? <CampScreenWrapper />
-                    : isAdmin
-                        ? <AdminApp db={db} setDb={setDb} />
-                        : <PlayerApp db={db} setDb={setDb} />
-            }
+            <Suspense fallback={<RouteFallback />}>
+                {isParty
+                    ? <PartyScreen db={db} />
+                    : isCamp
+                        ? <CampScreenWrapper />
+                        : isAdmin
+                            ? <AdminApp db={db} setDb={setDb} />
+                            : <PlayerApp db={db} setDb={setDb} />
+                }
+            </Suspense>
         </CampaignProvider>
     );
+}
+
+function RouteFallback() {
+    return <div style={{ color: '#fff', padding: 20 }}>Loading...</div>;
 }
 
 function CampScreenWrapper() {

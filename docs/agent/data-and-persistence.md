@@ -105,6 +105,7 @@ Write path:
 Important limitation:
 
 - There are repository functions in `src/shared/db/v2/repositories.js`, but some non-migrated UI paths still call broad `setDb`. The repositories are now used by the domain-action waves for Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, and Camping.
+- Shop/trader state, custom item/action saves, and encounter bestiary reveal-state now also use targeted domain actions instead of the broad runtime diff.
 
 ## Domain Action Layer
 
@@ -119,6 +120,8 @@ Files:
 - `src/shared/db/domain/mapReducers.js`
 - `src/shared/db/domain/progressReducers.js`
 - `src/shared/db/domain/campingReducers.js`
+- `src/shared/db/domain/globalContentReducers.js`
+- `src/shared/db/selectors/`
 - `src/shared/db/v2/repositories.js`
 
 `CampaignContext` exposes `dataActions`, `dbMode`, and `dbStatus`.
@@ -137,6 +140,9 @@ Current migrated write paths:
 - Player progress views read active-only Progress data through the domain reducer.
 - GM/player camping settings, activity edits, activity archive/restore, assignments, rolls, and unassign through `dataActions.camping`.
 - Player reward notifications read `campaign.notificationQueue` first and root `db.notificationQueue` only as a legacy fallback.
+- GM ItemsView shop/trader writes through `dataActions.shop`.
+- GM/player custom item/action saves through `dataActions.globalContent`.
+- Encounter bestiary reveal-state writes through `dataActions.bestiary`.
 
 Soft delete:
 
@@ -155,6 +161,7 @@ Adapter behavior:
 - Legacy mode uses pure reducers against the legacy campaign snapshot and writes with `setDb`.
 - Firestore v2 mode uses targeted repository updates and transactions.
 - Missing Firestore config falls back to legacy adapter behavior.
+- Runtime Firestore repositories are injected by `CampaignContext`; tests can inject fake repositories without loading Firebase.
 
 See `docs/agent/domain-actions.md` for the detailed API and migration status.
 
@@ -169,7 +176,7 @@ File: `src/shared/db/v2/normalizers.js`
 - Moves root quests and loot bags into a campaign when present.
 - Splits campaigns into campaign meta doc plus subcollection docs.
 - Adds members from `db.users`.
-- Adds global config from `shop`, `notificationQueue`, `rules`, `library`, `runes`, `feats`.
+- Adds global config from `shop`, `bestiary.creatures`, `notificationQueue`, `rules`, `library`, `runes`, `feats`.
 - Adds custom content collections for custom items, creatures, actions, and lore articles.
 - Stamps documents with schema metadata and migration info.
 - Produces a report with counts, renamed fields, moved fields, invalid values, and assumptions.
@@ -179,7 +186,7 @@ File: `src/shared/db/v2/normalizers.js`
 - Builds the legacy projection used by existing screens.
 - Reassembles campaign subcollections into `db.campaigns[campaignId]`.
 - Converts `members` docs back into `db.users`.
-- Rehydrates global config, custom collections, and lore.
+- Rehydrates global config including shop and bestiary reveal-state, custom collections, and lore.
 - Sets root `quests` and `lootBags` from the first campaign for compatibility.
 
 ## V2 Migration Scripts And UI
@@ -224,6 +231,11 @@ Files:
 
 - `tests/v2Migration.test.js`
 - `tests/domainReducers.test.js`
+- `tests/globalContentReducers.test.js`
+- `tests/dataActionsLegacy.test.js`
+- `tests/dataActionsV2Adapter.test.js`
+- `tests/selectors.test.js`
+- `tests/broadWritesGuard.test.js`
 
 Tests cover:
 
@@ -238,6 +250,10 @@ Tests cover:
 - Map soft delete, restore, order, pin, and scale reducers.
 - Progress update, active-only, top-level soft delete, and restore reducers.
 - Camping settings, custom activity archive/restore, assignment conflict, roll, and unassign reducers.
+- Global content reducers for custom items/actions, trader state, availability lists, and bestiary reveal-state.
+- Legacy and v2 adapter behavior for `createDataActions`.
+- Selector behavior for active/archived campaign data, legacy root fallbacks, shop reads, and bestiary reveal-state.
+- Broad-write guard coverage for migrated UI files.
 - Quest objective and quest reward idempotency.
 - Encounter activation, combatants, initiative, turn state, and conditions.
 

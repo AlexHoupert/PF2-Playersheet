@@ -1,6 +1,6 @@
 import { deleteDoc, doc, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
-import { cleanForFirestore } from './normalizers.js';
-import { V2_COLLECTIONS } from './schema.js';
+import { cleanForFirestore, safeDocId } from './normalizers.js';
+import { V2_COLLECTIONS, V2_GLOBAL_CONFIG_PATH } from './schema.js';
 
 export function campaignDocRef(firestore, campaignId) {
     return doc(firestore, V2_COLLECTIONS.campaigns, campaignId);
@@ -165,6 +165,44 @@ export const memberRepo = {
     async revokeUser(firestore, campaignId, email) {
         const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.members, email);
         await deleteDoc(ref);
+    },
+};
+
+export const globalRepo = {
+    async updateGlobalConfig(firestore, updater) {
+        const ref = docFromPath(firestore, V2_GLOBAL_CONFIG_PATH);
+        await runTransaction(firestore, async transaction => {
+            const snapshot = await transaction.get(ref);
+            const current = snapshot.exists() ? snapshot.data() : {};
+            const next = typeof updater === 'function' ? updater(current) : { ...current, ...updater };
+            transaction.set(ref, cleanForFirestore(stampRuntime(next)));
+        });
+    },
+
+    async setCustomItem(firestore, item) {
+        const id = safeDocId(item?.id || item?.name, 'custom_item');
+        const ref = doc(firestore, V2_COLLECTIONS.customItems, id);
+        await setDoc(ref, cleanForFirestore(stampRuntime({
+            id,
+            name: item?.name || id,
+            data: item,
+        })));
+    },
+
+    async deleteCustomItem(firestore, itemOrName) {
+        const id = safeDocId(itemOrName?.id || itemOrName?.name || itemOrName, 'custom_item');
+        await deleteDoc(doc(firestore, V2_COLLECTIONS.customItems, id));
+    },
+
+    async setCustomAction(firestore, action) {
+        const id = safeDocId(action?.id || action?.name, 'custom_action');
+        const ref = doc(firestore, V2_COLLECTIONS.customActions, id);
+        await setDoc(ref, cleanForFirestore(stampRuntime({ ...action, id })));
+    },
+
+    async deleteCustomAction(firestore, actionOrName) {
+        const id = safeDocId(actionOrName?.id || actionOrName?.name || actionOrName, 'custom_action');
+        await deleteDoc(doc(firestore, V2_COLLECTIONS.customActions, id));
     },
 };
 
@@ -434,6 +472,14 @@ export const lootRepo = {
         });
     },
 };
+
+function docFromPath(firestore, path) {
+    const segments = String(path || '').split('/').filter(Boolean);
+    if (segments.length === 0 || segments.length % 2 !== 0) {
+        throw new Error(`Invalid Firestore document path: ${path}`);
+    }
+    return doc(firestore, ...segments);
+}
 
 function stampRuntime(data) {
     return {

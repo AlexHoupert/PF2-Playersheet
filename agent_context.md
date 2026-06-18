@@ -19,13 +19,13 @@ The root repo is `PF2-Playersheet`; the parent directory is not the git repo.
 - Custom Express dev server in `server/index.js`; `npm run dev` starts this server on port 5173 and embeds Vite middleware.
 - Firebase 12 for Auth and Firestore.
 - Framer Motion is used in party/initiative display.
-- Node test runner via `node --test tests/*.test.js`.
+- Node test runner via `node --test tests/*.test.js`; `npm run check` runs tests, the broad-write guard, and a Vite app build.
 - A minimal Python project exists only for `openpyxl`; current app scripts are Node-based.
 
 ## Entry Points
 
 - `src/main.jsx` wraps `<App />` in `AuthProvider`.
-- `src/App.jsx` selects persistence mode and route:
+- `src/App.jsx` selects persistence mode and route. Player, Admin, Party, and Camp route shells are loaded with `React.lazy`.
   - default or `VITE_DB_MODE`: legacy `usePersistedDb`.
   - `?db=v2`: `useFirestoreV2Db`.
   - `?admin=true`: GM/admin app.
@@ -46,7 +46,7 @@ The root repo is `PF2-Playersheet`; the parent directory is not the git repo.
 - `ressources/`: source PF2e JSON and assets. Large, mostly input data.
 - `scripts/`: build and migration scripts.
 - `server/`: Express wrapper for dev, resource serving, file APIs, and admin rebuild APIs.
-- `tests/`: currently focused on Firestore v2 migration normalizers.
+- `tests/`: domain reducer, data-action adapter, selector, broad-write guard, and Firestore v2 normalizer tests.
 
 ## Persistence Summary
 
@@ -67,7 +67,8 @@ Firestore v2 mode:
 - Subscribes to normalized collections from `src/shared/db/v2/schema.js`.
 - Uses `composeLegacyDbFromV2Documents` to create the legacy projection.
 - Non-migrated runtime writes still diff whole legacy DBs via `writeLegacyDbDiffToV2`.
-- Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, and Camping migrated writes now go through `CampaignContext.dataActions` and targeted v2 repositories/transactions.
+- Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, custom item/action, and encounter bestiary reveal-state migrated writes now go through `CampaignContext.dataActions` and targeted v2 repositories/transactions.
+- `CampaignContext` uses pure selectors under `src/shared/db/selectors/` for active/archived campaign and character reads.
 
 Firestore v2 collections include `campaigns`, campaign subcollections `characters`, `quests`, `lootBags`, `encounters`, `maps`, `members`, plus top-level `global`, `customItems`, `customCreatures`, `customActions`, `loreArticles`, and `migrationBackups`.
 
@@ -86,6 +87,8 @@ Current domain action files:
 - `src/shared/db/domain/mapReducers.js`: pure map, pin, scale, order, and map soft-delete reducers.
 - `src/shared/db/domain/progressReducers.js`: pure progress normalization, active-only filtering, section updates, and top-level progress soft-delete reducers.
 - `src/shared/db/domain/campingReducers.js`: pure camping settings, activity, assignment, roll, and custom activity soft-delete reducers.
+- `src/shared/db/domain/globalContentReducers.js`: pure shop/trader, custom item/action, and bestiary reveal-state reducers.
+- `src/shared/db/selectors/`: pure read selectors for campaign, character, inventory, shop, bestiary, and progress data.
 - `src/shared/db/v2/repositories.js`: targeted Firestore v2 document updates and transactions.
 
 Migrated paths:
@@ -107,14 +110,17 @@ Migrated paths:
 - Player ProgressView reads active-only Progress data.
 - GM/player Camping views update DC settings, custom/default activities, assignments, rolls, and unassigns through `dataActions.camping`.
 - Camping assignments store `characterId` plus `characterName`; old name-only assignments remain readable.
+- GM ItemsView trader create/update/hide/inventory and shop availability/formula writes use `dataActions.shop`.
+- GM and player custom item/action saves use `dataActions.globalContent`.
+- Encounter creature reveal-state writes use `dataActions.bestiary.updateRevealState`.
 
 Soft delete uses `deletedAt`/`deletedBy`; restore removes those fields and sets `restoredAt`/`restoredBy`. `CampaignContext.campaigns`, `activeCampaign.characters`, `activeCampaign.quests`, `activeCampaign.encounters`, and `activeCampaign.maps` expose active records; `archivedCampaigns`, `activeCampaign.archivedCharacters`, `activeCampaign.archivedQuests`, `activeCampaign.archivedEncounters`, and `activeCampaign.archivedMaps` expose archived records.
 
 Quest rewards are idempotent via applied markers and are not automatically rolled back if an objective is later marked incomplete. Quest reward notifications are campaign-scoped via `campaign.notificationQueue`; root `db.notificationQueue` remains a legacy fallback.
 
-`CampaignContext.updateActiveCampaign` intentionally remains a broad compatibility helper for non-migrated pact/player-local style updates.
+`CampaignContext.updateActiveCampaign` intentionally remains a deprecated broad compatibility helper for non-migrated pact/player-local style updates.
 
-Remaining broad write paths are tracked in `docs/agent/domain-actions.md` and `docs/agent/known-risks.md`.
+Remaining broad write paths are tracked in `docs/agent/migration-backlog.md`, `docs/agent/domain-actions.md`, and `docs/agent/known-risks.md`. `scripts/check_broad_writes.js` fails new broad writes in migrated domains.
 
 ## Data Model Snapshot
 
@@ -159,7 +165,10 @@ Important scripts:
 
 ## Known Architectural State
 
-- `PlayerApp.jsx`, `AdminApp.jsx`, and `ItemsView.jsx` are large integration components and carry a lot of business logic.
+- `src/player/PlayerApp.jsx` is now a route shell; the current legacy-heavy implementation lives in `src/player/PlayerAppController.jsx`.
+- `src/admin/AdminApp.jsx` delegates tab rendering to `src/admin/AdminTabContent.jsx`, and admin tab views are lazy loaded.
+- `src/admin/ItemsView.jsx` is now the data/action controller for `src/admin/items/ItemsViewLayout.jsx`.
+- `src/admin/EncounterView.jsx` delegates sidebar/info-panel rendering to `src/admin/encounter/EncounterPanels.jsx`.
 - Some migration and normalization happens at runtime in React effects, especially for older skill names and data shape defaults.
 - Admin and player flows share `ModalManager` and catalog detail fetching patterns.
 - Direct browser prompts/alerts/confirms are common.
@@ -172,6 +181,7 @@ Important scripts:
 - `docs/agent/data-and-persistence.md`: legacy DB, Firestore v2, migration, rules.
 - `docs/agent/catalog-pipeline.md`: source resources, generated indexes, runtime fetching.
 - `docs/agent/domain-actions.md`: strangler layer for Campaign/Session, Character, Inventory, and Loot writes.
+- `docs/agent/migration-backlog.md`: remaining broad writes grouped by domain and guarded migrated files.
 - `docs/agent/migration-wave-maps-progress-camping.md`: current step-by-step wave status and assessments for Maps, Progress, and Camping.
 - `docs/agent/ui-flows.md`: player, GM/admin, party, camping, maps, pacts.
 - `docs/agent/known-risks.md`: current risks, cleanup candidates, modernization notes.

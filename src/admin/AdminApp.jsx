@@ -11,40 +11,7 @@ import { fetchFeatDetailBySourceFile, getFeatIndexItemByName } from '../shared/c
 import { fetchActionDetailBySourceFile, getActionIndexItemByName } from '../shared/catalog/actionIndex';
 import { getConditionCatalogEntry } from '../shared/constants/conditionsCatalog';
 
-// Components
-import ItemsView from './ItemsView';
-import SpellsView from './SpellsView';
-import ImpulsesView from './ImpulsesView';
-import FeatsView from './FeatsView';
-import ActionsView from './ActionsView';
-import AbilitiesView from './AbilitiesView';
-import QuestsView from './QuestsView';
-import LoreAdminView from './LoreAdminView';
-import BestiaryView from './BestiaryView';
-import EncounterView from './EncounterView';
-// import LootView from './LootView'; // Was imported in legacy but not in previous file content? Checked: activeTab === 'loot' at line 1016. It wasn't imported in line 1-28. Maybe it was defined in file or I missed it.
-// Checking previous file content... line 18 is 'QuestsView'. No LootView import.
-// But line 1016 says `{activeTab === 'loot' && <LootView db={db} setDb={setDb} />}`.
-// Ah, `LootView` might be missing or I missed the import. I'll define a placeholder or check if I need to add it.
-// Wait, `InventoryView` handles Loot in PlayerApp. Admin maybe had a separate one.
-// I'll check `src/admin` listing again.
-// Listing showed: ItemsView, SpellsView, ImpulsesView, FeatsView, ActionsView, QuestsView. No LootView.jsx.
-// Detailed AdminApp line 1016: `<LootView ...`. Maybe it's defined in the file?
-// I viewed 800-1065. I didn't see `function LootView`.
-// Line 1016 in previous view: `{activeTab === 'loot' && <LootView db={db} setDb={setDb} />}`.
-// If it's not imported and not defined, it would crash. Maybe it was commented out or I misread?
-// Let's assume I shouldn't break it if it works. But if it's not there...
-// I'll stick to what I saw.
-
-import MapAdminView from './MapAdminView';
-import ProgressAdminView from './ProgressAdminView';
-import CampingAdminView from '../camping/CampingAdminView';
-import DeviantAbilitiesAdminView from '../pacts/DeviantAbilitiesAdminView';
-import PactAdminView from '../pacts/PactAdminView';
-import FirebaseMigrator from './FirebaseMigrator';
-import SessionManager from './views/SessionManager';
-
-import { CharacterCard } from './components/CharacterCard';
+import AdminTabContent from './AdminTabContent';
 import { ModalManager } from '../player/ModalManager';
 import XpOverlay from '../player/components/XpOverlay';
 
@@ -229,157 +196,32 @@ export default function AdminApp({ db, setDb }) {
                     <Breadcrumbs activeTab={activeTab} />
 
                     <div className="admin-content-area" style={{ flex: 1, overflow: 'hidden', padding: 15, background: '#111', display: 'flex', flexDirection: 'column' }}>
-                        {activeTab === 'sessions' && <SessionManager db={db} setDb={setDb} />}
-
-                        {activeTab === 'players' && (
-                            <div className="admin-layout-column" style={{ padding: 10, height: '100%', overflowY: 'auto' }}>
-                                <div className="admin-toolbar">
-                                    <div className="toolbar-left">
-                                        <h3>{activeCampaign?.name || 'Legacy Campaign'}</h3>
-                                        <div className="toggle-group">
-                                            <button
-                                                className={playerTabMode === 'cards' ? 'active' : ''}
-                                                onClick={() => setPlayerTabMode('cards')}
-                                            >Cards</button>
-                                            <button
-                                                className={playerTabMode === 'users' ? 'active' : ''}
-                                                onClick={() => setPlayerTabMode('users')}
-                                            >Users</button>
-                                        </div>
-                                    </div>
-                                    {/* Campaign XP / Init Controls could go here */}
-                                    {activeCampaign && (
-                                        <div className="xp-control" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                                <span>XP: </span>
-                                                <input
-                                                    className="modal-input"
-                                                    style={{ width: 80 }}
-                                                    type="number"
-                                                    value={activeCampaign.xp || 0}
-                                                    onChange={(e) => {
-                                                        const v = parseInt(e.target.value) || 0;
-                                                        setPartyXp(activeCampaign.id, v);
-                                                    }}
-                                                />
-                                            </div>
-                                            <button
-                                                className="btn-add-condition"
-                                                style={{ margin: 0, background: '#c5a059', color: '#111', fontWeight: 'bold' }}
-                                                onClick={() => {
-                                                    const amtStr = prompt("Amount of XP to add:");
-                                                    if (!amtStr) return;
-                                                    const amt = parseInt(amtStr);
-                                                    if (isNaN(amt) || amt === 0) return;
-                                                    addPartyXp(activeCampaign.id, amt);
-                                                }}
-                                            >
-                                                + Add XP
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {playerTabMode === 'cards' && (
-                                    <div className="players-grid-container">
-                                        {characters.map((char, i) => (
-                                            <CharacterCard
-                                                key={char.id || i}
-                                                character={char}
-                                                db={db}
-                                                setDb={setDb}
-                                                updateCharacter={(fn) => updateCharacter(i, fn)}
-                                                setModalMode={setModalMode}
-                                                setModalData={setModalData}
-                                                onOpenModalLong={(data, mode) => {
-                                                    // Handle long press context
-                                                    setActiveCharIndex(i);
-                                                    setModalData(data);
-                                                    setModalMode(mode || 'context');
-                                                }}
-                                                onOpenModal={(mode, data) => {
-                                                    setActiveCharIndex(i);
-                                                    if (data) setModalData(data);
-                                                    setModalMode(mode);
-                                                }}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-
-                                {playerTabMode === 'users' && (
-                                    <div className="user-management-panel">
-                                        <div className="add-user-row">
-                                            <input id="new-user-email" placeholder="New User Email" />
-                                            <button onClick={() => {
-                                                const el = document.getElementById('new-user-email');
-                                                if (el && el.value.includes('@')) {
-                                                    assignUser(el.value, activeCampaign?.id, null, 'player');
-                                                    el.value = '';
-                                                }
-                                            }}>Authorize</button>
-                                        </div>
-                                        <table className="user-table">
-                                            <thead>
-                                                <tr><th>Email</th><th>Role</th><th>Character</th><th>Action</th></tr>
-                                            </thead>
-                                            <tbody>
-                                                {db.users && Object.entries(db.users).map(([email, info]) => (
-                                                    <tr key={email}>
-                                                        <td>{email}</td>
-                                                        <td>{info.role}</td>
-                                                        <td>
-                                                            <select
-                                                                value={info.characterId || ''}
-                                                                onChange={(e) => assignUser(email, info.campaignId, e.target.value, info.role)}
-                                                            >
-                                                                <option value="">None</option>
-                                                                {characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                                            </select>
-                                                        </td>
-                                                        <td>
-                                                            <button onClick={() => revokeUser(email)}>Revoke</button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {activeTab === 'items' && <ItemsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('item'); }} />}
-                        {activeTab === 'spells' && <SpellsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('spell'); }} />}
-                        {activeTab === 'impulses' && <ImpulsesView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('impulse'); }} />}
-                        {activeTab === 'feats' && <FeatsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('feat'); }} />}
-                        {activeTab === 'actions' && <ActionsView db={db} setDb={setDb} onInspectItem={(i) => { setModalData(i); setModalMode('item'); }} />}
-                        {activeTab === 'abilities' && <AbilitiesView db={db} setDb={setDb} />}
-                        {activeTab === 'quests' && <QuestsView db={db} setDb={setDb} />}
-                        {activeTab === 'lore' && <LoreAdminView db={db} setDb={setDb} />}
-                        {activeTab === 'maps' && <MapAdminView />}
-                        {activeTab === 'progress' && <ProgressAdminView />}
-                        {activeTab === 'camping' && <CampingAdminView />}
-                        {activeTab === 'deviant_abilities' && <DeviantAbilitiesAdminView db={db} setDb={setDb} />}
-                        {activeTab === 'pacts' && <PactAdminView db={db} setDb={setDb} />}
-
-                        {/* Bestiary Routes */}
-                        {(activeTab === 'bestiary' || activeTab === 'bestiary_overview') && <BestiaryView db={db} setDb={setDb} onContentLinkClick={handleContentLinkClick} />}
-                        {activeTab === 'bestiary_creatures' && <BestiaryView db={db} setDb={setDb} initialFilterType={['npc']} onContentLinkClick={handleContentLinkClick} />}
-                        {activeTab === 'bestiary_hazards' && <BestiaryView db={db} setDb={setDb} initialFilterType={['hazard']} onContentLinkClick={handleContentLinkClick} />}
-                        {activeTab === 'encounters' && <EncounterView db={db} setDb={setDb} />}
-
-                        {activeTab === 'system' && (
-                            <div style={{ padding: 20, height: '100%', overflowY: 'auto' }}>
-                                <h2>System</h2>
-                                <FirebaseMigrator db={db} />
-                                <div style={{ marginTop: 20 }}>
-                                    <button onClick={() => handleRebuild('all')}>Rebuild Indexes</button>
-                                    {rebuildStatus && <span>{rebuildStatus.status}</span>}
-                                </div>
-                                <button onClick={resetData} style={{ marginTop: 20, background: 'red' }}>Reset All Data</button>
-                            </div>
-                        )}
+                        <AdminTabContent
+                            activeTab={activeTab}
+                            activeCampaign={activeCampaign}
+                            addPartyXp={addPartyXp}
+                            assignUser={assignUser}
+                            characters={characters}
+                            db={db}
+                            handleContentLinkClick={handleContentLinkClick}
+                            handleRebuild={handleRebuild}
+                            onInspectAction={(i) => { setModalData(i); setModalMode('item'); }}
+                            onInspectFeat={(i) => { setModalData(i); setModalMode('feat'); }}
+                            onInspectImpulse={(i) => { setModalData(i); setModalMode('impulse'); }}
+                            onInspectItem={(i) => { setModalData(i); setModalMode('item'); }}
+                            onInspectSpell={(i) => { setModalData(i); setModalMode('spell'); }}
+                            playerTabMode={playerTabMode}
+                            rebuildStatus={rebuildStatus}
+                            resetData={resetData}
+                            revokeUser={revokeUser}
+                            setActiveCharIndex={setActiveCharIndex}
+                            setDb={setDb}
+                            setModalData={setModalData}
+                            setModalMode={setModalMode}
+                            setPartyXp={setPartyXp}
+                            setPlayerTabMode={setPlayerTabMode}
+                            updateCharacter={updateCharacter}
+                        />
                     </div>
                 </div>
             </div>

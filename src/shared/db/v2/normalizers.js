@@ -141,6 +141,7 @@ export function composeLegacyDbFromV2Documents(documents, baseDb = {}) {
 
         if (path === V2_GLOBAL_CONFIG_PATH) {
             db.shop = { ...db.shop, ...(data.shop || {}) };
+            db.bestiary = { ...db.bestiary, ...(data.bestiary || {}) };
             db.notificationQueue = Array.isArray(data.notificationQueue) ? data.notificationQueue : [];
             db.rules = data.rules || {};
             db.library = data.library || {};
@@ -449,6 +450,9 @@ function addGlobalDocuments(db, addDocument, report) {
             availableItems: Array.isArray(db.shop?.availableItems) ? db.shop.availableItems : [],
             availableFormulas: Array.isArray(db.shop?.availableFormulas) ? db.shop.availableFormulas : [],
             traders: Array.isArray(db.shop?.traders) ? db.shop.traders : [],
+        },
+        bestiary: {
+            creatures: db.bestiary?.creatures || {},
         },
         notificationQueue: Array.isArray(db.notificationQueue) ? db.notificationQueue : [],
         rules: db.rules || {},

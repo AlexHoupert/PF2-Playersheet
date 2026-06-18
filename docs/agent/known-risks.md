@@ -6,7 +6,14 @@ Last updated: 2026-06-18.
 
 1. Large integration components
 
-`src/player/PlayerApp.jsx`, `src/admin/AdminApp.jsx`, and `src/admin/ItemsView.jsx` contain many unrelated workflows. Changes in one handler can affect persistence, modals, catalog fetches, and UI state. Prefer extracting focused helpers while touching specific workflows, not broad rewrites.
+The worst route/component files have been cut into shells/controllers/layouts:
+
+- `src/player/PlayerApp.jsx` is a route shell; `PlayerAppController.jsx` still carries the old player handlers.
+- `src/admin/AdminApp.jsx` delegates tab content to `AdminTabContent.jsx`.
+- `src/admin/ItemsView.jsx` delegates rendering to `items/ItemsViewLayout.jsx`.
+- `src/admin/EncounterView.jsx` delegates sidebar/info panel rendering to `encounter/EncounterPanels.jsx`.
+
+The residual risk moved to the new controller/layout files. Continue extracting focused hooks while touching specific workflows.
 
 2. Legacy projection as hidden contract
 
@@ -18,7 +25,7 @@ Inventory and loot code sometimes uses `name`, sometimes `_index`, sometimes `in
 
 4. Whole-DB writes in normal UI paths
 
-Some v2 runtime writes still diff whole legacy DB snapshots. Campaign/Session, Character/Inventory/Loot, Quests/Rewards, Encounters, Maps, Progress, and Camping now use `dataActions` and targeted repositories, but pact/bestiary/global domains still need migration.
+Some v2 runtime writes still diff whole legacy DB snapshots. Campaign/Session, Character/Inventory/Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, custom item/action, and encounter bestiary reveal-state now use `dataActions` and targeted repositories. Pact, abilities, lore, bestiary custom creature, and some global domains still need migration.
 
 5. Generated data size and source duplication
 
@@ -29,13 +36,13 @@ Generated catalog files are large. It is easy to accidentally import a full cata
 - `migrateDb` mutates the input object in place by design. Be careful when calling it with shared references.
 - Runtime character defaults in `PlayerApp.jsx` directly mutate the selected character object before render. Moving this into migration would be cleaner.
 - Root `quests` and `lootBags` still exist for compatibility. Some code paths may read them when campaign data is absent.
-- `InventoryView` still receives `onSetDb` for player-created custom item catalog registration. The immediate inventory add uses `onUpdateCharacter`, but global custom item storage remains legacy/global.
+- Player-created custom item catalog registration uses `dataActions.globalContent.saveCustomItem`. The immediate inventory add still uses `onUpdateCharacter`.
 - Campaign, character, quest/subquest, encounter, and map deletion is soft delete. Do not hard-delete these documents unless a future purge flow is explicitly designed and approved.
 - `CampaignContext.updateActiveCampaign` remains a broad compatibility helper for non-migrated campaign child domains. Do not use it for new Campaign/Session lifecycle work.
-- Pacts, abilities, lore, bestiary custom content/reveal-state, and global catalog settings still have direct/broad `setDb` paths.
+- Pacts, abilities, lore, bestiary custom creatures, and some global catalog settings still have direct/broad `setDb` paths. See `docs/agent/migration-backlog.md`.
 - Quest rewards are idempotent and not automatically rolled back when objectives are later marked incomplete.
 - Quest reward notifications are campaign-scoped; root `notificationQueue` remains only a legacy fallback.
-- `ItemsView` trader/global catalog behavior remains legacy/global. Loot-bag and character assignment paths have been moved to `dataActions`.
+- `ItemsView` trader, availability/formula, custom-item, loot-bag, and character assignment paths have been moved to `dataActions`.
 - User assignment is keyed by email in legacy DB and by member documents in v2. Email casing is normalized in v2 member docs.
 - `src/data/new_db.json` includes real-looking user email assignments. Avoid exposing or expanding this data unnecessarily.
 - Firestore rules document v2 access but do not visibly permit legacy `data/master`. Verify deployed rules before relying on legacy cloud writes.
@@ -50,9 +57,8 @@ Generated catalog files are large. It is easy to accidentally import a full cata
 
 ## Code Quality Risks
 
-- There is no lint script.
-- Tests currently cover v2 migration only.
-- Some comments in `AdminApp.jsx` appear to be stale analysis notes from a prior edit, especially around a missing `LootView`.
+- There is no lint script. `npm run check` currently covers tests, broad-write guard, and Vite app build.
+- Tests now cover v2 migration, domain reducers, global content reducers, data-action adapters, selectors, and the broad-write guard.
 - `handleRebuild` in `AdminApp.jsx` currently logs the request instead of fully using the server rebuild API.
 - Debug logging remains in several runtime paths.
 - Catalog builder scripts have duplicated dictionary/recursive traversal patterns.
@@ -76,8 +82,8 @@ Short-term:
 
 Medium-term:
 
-- Introduce small domain services for campaign, character, inventory, and loot mutations.
-- Use v2 repository functions for remaining high-conflict actions like bestiary reveal-state and global/custom content updates.
+- Continue extracting `PlayerAppController.jsx` into real controller hooks for character, inventory, navigation, and modals.
+- Use v2 repository functions for remaining high-conflict actions like pacts, abilities, lore, and bestiary custom creatures.
 - Add smoke tests for catalog decoders and `parseFoundry`.
 - Add a minimal lint/format check to catch import and JSX issues.
 

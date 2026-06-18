@@ -1,9 +1,24 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../auth/AuthProvider';
+import { db as firestoreDb } from '../db/firebase-config';
 import { createDataActions } from '../db/domain/createDataActions';
-import { buildCampaignViewModel, isSoftDeleted, normalizeEmail } from '../db/domain/campaignReducers';
+import { isSoftDeleted, normalizeEmail } from '../db/domain/campaignReducers';
+import { selectActiveCampaign, selectCampaignBuckets, selectTargetCampaignId } from '../db/selectors/campaignSelectors';
+import { selectMyCharacter } from '../db/selectors/characterSelectors';
+import { campaignRepo, characterRepo, encounterRepo, globalRepo, lootRepo, mapRepo, memberRepo, questRepo } from '../db/v2/repositories';
 
 const CampaignContext = createContext();
+
+const defaultRepositories = {
+    campaignRepo,
+    characterRepo,
+    encounterRepo,
+    globalRepo,
+    lootRepo,
+    mapRepo,
+    memberRepo,
+    questRepo,
+};
 
 export function useCampaign() {
     return useContext(CampaignContext);
@@ -12,7 +27,17 @@ export function useCampaign() {
 export function CampaignProvider({ db, setDb, children, isAdmin = false, dbMode = 'legacy', dbStatus = null }) {
     const { user } = useAuth();
     const userEmail = normalizeEmail(user?.email);
-    const dataActions = useMemo(() => createDataActions({ db, setDb, mode: dbMode, actorEmail: userEmail }), [db, setDb, dbMode, userEmail]);
+    const dataActions = useMemo(
+        () => createDataActions({
+            db,
+            setDb,
+            mode: dbMode,
+            actorEmail: userEmail,
+            firestore: firestoreDb,
+            repositories: defaultRepositories,
+        }),
+        [db, setDb, dbMode, userEmail]
+    );
 
     // We need to determine:
     // 1. Is the user a GM? (Simple check for now: matching email or role in db)
@@ -43,33 +68,17 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false, dbMode 
     }, [isGM, userInfo, db.campaigns, setSelectedCampaignId]);
 
     // Derived Data
-    const rawCampaigns = db.campaigns || {};
-    const { campaigns, archivedCampaigns } = useMemo(() => {
-        const activeEntries = [];
-        const archivedEntries = [];
-        Object.entries(rawCampaigns).forEach(([id, campaign]) => {
-            const viewModel = buildCampaignViewModel(campaign);
-            if (isSoftDeleted(campaign)) archivedEntries.push([id, viewModel]);
-            else activeEntries.push([id, viewModel]);
-        });
-        return {
-            campaigns: Object.fromEntries(activeEntries),
-            archivedCampaigns: Object.fromEntries(archivedEntries),
-        };
-    }, [rawCampaigns]);
+    const { campaigns, archivedCampaigns } = useMemo(() => selectCampaignBuckets(db), [db]);
 
     // Active Campaign Object
     // If GM, use selected. If Player, use assigned.
     // If nothing selected/assigned, try to use "default" or first available?
-    const targetCampaignId = isGM
-        ? (campaigns[selectedCampaignId] ? selectedCampaignId : Object.keys(campaigns)[0])
-        : (campaigns[userInfo?.campaignId] ? userInfo.campaignId : (campaigns[selectedCampaignId] ? selectedCampaignId : null)); // Fallback to selected for GM previewing as player
+    const targetCampaignId = selectTargetCampaignId({ campaigns, isGM, selectedCampaignId, userInfo });
 
-    const activeCampaign = campaigns[targetCampaignId] || null;
+    const activeCampaign = selectActiveCampaign(campaigns, targetCampaignId);
 
     // Active Character (User's specific character)
-    const myCharacterId = userInfo?.characterId;
-    const myCharacter = activeCampaign?.characters?.find(c => c.id === myCharacterId || c.name === myCharacterId); // Support ID or Name match
+    const myCharacter = selectMyCharacter(activeCampaign, userInfo);
 
     useEffect(() => {
         if (selectedCampaignId && !campaigns[selectedCampaignId]) {
@@ -84,7 +93,8 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false, dbMode 
         });
     }, []);
 
-    // Actions
+    // Deprecated compatibility escape hatch for legacy-only domains and runtime data repair.
+    // New migrated domains must go through dataActions so V2 can use targeted repositories.
     const updateActiveCampaign = React.useCallback((updater) => {
         if (!activeCampaign || !targetCampaignId) return;
         setDb(prev => {

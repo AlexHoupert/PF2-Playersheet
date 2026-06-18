@@ -16,6 +16,8 @@ Location:
 - `src/shared/db/domain/mapReducers.js`
 - `src/shared/db/domain/progressReducers.js`
 - `src/shared/db/domain/campingReducers.js`
+- `src/shared/db/domain/globalContentReducers.js`
+- `src/shared/db/selectors/`
 - `src/shared/db/domain/createDataActions.js`
 - `src/shared/db/v2/repositories.js`
 
@@ -127,6 +129,28 @@ The UI still reads the legacy-shaped projection, but migrated write paths call `
 - `recordActivityRoll(campaignId, activityId, character, rollResult)`
 - `unassignActivity(campaignId, activityId, character)`
 
+`dataActions.bestiary`:
+
+- `updateRevealState(creatureId, field, revealMode)`
+
+`dataActions.globalContent`:
+
+- `saveCustomItem(item)`
+- `deleteCustomItem(itemOrName)`
+- `saveCustomAction(action)`
+- `deleteCustomAction(actionOrName)`
+
+`dataActions.shop`:
+
+- `createTrader(traderOrName, category)`
+- `updateTrader(traderId, updater)`
+- `deleteTrader(traderId)`
+- `setTraderHidden(traderId, hidden)`
+- `addItemsToTrader(traderId, items)`
+- `removeItemsFromTrader(traderId, items)`
+- `setItemAvailable(itemName, available)`
+- `setFormulaAvailable(itemName, available)`
+
 ## Adapter Behavior
 
 Legacy mode:
@@ -145,9 +169,12 @@ Firestore V2 mode:
 - Uses targeted map document updates for map CRUD/archive/restore, ordering, pins, scale, and image URL writes.
 - Uses targeted campaign document updates for progress sections and top-level progress archives/restores.
 - Uses targeted campaign document updates for camping settings, custom activities, assignments, rolls, and reset/archive/restore behavior.
+- Uses targeted global config/custom document writes for shop/trader state, custom items/actions, and bestiary reveal-state.
 - Does not route migrated writes through `writeLegacyDbDiffToV2`.
 
 If Firestore config is missing, the adapter falls back to legacy mode.
+
+`createDataActions` accepts optional `repositories` and `firestore` parameters. `CampaignContext` injects the runtime Firestore repositories; tests inject fake repositories without loading Firebase.
 
 ## Identity Rules
 
@@ -239,14 +266,19 @@ GM/Player Camping:
 - Player activity assignment, roll recording, and unassign.
 - Assignments store `characterId` plus legacy-compatible `characterName`.
 
+Global/Shop/Bestiary:
+
+- GM ItemsView trader create/update/category/hide and trader inventory edits.
+- GM ItemsView available item/formula toggles.
+- GM/player custom item saves and custom action saves.
+- Encounter creature reveal-state updates.
+
 ## Remaining Direct Legacy Writes
 
-Expected after the maps/progress/camping wave:
+Expected after the architecture stabilization wave:
 
 - Generic `updateActiveCampaign` remains a compatibility path because some pact/player-local flows still use it for non-migrated child collections.
-- Pact, custom content, bestiary reveal-state, and global catalog writes still have direct/broad `setDb` paths.
-- Player-created custom item catalog registration still uses `onSetDb` for global custom item storage.
-- Some legacy fallback branches remain in `ItemsView` for trader/global behavior.
+- Pact, abilities, lore, bestiary custom creature, and some global catalog writes still have direct/broad `setDb` paths.
 - `useFirestoreV2Db` still keeps broad diff writes for non-migrated paths.
 
-Next migrations should add domain actions for pacts, bestiary reveal-state, and global/custom content before switching V2 to default.
+Next migrations should add domain actions for pacts, abilities, lore, bestiary custom creatures, and remaining global/custom content before switching V2 to default.

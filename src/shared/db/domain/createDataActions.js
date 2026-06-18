@@ -1,5 +1,3 @@
-import { db as firestoreDb } from "../firebase-config.js";
-import { campaignRepo, characterRepo, encounterRepo, lootRepo, mapRepo, memberRepo, questRepo } from "../v2/repositories.js";
 import {
   addPartyXpInCampaign,
   applyCampaignUpdate,
@@ -98,16 +96,33 @@ import {
   unassignCampingActivityInCampaign,
   upsertCampingActivityInCampaign,
 } from "./campingReducers.js";
+import {
+  addItemsToTraderInDb,
+  createTraderInDb,
+  deleteCustomActionInDb,
+  deleteCustomItemInDb,
+  deleteTraderInDb,
+  removeItemsFromTraderInDb,
+  saveCustomActionInDb,
+  saveCustomItemInDb,
+  setShopFormulaAvailableInDb,
+  setShopItemAvailableInDb,
+  setTraderHiddenInDb,
+  updateBestiaryRevealStateInDb,
+  updateTraderInDb,
+} from "./globalContentReducers.js";
 
 export function createDataActions({
   db,
   setDb,
   mode = "legacy",
-  firestore = firestoreDb,
+  firestore = null,
   createId = () => createInstanceId("item"),
   actorEmail = null,
+  repositories = {},
 } = {}) {
   const useFirestoreV2 = mode === "firestore-v2" && hasFirestoreConfig(firestore);
+  const repos = repositories;
   const actor = normalizeEmail(actorEmail);
   const nowIso = () => new Date().toISOString();
   const createDomainId = (prefix) => {
@@ -145,7 +160,7 @@ export function createDataActions({
 
   const updateCharacter = (campaignId, characterId, updater) => {
     if (useFirestoreV2) {
-      return characterRepo.updateCharacter(firestore, campaignId, characterId, (character) =>
+      return repos.characterRepo.updateCharacter(firestore, campaignId, characterId, (character) =>
         applyCharacterUpdate({ ...character, id: character.id || characterId }, updater, { createId })
       );
     }
@@ -161,7 +176,7 @@ export function createDataActions({
 
   const updateLootBag = (campaignId, lootBagId, updater) => {
     if (useFirestoreV2) {
-      return lootRepo.updateLootBag(firestore, campaignId, lootBagId, (lootBag) =>
+      return repos.lootRepo.updateLootBag(firestore, campaignId, lootBagId, (lootBag) =>
         applyLootBagUpdate(lootBag, updater, { createId })
       );
     }
@@ -182,7 +197,7 @@ export function createDataActions({
     );
 
     if (useFirestoreV2) {
-      return lootRepo.createLootBag(firestore, campaignId, normalizedBag);
+      return repos.lootRepo.createLootBag(firestore, campaignId, normalizedBag);
     }
 
     return updateCampaignLegacy(campaignId, (campaign) => {
@@ -194,7 +209,7 @@ export function createDataActions({
 
   const claimItem = (campaignId, lootBagId, item, characterId) => {
     if (useFirestoreV2) {
-      return lootRepo.updateLootBagAndCharacter(
+      return repos.lootRepo.updateLootBagAndCharacter(
         firestore,
         campaignId,
         lootBagId,
@@ -224,7 +239,7 @@ export function createDataActions({
 
   const claimGold = (campaignId, lootBagId, characterId, amount) => {
     if (useFirestoreV2) {
-      return lootRepo.updateLootBagAndCharacter(
+      return repos.lootRepo.updateLootBagAndCharacter(
         firestore,
         campaignId,
         lootBagId,
@@ -252,7 +267,7 @@ export function createDataActions({
     const characterIds = (campaign?.characters || []).map((character) => character.id).filter(Boolean);
 
     if (useFirestoreV2) {
-      return lootRepo.updateLootBagAndCharacters(
+      return repos.lootRepo.updateLootBagAndCharacters(
         firestore,
         campaignId,
         lootBagId,
@@ -287,7 +302,7 @@ export function createDataActions({
   const createQuest = (campaignId, quest) => {
     const normalizedQuest = createQuestRecord(quest, { createId: () => createDomainId("quest") });
     if (useFirestoreV2) {
-      return questRepo.createQuest(firestore, campaignId, normalizedQuest).then(() => normalizedQuest.id);
+      return repos.questRepo.createQuest(firestore, campaignId, normalizedQuest).then(() => normalizedQuest.id);
     }
     return updateCampaignLegacy(campaignId, (campaign) =>
       upsertQuestInCampaign(campaign, normalizedQuest, { createId: () => createDomainId("quest") })
@@ -296,7 +311,7 @@ export function createDataActions({
 
   const updateQuest = (campaignId, questId, updater) => {
     if (useFirestoreV2) {
-      return questRepo.updateQuest(firestore, campaignId, questId, (quest) =>
+      return repos.questRepo.updateQuest(firestore, campaignId, questId, (quest) =>
         applyQuestUpdate({ ...quest, id: quest.id || questId }, updater)
       );
     }
@@ -307,7 +322,7 @@ export function createDataActions({
     const options = { now: nowIso(), actorEmail: actor };
     const questIds = collectQuestTreeIds(db?.campaigns?.[campaignId]?.quests || [], questId);
     if (useFirestoreV2) {
-      return questRepo.updateQuests(firestore, campaignId, questIds, (questsById) =>
+      return repos.questRepo.updateQuests(firestore, campaignId, questIds, (questsById) =>
         Object.fromEntries(Object.entries(questsById).map(([id, quest]) => [id, markDeleted(quest, options)]))
       );
     }
@@ -318,7 +333,7 @@ export function createDataActions({
     const options = { now: nowIso(), actorEmail: actor };
     const questIds = collectQuestTreeIds(db?.campaigns?.[campaignId]?.quests || [], questId);
     if (useFirestoreV2) {
-      return questRepo.updateQuests(firestore, campaignId, questIds, (questsById) =>
+      return repos.questRepo.updateQuests(firestore, campaignId, questIds, (questsById) =>
         Object.fromEntries(Object.entries(questsById).map(([id, quest]) => [id, markRestored(quest, options)]))
       );
     }
@@ -338,7 +353,7 @@ export function createDataActions({
     };
 
     if (useFirestoreV2) {
-      return questRepo.updateQuestAndCampaignAndCharacters(
+      return repos.questRepo.updateQuestAndCampaignAndCharacters(
         firestore,
         campaignId,
         questId,
@@ -379,7 +394,7 @@ export function createDataActions({
 
   const toggleObjectiveHidden = (campaignId, questId, objectiveIndex) => {
     if (useFirestoreV2) {
-      return questRepo.updateQuest(firestore, campaignId, questId, (quest) =>
+      return repos.questRepo.updateQuest(firestore, campaignId, questId, (quest) =>
         toggleQuestObjectiveHiddenInCampaign({ quests: [{ ...quest, id: quest.id || questId }] }, questId, objectiveIndex)
           .quests[0]
       );
@@ -391,7 +406,7 @@ export function createDataActions({
 
   const revealSecret = (campaignId, questId, secretText) => {
     if (useFirestoreV2) {
-      return questRepo.updateQuest(firestore, campaignId, questId, (quest) =>
+      return repos.questRepo.updateQuest(firestore, campaignId, questId, (quest) =>
         revealQuestSecretInCampaign({ quests: [{ ...quest, id: quest.id || questId }] }, questId, secretText).quests[0]
       );
     }
@@ -400,7 +415,7 @@ export function createDataActions({
 
   const clearNotification = (campaignId, notificationId) => {
     if (useFirestoreV2 && campaignId) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
         clearCampaignNotificationInCampaign({ ...campaign, id: campaign.id || campaignId }, notificationId)
       );
     }
@@ -417,7 +432,7 @@ export function createDataActions({
   const createEncounter = (campaignId, nameOrEncounter) => {
     const encounter = createEncounterRecord(nameOrEncounter, { createId: () => createDomainId("encounter") });
     if (useFirestoreV2) {
-      return encounterRepo.createEncounter(firestore, campaignId, encounter).then(() => encounter.id);
+      return repos.encounterRepo.createEncounter(firestore, campaignId, encounter).then(() => encounter.id);
     }
     return updateCampaignLegacy(campaignId, (campaign) => {
       const result = createEncounterInCampaign(campaign, encounter, { createId: () => createDomainId("encounter") });
@@ -427,7 +442,7 @@ export function createDataActions({
 
   const updateEncounter = (campaignId, encounterId, updater) => {
     if (useFirestoreV2) {
-      return encounterRepo.updateEncounter(firestore, campaignId, encounterId, (encounter) =>
+      return repos.encounterRepo.updateEncounter(firestore, campaignId, encounterId, (encounter) =>
         applyEncounterUpdate({ ...encounter, id: encounter.id || encounterId }, updater)
       );
     }
@@ -437,7 +452,7 @@ export function createDataActions({
   const softDeleteEncounter = (campaignId, encounterId) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return encounterRepo.updateEncounter(firestore, campaignId, encounterId, (encounter) =>
+      return repos.encounterRepo.updateEncounter(firestore, campaignId, encounterId, (encounter) =>
         softDeleteEncounterInCampaign(
           { encounters: [{ ...encounter, id: encounter.id || encounterId }] },
           encounterId,
@@ -451,7 +466,7 @@ export function createDataActions({
   const restoreEncounter = (campaignId, encounterId) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return encounterRepo.updateEncounter(firestore, campaignId, encounterId, (encounter) =>
+      return repos.encounterRepo.updateEncounter(firestore, campaignId, encounterId, (encounter) =>
         restoreEncounterInCampaign(
           { encounters: [{ ...encounter, id: encounter.id || encounterId }] },
           encounterId,
@@ -468,7 +483,7 @@ export function createDataActions({
       .map((encounter) => encounter.id);
 
     if (useFirestoreV2) {
-      return encounterRepo.updateEncounters(firestore, campaignId, encounterIds, (encountersById) =>
+      return repos.encounterRepo.updateEncounters(firestore, campaignId, encounterIds, (encountersById) =>
         Object.fromEntries(
           Object.entries(encountersById).map(([id, encounter]) => [
             id,
@@ -485,7 +500,7 @@ export function createDataActions({
 
   const updateEncounterViaReducer = (campaignId, encounterId, reducer) => {
     if (useFirestoreV2) {
-      return encounterRepo.updateEncounter(firestore, campaignId, encounterId, (encounter) =>
+      return repos.encounterRepo.updateEncounter(firestore, campaignId, encounterId, (encounter) =>
         reducer({ encounters: [{ ...encounter, id: encounter.id || encounterId }] }, encounterId).encounters[0]
       );
     }
@@ -500,7 +515,7 @@ export function createDataActions({
   const addAllPlayers = (campaignId, encounterId) => {
     if (useFirestoreV2) {
       const campaign = db?.campaigns?.[campaignId] || {};
-      return encounterRepo.updateEncounter(firestore, campaignId, encounterId, (encounter) =>
+      return repos.encounterRepo.updateEncounter(firestore, campaignId, encounterId, (encounter) =>
         addAllPlayersToEncounterInCampaign(
           {
             ...campaign,
@@ -556,7 +571,7 @@ export function createDataActions({
     });
 
     if (useFirestoreV2) {
-      return mapRepo.createMap(firestore, campaignId, map).then(() => map.id);
+      return repos.mapRepo.createMap(firestore, campaignId, map).then(() => map.id);
     }
     return updateCampaignLegacy(campaignId, (campaign) =>
       upsertMapInCampaign(campaign, map, { createId: () => createDomainId("map") })
@@ -565,7 +580,7 @@ export function createDataActions({
 
   const updateMap = (campaignId, mapId, updater) => {
     if (useFirestoreV2) {
-      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+      return repos.mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
         updateMapInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, updater).maps[0]
       );
     }
@@ -575,7 +590,7 @@ export function createDataActions({
   const softDeleteMap = (campaignId, mapId) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+      return repos.mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
         softDeleteMapInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, options).maps[0]
       );
     }
@@ -585,7 +600,7 @@ export function createDataActions({
   const restoreMap = (campaignId, mapId) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+      return repos.mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
         restoreMapInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, options).maps[0]
       );
     }
@@ -594,7 +609,7 @@ export function createDataActions({
 
   const reorderMaps = (campaignId, orderedIds) => {
     if (useFirestoreV2) {
-      return mapRepo.updateMaps(firestore, campaignId, orderedIds, (mapsById) => {
+      return repos.mapRepo.updateMaps(firestore, campaignId, orderedIds, (mapsById) => {
         const nextCampaign = reorderMapsInCampaign(
           { maps: orderedIds.map((id) => ({ ...mapsById[id], id: mapsById[id]?.id || id })) },
           orderedIds
@@ -607,7 +622,7 @@ export function createDataActions({
 
   const setImageUrl = (campaignId, mapId, imageUrl) => {
     if (useFirestoreV2) {
-      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+      return repos.mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
         setMapImageUrlInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, imageUrl).maps[0]
       );
     }
@@ -617,7 +632,7 @@ export function createDataActions({
   const upsertPin = (campaignId, mapId, pin) => {
     const options = { createId: () => createDomainId("pin") };
     if (useFirestoreV2) {
-      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+      return repos.mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
         upsertMapPinInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, pin, options).maps[0]
       );
     }
@@ -626,7 +641,7 @@ export function createDataActions({
 
   const deletePin = (campaignId, mapId, pinId) => {
     if (useFirestoreV2) {
-      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+      return repos.mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
         deleteMapPinInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, pinId).maps[0]
       );
     }
@@ -635,7 +650,7 @@ export function createDataActions({
 
   const setScale = (campaignId, mapId, scale) => {
     if (useFirestoreV2) {
-      return mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
+      return repos.mapRepo.updateMap(firestore, campaignId, mapId, (map) =>
         setMapScaleInCampaign({ maps: [{ ...map, id: map.id || mapId }] }, mapId, scale).maps[0]
       );
     }
@@ -644,7 +659,7 @@ export function createDataActions({
 
   const updateProgress = (campaignId, patchOrUpdater) => {
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
         stripChildCollections(updateProgressInCampaign({ ...campaign, id: campaign.id || campaignId }, patchOrUpdater))
       );
     }
@@ -654,7 +669,7 @@ export function createDataActions({
   const softDeleteProgressEntry = (campaignId, section, entryId) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
         stripChildCollections(
           softDeleteProgressEntryInCampaign({ ...campaign, id: campaign.id || campaignId }, section, entryId, options)
         )
@@ -668,7 +683,7 @@ export function createDataActions({
   const restoreProgressEntry = (campaignId, section, entryId) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
         stripChildCollections(
           restoreProgressEntryInCampaign({ ...campaign, id: campaign.id || campaignId }, section, entryId, options)
         )
@@ -681,7 +696,7 @@ export function createDataActions({
 
   const updateCamping = (campaignId, patchOrUpdater) => {
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
         stripChildCollections(updateCampingInCampaign({ ...campaign, id: campaign.id || campaignId }, patchOrUpdater))
       );
     }
@@ -691,7 +706,7 @@ export function createDataActions({
   const upsertCampingActivity = (campaignId, activity) => {
     const options = { createId: () => createDomainId("camping_activity") };
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
         stripChildCollections(
           upsertCampingActivityInCampaign({ ...campaign, id: campaign.id || campaignId }, activity, options)
         )
@@ -703,7 +718,7 @@ export function createDataActions({
   const deleteCampingActivity = (campaignId, activityId) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
         stripChildCollections(
           softDeleteCampingActivityInCampaign({ ...campaign, id: campaign.id || campaignId }, activityId, options)
         )
@@ -715,7 +730,7 @@ export function createDataActions({
   const restoreCampingActivity = (campaignId, activityId) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
         stripChildCollections(
           restoreCampingActivityInCampaign({ ...campaign, id: campaign.id || campaignId }, activityId, options)
         )
@@ -726,7 +741,7 @@ export function createDataActions({
 
   const resetDefaultCampingActivity = (campaignId, activityId) => {
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
         stripChildCollections(resetDefaultCampingActivityInCampaign({ ...campaign, id: campaign.id || campaignId }, activityId))
       );
     }
@@ -736,7 +751,7 @@ export function createDataActions({
   const assignCampingActivity = (campaignId, activityId, character) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
         stripChildCollections(
           assignCampingActivityInCampaign({ ...campaign, id: campaign.id || campaignId }, activityId, character, options)
         )
@@ -750,7 +765,7 @@ export function createDataActions({
   const recordCampingActivityRoll = (campaignId, activityId, character, rollResult) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
         stripChildCollections(
           recordCampingActivityRollInCampaign(
             { ...campaign, id: campaign.id || campaignId },
@@ -769,7 +784,7 @@ export function createDataActions({
 
   const unassignCampingActivity = (campaignId, activityId, character) => {
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
         stripChildCollections(
           unassignCampingActivityInCampaign({ ...campaign, id: campaign.id || campaignId }, activityId, character)
         )
@@ -785,9 +800,9 @@ export function createDataActions({
     const campaign = createCampaignRecord(name, { id: campaignId, now: Date.now() });
 
     if (useFirestoreV2) {
-      const writes = [campaignRepo.createCampaign(firestore, campaign)];
+      const writes = [repos.campaignRepo.createCampaign(firestore, campaign)];
       if (actor) {
-        writes.push(memberRepo.assignUser(firestore, campaignId, actor, {
+        writes.push(repos.memberRepo.assignUser(firestore, campaignId, actor, {
           role: "gm",
           characterId: null,
         }));
@@ -804,7 +819,7 @@ export function createDataActions({
 
   const updateCampaign = (campaignId, updater) => {
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
         applyCampaignUpdate({ ...campaign, id: campaign.id || campaignId }, updater)
       );
     }
@@ -814,7 +829,7 @@ export function createDataActions({
   const softDeleteCampaign = (campaignId) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) => markDeleted(campaign, options));
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) => markDeleted(campaign, options));
     }
     return updateDbLegacy((prev) => softDeleteCampaignInDb(prev, campaignId, options));
   };
@@ -822,7 +837,7 @@ export function createDataActions({
   const restoreCampaign = (campaignId) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaign(firestore, campaignId, (campaign) => markRestored(campaign, options));
+      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) => markRestored(campaign, options));
     }
     return updateDbLegacy((prev) => restoreCampaignInDb(prev, campaignId, options));
   };
@@ -835,7 +850,7 @@ export function createDataActions({
       .filter(Boolean);
 
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaignAndCharacters(
+      return repos.campaignRepo.updateCampaignAndCharacters(
         firestore,
         campaignId,
         activeCharacterIds,
@@ -871,7 +886,7 @@ export function createDataActions({
     const notificationId = Date.now();
 
     if (useFirestoreV2) {
-      return campaignRepo.updateCampaignAndCharacters(
+      return repos.campaignRepo.updateCampaignAndCharacters(
         firestore,
         campaignId,
         activeCharacterIds,
@@ -904,7 +919,7 @@ export function createDataActions({
     const normalizedEmail = normalizeEmail(email);
     if (!normalizedEmail) return Promise.resolve();
     if (useFirestoreV2) {
-      return memberRepo.assignUser(firestore, campaignId, normalizedEmail, { role, characterId });
+      return repos.memberRepo.assignUser(firestore, campaignId, normalizedEmail, { role, characterId });
     }
     return updateDbLegacy((prev) => assignUserInDb(prev, normalizedEmail, campaignId, characterId, role));
   };
@@ -915,7 +930,7 @@ export function createDataActions({
     const userInfo = db?.users?.[normalizedEmail] || db?.users?.[email];
     if (useFirestoreV2) {
       if (!userInfo?.campaignId) return Promise.resolve();
-      return memberRepo.revokeUser(firestore, userInfo.campaignId, normalizedEmail);
+      return repos.memberRepo.revokeUser(firestore, userInfo.campaignId, normalizedEmail);
     }
     return updateDbLegacy((prev) => revokeUserInDb(prev, normalizedEmail));
   };
@@ -923,7 +938,7 @@ export function createDataActions({
   const createCharacter = (campaignId, character) => {
     const normalizedCharacter = createCharacterRecord(character, { createId });
     if (useFirestoreV2) {
-      return characterRepo.createCharacter(firestore, campaignId, normalizedCharacter);
+      return repos.characterRepo.createCharacter(firestore, campaignId, normalizedCharacter);
     }
     return updateCampaignLegacy(campaignId, (campaign) =>
       createCharacterInCampaign(campaign, normalizedCharacter, { createId })
@@ -937,7 +952,7 @@ export function createDataActions({
       .map(([email]) => normalizeEmail(email));
 
     if (useFirestoreV2) {
-      return characterRepo.updateCharacterAndMembers(
+      return repos.characterRepo.updateCharacterAndMembers(
         firestore,
         campaignId,
         characterId,
@@ -953,7 +968,7 @@ export function createDataActions({
   const restoreCharacter = (campaignId, characterId) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return characterRepo.updateCharacter(firestore, campaignId, characterId, (character) =>
+      return repos.characterRepo.updateCharacter(firestore, campaignId, characterId, (character) =>
         markRestored(character, options)
       );
     }
@@ -965,12 +980,85 @@ export function createDataActions({
   const importLegacyCharacter = (campaignId, character, legacyIndex) => {
     const normalizedCharacter = createCharacterRecord(character, { createId });
     if (useFirestoreV2) {
-      return characterRepo.createCharacter(firestore, campaignId, normalizedCharacter);
+      return repos.characterRepo.createCharacter(firestore, campaignId, normalizedCharacter);
     }
     return updateDbLegacy((prev) =>
       importLegacyCharacterInDb(prev, campaignId, normalizedCharacter, legacyIndex, { createId })
     );
   };
+
+  const updateGlobalConfig = (updater) => {
+    if (useFirestoreV2) {
+      return repos.globalRepo.updateGlobalConfig(firestore, updater);
+    }
+    return updateDbLegacy(updater);
+  };
+
+  const saveCustomItem = (item) => {
+    if (useFirestoreV2) {
+      return repos.globalRepo.setCustomItem(firestore, item);
+    }
+    return updateDbLegacy((prev) => saveCustomItemInDb(prev, item));
+  };
+
+  const deleteCustomItem = (itemOrName) => {
+    if (useFirestoreV2) {
+      return repos.globalRepo.deleteCustomItem(firestore, itemOrName);
+    }
+    return updateDbLegacy((prev) => deleteCustomItemInDb(prev, itemOrName));
+  };
+
+  const saveCustomAction = (action) => {
+    if (useFirestoreV2) {
+      return repos.globalRepo.setCustomAction(firestore, action);
+    }
+    return updateDbLegacy((prev) => saveCustomActionInDb(prev, action));
+  };
+
+  const deleteCustomAction = (actionOrName) => {
+    if (useFirestoreV2) {
+      return repos.globalRepo.deleteCustomAction(firestore, actionOrName);
+    }
+    return updateDbLegacy((prev) => deleteCustomActionInDb(prev, actionOrName));
+  };
+
+  const updateBestiaryRevealState = (creatureId, field, revealMode) =>
+    updateGlobalConfig((current) => updateBestiaryRevealStateInDb(current, creatureId, field, revealMode));
+
+  const createTrader = (trader, category = "General") => {
+    const traderRecord =
+      typeof trader === "string"
+        ? { id: createDomainId("trader"), name: trader.trim(), inventory: [], category }
+        : {
+            id: trader?.id ?? createDomainId("trader"),
+            name: String(trader?.name || "").trim(),
+            inventory: Array.isArray(trader?.inventory) ? trader.inventory : [],
+            category: trader?.category || category || "General",
+            ...trader,
+          };
+    if (!traderRecord.name) return Promise.resolve(null);
+    return updateGlobalConfig((current) => createTraderInDb(current, traderRecord)).then(() => traderRecord.id);
+  };
+
+  const updateTrader = (traderId, updater) =>
+    updateGlobalConfig((current) => updateTraderInDb(current, traderId, updater));
+
+  const deleteTrader = (traderId) => updateGlobalConfig((current) => deleteTraderInDb(current, traderId));
+
+  const setTraderHidden = (traderId, hidden) =>
+    updateGlobalConfig((current) => setTraderHiddenInDb(current, traderId, hidden));
+
+  const addItemsToTrader = (traderId, items) =>
+    updateGlobalConfig((current) => addItemsToTraderInDb(current, traderId, items));
+
+  const removeItemsFromTrader = (traderId, items) =>
+    updateGlobalConfig((current) => removeItemsFromTraderInDb(current, traderId, items));
+
+  const setItemAvailable = (itemName, available) =>
+    updateGlobalConfig((current) => setShopItemAvailableInDb(current, itemName, available));
+
+  const setFormulaAvailable = (itemName, available) =>
+    updateGlobalConfig((current) => setShopFormulaAvailableInDb(current, itemName, available));
 
   return {
     mode: useFirestoreV2 ? "firestore-v2" : "legacy",
@@ -1024,7 +1112,7 @@ export function createDataActions({
       },
       transferItem(campaignId, fromCharacterId, toCharacterId, item, qty) {
         if (useFirestoreV2) {
-          return characterRepo.updateCharacters(
+          return repos.characterRepo.updateCharacters(
             firestore,
             campaignId,
             [fromCharacterId, toCharacterId],
@@ -1125,6 +1213,25 @@ export function createDataActions({
       assignActivity: assignCampingActivity,
       recordActivityRoll: recordCampingActivityRoll,
       unassignActivity: unassignCampingActivity,
+    },
+    bestiary: {
+      updateRevealState: updateBestiaryRevealState,
+    },
+    globalContent: {
+      saveCustomItem,
+      deleteCustomItem,
+      saveCustomAction,
+      deleteCustomAction,
+    },
+    shop: {
+      createTrader,
+      updateTrader,
+      deleteTrader,
+      setTraderHidden,
+      addItemsToTrader,
+      removeItemsFromTrader,
+      setItemAvailable,
+      setFormulaAvailable,
     },
   };
 }
