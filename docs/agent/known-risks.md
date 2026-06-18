@@ -8,12 +8,12 @@ Last updated: 2026-06-18.
 
 The worst route/component files have been cut into shells/controllers/layouts:
 
-- `src/player/PlayerApp.jsx` is a route shell; `PlayerAppController.jsx` still carries the old player handlers.
+- `src/player/PlayerApp.jsx` is a route shell; `PlayerAppController.jsx` is now a smaller orchestrator backed by `src/player/hooks/`.
 - `src/admin/AdminApp.jsx` delegates tab content to `AdminTabContent.jsx`.
 - `src/admin/ItemsView.jsx` delegates rendering to `items/ItemsViewLayout.jsx`.
 - `src/admin/EncounterView.jsx` delegates sidebar/info panel rendering to `encounter/EncounterPanels.jsx`.
 
-The residual risk moved to the new controller/layout files. Continue extracting focused hooks while touching specific workflows.
+The residual risk moved to the new hooks and controller/layout files. Continue extracting focused pure helpers while touching specific workflows.
 
 2. Legacy projection as hidden contract
 
@@ -36,7 +36,7 @@ Generated catalog files are large. It is easy to accidentally import a full cata
 ## Data And Migration Risks
 
 - `migrateDb` mutates the input object in place by design. Be careful when calling it with shared references.
-- Runtime character defaults in `PlayerApp.jsx` directly mutate the selected character object before render. Moving this into migration would be cleaner.
+- Runtime character defaults in `PlayerAppController.jsx` directly mutate the selected character object before render. Moving this into migration would be cleaner.
 - Root `quests` and `lootBags` still exist for compatibility. Some code paths may read them when campaign data is absent.
 - Player-created custom item catalog registration uses `dataActions.globalContent.saveCustomItem`. The immediate inventory add still uses `onUpdateCharacter`.
 - Campaign, character, quest/subquest, encounter, and map deletion is soft delete. Do not hard-delete these documents unless a future purge flow is explicitly designed and approved.
@@ -84,7 +84,7 @@ Short-term:
 
 Medium-term:
 
-- Continue extracting `PlayerAppController.jsx` into real controller hooks for character, inventory, navigation, and modals.
+- Keep shrinking large controller hooks, especially `usePlayerInventoryActions`, into smaller pure reducers/helpers as workflows are touched.
 - Continue shrinking compatibility reads and the legacy projection before making v2 the default.
 - Add smoke tests for catalog decoders and `parseFoundry`.
 - Add a minimal lint/format check to catch import and JSX issues.

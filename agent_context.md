@@ -170,11 +170,12 @@ Important scripts:
 
 ## Known Architectural State
 
-- `src/player/PlayerApp.jsx` is now a route shell; the current legacy-heavy implementation lives in `src/player/PlayerAppController.jsx`.
+- `src/player/PlayerApp.jsx` is now a route shell; `src/player/PlayerAppController.jsx` is a thin orchestrator backed by hooks in `src/player/hooks/`.
+- Player controller hooks: `usePlayerNavigation`, `usePlayerModalState`, `usePlayerCatalogInspection`, `usePlayerCharacterActions`, `usePlayerInventoryActions`, and temporary `usePlayerRuntimeRepair`.
 - `src/admin/AdminApp.jsx` delegates tab rendering to `src/admin/AdminTabContent.jsx`, and admin tab views are lazy loaded.
 - `src/admin/ItemsView.jsx` is now the data/action controller for `src/admin/items/ItemsViewLayout.jsx`.
 - `src/admin/EncounterView.jsx` delegates sidebar/info-panel rendering to `src/admin/encounter/EncounterPanels.jsx`.
-- Some migration and normalization happens at runtime in React effects, especially for older skill names and data shape defaults.
+- Some migration and normalization still happens at runtime through `usePlayerRuntimeRepair` and render-time defaults; move these into data migration/normalizers before a v2 default switch.
 - Admin and player flows share `ModalManager` and catalog detail fetching patterns.
 - Direct browser prompts/alerts/confirms are common.
 - `dangerouslySetInnerHTML` is used for parsed PF2e/Foundry content. Treat `parseFoundry` and trusted source assumptions carefully.

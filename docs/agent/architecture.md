@@ -63,12 +63,11 @@ Runtime writes should go through `dataActions`. `CampaignContext` no longer expo
 
 ## Major UI Shells
 
-`src/player/PlayerApp.jsx`:
+`src/player/PlayerApp.jsx` and `src/player/PlayerAppController.jsx`:
 
-- Main player sheet and GM preview shell.
-- Selects character from `activeCampaign.characters`; GM can cycle characters.
-- Has character mode and story mode tabs.
-- Owns many workflows directly: item consumption, daily prep, buying, transfers, weapon loading/firing, content-link navigation, modal history, catalog additions, loot claiming, formula buying, rune/equipment toggles.
+- `PlayerApp.jsx` is the lazy route shell.
+- `PlayerAppController.jsx` selects the active character, renders tabs, and orchestrates child views.
+- Focused hooks under `src/player/hooks/` own navigation, modal state, catalog inspection/detail loading, character action wrappers, inventory/catalog handlers, and temporary runtime repair.
 - Delegates display to `src/player/views/*`, `src/player/sections/*`, and `src/player/modals/*`.
 
 `src/admin/AdminApp.jsx`:
