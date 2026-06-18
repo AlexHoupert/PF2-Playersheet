@@ -25,7 +25,7 @@ Inventory and loot code sometimes uses `name`, sometimes `_index`, sometimes `in
 
 4. Whole-DB writes in compatibility paths
 
-Normal UI write paths for Campaign/Session, Character/Inventory/Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary, and Player runtime fallbacks now use `dataActions` and targeted repositories. Broad writes remain only in compatibility locations: `AdminApp`, `CampaignContext.updateActiveCampaign`, `createDataActions` legacy adapter, and the v2 broad-diff compatibility layer.
+Normal UI write paths for Campaign/Session, Character/Inventory/Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary, and Player runtime fallbacks now use `dataActions` and targeted repositories. UI and context broad writes are guarded against regressions; broad writes remain only in the `createDataActions` legacy adapter and the v2 broad-diff compatibility layer.
 
 5. Generated data size and source duplication
 
@@ -38,8 +38,8 @@ Generated catalog files are large. It is easy to accidentally import a full cata
 - Root `quests` and `lootBags` still exist for compatibility. Some code paths may read them when campaign data is absent.
 - Player-created custom item catalog registration uses `dataActions.globalContent.saveCustomItem`. The immediate inventory add still uses `onUpdateCharacter`.
 - Campaign, character, quest/subquest, encounter, and map deletion is soft delete. Do not hard-delete these documents unless a future purge flow is explicitly designed and approved.
-- `CampaignContext.updateActiveCampaign` remains a broad compatibility helper. Do not use it for new work.
-- Broad UI writes are guarded by `scripts/check_broad_writes.js`; see `docs/agent/migration-backlog.md`.
+- `CampaignContext.updateActiveCampaign` has been removed from the public context API.
+- Broad UI and context writes are guarded by `scripts/check_broad_writes.js`; see `docs/agent/migration-backlog.md`.
 - Quest rewards are idempotent and not automatically rolled back when objectives are later marked incomplete.
 - Quest reward notifications are campaign-scoped; root `notificationQueue` remains only a legacy fallback.
 - `ItemsView` trader, availability/formula, custom-item, loot-bag, and character assignment paths have been moved to `dataActions`.

@@ -307,10 +307,12 @@ Player compatibility:
 
 ## Remaining Direct Legacy Writes
 
-Expected after the Global Admin Content wave:
+Expected after the broad-write cleanup:
 
-- Generic `updateActiveCampaign` remains a deprecated compatibility path in `CampaignContext`.
-- `AdminApp` keeps a root-character fallback for the old campaignless admin/player mode.
+- UI and context broad writes are forbidden by `scripts/check_broad_writes.js`.
+- `CampaignContext` no longer exposes `updateActiveCampaign`.
+- `AdminApp` no longer writes root-level campaignless characters.
+- Only the legacy adapter branch in `createDataActions` intentionally writes through `setDb`.
 - `useFirestoreV2Db` still keeps broad diff writes for non-migrated paths.
 
 Next migrations should keep shrinking compatibility reads and the root legacy projection before switching V2 to default.

@@ -93,22 +93,6 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false, dbMode 
         });
     }, []);
 
-    // Deprecated compatibility escape hatch for legacy-only domains and runtime data repair.
-    // New migrated domains must go through dataActions so V2 can use targeted repositories.
-    const updateActiveCampaign = React.useCallback((updater) => {
-        if (!activeCampaign || !targetCampaignId) return;
-        setDb(prev => {
-            const next = { ...prev };
-            if (!next.campaigns) next.campaigns = {};
-
-            const currentCamp = next.campaigns[targetCampaignId] || {};
-            const updatedCamp = typeof updater === 'function' ? updater(currentCamp) : updater;
-
-            next.campaigns[targetCampaignId] = { ...currentCamp, ...updatedCamp };
-            return next;
-        });
-    }, [activeCampaign, targetCampaignId, setDb]);
-
     const createCampaign = React.useCallback((name) => {
         const action = dataActions.campaign.createCampaign(name);
         runDataAction(action).then(id => {
@@ -181,10 +165,8 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false, dbMode 
         restoreCharacter,
         importLegacyCharacter,
         setPartyXp,
-        addPartyXp,
-        // Data Actions
-        updateActiveCampaign
-    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, myCharacter, isGM, userInfo, dbMode, dbStatus, dataActions, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setPartyXp, addPartyXp, updateActiveCampaign]);
+        addPartyXp
+    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, myCharacter, isGM, userInfo, dbMode, dbStatus, dataActions, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setPartyXp, addPartyXp]);
 
     return (
         <CampaignContext.Provider value={value}>

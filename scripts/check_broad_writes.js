@@ -6,6 +6,7 @@ const repoRoot = process.cwd();
 const srcRoot = path.join(repoRoot, "src");
 
 const protectedFiles = new Set([
+  "src/admin/AdminApp.jsx",
   "src/admin/ItemsView.jsx",
   "src/admin/EncounterView.jsx",
   "src/admin/QuestsView.jsx",
@@ -24,11 +25,10 @@ const protectedFiles = new Set([
   "src/camping/CampingAdminView.jsx",
   "src/camping/CampingView.jsx",
   "src/camping/CampScreen.jsx",
+  "src/shared/context/CampaignContext.jsx",
 ]);
 
 const allowedBroadWriteFiles = new Map([
-  ["src/admin/AdminApp.jsx", "legacy admin/player tab glue"],
-  ["src/shared/context/CampaignContext.jsx", "deprecated compatibility escape hatch"],
   ["src/shared/db/domain/createDataActions.js", "legacy adapter implementation"],
 ]);
 

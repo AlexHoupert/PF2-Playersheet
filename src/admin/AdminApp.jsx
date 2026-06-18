@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { deepClone } from '../shared/utils/deepClone';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { DB_STORAGE_KEY } from '../shared/db/usePersistedDb';
 
@@ -93,25 +92,9 @@ export default function AdminApp({ db, setDb }) {
 
     // --- HELPERS ---
     const updateCharacter = (index, fn) => {
-        if (activeCampaign) {
-            const characterId = activeCampaign.characters?.[index]?.id;
-            if (!characterId) return;
-            runDataAction(dataActions.character.updateCharacter(activeCampaign.id, characterId, fn));
-            return;
-        }
-
-        setDb(prev => {
-            const next = { ...prev };
-            {
-                const nextChars = [...(next.characters || [])];
-                if (!nextChars[index]) return prev;
-                const charClone = deepClone(nextChars[index]);
-                fn(charClone);
-                nextChars[index] = charClone;
-                next.characters = nextChars;
-            }
-            return next;
-        });
+        const characterId = activeCampaign?.characters?.[index]?.id;
+        if (!activeCampaign?.id || !characterId) return;
+        runDataAction(dataActions.character.updateCharacter(activeCampaign.id, characterId, fn));
     };
 
     const resetData = () => {

@@ -10,6 +10,7 @@ are compatibility debt, not patterns for new code.
 
 These UI files must not introduce direct `setDb` or `updateActiveCampaign` writes:
 
+- `src/admin/AdminApp.jsx`
 - `src/admin/ItemsView.jsx`
 - `src/admin/EncounterView.jsx`
 - `src/admin/QuestsView.jsx`
@@ -21,6 +22,7 @@ These UI files must not introduce direct `setDb` or `updateActiveCampaign` write
 - `src/pacts/DeviantAbilitiesAdminView.jsx`
 - `src/pacts/PactAdminView.jsx`
 - `src/player/PlayerAppController.jsx`
+- `src/shared/context/CampaignContext.jsx`
 - `src/player/views/InventoryView.jsx`
 - `src/player/views/ProgressView.jsx`
 - `src/player/views/PlayerQuestsView.jsx`
@@ -35,8 +37,6 @@ These UI files must not introduce direct `setDb` or `updateActiveCampaign` write
 
 Only these broad-write files are currently allowed by `scripts/check_broad_writes.js`:
 
-- `src/admin/AdminApp.jsx`: legacy admin/player tab fallback for root characters when no campaign is active.
-- `src/shared/context/CampaignContext.jsx`: deprecated compatibility escape hatch `updateActiveCampaign`.
 - `src/shared/db/domain/createDataActions.js`: legacy adapter implementation that intentionally writes through `setDb`.
 
 Any new broad write outside those files should be treated as a regression.
@@ -55,8 +55,9 @@ Any new broad write outside those files should be treated as a regression.
 
 ### Campaign Compatibility
 
-- `CampaignContext.updateActiveCampaign` remains available but deprecated. Do not use it for new work.
-- `AdminApp` still has a root-character fallback for the old campaignless admin/player mode.
+- Campaign-scoped admin player writes now require an active campaign and use `dataActions.character.updateCharacter`.
+- The old campaignless root-character admin/player write fallback has been removed.
+- `CampaignContext.updateActiveCampaign` has been removed from the context API.
 
 ### Shop And Traders
 

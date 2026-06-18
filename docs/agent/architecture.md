@@ -57,9 +57,9 @@ Production build uses `vite build`, then `scripts/copy_ressources_to_dist.js` co
   - `createCampaign`
   - `deleteCampaign`
   - `assignUser`
-  - `updateActiveCampaign`
+  - `dataActions`
 
-`updateActiveCampaign` merges a returned partial campaign object into the active campaign. Callers often return a full copied campaign, but this merge behavior matters if adding nested fields.
+Runtime writes should go through `dataActions`. `CampaignContext` no longer exposes a broad `updateActiveCampaign` escape hatch.
 
 ## Major UI Shells
 
@@ -103,15 +103,14 @@ Catalog content links are produced by `parseFoundry` as spans with `.content-lin
 
 ## Data Flow
 
-Most state changes use the top-level `[db, setDb]` pair:
+Legacy compatibility still has a top-level `[db, setDb]` pair, but runtime UI writes should not call it directly:
 
 1. User action calls local handler.
-2. Handler copies some subset of `db`.
-3. Nested campaign/character/shop data is changed.
-4. `setDb` persists through either legacy or v2 hook.
-5. `CampaignContext` re-derives active campaign and user data.
+2. Handler calls a scoped `dataActions` method.
+3. The selected adapter applies the shared reducer to legacy data or writes targeted Firestore v2 documents.
+4. `CampaignContext` re-derives active campaign and user data.
 
-There is no central action/reducer layer. The same domain concepts can be mutated in several components.
+The old broad write model is now confined to the legacy adapter in `createDataActions` and the v2 compatibility diff layer.
 
 ## Design Implications For Future Work
 

@@ -32,7 +32,7 @@ The root repo is `PF2-Playersheet`; the parent directory is not the git repo.
   - `?party=true`: read-only party encounter screen.
   - `?camp=true`: camp overview screen.
   - no special query: player app.
-- `src/shared/context/CampaignContext.jsx` derives active campaign, GM status, user assignment, and campaign update helpers.
+- `src/shared/context/CampaignContext.jsx` derives active campaign, GM status, user assignment, and scoped domain actions.
 
 ## High-Level Structure
 
@@ -124,9 +124,7 @@ Soft delete uses `deletedAt`/`deletedBy`; restore removes those fields and sets 
 
 Quest rewards are idempotent via applied markers and are not automatically rolled back if an objective is later marked incomplete. Quest reward notifications are campaign-scoped via `campaign.notificationQueue`; root `db.notificationQueue` remains a legacy fallback.
 
-`CampaignContext.updateActiveCampaign` intentionally remains a deprecated broad compatibility helper. Do not use it for new work.
-
-Remaining broad write paths are limited to `AdminApp`, `CampaignContext`, and the legacy adapter implementation inside `createDataActions`. They are tracked in `docs/agent/migration-backlog.md`, `docs/agent/domain-actions.md`, and `docs/agent/known-risks.md`. `scripts/check_broad_writes.js` fails new broad writes in migrated domains.
+Broad UI and context writes have been removed from `AdminApp` and `CampaignContext`. The only permitted broad write path is the legacy adapter implementation inside `createDataActions`; all runtime UI writes should go through `dataActions`. Remaining compatibility debt is tracked in `docs/agent/migration-backlog.md`, `docs/agent/domain-actions.md`, and `docs/agent/known-risks.md`. `scripts/check_broad_writes.js` fails new broad writes outside that adapter.
 
 ## Data Model Snapshot
 
