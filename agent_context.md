@@ -161,6 +161,15 @@ Important scripts:
 
 `src/data/creature_catalog.json` is ignored in git, but the compact creature index is present. Runtime creature detail fetches read source JSON from `ressources/`.
 
+Bundle model:
+
+- `vite.config.js` isolates large catalog decoders into explicit data chunks: `ability-index`, `shop-index`, `creature-index`, `feat-index`, `spell-index`, `impulse-index`, `action-index`, plus `pacts-data`.
+- Shared dropdown/editor primitives are isolated in `shared-ui` to keep admin feature routes from importing player-common chunks just for small shared components.
+- `ImagePicker` loads `icon_catalog.json` as a JSON asset instead of a JavaScript chunk.
+- `RichTextEditor` lazy-loads Action/Item/Spell UUID dropdown catalogs only when those dropdowns open.
+- Player `LoreView` and `PartyScreen` lazy-load the creature index for bestiary/creature detail paths.
+- Remaining large data chunks are expected until player/admin catalog modals are converted to async-data flows rather than static index imports.
+
 ## Core Rule Helpers
 
 - `src/utils/rules.js`: stats, conditions, spell attack/DC, impulse attack/class DC.

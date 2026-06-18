@@ -1,6 +1,6 @@
 # Catalog Pipeline
 
-Last updated: 2026-06-16.
+Last updated: 2026-06-18.
 
 ## Purpose
 
@@ -87,6 +87,36 @@ Typical pattern:
 4. Export `fetch*DetailBySourceFile` helpers for on-demand JSON fetch.
 
 In dev, detail fetches use `/api/static`. In production, they use `/ressources`.
+
+## Bundle And Lazy-Loading Notes
+
+Vite uses manual chunks for large catalog decoders so data weight is explicit instead of being hidden in feature route chunks:
+
+- `ability-index`
+- `shop-index`
+- `creature-index`
+- `feat-index`
+- `spell-index`
+- `impulse-index`
+- `action-index`
+- `pacts-data`
+- `shared-ui`
+
+`icon_catalog.json` is loaded as a JSON asset by `ImagePicker` via `fetch(new URL(...))`, not as a JavaScript chunk.
+
+High-impact lazy paths:
+
+- `refClipboard` no longer imports ability data synchronously; heavy lookup data loads through the feature path that needs it.
+- `AbilityPicker` is lazy in creature editing flows.
+- `ImpulseEditor` is lazy from `ImpulsesView`.
+- `RichTextEditor` loads Action/Item/Spell UUID dropdown data only when those dropdowns are opened.
+- Player `LoreView` and `PartyScreen` dynamically import the creature index only for bestiary/creature detail paths.
+
+Known remaining large chunks after the 2026-06-18 optimization:
+
+- `ability-index` is still very large because the ability list itself is large; it should stay behind admin ability/picker flows.
+- `shop-index`, `creature-index`, and `feat-index` remain large but are now visible data chunks.
+- Player route code still imports several catalog helpers synchronously for item/spell/feat/action/impulse modal flows. A deeper follow-up would make those player catalog modals async-data driven.
 
 ## Shop Pipeline Details
 

@@ -2,7 +2,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import CreatureCard from '../../shared/components/CreatureCard';
 import CreatureAbilityModal from '../../shared/components/CreatureAbilityModal';
-import { getAllCreatures, fetchCreatureData } from '../../shared/catalog/creatureIndex';
 import {
     selectBestiaryCreatureMetadata,
     selectCustomCreatures,
@@ -153,13 +152,29 @@ export default function LoreView({ db, lore, bestiary }) {
 
     // Bestiary creatures (only those with bestiary: true)
     const [selectedCreatureId, setSelectedCreatureId] = useState(null);
+    const [catalogCreatures, setCatalogCreatures] = useState([]);
+
+    useEffect(() => {
+        if (currentCategory !== 'Bestiary') {
+            setCatalogCreatures([]);
+            return;
+        }
+
+        let cancelled = false;
+        import('../../shared/catalog/creatureIndex').then(module => {
+            if (!cancelled) setCatalogCreatures(module.getAllCreatures());
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [currentCategory]);
 
     // Merge INDEX data + custom creatures with db metadata - show only creatures with bestiary=true
     const bestiaryCreatures = useMemo(() => {
-        const indexItems = getAllCreatures();
         const dbMetadata = selectBestiaryCreatureMetadata(selectorDb);
 
-        const catalogEntries = indexItems
+        const catalogEntries = catalogCreatures
             .filter(item => dbMetadata[item.id]?.bestiary)
             .map(item => {
                 const meta = dbMetadata[item.id] || {};
@@ -198,7 +213,7 @@ export default function LoreView({ db, lore, bestiary }) {
             });
 
         return [...customEntries, ...catalogEntries].sort((a, b) => a.name.localeCompare(b.name));
-    }, [selectorDb]);
+    }, [selectorDb, catalogCreatures]);
 
     // Group creatures by their group field
     const groupedCreatures = useMemo(() => {
@@ -234,9 +249,16 @@ export default function LoreView({ db, lore, bestiary }) {
             setLoadedCreatureData(customData);
             return;
         }
-        fetchCreatureData(selectedCreatureId).then(data => {
-            if (data) setLoadedCreatureData(data);
-        });
+        let cancelled = false;
+        import('../../shared/catalog/creatureIndex')
+            .then(module => module.fetchCreatureData(selectedCreatureId))
+            .then(data => {
+                if (!cancelled && data) setLoadedCreatureData(data);
+            });
+
+        return () => {
+            cancelled = true;
+        };
     }, [selectedCreatureId, selectorDb]);
 
     // Ability modal state

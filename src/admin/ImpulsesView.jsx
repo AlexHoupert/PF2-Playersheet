@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import ImpulseEditor from './editors/ImpulseEditor';
 import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
 import BottomSheet from '../shared/components/BottomSheet';
 import ContentPreviewCard from './components/ContentPreviewCard';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { IMPULSE_INDEX_FILTER_OPTIONS, IMPULSE_INDEX_ITEMS, fetchImpulseDetailBySourceFile } from '../shared/catalog/impulseIndex';
+
+const ImpulseEditor = React.lazy(() => import('./editors/ImpulseEditor'));
 
 const uniqueTypes = IMPULSE_INDEX_FILTER_OPTIONS.types;
 const uniqueRarities = IMPULSE_INDEX_FILTER_OPTIONS.rarities;
@@ -140,11 +141,13 @@ export default function ImpulsesView({ onInspectItem }) {
 
     if (editingItem) {
         return (
-            <ImpulseEditor
-                initialItem={Object.keys(editingItem).length === 0 ? null : editingItem}
-                onSave={() => window.location.reload()}
-                onCancel={() => setEditingItem(null)}
-            />
+            <React.Suspense fallback={null}>
+                <ImpulseEditor
+                    initialItem={Object.keys(editingItem).length === 0 ? null : editingItem}
+                    onSave={() => window.location.reload()}
+                    onCancel={() => setEditingItem(null)}
+                />
+            </React.Suspense>
         );
     }
 

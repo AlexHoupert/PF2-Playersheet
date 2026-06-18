@@ -6,7 +6,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useCampaign } from '../shared/context/CampaignContext';
-import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
 import CreatureCard from '../shared/components/CreatureCard';
 import { CharacterCard } from '../admin/components/CharacterCard';
 import InitiativeCard from '../admin/components/InitiativeCard';
@@ -20,7 +19,6 @@ export default function PartyScreen({ db }) {
     const encounters = activeCampaign?.encounters || [];
     const characters = activeCampaign?.characters || [];
     const activeEncounter = encounters.find(e => e.isActive) || null;
-    const allCreatures = useMemo(() => getAllCreatures(), []);
 
     // Only show visible combatants, rotated so active is on top
     const visibleCombatants = useMemo(() => {
@@ -50,22 +48,50 @@ export default function PartyScreen({ db }) {
     // Load creature data
     useEffect(() => {
         if (!activeEncounter) return;
-        activeEncounter.combatants
-            .filter(c => c.type === 'creature' && c.visible && c.creatureId && !creatureDataCache[c.creatureId])
-            .forEach(c => {
-                // Custom creatures first — no fetch needed
-                const customData = selectCustomCreatureData(db, c.creatureId);
-                if (customData) {
-                    setCreatureDataCache(prev => ({ ...prev, [c.creatureId]: customData }));
-                    return;
-                }
-                const catalogEntry = allCreatures.find(cat => cat.id === c.creatureId || cat.name === c.creatureId);
-                if (catalogEntry?.id) {
-                    fetchCreatureData(catalogEntry.id).then(data => {
-                        if (data) setCreatureDataCache(prev => ({ ...prev, [c.creatureId]: data }));
-                    });
-                }
+        const missingCreatures = activeEncounter.combatants
+            .filter(c => c.type === 'creature' && c.visible && c.creatureId && !creatureDataCache[c.creatureId]);
+        if (missingCreatures.length === 0) return;
+
+        let cancelled = false;
+        const customResolved = [];
+        const catalogNeeded = [];
+
+        missingCreatures.forEach(c => {
+            // Custom creatures are already part of the projected DB.
+            const customData = selectCustomCreatureData(db, c.creatureId);
+            if (customData) customResolved.push([c.creatureId, customData]);
+            else catalogNeeded.push(c);
+        });
+
+        if (customResolved.length) {
+            setCreatureDataCache(prev => {
+                const next = { ...prev };
+                customResolved.forEach(([id, data]) => {
+                    next[id] = data;
+                });
+                return next;
             });
+        }
+
+        if (catalogNeeded.length) {
+            import('../shared/catalog/creatureIndex').then(module => {
+                catalogNeeded.forEach(c => {
+                    const catalogEntry = module.getCreatureFromIndex(c.creatureId)
+                        || module.getAllCreatures().find(cat => cat.name === c.creatureId);
+                    if (catalogEntry?.id) {
+                        module.fetchCreatureData(catalogEntry.id).then(data => {
+                            if (!cancelled && data) {
+                                setCreatureDataCache(prev => ({ ...prev, [c.creatureId]: data }));
+                            }
+                        });
+                    }
+                });
+            });
+        }
+
+        return () => {
+            cancelled = true;
+        };
     }, [activeEncounter?.combatants]);
 
     const getRevealState = (creatureId) => {

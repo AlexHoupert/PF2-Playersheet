@@ -15,7 +15,6 @@ import CreatureEditor from './editors/CreatureEditor';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { getRecallKnowledgeDC, generateFalseData } from '../utils/bestiaryUtils';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
-import { copyRef, getInMemoryRef } from '../shared/clipboard/refClipboard';
 import { selectCustomAbilityList } from '../shared/db/selectors/abilitySelectors';
 import { selectBestiaryCreatureMetadata, selectCustomCreatures } from '../shared/db/selectors/bestiarySelectors';
 
@@ -80,7 +79,14 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
         });
     };
 
-    const pasteAbilityToCreature = (creature) => {
+    const copyCreatureRef = async (creature) => {
+        const { copyRef } = await import('../shared/clipboard/refClipboard');
+        copyRef('creature', creature);
+        showToast('Reference copied');
+    };
+
+    const pasteAbilityToCreature = async (creature) => {
+        const { getInMemoryRef } = await import('../shared/clipboard/refClipboard');
         const ref = getInMemoryRef();
         if (!ref || ref.type !== 'ability') { showToast('No ability reference in clipboard'); return; }
         const ability = ref.data;
@@ -428,7 +434,7 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
                 </button>
                 <button
                     className="nav-btn"
-                    onClick={() => { copyRef('creature', previewCreature); showToast('Reference copied'); }}
+                    onClick={() => copyCreatureRef(previewCreature)}
                 >
                     📎 Copy Ref
                 </button>
@@ -635,11 +641,10 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
                     onClick={e => e.stopPropagation()}
                 >
                     {[
-                        { label: '📎 Copy Reference', onClick: () => { copyRef('creature', contextMenu.creature); showToast('Reference copied'); setContextMenu(null); } },
+                        { label: '📎 Copy Reference', onClick: () => { copyCreatureRef(contextMenu.creature); setContextMenu(null); } },
                         { label: '📁 Set Group', onClick: () => handleSetGroup(contextMenu.creature) },
                         contextMenu.creature.isCustom && {
                             label: '📥 Paste Referenced Ability',
-                            disabled: getInMemoryRef()?.type !== 'ability',
                             onClick: () => pasteAbilityToCreature(contextMenu.creature)
                         },
                         { label: '✏️ Edit', onClick: () => handleEdit(contextMenu.creature) },

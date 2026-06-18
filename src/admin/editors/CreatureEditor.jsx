@@ -6,9 +6,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import CreatureCard from '../../shared/components/CreatureCard';
-import AbilityPicker from '../../shared/components/AbilityPicker';
 import { useWindowSize } from '../../shared/hooks/useWindowSize';
 import { CREATURE_INDEX_FILTER_OPTIONS } from '../../shared/catalog/creatureIndex';
+
+const AbilityPicker = React.lazy(() => import('../../shared/components/AbilityPicker'));
 
 // Common damage types
 const DAMAGE_TYPES = [
@@ -790,12 +791,14 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
         </div>
 
         {pickerOpen && (
-            <AbilityPicker
-                defaultTypeFilter={pickerDefaultType}
-                onSelect={addAbilityFromLibrary}
-                onClose={() => setPickerOpen(false)}
-                customAbilities={customAbilities}
-            />
+            <React.Suspense fallback={null}>
+                <AbilityPicker
+                    defaultTypeFilter={pickerDefaultType}
+                    onSelect={addAbilityFromLibrary}
+                    onClose={() => setPickerOpen(false)}
+                    customAbilities={customAbilities}
+                />
+            </React.Suspense>
         )}
         </>
     );

@@ -1,17 +1,15 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
+import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import './RichTextEditor.css';
 
-// Catalogs
 import { conditionsCatalog } from '../../shared/constants/conditionsCatalog';
-import { getAllActionIndexItems } from '../../shared/catalog/actionIndex';
-import { SHOP_INDEX_ITEMS } from '../../shared/catalog/shopIndex';
-import { SPELL_INDEX_ITEMS } from '../../shared/catalog/spellIndex';
 
 // Helper component for Searchable Dropdown
-function SearchableInsertDropdown({ label, items, onSelect, icon }) {
+function SearchableInsertDropdown({ label, items = [], onSelect, icon, loadItems }) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [menuStyle, setMenuStyle] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [loadError, setLoadError] = useState(null);
     const buttonRef = useRef(null);
 
     const filteredItems = useMemo(() => {
@@ -46,12 +44,27 @@ function SearchableInsertDropdown({ label, items, onSelect, icon }) {
         };
     }, [open]);
 
+    const handleToggle = () => {
+        const nextOpen = !open;
+        setOpen(nextOpen);
+        if (nextOpen && loadItems && items.length === 0 && !isLoading) {
+            setIsLoading(true);
+            setLoadError(null);
+            loadItems()
+                .catch(err => {
+                    console.error(`Failed to load ${label} catalog`, err);
+                    setLoadError('Failed to load.');
+                })
+                .finally(() => setIsLoading(false));
+        }
+    };
+
     return (
         <div className="rte-dropdown-wrapper" style={{ position: 'relative', display: 'inline-block' }}>
             <button
                 type="button"
                 ref={buttonRef}
-                onClick={() => setOpen(!open)}
+                onClick={handleToggle}
                 title={label}
                 className="rte-btn"
             >
@@ -90,6 +103,8 @@ function SearchableInsertDropdown({ label, items, onSelect, icon }) {
                             }}
                         />
                         <div style={{ overflowY: 'auto', flex: 1 }}>
+                            {isLoading && <div style={{ padding: 5, color: '#888' }}>Loading...</div>}
+                            {loadError && <div style={{ padding: 5, color: '#e57373' }}>{loadError}</div>}
                             {filteredItems.map(item => (
                                 <div
                                     key={item}
@@ -106,7 +121,7 @@ function SearchableInsertDropdown({ label, items, onSelect, icon }) {
                                     {item}
                                 </div>
                             ))}
-                            {filteredItems.length === 0 && <div style={{ padding: 5, color: '#888' }}>No matches</div>}
+                            {!isLoading && !loadError && filteredItems.length === 0 && <div style={{ padding: 5, color: '#888' }}>No matches</div>}
                         </div>
                     </div>
                 </>
@@ -117,12 +132,34 @@ function SearchableInsertDropdown({ label, items, onSelect, icon }) {
 
 export default function RichTextEditor({ value, onChange, className, style, placeholder }) {
     const textareaRef = useRef(null);
+    const [catalogNames, setCatalogNames] = useState({ actions: null, items: null, spells: null });
 
     // Prepare lists
     const conditionNames = useMemo(() => Object.keys(conditionsCatalog).sort(), []);
-    const actionNames = useMemo(() => getAllActionIndexItems().map(i => i.name).sort(), []);
-    const itemNames = useMemo(() => SHOP_INDEX_ITEMS.map(i => i.name).sort(), []);
-    const spellNames = useMemo(() => SPELL_INDEX_ITEMS.map(i => i.name).sort(), []);
+    const actionNames = catalogNames.actions || [];
+    const itemNames = catalogNames.items || [];
+    const spellNames = catalogNames.spells || [];
+
+    const loadActionNames = useCallback(async () => {
+        if (catalogNames.actions) return;
+        const { getAllActionIndexItems } = await import('../../shared/catalog/actionIndex');
+        const names = getAllActionIndexItems().map(i => i.name).sort();
+        setCatalogNames(prev => prev.actions ? prev : { ...prev, actions: names });
+    }, [catalogNames.actions]);
+
+    const loadItemNames = useCallback(async () => {
+        if (catalogNames.items) return;
+        const { SHOP_INDEX_ITEMS } = await import('../../shared/catalog/shopIndex');
+        const names = SHOP_INDEX_ITEMS.map(i => i.name).sort();
+        setCatalogNames(prev => prev.items ? prev : { ...prev, items: names });
+    }, [catalogNames.items]);
+
+    const loadSpellNames = useCallback(async () => {
+        if (catalogNames.spells) return;
+        const { SPELL_INDEX_ITEMS } = await import('../../shared/catalog/spellIndex');
+        const names = SPELL_INDEX_ITEMS.map(i => i.name).sort();
+        setCatalogNames(prev => prev.spells ? prev : { ...prev, spells: names });
+    }, [catalogNames.spells]);
 
     const insertText = (text, wrapTags = null) => {
         const textarea = textareaRef.current;
@@ -276,9 +313,9 @@ export default function RichTextEditor({ value, onChange, className, style, plac
                 <span className="rte-sep">|</span>
 
                 <SearchableInsertDropdown label="Cond" icon="C" items={conditionNames} onSelect={(n) => insertUUID('Condition', n)} />
-                <SearchableInsertDropdown label="Act" icon="A" items={actionNames} onSelect={(n) => insertUUID('Action', n)} />
-                <SearchableInsertDropdown label="Item" icon="I" items={itemNames} onSelect={(n) => insertUUID('Item', n)} />
-                <SearchableInsertDropdown label="Spell" icon="S" items={spellNames} onSelect={(n) => insertUUID('Spell', n)} />
+                <SearchableInsertDropdown label="Act" icon="A" items={actionNames} loadItems={loadActionNames} onSelect={(n) => insertUUID('Action', n)} />
+                <SearchableInsertDropdown label="Item" icon="I" items={itemNames} loadItems={loadItemNames} onSelect={(n) => insertUUID('Item', n)} />
+                <SearchableInsertDropdown label="Spell" icon="S" items={spellNames} loadItems={loadSpellNames} onSelect={(n) => insertUUID('Spell', n)} />
 
                 <span className="rte-sep">|</span>
 

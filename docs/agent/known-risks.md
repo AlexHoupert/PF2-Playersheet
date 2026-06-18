@@ -33,6 +33,8 @@ Normal UI write paths for Campaign/Session, Character/Inventory/Loot, Quests/Rew
 
 Generated catalog files are large. It is easy to accidentally import a full catalog into the bundle or commit ignored/generated heavy files. Keep list views on compact indexes and details on lazy resource fetches.
 
+Vite now isolates major catalog decoders into explicit data chunks (`ability-index`, `shop-index`, `creature-index`, `feat-index`, `spell-index`, `impulse-index`, `action-index`) and loads `icon_catalog.json` as a JSON asset. Do not reintroduce broad static imports from utility modules like clipboard helpers or shared editors; use dynamic imports for optional catalog dropdowns/detail paths.
+
 ## Data And Migration Risks
 
 - `migrateDb` mutates the input object in place by design. Be careful when calling it with shared references.
@@ -86,6 +88,7 @@ Short-term:
 Medium-term:
 
 - Keep shrinking large controller hooks, especially `usePlayerInventoryActions`, into smaller pure reducers/helpers as workflows are touched.
+- Make player catalog modals async-data driven so `PlayerApp` does not synchronously import shop/spell/feat/action/impulse indexes.
 - Continue shrinking compatibility reads and the legacy projection before making v2 the default.
 - Add smoke tests for catalog decoders and `parseFoundry`.
 - Add a minimal lint/format check to catch import and JSX issues.

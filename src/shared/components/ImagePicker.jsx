@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 
 // Common image extensions
 const IMAGE_EXTENSIONS = ['.webp', '.png', '.jpg', '.jpeg', '.gif', '.svg'];
+const ICON_CATALOG_URL = new URL('../../data/icon_catalog.json', import.meta.url).href;
 
 export default function ImagePicker({ isOpen, onClose, onSelect, initialPath = 'ressources' }) {
     const [currentPath, setCurrentPath] = useState(initialPath);
@@ -38,17 +39,9 @@ export default function ImagePicker({ isOpen, onClose, onSelect, initialPath = '
                 // Fallback to static catalog if API fails
                 if (!data.success) {
                     try {
-                        // Dynamic import to avoid bundling large JSON if not needed? 
-                        // Or just import at top? Dynamic is safer for splitting.
-                        // But Vite handles JSON imports well. Let's assume standard import or dynamic.
-                        // For simplicity in this edit, let's use a dynamic import or assume it's available.
-                        // Actually, let's just fetch the JSON file if it's in public? 
-                        // No, it's in src/data. We need to import it.
-                        // Since replace_file_content can't easily add top-level imports without context,
-                        // I will add the import in a separate step or try to use `import()` here if possible.
-                        // But `import` inside function needs to be async.
-                        const catalogModule = await import('../../data/icon_catalog.json');
-                        const allPaths = catalogModule.default || catalogModule;
+                        const catalogResponse = await fetch(ICON_CATALOG_URL);
+                        if (!catalogResponse.ok) throw new Error(`Static icon catalog responded with ${catalogResponse.status}`);
+                        const allPaths = await catalogResponse.json();
 
                         // Simulate directory listing from paths
                         // currentPath is e.g. "ressources/icons"
