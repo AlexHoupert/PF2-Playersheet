@@ -213,6 +213,10 @@ Admin UI:
 
 Do not run write migration without explicit user approval.
 
+## V2 Default Readiness
+
+V2 remains opt-in through `?db=v2` or `VITE_DB_MODE=v2`. Do not switch the default until the manual smoke checklist and Firestore rules audit in `docs/agent/v2-default-readiness.md` are complete for the target Firebase project.
+
 ## Firestore Rules
 
 File: `firestore.rules`
@@ -230,6 +234,7 @@ Access model:
 Mismatch to watch:
 
 - Legacy `data/master` is not explicitly allowed by these rules. Legacy mode may depend on older/deployed rules or admin privileges. Verify live rules before relying on legacy Firestore writes.
+- The currently targeted V2 global writes are covered by `global`, `customItems`, `customCreatures`, `customActions`, and `loreArticles`; all are signed-in readable and global-admin writable.
 
 ## Existing Tests
 

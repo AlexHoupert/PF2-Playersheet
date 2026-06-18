@@ -70,6 +70,7 @@ Generated catalog files are large. It is easy to accidentally import a full cata
 - Dev server file APIs can save, create, delete, list, and upload under the project/resource tree. They guard against path traversal but should remain dev/admin-only.
 - `server/index.js` uses `exec` for rebuild commands. It maps a limited set of route params to known npm commands, which is good; keep it constrained.
 - Firestore v2 migration writes many documents and creates backups. Never run write migration without explicit approval and a backup plan.
+- V2 default mode is not enabled. Use `docs/agent/v2-default-readiness.md` before changing `VITE_DB_MODE` defaults.
 - LocalStorage is the first load path. Browser state can mask seed or Firestore changes during manual testing.
 
 ## Modernization Opportunities

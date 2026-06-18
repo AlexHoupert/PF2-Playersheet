@@ -72,6 +72,8 @@ Firestore v2 mode:
 
 Firestore v2 collections include `campaigns`, campaign subcollections `characters`, `quests`, `lootBags`, `encounters`, `maps`, `members`, plus top-level `global`, `customItems`, `customCreatures`, `customActions`, `loreArticles`, and `migrationBackups`.
 
+V2 is not the default. Before switching, use `docs/agent/v2-default-readiness.md` for the required manual smoke checklist and Firestore rules audit.
+
 ## Domain Actions Snapshot
 
 `CampaignContext` exposes `dataActions`, `dbMode`, and `dbStatus`.
@@ -185,6 +187,7 @@ Important scripts:
 
 - `docs/agent/architecture.md`: route tree, app composition, main data flow.
 - `docs/agent/data-and-persistence.md`: legacy DB, Firestore v2, migration, rules.
+- `docs/agent/v2-default-readiness.md`: checklist and Firestore rules audit for a future V2 default switch.
 - `docs/agent/catalog-pipeline.md`: source resources, generated indexes, runtime fetching.
 - `docs/agent/domain-actions.md`: strangler layer for Campaign/Session, Character, Inventory, and Loot writes.
 - `docs/agent/migration-backlog.md`: remaining broad writes grouped by domain and guarded migrated files.

@@ -30,7 +30,8 @@ Production build uses `vite build`, then `scripts/copy_ressources_to_dist.js` co
 
 - Selects data mode:
   - legacy: `usePersistedDb(dbData)`.
-  - v2: `useFirestoreV2Db(dbData)`.
+  - v2: `useFirestoreV2Db(dbData)` when `?db=v2` or `VITE_DB_MODE=v2` is set.
+- Legacy is still the default. See `docs/agent/v2-default-readiness.md` before changing the default.
 - Selects route through query params:
   - `?party=true` -> `PartyScreen`.
   - `?camp=true` -> `CampScreen`.
