@@ -41,6 +41,13 @@ test('normalizes legacy master data into campaign-scoped v2 documents', () => {
         lore: {
             articles: [{ id: 'article1', title: 'Lore' }],
         },
+        abilities: {
+            custom: { customTrip: { id: 'customTrip', name: 'Trip' } },
+            deviant: { spark: { id: 'spark', name: 'Spark' } },
+        },
+        pacts: {
+            ember: { id: 'ember', name: 'Ember Pact' },
+        },
     };
 
     const result = normalizeMasterToV2(master, {
@@ -58,6 +65,11 @@ test('normalizes legacy master data into campaign-scoped v2 documents', () => {
     assert(paths.has('customItems/Widget'));
     assert(paths.has('customActions/Shove'));
     assert(paths.has('loreArticles/article1'));
+
+    const globalConfig = result.documents.find(doc => doc.path === 'global/config').data;
+    assert.equal(globalConfig.abilities.custom.customTrip.name, 'Trip');
+    assert.equal(globalConfig.abilities.deviant.spark.name, 'Spark');
+    assert.equal(globalConfig.pacts.ember.name, 'Ember Pact');
 
     const characterDoc = result.documents.find(doc => doc.path === 'campaigns/camp1/characters/char1').data;
     assert.deepEqual(characterDoc.stats.hp, { current: 12, max: 20, temp: 0 });
@@ -93,6 +105,13 @@ test('composes v2 documents back into the legacy projection used by existing scr
         users: {
             'player@example.com': { role: 'player', campaignId: 'camp1', characterId: 'char1' },
         },
+        abilities: {
+            custom: { customTrip: { id: 'customTrip', name: 'Trip' } },
+            deviant: { spark: { id: 'spark', name: 'Spark' } },
+        },
+        pacts: {
+            ember: { id: 'ember', name: 'Ember Pact' },
+        },
     }, {
         now: 0,
         migrationId: 'test_projection',
@@ -105,6 +124,9 @@ test('composes v2 documents back into the legacy projection used by existing scr
     assert.equal(db.campaigns.camp1.quests[0].id, 'quest1');
     assert.deepEqual(db.campaigns.camp1.maps.map(map => map.id), ['map-first', 'map-last']);
     assert.equal(db.quests[0].id, 'quest1');
+    assert.equal(db.abilities.custom.customTrip.name, 'Trip');
+    assert.equal(db.abilities.deviant.spark.name, 'Spark');
+    assert.equal(db.pacts.ember.name, 'Ember Pact');
     assert.deepEqual(db.users['player@example.com'], {
         role: 'player',
         campaignId: 'camp1',

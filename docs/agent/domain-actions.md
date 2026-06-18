@@ -132,6 +132,11 @@ The UI still reads the legacy-shaped projection, but migrated write paths call `
 `dataActions.bestiary`:
 
 - `updateRevealState(creatureId, field, revealMode)`
+- `saveCustomCreature(creature)`
+- `updateCustomCreature(creatureId, updater)`
+- `deleteCreature(creatureId)`
+- `updateCreatureMetadata(creatureId, updater)`
+- `initializeCreatureMetadata(metadataEntries)`
 
 `dataActions.globalContent`:
 
@@ -139,6 +144,19 @@ The UI still reads the legacy-shaped projection, but migrated write paths call `
 - `deleteCustomItem(itemOrName)`
 - `saveCustomAction(action)`
 - `deleteCustomAction(actionOrName)`
+- `saveCustomAbility(ability)`
+- `deleteCustomAbility(abilityOrId)`
+- `saveLoreArticle(article)`
+- `deleteLoreArticle(articleOrId)`
+- `moveLoreArticle(articleId, direction)`
+- `clearRootNotification(notificationId)`
+
+`dataActions.pact`:
+
+- `savePact(pact)`
+- `deletePact(pactOrId)`
+- `saveDeviantAbility(ability)`
+- `deleteDeviantAbility(abilityOrId)`
 
 `dataActions.shop`:
 
@@ -169,7 +187,7 @@ Firestore V2 mode:
 - Uses targeted map document updates for map CRUD/archive/restore, ordering, pins, scale, and image URL writes.
 - Uses targeted campaign document updates for progress sections and top-level progress archives/restores.
 - Uses targeted campaign document updates for camping settings, custom activities, assignments, rolls, and reset/archive/restore behavior.
-- Uses targeted global config/custom document writes for shop/trader state, custom items/actions, and bestiary reveal-state.
+- Uses targeted global config/custom document writes for shop/trader state, custom items/actions, custom abilities, pacts, deviant abilities, lore, bestiary reveal-state, bestiary metadata, custom creatures, and root-notification compatibility.
 - Does not route migrated writes through `writeLegacyDbDiffToV2`.
 
 If Firestore config is missing, the adapter falls back to legacy mode.
@@ -271,14 +289,28 @@ Global/Shop/Bestiary:
 - GM ItemsView trader create/update/category/hide and trader inventory edits.
 - GM ItemsView available item/formula toggles.
 - GM/player custom item saves and custom action saves.
+- GM AbilitiesView custom ability saves/deletes/clones and custom-creature ability assignment.
+- GM BestiaryView custom creature saves/updates/deletes.
+- GM BestiaryView catalog metadata, bestiary toggles, group edits, reveal-state, and metadata initialization.
 - Encounter creature reveal-state updates.
+
+Pacts/Lore:
+
+- GM PactAdminView pact save/delete.
+- GM DeviantAbilitiesAdminView deviant ability save/delete.
+- GM LoreAdminView article create/save/delete/clone/move.
+
+Player compatibility:
+
+- Root notification fallback clearing uses `dataActions.globalContent.clearRootNotification`.
+- Runtime skill-name repair uses `dataActions.character.updateCharacter`.
 
 ## Remaining Direct Legacy Writes
 
-Expected after the architecture stabilization wave:
+Expected after the Global Admin Content wave:
 
-- Generic `updateActiveCampaign` remains a compatibility path because some pact/player-local flows still use it for non-migrated child collections.
-- Pact, abilities, lore, bestiary custom creature, and some global catalog writes still have direct/broad `setDb` paths.
+- Generic `updateActiveCampaign` remains a deprecated compatibility path in `CampaignContext`.
+- `AdminApp` keeps a root-character fallback for the old campaignless admin/player mode.
 - `useFirestoreV2Db` still keeps broad diff writes for non-migrated paths.
 
-Next migrations should add domain actions for pacts, abilities, lore, bestiary custom creatures, and remaining global/custom content before switching V2 to default.
+Next migrations should keep shrinking compatibility reads and the root legacy projection before switching V2 to default.

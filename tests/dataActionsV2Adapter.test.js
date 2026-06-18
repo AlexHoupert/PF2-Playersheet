@@ -57,13 +57,40 @@ function createActionHarness(db = {}) {
         globalRepo: {
             async updateGlobalConfig(_firestore, updater) {
                 calls.push(['global.updateGlobalConfig']);
-                updater({ shop: { traders: [{ id: 'trader1', name: 'Market', inventory: [] }] }, bestiary: { creatures: {} } });
+                updater({
+                    shop: { traders: [{ id: 'trader1', name: 'Market', inventory: [] }] },
+                    bestiary: { creatures: {} },
+                    abilities: { custom: {}, deviant: {} },
+                    pacts: {},
+                    lore: { articles: [] },
+                    notificationQueue: [{ id: 'notice1' }],
+                });
             },
             async setCustomItem(_firestore, item) {
                 calls.push(['global.setCustomItem', item.name]);
             },
             async setCustomAction(_firestore, action) {
                 calls.push(['global.setCustomAction', action.name]);
+            },
+            async setCustomCreature(_firestore, creature) {
+                calls.push(['global.setCustomCreature', creature.name]);
+            },
+            async updateCustomCreature(_firestore, creatureId, updater) {
+                calls.push(['global.updateCustomCreature', creatureId]);
+                updater({ id: creatureId, data: { items: [] } });
+            },
+            async deleteCustomCreature(_firestore, creatureId) {
+                calls.push(['global.deleteCustomCreature', creatureId]);
+            },
+            async setLoreArticle(_firestore, article) {
+                calls.push(['global.setLoreArticle', article.id]);
+            },
+            async deleteLoreArticle(_firestore, articleOrId) {
+                calls.push(['global.deleteLoreArticle', articleOrId.id || articleOrId]);
+            },
+            async updateLoreArticles(_firestore, articleIds, updater) {
+                calls.push(['global.updateLoreArticles', articleIds]);
+                updater(Object.fromEntries(articleIds.map(id => [id, { id, title: id }])));
             },
         },
     };
@@ -113,10 +140,28 @@ test('v2 adapter uses targeted repositories for migrated campaign domains', asyn
 });
 
 test('v2 adapter uses global repositories for shop and custom content', async () => {
-    const { actions, calls } = createActionHarness();
+    const { actions, calls } = createActionHarness({
+        lore: {
+            articles: [
+                { id: 'article1', title: 'One', category: 'history', sortOrder: 0 },
+                { id: 'article2', title: 'Two', category: 'history', sortOrder: 1 },
+            ],
+        },
+    });
 
     await actions.globalContent.saveCustomItem({ name: 'Widget' });
     await actions.globalContent.saveCustomAction({ name: '[gold]Trip[/gold]' });
+    await actions.globalContent.saveCustomAbility({ id: 'custom-trip', name: 'Trip' });
+    await actions.globalContent.saveLoreArticle({ id: 'article3', title: 'Three' });
+    await actions.globalContent.moveLoreArticle('article2', 'up');
+    await actions.globalContent.deleteLoreArticle('article1');
+    await actions.globalContent.clearRootNotification('notice1');
+    await actions.pact.savePact({ id: 'ember', name: 'Ember Pact' });
+    await actions.pact.saveDeviantAbility({ id: 'spark', name: 'Spark' });
+    await actions.bestiary.saveCustomCreature({ _id: 'custom-goblin', name: 'Goblin Boss' });
+    await actions.bestiary.updateCustomCreature('custom-goblin', entry => entry);
+    await actions.bestiary.deleteCreature('custom-goblin');
+    await actions.bestiary.initializeCreatureMetadata([{ id: 'wolf' }]);
     await actions.shop.addItemsToTrader('trader1', [{ name: 'Widget' }]);
     await actions.shop.setItemAvailable('Widget', true);
     await actions.bestiary.updateRevealState('goblin', 'hp', 'public');
@@ -124,6 +169,18 @@ test('v2 adapter uses global repositories for shop and custom content', async ()
     assert.deepEqual(calls.map(call => call[0]), [
         'global.setCustomItem',
         'global.setCustomAction',
+        'global.updateGlobalConfig',
+        'global.setLoreArticle',
+        'global.updateLoreArticles',
+        'global.deleteLoreArticle',
+        'global.updateGlobalConfig',
+        'global.updateGlobalConfig',
+        'global.updateGlobalConfig',
+        'global.setCustomCreature',
+        'global.updateCustomCreature',
+        'global.updateGlobalConfig',
+        'global.deleteCustomCreature',
+        'global.updateGlobalConfig',
         'global.updateGlobalConfig',
         'global.updateGlobalConfig',
         'global.updateGlobalConfig',

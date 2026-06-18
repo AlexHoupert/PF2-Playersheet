@@ -11,6 +11,12 @@ const protectedFiles = new Set([
   "src/admin/QuestsView.jsx",
   "src/admin/MapAdminView.jsx",
   "src/admin/ProgressAdminView.jsx",
+  "src/admin/AbilitiesView.jsx",
+  "src/admin/BestiaryView.jsx",
+  "src/admin/LoreAdminView.jsx",
+  "src/pacts/DeviantAbilitiesAdminView.jsx",
+  "src/pacts/PactAdminView.jsx",
+  "src/player/PlayerAppController.jsx",
   "src/player/views/InventoryView.jsx",
   "src/player/views/ProgressView.jsx",
   "src/player/views/PlayerQuestsView.jsx",
@@ -21,13 +27,7 @@ const protectedFiles = new Set([
 ]);
 
 const allowedBroadWriteFiles = new Map([
-  ["src/admin/AbilitiesView.jsx", "legacy global abilities"],
   ["src/admin/AdminApp.jsx", "legacy admin/player tab glue"],
-  ["src/admin/BestiaryView.jsx", "legacy bestiary catalog"],
-  ["src/admin/LoreAdminView.jsx", "legacy lore catalog"],
-  ["src/pacts/DeviantAbilitiesAdminView.jsx", "legacy deviant abilities"],
-  ["src/pacts/PactAdminView.jsx", "legacy pacts"],
-  ["src/player/PlayerAppController.jsx", "legacy notification and runtime repair fallback"],
   ["src/shared/context/CampaignContext.jsx", "deprecated compatibility escape hatch"],
   ["src/shared/db/domain/createDataActions.js", "legacy adapter implementation"],
 ]);

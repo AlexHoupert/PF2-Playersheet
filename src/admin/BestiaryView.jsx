@@ -16,6 +16,8 @@ import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { getRecallKnowledgeDC, generateFalseData } from '../utils/bestiaryUtils';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
 import { copyRef, getInMemoryRef } from '../shared/clipboard/refClipboard';
+import { selectCustomAbilityList } from '../shared/db/selectors/abilitySelectors';
+import { selectBestiaryCreatureMetadata, selectCustomCreatures } from '../shared/db/selectors/bestiarySelectors';
 
 // Default reveal state for new creatures
 const DEFAULT_REVEAL_STATE = {
@@ -38,7 +40,7 @@ const COL_PRIORITY = {
 };
 
 export default function BestiaryView({ db, setDb, initialFilterType, onContentLinkClick }) {
-    const { activeCampaign } = useCampaign();
+    const { dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
 
     // ── Filter / search state ────────────────────────────────────────────────
@@ -71,6 +73,12 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
         setToast({ msg, key });
         setTimeout(() => setToast(t => t?.key === key ? null : t), 2200);
     };
+    const runDataAction = (action) => {
+        Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
+    };
 
     const pasteAbilityToCreature = (creature) => {
         const ref = getInMemoryRef();
@@ -88,14 +96,10 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
                 traits: { value: ability.traits || [] },
             },
         };
-        setDb(prev => {
-            const cc = { ...prev.bestiary?.customCreatures };
-            const entry = cc[creature.id];
-            if (!entry) return prev;
-            const data = { ...entry.data, items: [...(entry.data?.items || []), foundryItem] };
-            cc[creature.id] = { ...entry, data };
-            return { ...prev, bestiary: { ...prev.bestiary, customCreatures: cc } };
-        });
+        runDataAction(dataActions.bestiary.updateCustomCreature(creature.id, entry => ({
+            ...entry,
+            data: { ...entry.data, items: [...(entry.data?.items || []), foundryItem] }
+        })));
         showToast(`"${ability.name}" added to ${creature.name}`);
         setContextMenu(null);
     };
@@ -112,28 +116,28 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
     useEffect(() => {
         if (!previewCreature?.id) { setLoadedCreatureData(null); return; }
         if (previewCreature.isCustom) {
-            const customData = db.bestiary?.customCreatures?.[previewCreature.id]?.data;
+            const customData = selectCustomCreatures(db)[previewCreature.id]?.data;
             if (customData) { setLoadedCreatureData(customData); return; }
         }
         fetchCreatureData(previewCreature.id).then(data => { if (data) setLoadedCreatureData(data); });
-    }, [previewCreature?.id, db.bestiary?.customCreatures]);
+    }, [previewCreature?.id, db]);
 
     // Fetch full creature data when editing creature changes
     useEffect(() => {
         if (!editingCreature?.id || editingCreature.data) return;
         if (editingCreature.isCustom) {
-            const customData = db.bestiary?.customCreatures?.[editingCreature.id]?.data;
+            const customData = selectCustomCreatures(db)[editingCreature.id]?.data;
             if (customData) { setEditingCreature(prev => ({ ...prev, data: customData })); return; }
         }
         fetchCreatureData(editingCreature.id).then(data => {
             if (data) setEditingCreature(prev => ({ ...prev, data }));
         });
-    }, [editingCreature?.id, db.bestiary?.customCreatures]);
+    }, [editingCreature?.id, db]);
 
     // ── Data: merge index + custom creatures ─────────────────────────────────
     const creatures = useMemo(() => {
         const indexItems = getAllCreatures();
-        const customCreatures = Object.values(db.bestiary?.customCreatures || {}).map(cData => {
+        const customCreatures = Object.values(selectCustomCreatures(db)).map(cData => {
             const sys = cData.data?.system || {};
             return {
                 id: cData.id,
@@ -147,7 +151,7 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
             };
         });
         const distinctItems = [...customCreatures, ...indexItems];
-        const dbMetadata = db.bestiary?.creatures || {};
+        const dbMetadata = selectBestiaryCreatureMetadata(db);
         const seenIds = new Set();
         return distinctItems
             .filter(item => { if (seenIds.has(item.id)) return false; seenIds.add(item.id); return true; })
@@ -167,7 +171,7 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
                     falseData: meta.falseData
                 };
             });
-    }, [db.bestiary?.creatures, db.bestiary?.customCreatures]);
+    }, [db]);
 
     // ── Filter options ────────────────────────────────────────────────────────
     const uniqueTypes    = useMemo(() => ['creature', 'hazard'], []);
@@ -255,28 +259,19 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
         const id = creatureData.id;
         if (!id) { alert('Cannot save: creature must have an ID from the catalog'); return; }
         const level = creatureData.data?.system?.details?.level?.value ?? 0;
-        setDb(prev => ({
-            ...prev,
-            bestiary: {
-                ...prev.bestiary,
-                creatures: {
-                    ...prev.bestiary?.creatures,
-                    [id]: {
-                        id,
-                        group: creatureData.group || 'Uncategorized',
-                        bestiary: creatureData.bestiary || false,
-                        revealState: creatureData.revealState || { ...DEFAULT_REVEAL_STATE },
-                        falseData: creatureData.falseData || generateFalseData({
-                            hp: creatureData.data?.system?.attributes?.hp?.max ?? 0,
-                            fortitude: creatureData.data?.system?.saves?.fortitude?.value ?? 0,
-                            reflex: creatureData.data?.system?.saves?.reflex?.value ?? 0,
-                            will: creatureData.data?.system?.saves?.will?.value ?? 0,
-                            ac: creatureData.data?.system?.attributes?.ac?.value ?? 10,
-                            perception: creatureData.data?.system?.perception?.mod ?? 0
-                        }, level)
-                    }
-                }
-            }
+        runDataAction(dataActions.bestiary.updateCreatureMetadata(id, {
+            id,
+            group: creatureData.group || 'Uncategorized',
+            bestiary: creatureData.bestiary || false,
+            revealState: creatureData.revealState || { ...DEFAULT_REVEAL_STATE },
+            falseData: creatureData.falseData || generateFalseData({
+                hp: creatureData.data?.system?.attributes?.hp?.max ?? 0,
+                fortitude: creatureData.data?.system?.saves?.fortitude?.value ?? 0,
+                reflex: creatureData.data?.system?.saves?.reflex?.value ?? 0,
+                will: creatureData.data?.system?.saves?.will?.value ?? 0,
+                ac: creatureData.data?.system?.attributes?.ac?.value ?? 10,
+                perception: creatureData.data?.system?.perception?.mod ?? 0
+            }, level)
         }));
         setEditingCreature(null);
         setJsonImportText('');
@@ -284,20 +279,14 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
 
     const handleDelete = (id) => {
         if (!confirm('Delete this creature?')) return;
-        setDb(prev => {
-            const newCreatures = { ...prev.bestiary?.creatures };
-            delete newCreatures[id];
-            const newCustomCreatures = { ...prev.bestiary?.customCreatures };
-            if (newCustomCreatures[id]) delete newCustomCreatures[id];
-            return { ...prev, bestiary: { ...prev.bestiary, creatures: newCreatures, customCreatures: newCustomCreatures } };
-        });
+        runDataAction(dataActions.bestiary.deleteCreature(id));
         setContextMenu(null);
         if (previewCreature?.id === id) setPreviewCreature(null);
     };
 
     const handleEdit = async (creature) => {
         if (creature.isCustom) {
-            const data = db.bestiary?.customCreatures?.[creature.id]?.data;
+            const data = selectCustomCreatures(db)[creature.id]?.data;
             if (!data) { alert('Custom creature data not found in database'); setContextMenu(null); return; }
             setEditingCreature({ ...creature, data });
             setContextMenu(null);
@@ -313,7 +302,7 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
 
     const handleClone = async (creature) => {
         const rawData = creature.isCustom
-            ? db.bestiary?.customCreatures?.[creature.id]?.data
+            ? selectCustomCreatures(db)[creature.id]?.data
             : await fetchCreatureData(creature.id);
         if (!rawData) { alert('Failed to load creature data'); setContextMenu(null); return; }
         // Deep-copy so the clone shares no nested object references with the original
@@ -328,9 +317,14 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
 
     const toggleBestiary = (creature) => {
         const id = creature.id;
-        setDb(prev => {
-            const existing = prev.bestiary?.creatures?.[id];
-            const newEntry = existing
+        runDataAction(dataActions.bestiary.updateCreatureMetadata(id, existing => {
+            const hasMetadata = existing && (
+                existing.group ||
+                existing.revealState ||
+                existing.falseData ||
+                typeof existing.bestiary === 'boolean'
+            );
+            const newEntry = hasMetadata
                 ? { ...existing, bestiary: !existing.bestiary }
                 : {
                     id,
@@ -339,50 +333,31 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
                     revealState: { ...DEFAULT_REVEAL_STATE },
                     falseData: generateFalseData({ hp: 0, fortitude: 0, reflex: 0, will: 0, ac: 10, perception: 0 }, creature.level ?? 0)
                 };
-            return {
-                ...prev,
-                bestiary: {
-                    ...prev.bestiary,
-                    creatures: { ...prev.bestiary?.creatures, [id]: newEntry }
-                }
-            };
-        });
+            return newEntry;
+        }));
     };
 
     const handleSetGroup = (creature) => {
         const newGroup = prompt('Enter group name:', creature.group || 'Uncategorized');
         if (newGroup === null) return;
         const id = creature.id;
-        setDb(prev => {
-            const existing = prev.bestiary?.creatures?.[id];
-            const newEntry = existing
+        runDataAction(dataActions.bestiary.updateCreatureMetadata(id, existing => {
+            const hasMetadata = existing && (
+                existing.group ||
+                existing.revealState ||
+                existing.falseData ||
+                typeof existing.bestiary === 'boolean'
+            );
+            const newEntry = hasMetadata
                 ? { ...existing, group: newGroup.trim() || 'Uncategorized' }
                 : { id, group: newGroup.trim() || 'Uncategorized', bestiary: false, revealState: { ...DEFAULT_REVEAL_STATE } };
-            return {
-                ...prev,
-                bestiary: {
-                    ...prev.bestiary,
-                    creatures: { ...prev.bestiary?.creatures, [id]: newEntry }
-                }
-            };
-        });
+            return newEntry;
+        }));
         setContextMenu(null);
     };
 
     const updateRevealState = (id, field, state) => {
-        setDb(prev => ({
-            ...prev,
-            bestiary: {
-                ...prev.bestiary,
-                creatures: {
-                    ...prev.bestiary?.creatures,
-                    [id]: {
-                        ...prev.bestiary?.creatures?.[id],
-                        revealState: { ...prev.bestiary?.creatures?.[id]?.revealState, [field]: state }
-                    }
-                }
-            }
-        }));
+        runDataAction(dataActions.bestiary.updateRevealState(id, field, state));
     };
 
     const handleImportJSON = () => {
@@ -398,24 +373,18 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
     const handleInitMetadataFromCatalog = () => {
         setImportingCatalog(true);
         const catalogCreatures = getAllCreatures();
-        let initialized = 0;
-        setDb(prev => {
-            const existingIds = Object.keys(prev.bestiary?.creatures || {});
-            const newMetadata = { ...prev.bestiary?.creatures };
-            catalogCreatures.forEach(creature => {
-                if (!existingIds.includes(creature.id)) {
-                    const level = creature.data?.system?.details?.level?.value ?? 0;
-                    newMetadata[creature.id] = {
-                        id: creature.id, group: 'Uncategorized', bestiary: false,
-                        revealState: { ...DEFAULT_REVEAL_STATE },
-                        falseData: generateFalseData({ hp: 0, fortitude: 0, reflex: 0, will: 0, ac: 10, perception: 0 }, level)
-                    };
-                    initialized++;
-                }
-            });
-            alert(`Initialized metadata for ${initialized} creatures.`);
-            return { ...prev, bestiary: { ...prev.bestiary, creatures: newMetadata } };
+        const existingIds = new Set(Object.keys(selectBestiaryCreatureMetadata(db)));
+        const metadataEntries = catalogCreatures.flatMap(creature => {
+            if (existingIds.has(creature.id)) return [];
+            const level = creature.data?.system?.details?.level?.value ?? 0;
+            return [{
+                id: creature.id, group: 'Uncategorized', bestiary: false,
+                revealState: { ...DEFAULT_REVEAL_STATE },
+                falseData: generateFalseData({ hp: 0, fortitude: 0, reflex: 0, will: 0, ac: 10, perception: 0 }, level)
+            }];
         });
+        runDataAction(dataActions.bestiary.initializeCreatureMetadata(metadataEntries));
+        alert(`Initialized metadata for ${metadataEntries.length} creatures.`);
         setImportingCatalog(false);
     };
 
@@ -426,26 +395,14 @@ export default function BestiaryView({ db, setDb, initialFilterType, onContentLi
         return (
             <CreatureEditor
                 initialCreature={editingCreature}
-                customAbilities={Object.values(db?.abilities?.custom || {})}
+                customAbilities={selectCustomAbilityList(db)}
                 onSave={(data) => {
                     setEditingCreature(null);
                     if (!data?.message?.includes('Database')) window.location.reload();
                 }}
                 onCancel={() => setEditingCreature(null)}
                 onSaveToDb={(creatureData) => {
-                    setDb(prev => ({
-                        ...prev,
-                        bestiary: {
-                            ...prev.bestiary,
-                            customCreatures: {
-                                ...prev.bestiary?.customCreatures,
-                                [creatureData._id]: {
-                                    id: creatureData._id, type: creatureData.type,
-                                    name: creatureData.name, data: creatureData
-                                }
-                            }
-                        }
-                    }));
+                    return dataActions.bestiary.saveCustomCreature(creatureData);
                 }}
             />
         );

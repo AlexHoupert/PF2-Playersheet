@@ -104,8 +104,8 @@ Write path:
 
 Important limitation:
 
-- There are repository functions in `src/shared/db/v2/repositories.js`, but some non-migrated UI paths still call broad `setDb`. The repositories are now used by the domain-action waves for Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, and Camping.
-- Shop/trader state, custom item/action saves, and encounter bestiary reveal-state now also use targeted domain actions instead of the broad runtime diff.
+- There are repository functions in `src/shared/db/v2/repositories.js`, but compatibility support for broad legacy diffs still exists for future non-migrated paths.
+- Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, and Player runtime fallbacks now use targeted domain actions instead of broad runtime UI writes.
 
 ## Domain Action Layer
 
@@ -142,7 +142,12 @@ Current migrated write paths:
 - Player reward notifications read `campaign.notificationQueue` first and root `db.notificationQueue` only as a legacy fallback.
 - GM ItemsView shop/trader writes through `dataActions.shop`.
 - GM/player custom item/action saves through `dataActions.globalContent`.
+- GM AbilitiesView custom ability saves/deletes/clones and custom-creature ability assignment through `dataActions.globalContent` and `dataActions.bestiary`.
+- GM PactAdminView and DeviantAbilitiesAdminView through `dataActions.pact`.
+- GM LoreAdminView through `dataActions.globalContent` and the `loreArticles` collection.
+- GM BestiaryView custom creature, metadata, reveal-state, group, bestiary toggle, and catalog metadata initialization through `dataActions.bestiary`.
 - Encounter bestiary reveal-state writes through `dataActions.bestiary`.
+- Player root-notification clear and skill-name runtime repair through `dataActions`.
 
 Soft delete:
 
@@ -177,6 +182,7 @@ File: `src/shared/db/v2/normalizers.js`
 - Splits campaigns into campaign meta doc plus subcollection docs.
 - Adds members from `db.users`.
 - Adds global config from `shop`, `bestiary.creatures`, `notificationQueue`, `rules`, `library`, `runes`, `feats`.
+- Adds `pacts` and `abilities.custom`/`abilities.deviant` into `global/config`.
 - Adds custom content collections for custom items, creatures, actions, and lore articles.
 - Stamps documents with schema metadata and migration info.
 - Produces a report with counts, renamed fields, moved fields, invalid values, and assumptions.
@@ -186,7 +192,7 @@ File: `src/shared/db/v2/normalizers.js`
 - Builds the legacy projection used by existing screens.
 - Reassembles campaign subcollections into `db.campaigns[campaignId]`.
 - Converts `members` docs back into `db.users`.
-- Rehydrates global config including shop and bestiary reveal-state, custom collections, and lore.
+- Rehydrates global config including shop, bestiary reveal-state/metadata, pacts, abilities, custom collections, and lore.
 - Sets root `quests` and `lootBags` from the first campaign for compatibility.
 
 ## V2 Migration Scripts And UI
@@ -244,15 +250,15 @@ Tests cover:
 - String condition/item conversion.
 - Inventory quantity normalization.
 - Proficiencies array to object conversion.
-- Members, custom items/actions, and lore document paths.
+- Members, custom items/actions/creatures, pacts, abilities, and lore document paths/projection.
 - Composition of v2 docs back into legacy projection.
 - Campaign/Character/Quest/Encounter soft delete and restore reducers.
 - Map soft delete, restore, order, pin, and scale reducers.
 - Progress update, active-only, top-level soft delete, and restore reducers.
 - Camping settings, custom activity archive/restore, assignment conflict, roll, and unassign reducers.
-- Global content reducers for custom items/actions, trader state, availability lists, and bestiary reveal-state.
+- Global content reducers for custom items/actions/abilities/creatures, pacts, lore, trader state, availability lists, root notifications, and bestiary reveal-state/metadata.
 - Legacy and v2 adapter behavior for `createDataActions`.
-- Selector behavior for active/archived campaign data, legacy root fallbacks, shop reads, and bestiary reveal-state.
+- Selector behavior for active/archived campaign data, legacy root fallbacks, shop reads, bestiary reveal-state/custom creatures, pacts, abilities, and lore.
 - Broad-write guard coverage for migrated UI files.
 - Quest objective and quest reward idempotency.
 - Encounter activation, combatants, initiative, turn state, and conditions.

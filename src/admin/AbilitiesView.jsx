@@ -5,6 +5,9 @@ import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
 import BottomSheet from '../shared/components/BottomSheet';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { copyRef } from '../shared/clipboard/refClipboard';
+import { useCampaign } from '../shared/context/CampaignContext';
+import { selectCustomAbilityList } from '../shared/db/selectors/abilitySelectors';
+import { selectCustomCreatures } from '../shared/db/selectors/bestiarySelectors';
 
 const PAGE_SIZE = 100;
 
@@ -126,7 +129,7 @@ function AbilityFormModal({ initial, onSave, onClose }) {
 
 // ── Creature Picker Modal ─────────────────────────────────────────────────────
 function CreaturePickerModal({ db, onPick, onClose }) {
-    const creatures = Object.values(db?.bestiary?.customCreatures || {});
+    const creatures = Object.values(selectCustomCreatures(db));
     const [search, setSearch] = useState('');
     const filtered = creatures.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -197,15 +200,16 @@ function AbilityPreviewContent({ selected, setAbilityForm, copyRef, showToast, s
 
 // ── Main View ─────────────────────────────────────────────────────────────────
 export default function AbilitiesView({ db, setDb }) {
+    const { dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
 
     // Merge indexed abilities with custom db abilities (custom takes priority by name)
     const allAbilities = useMemo(() => {
         const indexed = getAllAbilities();
-        const custom  = Object.values(db?.abilities?.custom || {});
+        const custom  = selectCustomAbilityList(db);
         const customNames = new Set(custom.map(a => a.name));
         return [...custom, ...indexed.filter(a => !customNames.has(a.name))];
-    }, [db?.abilities?.custom]);
+    }, [db]);
 
     const [search, setSearch]           = useState('');
     const [typeFilter, setTypeFilter]   = useState(null);
@@ -216,6 +220,12 @@ export default function AbilitiesView({ db, setDb }) {
     const [abilityForm, setAbilityForm] = useState(null); // ability object | null
     const [creaturePicker, setCreaturePicker] = useState(null); // ability | null
     const [toast, setToast]             = useState(null); // { msg, key }
+    const runDataAction = (action) => {
+        Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
+    };
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -241,31 +251,21 @@ export default function AbilitiesView({ db, setDb }) {
     // ── Custom Ability CRUD ─────────────────────────────────────────────────
     const saveCustomAbility = (ability) => {
         const saved = { ...ability, isCustom: true };
-        setDb(prev => ({
-            ...prev,
-            abilities: { ...prev.abilities, custom: { ...prev.abilities?.custom, [saved.id]: saved } }
-        }));
+        runDataAction(dataActions.globalContent.saveCustomAbility(saved));
         setAbilityForm(null);
         setSelected(saved);
     };
 
     const deleteCustomAbility = (ability) => {
         if (!window.confirm(`Delete "${ability.name}"? This cannot be undone.`)) return;
-        setDb(prev => {
-            const custom = { ...prev.abilities?.custom };
-            delete custom[ability.id];
-            return { ...prev, abilities: { ...prev.abilities, custom } };
-        });
+        runDataAction(dataActions.globalContent.deleteCustomAbility(ability));
         if (selected?.id === ability.id) setSelected(null);
         setContextMenu(null);
     };
 
     const cloneAbility = (ability) => {
         const clone = { ...ability, id: `custom-${Date.now()}`, name: `${ability.name} (Copy)`, isCustom: true };
-        setDb(prev => ({
-            ...prev,
-            abilities: { ...prev.abilities, custom: { ...prev.abilities?.custom, [clone.id]: clone } }
-        }));
+        runDataAction(dataActions.globalContent.saveCustomAbility(clone));
         setSelected(clone);
         setContextMenu(null);
         showToast(`Cloned "${clone.name}"`);
@@ -273,14 +273,10 @@ export default function AbilitiesView({ db, setDb }) {
 
     // ── Give to Creature ────────────────────────────────────────────────────
     const giveAbilityToCreature = (ability, creatureId) => {
-        setDb(prev => {
-            const cc = { ...prev.bestiary?.customCreatures };
-            const entry = cc[creatureId];
-            if (!entry) return prev;
-            const data = { ...entry.data, items: [...(entry.data?.items || []), buildFoundryItem(ability)] };
-            cc[creatureId] = { ...entry, data };
-            return { ...prev, bestiary: { ...prev.bestiary, customCreatures: cc } };
-        });
+        runDataAction(dataActions.bestiary.updateCustomCreature(creatureId, entry => ({
+            ...entry,
+            data: { ...entry.data, items: [...(entry.data?.items || []), buildFoundryItem(ability)] }
+        })));
         const creatureName = db?.bestiary?.customCreatures?.[creatureId]?.name || 'creature';
         showToast(`"${ability.name}" added to ${creatureName}`);
         setCreaturePicker(null);

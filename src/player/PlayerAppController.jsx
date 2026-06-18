@@ -57,24 +57,24 @@ const ARMOR_RANKS = [
 
 
 export default function PlayerAppController({ db, setDb }) {
-    const { activeCampaign, myCharacter, updateActiveCampaign, isGM, dataActions } = useCampaign();
+    const { activeCampaign, myCharacter, isGM, dataActions } = useCampaign();
     // const [db, setDb] = usePersistedDb(dbData);
     // const [db, setDb] = useState(dbData);
 
     const [activeCharIndex, setActiveCharIndex] = useState(0);
+    const runDataAction = React.useCallback((action) => {
+        Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
+    }, []);
 
     const handleClearNotification = (id) => {
         if (activeCampaign?.id && activeCampaign?.notificationQueue?.some(n => n.id === id)) {
             runDataAction(dataActions.campaign.clearNotification(activeCampaign.id, id));
             return;
         }
-        setDb(prev => {
-            if (!prev.notificationQueue) return prev;
-            return {
-                ...prev,
-                notificationQueue: prev.notificationQueue.filter(n => n.id !== id)
-            };
-        });
+        runDataAction(dataActions.globalContent.clearRootNotification(id));
     };
     // Let's replace the top imports first.
 
@@ -114,12 +114,8 @@ export default function PlayerAppController({ db, setDb }) {
         if (needsIntimidate || needsPerform) {
             console.log("Running Skill Migrations for", charToCheck.name);
 
-            updateActiveCampaign(camp => {
-                const chars = [...(camp.characters || [])];
-                const idx = chars.findIndex(c => c.id === myCharacter.id);
-                if (idx === -1) return camp;
-
-                const c = deepClone(chars[idx]);
+            runDataAction(dataActions.character.updateCharacter(activeCampaign.id, myCharacter.id, currentCharacter => {
+                const c = deepClone(currentCharacter);
                 let changed = false;
 
                 // Intimidate
@@ -150,14 +146,10 @@ export default function PlayerAppController({ db, setDb }) {
                     changed = true;
                 }
 
-                if (changed) {
-                    chars[idx] = c;
-                    return { ...camp, characters: chars };
-                }
-                return camp;
-            });
+                return changed ? c : currentCharacter;
+            }));
         }
-    }, [activeCampaign, myCharacter, updateActiveCampaign]);
+    }, [activeCampaign, myCharacter, dataActions, runDataAction]);
 
 
 
@@ -899,13 +891,6 @@ export default function PlayerAppController({ db, setDb }) {
 
     // --- STATE UPDATERS ---
 
-
-    const runDataAction = (action) => {
-        Promise.resolve(action).catch(err => {
-            console.error(err);
-            alert(err?.message || String(err));
-        });
-    };
 
     const updateCharacter = (updater) => {
         const campaignId = activeCampaign?.id;

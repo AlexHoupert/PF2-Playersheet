@@ -23,9 +23,9 @@ Most screens still expect the legacy `db` shape. Firestore v2 mode projects norm
 
 Inventory and loot code sometimes uses `name`, sometimes `_index`, sometimes `instanceId`, sometimes `addedAt` plus equipment/prepared flags. This can break stacked items, duplicate items, and transfer/claim flows.
 
-4. Whole-DB writes in normal UI paths
+4. Whole-DB writes in compatibility paths
 
-Some v2 runtime writes still diff whole legacy DB snapshots. Campaign/Session, Character/Inventory/Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, custom item/action, and encounter bestiary reveal-state now use `dataActions` and targeted repositories. Pact, abilities, lore, bestiary custom creature, and some global domains still need migration.
+Normal UI write paths for Campaign/Session, Character/Inventory/Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary, and Player runtime fallbacks now use `dataActions` and targeted repositories. Broad writes remain only in compatibility locations: `AdminApp`, `CampaignContext.updateActiveCampaign`, `createDataActions` legacy adapter, and the v2 broad-diff compatibility layer.
 
 5. Generated data size and source duplication
 
@@ -38,8 +38,8 @@ Generated catalog files are large. It is easy to accidentally import a full cata
 - Root `quests` and `lootBags` still exist for compatibility. Some code paths may read them when campaign data is absent.
 - Player-created custom item catalog registration uses `dataActions.globalContent.saveCustomItem`. The immediate inventory add still uses `onUpdateCharacter`.
 - Campaign, character, quest/subquest, encounter, and map deletion is soft delete. Do not hard-delete these documents unless a future purge flow is explicitly designed and approved.
-- `CampaignContext.updateActiveCampaign` remains a broad compatibility helper for non-migrated campaign child domains. Do not use it for new Campaign/Session lifecycle work.
-- Pacts, abilities, lore, bestiary custom creatures, and some global catalog settings still have direct/broad `setDb` paths. See `docs/agent/migration-backlog.md`.
+- `CampaignContext.updateActiveCampaign` remains a broad compatibility helper. Do not use it for new work.
+- Broad UI writes are guarded by `scripts/check_broad_writes.js`; see `docs/agent/migration-backlog.md`.
 - Quest rewards are idempotent and not automatically rolled back when objectives are later marked incomplete.
 - Quest reward notifications are campaign-scoped; root `notificationQueue` remains only a legacy fallback.
 - `ItemsView` trader, availability/formula, custom-item, loot-bag, and character assignment paths have been moved to `dataActions`.
@@ -83,7 +83,7 @@ Short-term:
 Medium-term:
 
 - Continue extracting `PlayerAppController.jsx` into real controller hooks for character, inventory, navigation, and modals.
-- Use v2 repository functions for remaining high-conflict actions like pacts, abilities, lore, and bestiary custom creatures.
+- Continue shrinking compatibility reads and the legacy projection before making v2 the default.
 - Add smoke tests for catalog decoders and `parseFoundry`.
 - Add a minimal lint/format check to catch import and JSX issues.
 

@@ -55,11 +55,32 @@ test('legacy data actions update character, inventory, loot, quest, encounter, m
     assert.equal(campaign.camping.zoneDC, 18);
 });
 
-test('legacy global actions update shop, custom content, and bestiary reveal state', async () => {
-    const harness = legacyHarness({ shop: { traders: [], customItems: {} }, actions: {}, bestiary: { creatures: {} } });
+test('legacy global actions update shop, custom content, bestiary, lore, and pacts', async () => {
+    const harness = legacyHarness({
+        shop: { traders: [], customItems: {} },
+        actions: {},
+        bestiary: { creatures: {}, customCreatures: {} },
+        lore: { articles: [{ id: 'article1', title: 'First', category: 'history', sortOrder: 0 }] },
+        abilities: { custom: {}, deviant: {} },
+        pacts: {},
+        notificationQueue: [{ id: 'notice1' }],
+    });
 
     await harness.actions.globalContent.saveCustomItem({ name: 'Widget' });
     await harness.actions.globalContent.saveCustomAction({ name: '[gold]Trip[/gold]' });
+    await harness.actions.globalContent.saveCustomAbility({ id: 'custom-trip', name: 'Trip' });
+    await harness.actions.globalContent.saveLoreArticle({ id: 'article2', title: 'Second', category: 'history', sortOrder: 1 });
+    await harness.actions.globalContent.moveLoreArticle('article2', 'up');
+    await harness.actions.globalContent.clearRootNotification('notice1');
+    await harness.actions.pact.savePact({ id: 'ember', name: 'Ember Pact' });
+    await harness.actions.pact.saveDeviantAbility({ id: 'spark', name: 'Spark', element: 'Fire' });
+    await harness.actions.bestiary.saveCustomCreature({ _id: 'custom-goblin', name: 'Goblin Boss', type: 'npc', items: [] });
+    await harness.actions.bestiary.updateCustomCreature('custom-goblin', entry => ({
+        ...entry,
+        data: { ...entry.data, items: [{ name: 'Roar' }] },
+    }));
+    await harness.actions.bestiary.updateCreatureMetadata('custom-goblin', { id: 'custom-goblin', group: 'Bosses' });
+    await harness.actions.bestiary.initializeCreatureMetadata([{ id: 'wolf', group: 'Wolves' }]);
     await harness.actions.shop.createTrader({ id: 'trader1', name: 'Market', inventory: [] });
     await harness.actions.shop.addItemsToTrader('trader1', [{ name: 'Widget' }]);
     await harness.actions.shop.setItemAvailable('Widget', true);
@@ -67,6 +88,14 @@ test('legacy global actions update shop, custom content, and bestiary reveal sta
 
     assert.equal(harness.state.shop.customItems.Widget.name, 'Widget');
     assert.equal(harness.state.actions['[gold]Trip[/gold]'].name, '[gold]Trip[/gold]');
+    assert.equal(harness.state.abilities.custom['custom-trip'].name, 'Trip');
+    assert.equal(harness.state.abilities.deviant.spark.element, 'Fire');
+    assert.equal(harness.state.pacts.ember.name, 'Ember Pact');
+    assert.equal(harness.state.lore.articles.find(article => article.id === 'article2').sortOrder, 0);
+    assert.deepEqual(harness.state.notificationQueue, []);
+    assert.equal(harness.state.bestiary.customCreatures['custom-goblin'].data.items[0].name, 'Roar');
+    assert.equal(harness.state.bestiary.creatures['custom-goblin'].group, 'Bosses');
+    assert.equal(harness.state.bestiary.creatures.wolf.group, 'Wolves');
     assert.deepEqual(harness.state.shop.traders[0].inventory, ['Widget']);
     assert.deepEqual(harness.state.shop.availableItems, ['Widget']);
     assert.equal(harness.state.bestiary.creatures.goblin.revealState.hp, 'public');

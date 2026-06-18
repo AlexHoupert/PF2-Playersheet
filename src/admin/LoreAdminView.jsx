@@ -1,18 +1,26 @@
 import React, { useState, useMemo } from 'react';
 import BottomSheet from '../shared/components/BottomSheet';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
+import { useCampaign } from '../shared/context/CampaignContext';
+import { selectLoreArticle, selectLoreArticles, selectLoreArticlesByCategory } from '../shared/db/selectors/loreSelectors';
 
 const LORE_CATEGORIES = ['History', 'Locations', 'NPCs', 'Bestiary'];
 
 export default function LoreAdminView({ db, setDb }) {
+    const { dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
     const [selectedCategory, setSelectedCategory] = useState('History');
     const [selectedArticleId, setSelectedArticleId] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState({});
 
-    const lore = db?.lore || { articles: [] };
-    const articles = lore.articles || [];
+    const articles = selectLoreArticles(db);
+    const runDataAction = (action) => {
+        Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
+    };
 
     // Toolbar button style
     const toolbarBtnStyle = {
@@ -58,20 +66,12 @@ export default function LoreAdminView({ db, setDb }) {
     };
 
     const filteredArticles = useMemo(() => {
-        return articles
-            .filter(a => a.category?.toLowerCase() === selectedCategory.toLowerCase())
-            .sort((a, b) => {
-                // Sort by sortOrder if both have it, otherwise alphabetically
-                const orderA = a.sortOrder ?? 9999;
-                const orderB = b.sortOrder ?? 9999;
-                if (orderA !== orderB) return orderA - orderB;
-                return a.title.localeCompare(b.title);
-            });
-    }, [articles, selectedCategory]);
+        return selectLoreArticlesByCategory(db, selectedCategory);
+    }, [db, selectedCategory]);
 
     const selectedArticle = useMemo(() => {
-        return articles.find(a => a.id === selectedArticleId);
-    }, [articles, selectedArticleId]);
+        return selectLoreArticle(db, selectedArticleId);
+    }, [db, selectedArticleId]);
 
     // --- ACTIONS ---
     const handleCreate = () => {
@@ -95,11 +95,7 @@ export default function LoreAdminView({ db, setDb }) {
 
     const handleDelete = (articleId) => {
         if (!window.confirm('Delete this article?')) return;
-        const updated = articles.filter(a => a.id !== articleId);
-        setDb(prev => ({
-            ...prev,
-            lore: { ...prev.lore, articles: updated }
-        }));
+        runDataAction(dataActions.globalContent.deleteLoreArticle(articleId));
         if (selectedArticleId === articleId) setSelectedArticleId(null);
     };
 
@@ -109,11 +105,7 @@ export default function LoreAdminView({ db, setDb }) {
             id: crypto.randomUUID(),
             title: article.title + ' (Copy)'
         };
-        const updated = [...articles, cloned];
-        setDb(prev => ({
-            ...prev,
-            lore: { ...prev.lore, articles: updated }
-        }));
+        runDataAction(dataActions.globalContent.saveLoreArticle(cloned));
         setSelectedArticleId(cloned.id);
         setIsEditing(true);
         setEditForm(cloned);
@@ -130,25 +122,11 @@ export default function LoreAdminView({ db, setDb }) {
         const targetIdx = direction === 'up' ? currentIdx - 1 : currentIdx + 1;
         if (targetIdx < 0 || targetIdx >= filteredArticles.length) return;
 
-        const current = filteredArticles[currentIdx];
-        const target = filteredArticles[targetIdx];
-
-        // Use display indices as new sortOrder values (swap positions)
-        setDb(prev => {
-            const updated = prev.lore.articles.map(a => {
-                if (a.id === current.id) return { ...a, sortOrder: targetIdx };
-                if (a.id === target.id) return { ...a, sortOrder: currentIdx };
-                return a;
-            });
-            return { ...prev, lore: { ...prev.lore, articles: updated } };
-        });
+        runDataAction(dataActions.globalContent.moveLoreArticle(articleId, direction));
     };
 
     const handleSave = () => {
         if (!editForm.title?.trim()) return alert('Title is required');
-
-        let updated = [...articles];
-        const existingIdx = updated.findIndex(a => a.id === editForm.id);
 
         // Ensure category is lowercase
         const normalizedForm = {
@@ -156,16 +134,7 @@ export default function LoreAdminView({ db, setDb }) {
             category: (editForm.category || selectedCategory).toLowerCase()
         };
 
-        if (existingIdx > -1) {
-            updated[existingIdx] = normalizedForm;
-        } else {
-            updated.push(normalizedForm);
-        }
-
-        setDb(prev => ({
-            ...prev,
-            lore: { ...prev.lore, articles: updated }
-        }));
+        runDataAction(dataActions.globalContent.saveLoreArticle(normalizedForm));
         setIsEditing(false);
         setSelectedArticleId(normalizedForm.id);
     };

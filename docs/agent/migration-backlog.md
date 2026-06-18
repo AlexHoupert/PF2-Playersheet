@@ -1,7 +1,8 @@
 # Migration Backlog
 
 This file tracks remaining broad legacy writes after the Character/Inventory/Loot,
-Campaign/Session, Quests/Rewards, Encounters, Maps, Progress, and Camping waves.
+Campaign/Session, Quests/Rewards, Encounters, Maps, Progress, Camping, and
+Global Admin Content waves.
 New work should prefer `dataActions` and domain reducers. Broad writes listed here
 are compatibility debt, not patterns for new code.
 
@@ -14,6 +15,12 @@ These UI files must not introduce direct `setDb` or `updateActiveCampaign` write
 - `src/admin/QuestsView.jsx`
 - `src/admin/MapAdminView.jsx`
 - `src/admin/ProgressAdminView.jsx`
+- `src/admin/AbilitiesView.jsx`
+- `src/admin/BestiaryView.jsx`
+- `src/admin/LoreAdminView.jsx`
+- `src/pacts/DeviantAbilitiesAdminView.jsx`
+- `src/pacts/PactAdminView.jsx`
+- `src/player/PlayerAppController.jsx`
 - `src/player/views/InventoryView.jsx`
 - `src/player/views/ProgressView.jsx`
 - `src/player/views/PlayerQuestsView.jsx`
@@ -24,47 +31,34 @@ These UI files must not introduce direct `setDb` or `updateActiveCampaign` write
 
 `scripts/check_broad_writes.js` enforces this list.
 
-## Remaining Direct Writes By Domain
+## Remaining Direct Writes
 
-### Pacts
+Only these broad-write files are currently allowed by `scripts/check_broad_writes.js`:
 
-- `src/pacts/PactAdminView.jsx`
-- `src/pacts/DeviantAbilitiesAdminView.jsx`
-- `src/player/PlayerAppController.jsx` still uses `updateActiveCampaign` for player-side
-  runtime skill repair before a dedicated character repair action exists.
+- `src/admin/AdminApp.jsx`: legacy admin/player tab fallback for root characters when no campaign is active.
+- `src/shared/context/CampaignContext.jsx`: deprecated compatibility escape hatch `updateActiveCampaign`.
+- `src/shared/db/domain/createDataActions.js`: legacy adapter implementation that intentionally writes through `setDb`.
 
-Next action: add `dataActions.pact` with campaign-scoped V2 writes and a small
-character repair action for one-off migrations.
+Any new broad write outside those files should be treated as a regression.
 
-### Bestiary
+## Completed In Global Admin Content Wave
 
-- `src/admin/BestiaryView.jsx` still manages custom creatures and catalog metadata
-  through broad writes.
+- Pacts and Deviant Abilities use `dataActions.pact`.
+- Custom Abilities use `dataActions.globalContent`.
+- Lore articles use `dataActions.globalContent` and the `loreArticles` collection.
+- Bestiary custom creatures use the `customCreatures` collection through `dataActions.bestiary`.
+- Bestiary metadata, reveal state, catalog initialization, group changes, and bestiary toggles use `global/config.bestiary.creatures` through `dataActions.bestiary`.
+- Player root-notification clearing uses `dataActions.globalContent.clearRootNotification`.
+- Player skill-name runtime repair uses `dataActions.character.updateCharacter`.
 
-Completed in the stabilization wave: encounter creature reveal state now uses
-`dataActions.bestiary.updateRevealState`.
+## Remaining By Domain
 
-Next action: add `dataActions.bestiary.saveCustomCreature/deleteCustomCreature`
-and migrate `BestiaryView`.
+### Campaign Compatibility
 
-### Lore
-
-- `src/admin/LoreAdminView.jsx` still writes lore articles broadly.
-
-Next action: migrate to a `globalContent` lore repository backed by
-`loreArticles`.
-
-### Abilities
-
-- `src/admin/AbilitiesView.jsx` still writes ability and deviant ability catalogs
-  broadly.
-
-Next action: split global ability catalog writes from campaign-scoped character
-ability assignments, then add targeted actions for each.
+- `CampaignContext.updateActiveCampaign` remains available but deprecated. Do not use it for new work.
+- `AdminApp` still has a root-character fallback for the old campaignless admin/player mode.
 
 ### Shop And Traders
-
-Completed in the stabilization wave:
 
 - `ItemsView` trader create/update/hide/inventory writes use `dataActions.shop`.
 - Available items and formulas use `dataActions.shop`.
@@ -74,23 +68,7 @@ Remaining:
 
 - `ShopView` is read-only and still reads through the legacy projection.
 
-### Global Custom Content
+### Legacy V2 Compatibility
 
-Completed in the stabilization wave:
-
-- Player-created custom items use `dataActions.globalContent.saveCustomItem`.
-- Player-created custom actions use `dataActions.globalContent.saveCustomAction`.
-
-Remaining:
-
-- Custom creatures and lore still need targeted actions.
-
-### Player Runtime Fallbacks
-
-- `src/player/PlayerAppController.jsx` clears legacy root `notificationQueue` entries through
-  `setDb` when a notification is not campaign-scoped.
-- `src/player/PlayerAppController.jsx` has a runtime skill-name repair path that still uses
-  `updateActiveCampaign`.
-
-These remain explicit compatibility fallbacks until root notifications and player
-repair actions are fully migrated.
+- `useFirestoreV2Db` still contains broad legacy diff support for any future non-migrated path.
+- `writeLegacyDbDiffToV2` must remain confined to the V2 compatibility layer.

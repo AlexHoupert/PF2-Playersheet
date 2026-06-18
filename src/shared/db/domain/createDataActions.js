@@ -98,17 +98,32 @@ import {
 } from "./campingReducers.js";
 import {
   addItemsToTraderInDb,
+  clearRootNotificationInDb,
   createTraderInDb,
+  deleteCreatureInDb,
   deleteCustomActionInDb,
+  deleteCustomAbilityInDb,
   deleteCustomItemInDb,
+  deleteDeviantAbilityInDb,
+  deleteLoreArticleInDb,
+  deletePactInDb,
   deleteTraderInDb,
+  initializeCreatureMetadataInDb,
+  moveLoreArticleInDb,
   removeItemsFromTraderInDb,
   saveCustomActionInDb,
+  saveCustomAbilityInDb,
+  saveCustomCreatureInDb,
   saveCustomItemInDb,
+  saveDeviantAbilityInDb,
+  saveLoreArticleInDb,
+  savePactInDb,
   setShopFormulaAvailableInDb,
   setShopItemAvailableInDb,
   setTraderHiddenInDb,
   updateBestiaryRevealStateInDb,
+  updateCreatureMetadataInDb,
+  updateCustomCreatureInDb,
   updateTraderInDb,
 } from "./globalContentReducers.js";
 
@@ -1022,6 +1037,98 @@ export function createDataActions({
     return updateDbLegacy((prev) => deleteCustomActionInDb(prev, actionOrName));
   };
 
+  const saveCustomAbility = (ability) => updateGlobalConfig((current) => saveCustomAbilityInDb(current, ability));
+
+  const deleteCustomAbility = (abilityOrId) =>
+    updateGlobalConfig((current) => deleteCustomAbilityInDb(current, abilityOrId));
+
+  const savePact = (pact) => updateGlobalConfig((current) => savePactInDb(current, pact));
+
+  const deletePact = (pactOrId) => updateGlobalConfig((current) => deletePactInDb(current, pactOrId));
+
+  const saveDeviantAbility = (ability) =>
+    updateGlobalConfig((current) => saveDeviantAbilityInDb(current, ability));
+
+  const deleteDeviantAbility = (abilityOrId) =>
+    updateGlobalConfig((current) => deleteDeviantAbilityInDb(current, abilityOrId));
+
+  const saveLoreArticle = (article) => {
+    if (useFirestoreV2) {
+      return repos.globalRepo.setLoreArticle(firestore, article);
+    }
+    return updateDbLegacy((prev) => saveLoreArticleInDb(prev, article));
+  };
+
+  const deleteLoreArticle = (articleOrId) => {
+    if (useFirestoreV2) {
+      return repos.globalRepo.deleteLoreArticle(firestore, articleOrId);
+    }
+    return updateDbLegacy((prev) => deleteLoreArticleInDb(prev, articleOrId));
+  };
+
+  const moveLoreArticle = (articleId, direction) => {
+    if (!useFirestoreV2) {
+      return updateDbLegacy((prev) => moveLoreArticleInDb(prev, articleId, direction));
+    }
+    const currentArticle = (db?.lore?.articles || []).find((article) => article.id === articleId);
+    if (!currentArticle || !["up", "down"].includes(direction)) return Promise.resolve();
+    const category = String(currentArticle.category || "").toLowerCase();
+    const sorted = (db?.lore?.articles || [])
+      .filter((article) => String(article.category || "").toLowerCase() === category)
+      .sort((a, b) => {
+        const orderA = a.sortOrder ?? 9999;
+        const orderB = b.sortOrder ?? 9999;
+        if (orderA !== orderB) return orderA - orderB;
+        return String(a.title || "").localeCompare(String(b.title || ""));
+      });
+    const currentIndex = sorted.findIndex((article) => article.id === articleId);
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= sorted.length) return Promise.resolve();
+    const affectedIds = [sorted[currentIndex].id, sorted[targetIndex].id];
+
+    return repos.globalRepo.updateLoreArticles(firestore, affectedIds, (articlesById) => {
+      const current = articlesById[sorted[currentIndex].id];
+      const target = articlesById[sorted[targetIndex].id];
+      return {
+        [sorted[currentIndex].id]: { ...current, sortOrder: targetIndex },
+        [sorted[targetIndex].id]: { ...target, sortOrder: currentIndex },
+      };
+    });
+  };
+
+  const clearRootNotification = (notificationId) =>
+    updateGlobalConfig((current) => clearRootNotificationInDb(current, notificationId));
+
+  const saveCustomCreature = (creature) => {
+    if (useFirestoreV2) {
+      return repos.globalRepo.setCustomCreature(firestore, creature);
+    }
+    return updateDbLegacy((prev) => saveCustomCreatureInDb(prev, creature));
+  };
+
+  const updateCustomCreature = (creatureId, updater) => {
+    if (useFirestoreV2) {
+      return repos.globalRepo.updateCustomCreature(firestore, creatureId, updater);
+    }
+    return updateDbLegacy((prev) => updateCustomCreatureInDb(prev, creatureId, updater));
+  };
+
+  const deleteCreature = (creatureId) => {
+    if (useFirestoreV2) {
+      return Promise.all([
+        repos.globalRepo.updateGlobalConfig(firestore, (current) => deleteCreatureInDb(current, creatureId)),
+        repos.globalRepo.deleteCustomCreature(firestore, creatureId),
+      ]);
+    }
+    return updateDbLegacy((prev) => deleteCreatureInDb(prev, creatureId));
+  };
+
+  const updateCreatureMetadata = (creatureId, updater) =>
+    updateGlobalConfig((current) => updateCreatureMetadataInDb(current, creatureId, updater));
+
+  const initializeCreatureMetadata = (metadataEntries) =>
+    updateGlobalConfig((current) => initializeCreatureMetadataInDb(current, metadataEntries));
+
   const updateBestiaryRevealState = (creatureId, field, revealMode) =>
     updateGlobalConfig((current) => updateBestiaryRevealStateInDb(current, creatureId, field, revealMode));
 
@@ -1216,12 +1323,29 @@ export function createDataActions({
     },
     bestiary: {
       updateRevealState: updateBestiaryRevealState,
+      saveCustomCreature,
+      updateCustomCreature,
+      deleteCreature,
+      updateCreatureMetadata,
+      initializeCreatureMetadata,
     },
     globalContent: {
       saveCustomItem,
       deleteCustomItem,
       saveCustomAction,
       deleteCustomAction,
+      saveCustomAbility,
+      deleteCustomAbility,
+      saveLoreArticle,
+      deleteLoreArticle,
+      moveLoreArticle,
+      clearRootNotification,
+    },
+    pact: {
+      savePact,
+      deletePact,
+      saveDeviantAbility,
+      deleteDeviantAbility,
     },
     shop: {
       createTrader,

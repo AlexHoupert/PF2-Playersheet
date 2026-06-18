@@ -8,7 +8,10 @@ import {
     selectTargetCampaignId,
 } from '../src/shared/db/selectors/campaignSelectors.js';
 import { selectMyCharacter } from '../src/shared/db/selectors/characterSelectors.js';
-import { selectBestiaryRevealState } from '../src/shared/db/selectors/bestiarySelectors.js';
+import { selectCustomAbilityList, selectDeviantAbilityList } from '../src/shared/db/selectors/abilitySelectors.js';
+import { selectBestiaryRevealState, selectCustomCreature } from '../src/shared/db/selectors/bestiarySelectors.js';
+import { selectLoreArticlesByCategory } from '../src/shared/db/selectors/loreSelectors.js';
+import { selectPactList } from '../src/shared/db/selectors/pactSelectors.js';
 import { selectShop, selectVisibleTraders } from '../src/shared/db/selectors/shopSelectors.js';
 import { composeLegacyDbFromV2Documents } from '../src/shared/db/v2/normalizers.js';
 
@@ -64,7 +67,14 @@ test('selectors read v2 projection with campaign subcollections and global confi
                 availableItems: ['Rope'],
             },
             bestiary: { creatures: { goblin: { revealState: { hp: 'public' } } } },
+            abilities: {
+                custom: { trip: { id: 'trip', name: 'Trip' } },
+                deviant: { spark: { id: 'spark', name: 'Spark', level: 2 } },
+            },
+            pacts: { ember: { id: 'ember', name: 'Ember Pact' } },
         } },
+        { path: 'customCreatures/custom-goblin', data: { id: 'custom-goblin', name: 'Goblin Boss', data: { _id: 'custom-goblin' } } },
+        { path: 'loreArticles/article1', data: { id: 'article1', title: 'Lore', category: 'history', sortOrder: 0 } },
         { path: 'campaigns/camp1', data: { id: 'camp1', name: 'Campaign' } },
         { path: 'campaigns/camp1/characters/char1', data: { id: 'char1', name: 'Hero' } },
         { path: 'campaigns/camp1/quests/quest1', data: { id: 'quest1', title: 'Quest' } },
@@ -76,4 +86,9 @@ test('selectors read v2 projection with campaign subcollections and global confi
     assert.deepEqual(selectShop(db).availableItems, ['Rope']);
     assert.deepEqual(selectVisibleTraders(db).map(trader => trader.id), ['trader1']);
     assert.equal(selectBestiaryRevealState(db, 'goblin').hp, 'public');
+    assert.equal(selectCustomCreature(db, 'custom-goblin').name, 'Goblin Boss');
+    assert.equal(selectCustomAbilityList(db)[0].name, 'Trip');
+    assert.equal(selectDeviantAbilityList(db)[0].name, 'Spark');
+    assert.equal(selectPactList(db)[0].name, 'Ember Pact');
+    assert.equal(selectLoreArticlesByCategory(db, 'history')[0].id, 'article1');
 });

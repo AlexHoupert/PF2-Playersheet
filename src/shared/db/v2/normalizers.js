@@ -117,6 +117,12 @@ export function composeLegacyDbFromV2Documents(documents, baseDb = {}) {
             ...(baseDb?.lore || {}),
         },
         actions: {},
+        pacts: {},
+        abilities: {
+            custom: {},
+            deviant: {},
+            ...(baseDb?.abilities || {}),
+        },
     };
 
     const ensureCampaign = (campaignId) => {
@@ -147,6 +153,13 @@ export function composeLegacyDbFromV2Documents(documents, baseDb = {}) {
             db.library = data.library || {};
             db.runes = data.runes || {};
             db.feats = data.feats || {};
+            db.pacts = data.pacts || {};
+            db.abilities = {
+                ...(db.abilities || {}),
+                ...(data.abilities || {}),
+                custom: data.abilities?.custom || db.abilities?.custom || {},
+                deviant: data.abilities?.deviant || db.abilities?.deviant || {},
+            };
             continue;
         }
 
@@ -459,6 +472,11 @@ function addGlobalDocuments(db, addDocument, report) {
         library: db.library || {},
         runes: db.runes || {},
         feats: db.feats || {},
+        pacts: db.pacts || {},
+        abilities: {
+            custom: db.abilities?.custom || {},
+            deviant: db.abilities?.deviant || {},
+        },
     });
 
     for (const [key, item] of Object.entries(db.shop?.customItems || {})) {

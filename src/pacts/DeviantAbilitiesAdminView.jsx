@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import RichTextEditor from '../shared/components/RichTextEditor';
+import { useCampaign } from '../shared/context/CampaignContext';
+import { selectDeviantAbilityList } from '../shared/db/selectors/abilitySelectors';
 import { ELEMENTS, ELEMENT_NAMES, generateId } from './pactsData';
 
 const EMPTY_ABILITY = {
@@ -10,15 +12,19 @@ const EMPTY_ABILITY = {
 };
 
 export default function DeviantAbilitiesAdminView({ db, setDb }) {
-    const abilities = useMemo(
-        () => Object.values(db?.abilities?.deviant || {}).sort((a, b) => (a.level ?? 0) - (b.level ?? 0) || a.name.localeCompare(b.name)),
-        [db?.abilities?.deviant]
-    );
+    const { dataActions } = useCampaign();
+    const abilities = useMemo(() => selectDeviantAbilityList(db), [db]);
 
     const [search, setSearch] = useState('');
     const [filterEl, setFilterEl] = useState('');
     const [editing, setEditing] = useState(null);
     const [isNew, setIsNew] = useState(false);
+    const runDataAction = (action) => {
+        Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
+    };
 
     const visible = useMemo(() =>
         abilities.filter(a =>
@@ -30,20 +36,13 @@ export default function DeviantAbilitiesAdminView({ db, setDb }) {
         if (!editing?.name?.trim()) return;
         const id = editing.id || generateId(editing.name);
         const record = { ...editing, id };
-        setDb(prev => ({
-            ...prev,
-            abilities: { ...prev.abilities, deviant: { ...prev.abilities?.deviant, [id]: record } }
-        }));
+        runDataAction(dataActions.pact.saveDeviantAbility(record));
         setEditing(null);
     };
 
     const del = (id) => {
         if (!confirm('Delete this deviant ability?')) return;
-        setDb(prev => {
-            const deviant = { ...prev.abilities?.deviant };
-            delete deviant[id];
-            return { ...prev, abilities: { ...prev.abilities, deviant } };
-        });
+        runDataAction(dataActions.pact.deleteDeviantAbility(id));
         if (editing?.id === id) setEditing(null);
     };
 

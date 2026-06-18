@@ -204,6 +204,65 @@ export const globalRepo = {
         const id = safeDocId(actionOrName?.id || actionOrName?.name || actionOrName, 'custom_action');
         await deleteDoc(doc(firestore, V2_COLLECTIONS.customActions, id));
     },
+
+    async setCustomCreature(firestore, creature) {
+        const entry = normalizeCustomCreatureDocument(creature);
+        const id = safeDocId(entry?.id, 'custom_creature');
+        const ref = doc(firestore, V2_COLLECTIONS.customCreatures, id);
+        await setDoc(ref, cleanForFirestore(stampRuntime({ ...entry, id })));
+    },
+
+    async updateCustomCreature(firestore, creatureId, updater) {
+        const id = safeDocId(creatureId, 'custom_creature');
+        const ref = doc(firestore, V2_COLLECTIONS.customCreatures, id);
+        await runTransaction(firestore, async transaction => {
+            const snapshot = await transaction.get(ref);
+            if (!snapshot.exists()) throw new Error(`Custom creature not found: ${creatureId}`);
+            const current = snapshot.data();
+            const next = typeof updater === 'function' ? updater(current) : { ...current, ...updater };
+            const entry = normalizeCustomCreatureDocument({ ...current, ...next, id: next?.id || creatureId });
+            transaction.set(ref, cleanForFirestore(stampRuntime({ ...entry, id })));
+        });
+    },
+
+    async deleteCustomCreature(firestore, creatureOrId) {
+        const id = safeDocId(creatureOrId?.id || creatureOrId?.name || creatureOrId, 'custom_creature');
+        await deleteDoc(doc(firestore, V2_COLLECTIONS.customCreatures, id));
+    },
+
+    async setLoreArticle(firestore, article) {
+        const id = safeDocId(article?.id || article?.title, 'article');
+        const ref = doc(firestore, V2_COLLECTIONS.loreArticles, id);
+        await setDoc(ref, cleanForFirestore(stampRuntime({ ...article, id })));
+    },
+
+    async deleteLoreArticle(firestore, articleOrId) {
+        const id = safeDocId(articleOrId?.id || articleOrId?.title || articleOrId, 'article');
+        await deleteDoc(doc(firestore, V2_COLLECTIONS.loreArticles, id));
+    },
+
+    async updateLoreArticles(firestore, articleIds, updater) {
+        const uniqueIds = [...new Set(articleIds.filter(Boolean).map(id => safeDocId(id, 'article')))];
+        const refsById = Object.fromEntries(
+            uniqueIds.map(articleId => [articleId, doc(firestore, V2_COLLECTIONS.loreArticles, articleId)])
+        );
+
+        await runTransaction(firestore, async transaction => {
+            const entries = await Promise.all(
+                uniqueIds.map(async articleId => {
+                    const snapshot = await transaction.get(refsById[articleId]);
+                    if (!snapshot.exists()) throw new Error(`Lore article not found: ${articleId}`);
+                    return [articleId, snapshot.data()];
+                })
+            );
+            const currentById = Object.fromEntries(entries);
+            const nextById = typeof updater === 'function' ? updater(currentById) : updater;
+            Object.entries(nextById || currentById).forEach(([articleId, article]) => {
+                if (!refsById[articleId]) return;
+                transaction.set(refsById[articleId], cleanForFirestore(stampRuntime({ ...article, id: article.id || articleId })));
+            });
+        });
+    },
 };
 
 export const questRepo = {
@@ -472,6 +531,34 @@ export const lootRepo = {
         });
     },
 };
+
+function normalizeCustomCreatureDocument(creature) {
+    if (!creature) return { id: 'custom_creature', name: 'custom_creature', type: 'npc', data: {} };
+    if (creature.data) {
+        const data = creature.data;
+        const id = creature.id || data._id || data.id || creature.name;
+        return {
+            ...creature,
+            id,
+            type: creature.type || data.type || 'npc',
+            name: creature.name || data.name || id,
+            data: {
+                ...data,
+                _id: data._id || id,
+            },
+        };
+    }
+    const id = creature._id || creature.id || creature.name;
+    return {
+        id,
+        type: creature.type || 'npc',
+        name: creature.name || id,
+        data: {
+            ...creature,
+            _id: creature._id || id,
+        },
+    };
+}
 
 function docFromPath(firestore, path) {
     const segments = String(path || '').split('/').filter(Boolean);

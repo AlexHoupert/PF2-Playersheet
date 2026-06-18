@@ -67,7 +67,7 @@ Firestore v2 mode:
 - Subscribes to normalized collections from `src/shared/db/v2/schema.js`.
 - Uses `composeLegacyDbFromV2Documents` to create the legacy projection.
 - Non-migrated runtime writes still diff whole legacy DBs via `writeLegacyDbDiffToV2`.
-- Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, custom item/action, and encounter bestiary reveal-state migrated writes now go through `CampaignContext.dataActions` and targeted v2 repositories/transactions.
+- Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, and Player runtime fallbacks now go through `CampaignContext.dataActions` and targeted v2 repositories/transactions.
 - `CampaignContext` uses pure selectors under `src/shared/db/selectors/` for active/archived campaign and character reads.
 
 Firestore v2 collections include `campaigns`, campaign subcollections `characters`, `quests`, `lootBags`, `encounters`, `maps`, `members`, plus top-level `global`, `customItems`, `customCreatures`, `customActions`, `loreArticles`, and `migrationBackups`.
@@ -87,8 +87,8 @@ Current domain action files:
 - `src/shared/db/domain/mapReducers.js`: pure map, pin, scale, order, and map soft-delete reducers.
 - `src/shared/db/domain/progressReducers.js`: pure progress normalization, active-only filtering, section updates, and top-level progress soft-delete reducers.
 - `src/shared/db/domain/campingReducers.js`: pure camping settings, activity, assignment, roll, and custom activity soft-delete reducers.
-- `src/shared/db/domain/globalContentReducers.js`: pure shop/trader, custom item/action, and bestiary reveal-state reducers.
-- `src/shared/db/selectors/`: pure read selectors for campaign, character, inventory, shop, bestiary, and progress data.
+- `src/shared/db/domain/globalContentReducers.js`: pure shop/trader, global custom content, pact, ability, lore, bestiary metadata/custom creature, notification, and reveal-state reducers.
+- `src/shared/db/selectors/`: pure read selectors for campaign, character, inventory, shop, bestiary, progress, pact, ability, and lore data.
 - `src/shared/db/v2/repositories.js`: targeted Firestore v2 document updates and transactions.
 
 Migrated paths:
@@ -112,15 +112,21 @@ Migrated paths:
 - Camping assignments store `characterId` plus `characterName`; old name-only assignments remain readable.
 - GM ItemsView trader create/update/hide/inventory and shop availability/formula writes use `dataActions.shop`.
 - GM and player custom item/action saves use `dataActions.globalContent`.
+- GM AbilitiesView custom ability saves/deletes/clones and custom-creature ability assignment use `dataActions.globalContent` and `dataActions.bestiary`.
+- GM PactAdminView and DeviantAbilitiesAdminView use `dataActions.pact`.
+- GM LoreAdminView uses `dataActions.globalContent` with `loreArticles`.
+- GM BestiaryView custom creature save/update/delete, metadata edits, bestiary toggles, group edits, reveal-state, and catalog metadata initialization use `dataActions.bestiary`.
 - Encounter creature reveal-state writes use `dataActions.bestiary.updateRevealState`.
+- Player root-notification clearing uses `dataActions.globalContent.clearRootNotification`.
+- Player skill-name runtime repair uses `dataActions.character.updateCharacter`.
 
 Soft delete uses `deletedAt`/`deletedBy`; restore removes those fields and sets `restoredAt`/`restoredBy`. `CampaignContext.campaigns`, `activeCampaign.characters`, `activeCampaign.quests`, `activeCampaign.encounters`, and `activeCampaign.maps` expose active records; `archivedCampaigns`, `activeCampaign.archivedCharacters`, `activeCampaign.archivedQuests`, `activeCampaign.archivedEncounters`, and `activeCampaign.archivedMaps` expose archived records.
 
 Quest rewards are idempotent via applied markers and are not automatically rolled back if an objective is later marked incomplete. Quest reward notifications are campaign-scoped via `campaign.notificationQueue`; root `db.notificationQueue` remains a legacy fallback.
 
-`CampaignContext.updateActiveCampaign` intentionally remains a deprecated broad compatibility helper for non-migrated pact/player-local style updates.
+`CampaignContext.updateActiveCampaign` intentionally remains a deprecated broad compatibility helper. Do not use it for new work.
 
-Remaining broad write paths are tracked in `docs/agent/migration-backlog.md`, `docs/agent/domain-actions.md`, and `docs/agent/known-risks.md`. `scripts/check_broad_writes.js` fails new broad writes in migrated domains.
+Remaining broad write paths are limited to `AdminApp`, `CampaignContext`, and the legacy adapter implementation inside `createDataActions`. They are tracked in `docs/agent/migration-backlog.md`, `docs/agent/domain-actions.md`, and `docs/agent/known-risks.md`. `scripts/check_broad_writes.js` fails new broad writes in migrated domains.
 
 ## Data Model Snapshot
 
