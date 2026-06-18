@@ -7,7 +7,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { deepClone } from '../shared/utils/deepClone';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
-import { selectBestiaryRevealState } from '../shared/db/selectors/bestiarySelectors';
+import { selectBestiaryRevealState, selectCustomCreatureData, selectCustomCreatureList } from '../shared/db/selectors/bestiarySelectors';
 import BottomSheet from '../shared/components/BottomSheet';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import InitiativeCard from './components/InitiativeCard';
@@ -40,7 +40,7 @@ export default function EncounterView({ db, setDb }) {
     // ── Creature catalog for search (static index + custom creatures from DB) ──
     const allCreatures = useMemo(() => {
         const indexed = getAllCreatures();
-        const custom = Object.values(db?.bestiary?.customCreatures || {}).map(c => ({
+        const custom = selectCustomCreatureList(db).map(c => ({
             id: c.id,
             name: c.name,
             level: c.data?.system?.details?.level?.value ?? 0,
@@ -54,7 +54,7 @@ export default function EncounterView({ db, setDb }) {
         // Custom creatures first, then deduplicate static ones by name
         const customNames = new Set(custom.map(c => c.name));
         return [...custom, ...indexed.filter(c => !customNames.has(c.name))];
-    }, [db?.bestiary?.customCreatures]);
+    }, [db]);
 
     const filteredCreatures = useMemo(() => {
         if (!creatureSearch || creatureSearch.length < 2) return [];
@@ -69,7 +69,7 @@ export default function EncounterView({ db, setDb }) {
             .filter(c => c.type === 'creature' && c.creatureId && !creatureDataCache[c.creatureId])
             .forEach(c => {
                 // Check custom creatures first (synchronous, no fetch needed)
-                const customData = db?.bestiary?.customCreatures?.[c.creatureId]?.data;
+                const customData = selectCustomCreatureData(db, c.creatureId);
                 if (customData) {
                     setCreatureDataCache(prev => ({ ...prev, [c.creatureId]: customData }));
                     return;
@@ -139,7 +139,7 @@ export default function EncounterView({ db, setDb }) {
 
         if (catalogEntry.isCustom) {
             // Custom creatures are already in DB — no async fetch needed
-            const customData = db?.bestiary?.customCreatures?.[catalogEntry.id]?.data;
+            const customData = selectCustomCreatureData(db, catalogEntry.id);
             if (customData) applyData(deepClone(customData));
             return;
         }

@@ -64,10 +64,11 @@ Any new broad write outside those files should be treated as a regression.
 - `ItemsView` trader create/update/hide/inventory writes use `dataActions.shop`.
 - Available items and formulas use `dataActions.shop`.
 - GM custom items use `dataActions.globalContent.saveCustomItem/deleteCustomItem`.
+- Shop reads in `ShopView`, `ItemsView`, and `InventoryView` are selector-backed through `shopSelectors`.
 
 Remaining:
 
-- `ShopView` is read-only and still reads through the legacy projection.
+- Shop still depends on the legacy-shaped projection as the view-model input, but component-local root fallback logic has been removed.
 
 ### Legacy V2 Compatibility
 

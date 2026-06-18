@@ -31,7 +31,6 @@ export default function ItemsViewLayout({
     contextSubMenu,
     COLUMNS_CONFIG,
     dataActions,
-    db,
     editingItem,
     executeItemAction,
     filteredSideItems,
@@ -75,6 +74,7 @@ export default function ItemsViewLayout({
     setSidePage,
     setVisibleColumns,
     showColSelector,
+    shopState,
     sideLists,
     sideMode,
     sidePage,
@@ -82,7 +82,11 @@ export default function ItemsViewLayout({
     sortConfig,
     sortedGlobalItems,
     totalPages,
-    visibleColumns,}) {    const tableColumns = ['Available', 'Formula', ...visibleColumns];
+    visibleColumns,}) {
+    const tableColumns = ['Available', 'Formula', ...visibleColumns];
+    const availableItems = shopState?.availableItems || [];
+    const availableFormulas = shopState?.availableFormulas || [];
+    const traders = shopState?.traders || [];
     const isSelected = (item) => selectedItems.some(i => i.name === item.name);
     const isSideSelected = (item) => selectedSideItems.some(i => (i.instanceId || i.name) === (item.instanceId || item.name));
 
@@ -208,8 +212,8 @@ export default function ItemsViewLayout({
                                     >
                                         {tableColumns.map(col => {
                                             const priority = { category: 3, group: 3, rarity: 2, traits: 2, damage: 2, range: 2, bulk: 3 }[col];
-                                            if (col === 'Available') return <td key={col} data-priority={priority} style={{ padding: 8 }}><input type="checkbox" checked={(db.shop?.availableItems || []).includes(item.name)} onChange={(e) => { e.stopPropagation(); performAction((db.shop?.availableItems || []).includes(item.name) ? 'makeUnavailable' : 'makeAvailable'); }} onClick={e => e.stopPropagation()} /></td>;
-                                            if (col === 'Formula') return <td key={col} data-priority={priority} style={{ padding: 8 }}><input type="checkbox" checked={(db.shop?.availableFormulas || []).includes(item.name)} onChange={(e) => { e.stopPropagation(); performAction((db.shop?.availableFormulas || []).includes(item.name) ? 'removeFormula' : 'addFormula'); }} onClick={e => e.stopPropagation()} /></td>;
+                                            if (col === 'Available') return <td key={col} data-priority={priority} style={{ padding: 8 }}><input type="checkbox" checked={availableItems.includes(item.name)} onChange={(e) => { e.stopPropagation(); performAction(availableItems.includes(item.name) ? 'makeUnavailable' : 'makeAvailable'); }} onClick={e => e.stopPropagation()} /></td>;
+                                            if (col === 'Formula') return <td key={col} data-priority={priority} style={{ padding: 8 }}><input type="checkbox" checked={availableFormulas.includes(item.name)} onChange={(e) => { e.stopPropagation(); performAction(availableFormulas.includes(item.name) ? 'removeFormula' : 'addFormula'); }} onClick={e => e.stopPropagation()} /></td>;
                                             return <td key={col} data-priority={priority} style={{ padding: 8, color: '#ddd' }}>{item[col]}</td>;
                                         })}
                                     </tr>
@@ -400,8 +404,8 @@ export default function ItemsViewLayout({
                                                     cursor: 'pointer'
                                                 }}
                                             >
-                                                {sideMode === 'trader' && <td style={{ padding: 4 }}><input type="checkbox" checked={(db.shop?.availableItems || []).includes(item.name)} onChange={e => { e.stopPropagation(); performAction((db.shop?.availableItems || []).includes(item.name) ? 'makeUnavailable' : 'makeAvailable'); }} onClick={e => e.stopPropagation()} /></td>}
-                                                {sideMode === 'trader' && <td style={{ padding: 4 }}><input type="checkbox" checked={(db.shop?.availableFormulas || []).includes(item.name)} onChange={e => { e.stopPropagation(); performAction((db.shop?.availableFormulas || []).includes(item.name) ? 'removeFormula' : 'addFormula'); }} onClick={e => e.stopPropagation()} /></td>}
+                                                {sideMode === 'trader' && <td style={{ padding: 4 }}><input type="checkbox" checked={availableItems.includes(item.name)} onChange={e => { e.stopPropagation(); performAction(availableItems.includes(item.name) ? 'makeUnavailable' : 'makeAvailable'); }} onClick={e => e.stopPropagation()} /></td>}
+                                                {sideMode === 'trader' && <td style={{ padding: 4 }}><input type="checkbox" checked={availableFormulas.includes(item.name)} onChange={e => { e.stopPropagation(); performAction(availableFormulas.includes(item.name) ? 'removeFormula' : 'addFormula'); }} onClick={e => e.stopPropagation()} /></td>}
                                                 <td style={{ padding: 4 }}>{item.name}</td>
                                                 <td style={{ padding: 4 }}>{item.level || 0}</td>
                                                 <td style={{ padding: 4 }}>{item.type}</td>
@@ -454,11 +458,11 @@ export default function ItemsViewLayout({
                             ) : (
                                 /* Main table context menu */
                                 <>
-                                    {(db.shop?.availableItems || []).includes(contextMenu.item.name)
+                                    {availableItems.includes(contextMenu.item.name)
                                         ? <CtxItem icon="✓" label="Make Unavailable" onClick={() => performAction('makeUnavailable')} />
                                         : <CtxItem icon="+" label="Make Available" onClick={() => performAction('makeAvailable')} />
                                     }
-                                    {(db.shop?.availableFormulas || []).includes(contextMenu.item.name)
+                                    {availableFormulas.includes(contextMenu.item.name)
                                         ? <CtxItem icon="📖" label="Remove Formula" onClick={() => performAction('removeFormula')} />
                                         : <CtxItem icon="📜" label="Add Formula" onClick={() => performAction('addFormula')} />
                                     }
@@ -471,7 +475,7 @@ export default function ItemsViewLayout({
                                         <CtxItem icon="🏪" label="Assign to Trader" hasSubmenu />
                                         {contextSubMenu === 'trader' && (
                                             <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
-                                                {(db.shop?.traders || []).map(t => <CtxItem key={t.id} label={t.name} onClick={() => performAction('addToTrader', t.id)} />)}
+                                                {traders.map(t => <CtxItem key={t.id} label={t.name} onClick={() => performAction('addToTrader', t.id)} />)}
                                             </div>
                                         )}
                                     </div>

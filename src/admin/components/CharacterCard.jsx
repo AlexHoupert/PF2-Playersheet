@@ -5,6 +5,8 @@ import { MagicView } from '../../player/views/MagicView';
 import { FeatsView } from '../../player/views/FeatsView';
 import { ImpulsesView } from '../../player/views/ImpulsesView';
 import { ELEMENTS, BACKLASH_TIERS, BACKLASH_LABELS, BACKLASH_COLORS, applyBacklashEffects } from '../../pacts/pactsData';
+import { selectDeviantAbility } from '../../shared/db/selectors/abilitySelectors';
+import { selectPact, selectPactList } from '../../shared/db/selectors/pactSelectors';
 
 export function CharacterCard({
     character,
@@ -21,10 +23,8 @@ export function CharacterCard({
 
     // Resolve the character's assigned pact from db
     const assignedPact = useMemo(() => {
-        const pactId = character.pact?.pactId;
-        if (!pactId || !db?.pacts) return null;
-        return db.pacts[pactId] || null;
-    }, [character.pact?.pactId, db?.pacts]);
+        return selectPact(db, character.pact?.pactId);
+    }, [character.pact?.pactId, db]);
 
     const hasPact = !!assignedPact;
     const el = assignedPact ? (ELEMENTS[assignedPact.element] || ELEMENTS.Fire) : null;
@@ -84,7 +84,7 @@ export function CharacterCard({
 
     const isCaster = character.isCaster || (character.magic?.list?.length > 0);
     const isKineticist = character.isKineticist || (character.impulses?.length > 0);
-    const allPacts = useMemo(() => Object.values(db?.pacts || {}).sort((a, b) => a.name.localeCompare(b.name)), [db?.pacts]);
+    const allPacts = useMemo(() => selectPactList(db), [db]);
     const hasPactsInDb = allPacts.length > 0;
 
     return (
@@ -304,7 +304,7 @@ function PactTab({ character, updateCharacter, db, allPacts, assignedPact }) {
                                 {assignedPact.abilityGroups.map((group, gIdx) => {
                                     const chosenId = pactData.choices?.[gIdx];
                                     const abilities = (group.abilityIds || [])
-                                        .map(id => db?.abilities?.deviant?.[id])
+                                        .map(id => selectDeviantAbility(db, id))
                                         .filter(Boolean);
                                     if (abilities.length === 0) return null;
                                     return (

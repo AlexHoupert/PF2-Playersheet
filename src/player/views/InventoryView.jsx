@@ -7,6 +7,7 @@ import { getShopItemRowMeta } from '../../shared/catalog/shopRowMeta';
 import { shouldStack } from '../../shared/utils/inventoryUtils';
 import { getWeaponCapacity, getWeaponAttackBonus, isEquipableInventoryItem, getInventoryBucket } from '../../shared/utils/combatUtils';
 import { calculateWeaponDamage } from '../../utils/rules/damage';
+import { selectCustomShopItem } from '../../shared/db/selectors/shopSelectors';
 
 export function InventoryView({
     character,
@@ -50,8 +51,8 @@ export function InventoryView({
         }
 
         // 2. Try Custom DB
-        if (!fromIndex && db?.shop?.customItems && rawItem.name) {
-            const customItem = db.shop.customItems[rawItem.name];
+        if (!fromIndex && rawItem.name) {
+            const customItem = selectCustomShopItem(db, rawItem.name);
             if (customItem) {
                 // Flatten/Map custom item to expected display structure
                 fromIndex = {

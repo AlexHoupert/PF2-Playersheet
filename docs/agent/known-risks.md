@@ -19,6 +19,8 @@ The residual risk moved to the new controller/layout files. Continue extracting 
 
 Most screens still expect the legacy `db` shape. Firestore v2 mode projects normalized documents back to that shape. New v2 collections or fields must be added to both normalization and composition if they should survive runtime writes.
 
+Global-facing reads for shop, pacts, abilities, lore, and bestiary are now centralized in selectors, but they still consume the legacy-shaped projection until a dedicated v2 read model replaces it.
+
 3. Mixed item identity
 
 Inventory and loot code sometimes uses `name`, sometimes `_index`, sometimes `instanceId`, sometimes `addedAt` plus equipment/prepared flags. This can break stacked items, duplicate items, and transfer/claim flows.

@@ -23,6 +23,8 @@ Location:
 
 The UI still reads the legacy-shaped projection, but migrated write paths call `dataActions` from `CampaignContext`.
 
+Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `src/shared/db/selectors/` instead of embedding root-field fallback logic inside components.
+
 ## Current API Surface
 
 `CampaignContext` exposes:
@@ -304,6 +306,7 @@ Player compatibility:
 
 - Root notification fallback clearing uses `dataActions.globalContent.clearRootNotification`.
 - Runtime skill-name repair uses `dataActions.character.updateCharacter`.
+- Player/Admin global reads for shop, pacts, abilities, lore, and bestiary route through selector helpers.
 
 ## Remaining Direct Legacy Writes
 

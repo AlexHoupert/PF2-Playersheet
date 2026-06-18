@@ -1,7 +1,10 @@
 /**
  * Elemental Pacts — shared constants and helpers.
- * All pact and deviant ability data lives in the DB (db.pacts, db.abilities.deviant).
+ * Pact and deviant ability helpers read through the selector layer.
  */
+
+import { selectDeviantAbility, selectDeviantAbilityList } from '../shared/db/selectors/abilitySelectors';
+import { selectPact, selectPactList } from '../shared/db/selectors/pactSelectors';
 
 export const ELEMENTS = {
     Fire:  { color: '#f44336', dim: '#c62828', bg: '#2a0a0a', icon: '🔥', label: 'Fire'  },
@@ -34,8 +37,7 @@ export const BACKLASH_CONDITIONS = [
 
 /** Get all deviant abilities from DB as a sorted array. */
 export function getDeviantAbilities(db) {
-    return Object.values(db?.abilities?.deviant || {})
-        .sort((a, b) => (a.level ?? 0) - (b.level ?? 0) || a.name.localeCompare(b.name));
+    return selectDeviantAbilityList(db);
 }
 
 /** Get deviant abilities filtered by element. */
@@ -45,17 +47,17 @@ export function getDeviantAbilitiesByElement(db, element) {
 
 /** Get all pacts from DB as a sorted array. */
 export function getPacts(db) {
-    return Object.values(db?.pacts || {}).sort((a, b) => a.name.localeCompare(b.name));
+    return selectPactList(db);
 }
 
 /** Resolve a pact by id. */
 export function getPact(db, pactId) {
-    return db?.pacts?.[pactId] || null;
+    return selectPact(db, pactId);
 }
 
 /** Resolve a deviant ability by id. */
 export function getDeviantAbility(db, abilityId) {
-    return db?.abilities?.deviant?.[abilityId] || null;
+    return selectDeviantAbility(db, abilityId);
 }
 
 /** Generate a simple id from a name string. */

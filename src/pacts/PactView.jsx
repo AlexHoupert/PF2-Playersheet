@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ELEMENTS, BACKLASH_TIERS, BACKLASH_LABELS, BACKLASH_COLORS } from './pactsData';
+import { selectDeviantAbility } from '../shared/db/selectors/abilitySelectors';
+import { selectPact } from '../shared/db/selectors/pactSelectors';
 
 /**
  * Player-facing pact view.
@@ -8,16 +10,15 @@ import { ELEMENTS, BACKLASH_TIERS, BACKLASH_LABELS, BACKLASH_COLORS } from './pa
  *
  * Props:
  *   character  — character object (has .pact: { pactId, choices, unlockedAwakenings })
- *   db         — full db (for db.pacts and db.abilities.deviant)
+ *   db         — full db for selector-backed pact and deviant ability reads
  */
 export default function PactView({ character, db }) {
     const pactData = character?.pact || {};
     const [expandedAbility, setExpandedAbility] = useState(null);
 
     const assignedPact = useMemo(() => {
-        const id = pactData.pactId;
-        return (id && db?.pacts?.[id]) || null;
-    }, [pactData.pactId, db?.pacts]);
+        return selectPact(db, pactData.pactId);
+    }, [pactData.pactId, db]);
 
     if (!assignedPact) {
         return (
@@ -29,7 +30,7 @@ export default function PactView({ character, db }) {
 
     const el = ELEMENTS[assignedPact.element] || ELEMENTS.Fire;
 
-    const resolveAbility = (id) => db?.abilities?.deviant?.[id] || null;
+    const resolveAbility = (id) => selectDeviantAbility(db, id);
 
     return (
         <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>

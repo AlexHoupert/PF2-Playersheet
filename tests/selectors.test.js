@@ -8,11 +8,29 @@ import {
     selectTargetCampaignId,
 } from '../src/shared/db/selectors/campaignSelectors.js';
 import { selectMyCharacter } from '../src/shared/db/selectors/characterSelectors.js';
-import { selectCustomAbilityList, selectDeviantAbilityList } from '../src/shared/db/selectors/abilitySelectors.js';
-import { selectBestiaryRevealState, selectCustomCreature } from '../src/shared/db/selectors/bestiarySelectors.js';
-import { selectLoreArticlesByCategory } from '../src/shared/db/selectors/loreSelectors.js';
-import { selectPactList } from '../src/shared/db/selectors/pactSelectors.js';
-import { selectShop, selectVisibleTraders } from '../src/shared/db/selectors/shopSelectors.js';
+import {
+    selectCustomAbility,
+    selectCustomAbilityList,
+    selectDeviantAbility,
+    selectDeviantAbilityList,
+} from '../src/shared/db/selectors/abilitySelectors.js';
+import {
+    selectBestiaryCreatureMetadataEntry,
+    selectBestiaryRevealState,
+    selectCustomCreature,
+    selectCustomCreatureData,
+    selectCustomCreatureList,
+} from '../src/shared/db/selectors/bestiarySelectors.js';
+import { selectLoreArticle, selectLoreArticlesByCategory } from '../src/shared/db/selectors/loreSelectors.js';
+import { selectPact, selectPactList } from '../src/shared/db/selectors/pactSelectors.js';
+import {
+    selectAvailableFormulaNames,
+    selectAvailableItemNames,
+    selectCustomShopItem,
+    selectShop,
+    selectShopTraders,
+    selectVisibleTraders,
+} from '../src/shared/db/selectors/shopSelectors.js';
 import { composeLegacyDbFromV2Documents } from '../src/shared/db/v2/normalizers.js';
 
 test('campaign selectors separate active and archived campaigns and characters', () => {
@@ -65,6 +83,8 @@ test('selectors read v2 projection with campaign subcollections and global confi
             shop: {
                 traders: [{ id: 'trader1', name: 'Market' }, { id: 'hidden', name: 'Hidden', hidden: true }],
                 availableItems: ['Rope'],
+                availableFormulas: ['Rope'],
+                customItems: { 'Hero Snack': { name: 'Hero Snack' } },
             },
             bestiary: { creatures: { goblin: { revealState: { hp: 'public' } } } },
             abilities: {
@@ -84,11 +104,22 @@ test('selectors read v2 projection with campaign subcollections and global confi
     assert.equal(buckets.campaigns.camp1.characters[0].id, 'char1');
     assert.equal(buckets.campaigns.camp1.quests[0].id, 'quest1');
     assert.deepEqual(selectShop(db).availableItems, ['Rope']);
+    assert.deepEqual(selectAvailableItemNames(db), ['Rope']);
+    assert.deepEqual(selectAvailableFormulaNames(db), ['Rope']);
+    assert.equal(selectCustomShopItem(db, 'Hero Snack').name, 'Hero Snack');
+    assert.deepEqual(selectShopTraders(db).map(trader => trader.id), ['trader1', 'hidden']);
     assert.deepEqual(selectVisibleTraders(db).map(trader => trader.id), ['trader1']);
     assert.equal(selectBestiaryRevealState(db, 'goblin').hp, 'public');
+    assert.equal(selectBestiaryCreatureMetadataEntry(db, 'goblin').revealState.hp, 'public');
     assert.equal(selectCustomCreature(db, 'custom-goblin').name, 'Goblin Boss');
+    assert.equal(selectCustomCreatureData(db, 'custom-goblin')._id, 'custom-goblin');
+    assert.deepEqual(selectCustomCreatureList(db).map(creature => creature.id), ['custom-goblin']);
+    assert.equal(selectCustomAbility(db, 'trip').name, 'Trip');
     assert.equal(selectCustomAbilityList(db)[0].name, 'Trip');
+    assert.equal(selectDeviantAbility(db, 'spark').name, 'Spark');
     assert.equal(selectDeviantAbilityList(db)[0].name, 'Spark');
+    assert.equal(selectPact(db, 'ember').name, 'Ember Pact');
     assert.equal(selectPactList(db)[0].name, 'Ember Pact');
+    assert.equal(selectLoreArticle(db, 'article1').title, 'Lore');
     assert.equal(selectLoreArticlesByCategory(db, 'history')[0].id, 'article1');
 });

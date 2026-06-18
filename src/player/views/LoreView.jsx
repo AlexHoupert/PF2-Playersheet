@@ -3,6 +3,12 @@ import React, { useState, useMemo, useEffect } from 'react';
 import CreatureCard from '../../shared/components/CreatureCard';
 import CreatureAbilityModal from '../../shared/components/CreatureAbilityModal';
 import { getAllCreatures, fetchCreatureData } from '../../shared/catalog/creatureIndex';
+import {
+    selectBestiaryCreatureMetadata,
+    selectCustomCreatures,
+    selectCustomCreatureData,
+} from '../../shared/db/selectors/bestiarySelectors';
+import { selectLoreArticles } from '../../shared/db/selectors/loreSelectors';
 
 const LORE_CATEGORIES = ['History', 'Locations', 'NPCs', 'Bestiary'];
 
@@ -107,16 +113,17 @@ const TreeFolder = ({ name, node, level = 0, onSelect, selectedId, forceExpand =
 };
 
 
-export default function LoreView({ lore, bestiary }) {
+export default function LoreView({ db, lore, bestiary }) {
     // viewMode: 'tiles' (Initial) | 'book' (Reading)
     const [viewMode, setViewMode] = useState('tiles');
     const [currentCategory, setCurrentCategory] = useState(null);
     const [currentArticleId, setCurrentArticleId] = useState(null);
     const [historyStack, setHistoryStack] = useState([]);
+    const selectorDb = useMemo(() => db || { lore, bestiary }, [db, lore, bestiary]);
 
     // Data Patching for missing groups
     const articles = useMemo(() => {
-        const raw = lore?.articles || [];
+        const raw = selectLoreArticles(selectorDb);
         return raw.map(a => {
             if (!a.group) {
                 // Patch specific known IDs for demo purposes
@@ -128,7 +135,7 @@ export default function LoreView({ lore, bestiary }) {
             }
             return a;
         });
-    }, [lore]);
+    }, [selectorDb]);
 
     const filteredArticles = useMemo(() => {
         if (!currentCategory) return [];
@@ -150,7 +157,7 @@ export default function LoreView({ lore, bestiary }) {
     // Merge INDEX data + custom creatures with db metadata - show only creatures with bestiary=true
     const bestiaryCreatures = useMemo(() => {
         const indexItems = getAllCreatures();
-        const dbMetadata = bestiary?.creatures || {};
+        const dbMetadata = selectBestiaryCreatureMetadata(selectorDb);
 
         const catalogEntries = indexItems
             .filter(item => dbMetadata[item.id]?.bestiary)
@@ -170,7 +177,7 @@ export default function LoreView({ lore, bestiary }) {
                 };
             });
 
-        const customEntries = Object.values(bestiary?.customCreatures || {})
+        const customEntries = Object.values(selectCustomCreatures(selectorDb))
             .filter(cc => dbMetadata[cc.id]?.bestiary)
             .map(cc => {
                 const meta = dbMetadata[cc.id] || {};
@@ -191,7 +198,7 @@ export default function LoreView({ lore, bestiary }) {
             });
 
         return [...customEntries, ...catalogEntries].sort((a, b) => a.name.localeCompare(b.name));
-    }, [bestiary?.creatures, bestiary?.customCreatures]);
+    }, [selectorDb]);
 
     // Group creatures by their group field
     const groupedCreatures = useMemo(() => {
@@ -222,7 +229,7 @@ export default function LoreView({ lore, bestiary }) {
             setLoadedCreatureData(null);
             return;
         }
-        const customData = bestiary?.customCreatures?.[selectedCreatureId]?.data;
+        const customData = selectCustomCreatureData(selectorDb, selectedCreatureId);
         if (customData) {
             setLoadedCreatureData(customData);
             return;
@@ -230,7 +237,7 @@ export default function LoreView({ lore, bestiary }) {
         fetchCreatureData(selectedCreatureId).then(data => {
             if (data) setLoadedCreatureData(data);
         });
-    }, [selectedCreatureId]);
+    }, [selectedCreatureId, selectorDb]);
 
     // Ability modal state
     const [selectedAbility, setSelectedAbility] = useState(null);

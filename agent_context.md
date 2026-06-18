@@ -68,7 +68,7 @@ Firestore v2 mode:
 - Uses `composeLegacyDbFromV2Documents` to create the legacy projection.
 - Non-migrated runtime writes still diff whole legacy DBs via `writeLegacyDbDiffToV2`.
 - Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, and Player runtime fallbacks now go through `CampaignContext.dataActions` and targeted v2 repositories/transactions.
-- `CampaignContext` uses pure selectors under `src/shared/db/selectors/` for active/archived campaign and character reads.
+- `CampaignContext` and global-facing views use pure selectors under `src/shared/db/selectors/` for campaign/character, shop, pact, ability, lore, and bestiary reads.
 
 Firestore v2 collections include `campaigns`, campaign subcollections `characters`, `quests`, `lootBags`, `encounters`, `maps`, `members`, plus top-level `global`, `customItems`, `customCreatures`, `customActions`, `loreArticles`, and `migrationBackups`.
 
@@ -119,6 +119,7 @@ Migrated paths:
 - Encounter creature reveal-state writes use `dataActions.bestiary.updateRevealState`.
 - Player root-notification clearing uses `dataActions.globalContent.clearRootNotification`.
 - Player skill-name runtime repair uses `dataActions.character.updateCharacter`.
+- Pacts, Abilities, Lore, Bestiary, Shop, Items, Encounter, Party, and Player inventory reads use selector helpers instead of component-local root-field fallbacks.
 
 Soft delete uses `deletedAt`/`deletedBy`; restore removes those fields and sets `restoredAt`/`restoredBy`. `CampaignContext.campaigns`, `activeCampaign.characters`, `activeCampaign.quests`, `activeCampaign.encounters`, and `activeCampaign.maps` expose active records; `archivedCampaigns`, `activeCampaign.archivedCharacters`, `activeCampaign.archivedQuests`, `activeCampaign.archivedEncounters`, and `activeCampaign.archivedMaps` expose archived records.
 

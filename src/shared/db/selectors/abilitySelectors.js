@@ -2,12 +2,20 @@ export function selectCustomAbilities(db) {
     return db?.abilities?.custom || {};
 }
 
+export function selectCustomAbility(db, abilityId) {
+    return abilityId ? selectCustomAbilities(db)[abilityId] || null : null;
+}
+
 export function selectCustomAbilityList(db) {
     return Object.values(selectCustomAbilities(db));
 }
 
 export function selectDeviantAbilities(db) {
     return db?.abilities?.deviant || {};
+}
+
+export function selectDeviantAbility(db, abilityId) {
+    return abilityId ? selectDeviantAbilities(db)[abilityId] || null : null;
 }
 
 export function selectDeviantAbilityList(db) {

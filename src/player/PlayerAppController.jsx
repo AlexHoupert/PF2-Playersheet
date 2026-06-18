@@ -38,6 +38,7 @@ import CampScreen from '../camping/CampScreen';
 import PactView from '../pacts/PactView';
 import { isEquipableInventoryItem, getWeaponCapacity } from '../shared/utils/combatUtils';
 import { ModalManager } from './ModalManager';
+import { selectPact } from '../shared/db/selectors/pactSelectors';
 // Top of file
 import NotificationOverlay from './components/NotificationOverlay';
 import XpOverlay from './components/XpOverlay';
@@ -1138,9 +1139,9 @@ export default function PlayerAppController({ db, setDb }) {
         if (character.isKineticist) tabs.push('impulses');
         tabs.push('items');
         if (character.has_companion) tabs.push('companion');
-        if (character.pact?.pactId && db?.pacts?.[character.pact.pactId]) tabs.push('pact');
+        if (character.pact?.pactId && selectPact(db, character.pact.pactId)) tabs.push('pact');
         return tabs;
-    }, [appMode, character.isCaster, character.magic, character.isKineticist, character.has_companion, character.pact?.pactId, db?.pacts]);
+    }, [appMode, character.isCaster, character.magic, character.isKineticist, character.has_companion, character.pact?.pactId, db]);
 
     const { handlers: swipeHandlers, ref: swipeRef } = useSwipe({
         // Swipe Left -> Next Tab
@@ -1323,7 +1324,7 @@ export default function PlayerAppController({ db, setDb }) {
                 )}
 
                 {activeTab === 'lore' && (
-                    <LoreView lore={db?.lore || { articles: [] }} bestiary={db?.bestiary} />
+                    <LoreView db={db} />
                 )}
 
                 {activeTab === 'actions' && (

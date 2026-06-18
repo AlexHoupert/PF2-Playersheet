@@ -10,6 +10,7 @@ import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIn
 import CreatureCard from '../shared/components/CreatureCard';
 import { CharacterCard } from '../admin/components/CharacterCard';
 import InitiativeCard from '../admin/components/InitiativeCard';
+import { selectBestiaryRevealState, selectCustomCreatureData } from '../shared/db/selectors/bestiarySelectors';
 import './PartyScreen.css';
 
 export default function PartyScreen({ db }) {
@@ -53,7 +54,7 @@ export default function PartyScreen({ db }) {
             .filter(c => c.type === 'creature' && c.visible && c.creatureId && !creatureDataCache[c.creatureId])
             .forEach(c => {
                 // Custom creatures first — no fetch needed
-                const customData = db?.bestiary?.customCreatures?.[c.creatureId]?.data;
+                const customData = selectCustomCreatureData(db, c.creatureId);
                 if (customData) {
                     setCreatureDataCache(prev => ({ ...prev, [c.creatureId]: customData }));
                     return;
@@ -68,7 +69,7 @@ export default function PartyScreen({ db }) {
     }, [activeEncounter?.combatants]);
 
     const getRevealState = (creatureId) => {
-        return db?.bestiary?.creatures?.[creatureId]?.revealState || {};
+        return selectBestiaryRevealState(db, creatureId);
     };
 
     if (!activeEncounter) {

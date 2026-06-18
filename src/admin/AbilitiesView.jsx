@@ -7,7 +7,7 @@ import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { copyRef } from '../shared/clipboard/refClipboard';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { selectCustomAbilityList } from '../shared/db/selectors/abilitySelectors';
-import { selectCustomCreatures } from '../shared/db/selectors/bestiarySelectors';
+import { selectCustomCreature, selectCustomCreatures } from '../shared/db/selectors/bestiarySelectors';
 
 const PAGE_SIZE = 100;
 
@@ -277,7 +277,7 @@ export default function AbilitiesView({ db, setDb }) {
             ...entry,
             data: { ...entry.data, items: [...(entry.data?.items || []), buildFoundryItem(ability)] }
         })));
-        const creatureName = db?.bestiary?.customCreatures?.[creatureId]?.name || 'creature';
+        const creatureName = selectCustomCreature(db, creatureId)?.name || 'creature';
         showToast(`"${ability.name}" added to ${creatureName}`);
         setCreaturePicker(null);
         setContextMenu(null);

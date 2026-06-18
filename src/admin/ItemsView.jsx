@@ -3,6 +3,7 @@ import { useCampaign } from '../shared/context/CampaignContext';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { SHOP_INDEX_FILTER_OPTIONS, SHOP_INDEX_ITEMS, fetchShopItemDetailBySourceFile } from '../shared/catalog/shopIndex';
 import ItemsViewLayout from './items/ItemsViewLayout';
+import { selectShop } from '../shared/db/selectors/shopSelectors';
 
 const uniqueTypes = SHOP_INDEX_FILTER_OPTIONS.types;
 const uniqueCategories = SHOP_INDEX_FILTER_OPTIONS.categories;
@@ -40,6 +41,7 @@ export default function ItemsView({ db, onInspectItem }) {
             alert(err?.message || String(err));
         });
     };
+    const shopState = useMemo(() => selectShop(db), [db]);
 
     // --- STATE ---
     const [search, setSearch] = useState('');
@@ -93,7 +95,7 @@ export default function ItemsView({ db, onInspectItem }) {
 
     // --- DATA PREP ---
     const globalItems = useMemo(() => {
-        const customItemsRaw = Object.values(db.shop?.customItems || {});
+        const customItemsRaw = Object.values(shopState.customItems);
         const flatCustomItems = customItemsRaw.map(i => ({
             name: i.name,
             level: i.system?.level?.value ?? 0,
@@ -111,16 +113,16 @@ export default function ItemsView({ db, onInspectItem }) {
             data: i
         }));
         return [...flatCustomItems, ...SHOP_INDEX_ITEMS];
-    }, [db.shop?.customItems]);
+    }, [shopState.customItems]);
 
     const filterItem = (item, filters, searchTerm) => {
         if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
 
-        if (filters.Available === true && !(db.shop?.availableItems || []).includes(item.name)) return false;
-        if (filters.Available === false && (db.shop?.availableItems || []).includes(item.name)) return false;
+        if (filters.Available === true && !shopState.availableItems.includes(item.name)) return false;
+        if (filters.Available === false && shopState.availableItems.includes(item.name)) return false;
 
-        if (filters.Formula === true && !(db.shop?.availableFormulas || []).includes(item.name)) return false;
-        if (filters.Formula === false && (db.shop?.availableFormulas || []).includes(item.name)) return false;
+        if (filters.Formula === true && !shopState.availableFormulas.includes(item.name)) return false;
+        if (filters.Formula === false && shopState.availableFormulas.includes(item.name)) return false;
 
         for (const [key, val] of Object.entries(filters)) {
             if (key === 'Available' || key === 'Formula') continue;
@@ -161,7 +163,7 @@ export default function ItemsView({ db, onInspectItem }) {
 
     const filteredGlobalItems = useMemo(() => {
         return globalItems.filter(i => filterItem(i, activeFilters, search));
-    }, [globalItems, activeFilters, search, db.shop]);
+    }, [globalItems, activeFilters, search, shopState]);
 
     const sortedGlobalItems = useMemo(() => {
         return [...filteredGlobalItems].sort((a, b) => {
@@ -179,7 +181,7 @@ export default function ItemsView({ db, onInspectItem }) {
     const paginatedItems = sortedGlobalItems.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
     // --- SIDE PANEL DATA ---
-    const activeTrader = db.shop?.traders?.find(t => t.id === selectedTraderId);
+    const activeTrader = shopState.traders.find(t => t.id === selectedTraderId);
     const campaignLootBags = activeCampaign?.lootBags || [];
     const activeLoot = campaignLootBags.find(b => b.id === selectedLootId);
 
@@ -201,7 +203,7 @@ export default function ItemsView({ db, onInspectItem }) {
             if (valA > valB) return sideSortConfig.direction === 'asc' ? 1 : -1;
             return 0;
         });
-    }, [sideMode, activeTrader, activeLoot, globalItems, sideSortConfig, db.shop]);
+    }, [sideMode, activeTrader, activeLoot, globalItems, sideSortConfig]);
 
     const filteredSideItems = useMemo(() => {
         return applySideFilters ? sideItems.filter(i => filterItem(i, activeFilters, search)) : sideItems;
@@ -210,13 +212,13 @@ export default function ItemsView({ db, onInspectItem }) {
     // Side List Pagination (10 max)
     const sideLists = useMemo(() => {
         let list = [];
-        if (sideMode === 'trader') list = db.shop?.traders || [];
+        if (sideMode === 'trader') list = shopState.traders;
         if (sideMode === 'loot') list = campaignLootBags;
         const max = 10;
         const total = Math.ceil(list.length / max) || 1;
         const current = Math.min(sidePage, total);
         return { sliced: list.slice((current - 1) * max, current * max), total, current };
-    }, [db.shop, campaignLootBags, sideMode, sidePage]);
+    }, [shopState.traders, campaignLootBags, sideMode, sidePage]);
 
     // --- HANDLERS ---
     const handleSort = (key) => setSortConfig(p => ({ key, direction: p.key === key && p.direction === 'asc' ? 'desc' : 'asc' }));
@@ -451,7 +453,6 @@ export default function ItemsView({ db, onInspectItem }) {
             contextSubMenu={contextSubMenu}
             COLUMNS_CONFIG={COLUMNS_CONFIG}
             dataActions={dataActions}
-            db={db}
             editingItem={editingItem}
             executeItemAction={executeItemAction}
             filteredSideItems={filteredSideItems}
@@ -495,6 +496,7 @@ export default function ItemsView({ db, onInspectItem }) {
             setSidePage={setSidePage}
             setVisibleColumns={setVisibleColumns}
             showColSelector={showColSelector}
+            shopState={shopState}
             sideLists={sideLists}
             sideMode={sideMode}
             sidePage={sidePage}

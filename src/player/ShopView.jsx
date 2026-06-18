@@ -4,6 +4,7 @@ import { SHOP_ALL_AVAILABLE_KEY, SHOP_CATEGORIES } from '../shared/constants/sho
 import { SHOP_INDEX_BY_NAME } from '../shared/catalog/shopIndex';
 import { getShopItemRowMeta } from '../shared/catalog/shopRowMeta';
 import { getFormulaPrice } from '../shared/constants/crafting';
+import { selectShop, selectVisibleTraders } from '../shared/db/selectors/shopSelectors';
 
 export default function ShopView({ db, onInspectItem, onBuyItem, onBuyFormula, knownFormulas = [] }) {
     const [shopSearch, setShopSearch] = useState('');
@@ -18,10 +19,8 @@ export default function ShopView({ db, onInspectItem, onBuyItem, onBuyFormula, k
     const [shopItemsPerPage, setShopItemsPerPage] = useState(50);
     const [showShopFilters, setShowShopFilters] = useState(false);
 
-    const allTraders = useMemo(
-        () => (Array.isArray(db.shop?.traders) ? db.shop.traders.filter(t => !t.hidden) : []),
-        [db.shop?.traders]
-    );
+    const shopState = useMemo(() => selectShop(db), [db]);
+    const allTraders = useMemo(() => selectVisibleTraders(db), [db]);
 
     const shopInventory = useMemo(() => {
         if (!shopCategory) {
@@ -32,7 +31,7 @@ export default function ShopView({ db, onInspectItem, onBuyItem, onBuyFormula, k
             ? []
             : allTraders.filter(t => t.category === shopCategory);
 
-        const availableItems = Array.isArray(db.shop?.availableItems) ? db.shop.availableItems : [];
+        const availableItems = shopState.availableItems;
         const availableSet = new Set(availableItems);
         const enforceAvailability = shopCategory === SHOP_ALL_AVAILABLE_KEY || availableItems.length > 0;
 
@@ -60,7 +59,7 @@ export default function ShopView({ db, onInspectItem, onBuyItem, onBuyFormula, k
             const indexItem = SHOP_INDEX_BY_NAME.get(name);
             if (indexItem) return indexItem;
 
-            const customItem = db.shop?.customItems?.[name];
+            const customItem = shopState.customItems[name];
             if (customItem) {
                 // Map full item to index-like structure for ShopView
                 return {
@@ -81,7 +80,7 @@ export default function ShopView({ db, onInspectItem, onBuyItem, onBuyFormula, k
         }
 
         return { traders, items, availableCount: availableItems.length };
-    }, [allTraders, db.shop?.availableItems, db.shop?.customItems, shopCategory, shopTrader]);
+    }, [allTraders, shopState.availableItems, shopState.customItems, shopCategory, shopTrader]);
 
     const shopFilterData = useMemo(() => {
         if (!shopCategory) {
@@ -417,7 +416,7 @@ export default function ShopView({ db, onInspectItem, onBuyItem, onBuyFormula, k
                         </div>
                         <div className="shop-row-actions" style={{ display: 'flex', alignItems: 'flex-start' }}>
                             {/* Formula Icon */}
-                            {(db.shop?.availableFormulas || []).includes(item.name) && (
+                            {shopState.availableFormulas.includes(item.name) && (
                                 <div
                                     onClick={(e) => {
                                         e.stopPropagation();
