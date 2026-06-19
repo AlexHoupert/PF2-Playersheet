@@ -4,6 +4,8 @@ import {
     selectActiveCampaign,
     selectCampaignBuckets,
     selectCampaignChildLists,
+    selectLootBagLists,
+    selectQuestLists,
     selectRootFallbackList,
     selectTargetCampaignId,
 } from '../src/shared/db/selectors/campaignSelectors.js';
@@ -75,6 +77,49 @@ test('character and root fallback selectors keep legacy reads centralized', () =
 
     assert.equal(selectMyCharacter(db.campaigns.camp1, { characterId: 'char1' }).name, 'Hero');
     assert.equal(selectRootFallbackList(db, 'quests', 'camp1')[0].id, 'legacyQuest');
+});
+
+test('quest and lootbag selectors prefer campaign data and fall back to legacy roots', () => {
+    const db = {
+        quests: [
+            { id: 'legacyQuest' },
+            { id: 'archivedLegacyQuest', deletedAt: '2026-01-01' },
+        ],
+        lootBags: [
+            { id: 'legacyLoot', name: 'Old Chest' },
+            { id: 'archivedLegacyLoot', name: 'Old Archive', deletedAt: '2026-01-01' },
+        ],
+        campaigns: {
+            empty: { id: 'empty', quests: [], lootBags: [] },
+            active: {
+                id: 'active',
+                quests: [
+                    { id: 'campaignQuest' },
+                    { id: 'archivedCampaignQuest', deletedAt: '2026-01-02' },
+                ],
+                lootBags: [
+                    { id: 'campaignLoot', name: 'Chest' },
+                    { id: 'archivedCampaignLoot', name: 'Archive', deletedAt: '2026-01-02' },
+                ],
+            },
+        },
+    };
+
+    const rootQuestLists = selectQuestLists(db, db.campaigns.empty, 'empty');
+    assert.deepEqual(rootQuestLists.quests.map(q => q.id), ['legacyQuest']);
+    assert.deepEqual(rootQuestLists.archivedQuests.map(q => q.id), ['archivedLegacyQuest']);
+
+    const campaignQuestLists = selectQuestLists(db, db.campaigns.active, 'active');
+    assert.deepEqual(campaignQuestLists.quests.map(q => q.id), ['campaignQuest']);
+    assert.deepEqual(campaignQuestLists.archivedQuests.map(q => q.id), ['archivedCampaignQuest']);
+
+    const rootLootLists = selectLootBagLists(db, db.campaigns.empty, 'empty');
+    assert.deepEqual(rootLootLists.lootBags.map(bag => bag.id), ['legacyLoot']);
+    assert.deepEqual(rootLootLists.archivedLootBags.map(bag => bag.id), ['archivedLegacyLoot']);
+
+    const campaignLootLists = selectLootBagLists(db, db.campaigns.active, 'active');
+    assert.deepEqual(campaignLootLists.lootBags.map(bag => bag.id), ['campaignLoot']);
+    assert.deepEqual(campaignLootLists.archivedLootBags.map(bag => bag.id), ['archivedCampaignLoot']);
 });
 
 test('selectors read v2 projection with campaign subcollections and global config', () => {

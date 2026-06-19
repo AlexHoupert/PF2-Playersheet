@@ -20,6 +20,7 @@ const ARMOR_RANKS = [
 export function EditGoldModal({ character, updateCharacter, onClose }) {
     const [editVal, setEditVal] = useState("");
     const parseGold = (value) => Number.parseFloat(value || 0) || 0;
+    const currentGold = Number.parseFloat(parseGold(character.gold).toFixed(2));
     const applyDelta = (amount) => {
         updateCharacter(c => {
             const currentGold = parseGold(c.gold);
@@ -38,13 +39,19 @@ export function EditGoldModal({ character, updateCharacter, onClose }) {
                 color: '#e0e0e0', textAlign: 'center'
             }} onClick={e => e.stopPropagation()}>
                 <h2>Manage Gold</h2>
-                <p style={{ textAlign: 'center', color: '#888' }}>Current: <span style={{ color: 'var(--text-gold)', fontWeight: 'bold' }}>{character.gold}</span></p>
+                <p style={{ textAlign: 'center', color: '#888' }}>Current: <span style={{ color: 'var(--text-gold)', fontWeight: 'bold' }}>{currentGold.toFixed(2)} gp</span></p>
                 <div className="qty-control-box">
                     <button className="qty-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }} onClick={() => applyDelta(-(parseGold(editVal)))}>-</button>
                     <input type="number" className="modal-input" style={{ width: 100, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="0" />
                     <button className="qty-btn" style={{ borderColor: 'var(--accent-green)', color: 'var(--accent-green)' }} onClick={() => applyDelta(parseGold(editVal))}>+</button>
                 </div>
-                <button className="set-btn" onClick={() => { updateCharacter(c => c.gold = parseGold(editVal)); setEditVal(""); onClose(); }}>Set to Value</button>
+                <button className="set-btn" onClick={() => {
+                    updateCharacter(c => {
+                        c.gold = Number.parseFloat(parseGold(editVal).toFixed(2));
+                    });
+                    setEditVal("");
+                    onClose();
+                }}>Set to Value</button>
             </div>
         </div>
     );
@@ -162,8 +169,18 @@ export function EditSpeedModal({ character, updateCharacter, onClose }) {
  */
 export function EditAttributeModal({ character, updateCharacter, onClose, modalData }) {
     const key = modalData.item.key;
-    const val = character.stats.attributes[key];
+    const attributes = character?.stats?.attributes || {};
+    const val = attributes[key] || 0;
     const label = modalData.item.label;
+    const updateAttribute = (delta) => {
+        updateCharacter(c => {
+            if (!c.stats || typeof c.stats !== 'object') c.stats = {};
+            if (!c.stats.attributes || typeof c.stats.attributes !== 'object' || Array.isArray(c.stats.attributes)) {
+                c.stats.attributes = {};
+            }
+            c.stats.attributes[key] = (Number(c.stats.attributes[key]) || 0) + delta;
+        });
+    };
 
     return (
         <div style={{
@@ -178,9 +195,9 @@ export function EditAttributeModal({ character, updateCharacter, onClose, modalD
             }} onClick={e => e.stopPropagation()}>
                 <h2>Edit {label}</h2>
                 <div className="qty-control-box">
-                    <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.attributes[key] = (c.stats.attributes[key] || 0) - 1)}>-</button>
+                    <button className="qty-btn" onClick={() => updateAttribute(-1)}>-</button>
                     <span style={{ fontSize: '2em', width: 60, textAlign: 'center' }}>{val >= 0 ? `+${val}` : val}</span>
-                    <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.attributes[key] = (c.stats.attributes[key] || 0) + 1)}>+</button>
+                    <button className="qty-btn" onClick={() => updateAttribute(1)}>+</button>
                 </div>
                 <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
             </div>

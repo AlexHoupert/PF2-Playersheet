@@ -3,6 +3,7 @@ import { usePersistedDb } from './shared/db/usePersistedDb';
 import { useFirestoreV2Db } from './shared/db/v2/useFirestoreV2Db';
 import dbData from './data/new_db.json';
 import { CampaignProvider } from './shared/context/CampaignContext';
+import ErrorBoundary from './shared/components/ErrorBoundary';
 
 const PlayerApp = lazy(() => import('./player/PlayerApp'));
 const AdminApp = lazy(() => import('./admin/AdminApp'));
@@ -41,16 +42,18 @@ function AppRoutes({ db, setDb, dbMode, dbStatus }) {
 
     return (
         <CampaignProvider db={db} setDb={setDb} isAdmin={isAdmin || isParty || isCamp} dbMode={dbMode} dbStatus={dbStatus}>
-            <Suspense fallback={<RouteFallback />}>
-                {isParty
-                    ? <PartyScreen db={db} />
-                    : isCamp
-                        ? <CampScreenWrapper />
-                        : isAdmin
-                            ? <AdminApp db={db} setDb={setDb} />
-                            : <PlayerApp db={db} setDb={setDb} />
-                }
-            </Suspense>
+            <ErrorBoundary>
+                <Suspense fallback={<RouteFallback />}>
+                    {isParty
+                        ? <PartyScreen db={db} />
+                        : isCamp
+                            ? <CampScreenWrapper />
+                            : isAdmin
+                                ? <AdminApp db={db} setDb={setDb} />
+                                : <PlayerApp db={db} setDb={setDb} />
+                    }
+                </Suspense>
+            </ErrorBoundary>
         </CampaignProvider>
     );
 }

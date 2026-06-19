@@ -35,6 +35,7 @@ import { usePlayerCharacterActions } from './hooks/usePlayerCharacterActions';
 import { usePlayerInventoryActions } from './hooks/usePlayerInventoryActions';
 import { usePlayerModalState } from './hooks/usePlayerModalState';
 import { usePlayerNavigation } from './hooks/usePlayerNavigation';
+import { selectLootBagLists, selectQuestLists } from '../shared/db/selectors/campaignSelectors';
 // Top of file
 import NotificationOverlay from './components/NotificationOverlay';
 import XpOverlay from './components/XpOverlay';
@@ -75,9 +76,8 @@ export default function PlayerAppController({ db, setDb }) {
     } = usePlayerModalState();
 
     const [dailyPrepQueue, setDailyPrepQueue] = useState([]);
-    const campaignQuests = Array.isArray(activeCampaign?.quests) ? activeCampaign.quests : [];
-    const rootQuests = Array.isArray(db?.quests) ? db.quests : [];
-    const playerQuests = campaignQuests.length > 0 ? campaignQuests : rootQuests;
+    const { quests: playerQuests } = selectQuestLists(db, activeCampaign);
+    const { lootBags: playerLootBags } = selectLootBagLists(db, activeCampaign);
 
     const {
         activeCharIndex,
@@ -309,7 +309,7 @@ export default function PlayerAppController({ db, setDb }) {
                 {mainTabs.map(tab => {
                     const hasLoot = tab === 'items' && (
                         character?.inventory?.some(i => i.isLoot) ||
-                        activeCampaign?.lootBags?.some(b => !b.isLocked && b.items.some(i => !i.claimedBy))
+                        playerLootBags.some(b => !b.isLocked && (b.items || []).some(i => !i.claimedBy))
                     );
                     return (
                         <button

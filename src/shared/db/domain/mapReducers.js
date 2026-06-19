@@ -1,5 +1,6 @@
 import { markDeleted, markRestored } from "./campaignReducers.js";
 import { cloneValue, createInstanceId } from "./inventoryReducers.js";
+import { applyRecordUpdater } from "./updateHelpers.js";
 
 export function createMapRecord(nameOrMap, options = {}) {
   const { createId = () => createInstanceId("map"), order = Date.now() } = options;
@@ -54,8 +55,8 @@ export function sortMapsForView(maps = []) {
 
 export function applyMapUpdate(map, updater, options = {}) {
   const current = normalizeMap(map, options);
-  const result = typeof updater === "function" ? updater(current) : { ...current, ...updater };
-  return normalizeMap(result || current, options);
+  const result = applyRecordUpdater(current, updater);
+  return normalizeMap(result, options);
 }
 
 export function upsertMapInCampaign(campaign, map, options = {}) {

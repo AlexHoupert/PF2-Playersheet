@@ -55,14 +55,23 @@ export default function QuickSheetModal({ character, updateCharacter, onClose })
             <div className="qs-grid-3">
                 {ATTRIBUTES.map(attr => {
                     const key = attr.toLowerCase();
-                    const val = character.stats.attributes[key] || 0;
+                    const val = character?.stats?.attributes?.[key] || 0;
+                    const updateAttribute = (delta) => {
+                        updateCharacter(c => {
+                            if (!c.stats || typeof c.stats !== 'object') c.stats = {};
+                            if (!c.stats.attributes || typeof c.stats.attributes !== 'object' || Array.isArray(c.stats.attributes)) {
+                                c.stats.attributes = {};
+                            }
+                            c.stats.attributes[key] = (Number(c.stats.attributes[key]) || 0) + delta;
+                        });
+                    };
                     return (
                         <div key={attr} className="qs-stat-box">
                             <div className="qs-label">{attr.slice(0, 3).toUpperCase()}</div>
                             <div className="qs-controls">
-                                <button onClick={() => updateCharacter(c => c.stats.attributes[key] = (c.stats.attributes[key] || 0) - 1)}>-</button>
+                                <button onClick={() => updateAttribute(-1)}>-</button>
                                 <span className="qs-val">{val >= 0 ? `+${val}` : val}</span>
-                                <button onClick={() => updateCharacter(c => c.stats.attributes[key] = (c.stats.attributes[key] || 0) + 1)}>+</button>
+                                <button onClick={() => updateAttribute(1)}>+</button>
                             </div>
                         </div>
                     );

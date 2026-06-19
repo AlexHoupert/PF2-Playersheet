@@ -1,4 +1,5 @@
 import { normalizeCharacterRuntimeShape } from "./characterShape.js";
+import { applyRecordUpdater } from "./updateHelpers.js";
 
 export function cloneValue(value) {
   if (value === undefined || value === null) return value;
@@ -36,8 +37,8 @@ export function normalizeCharacterInventory(character, options = {}) {
 
 export function applyCharacterUpdate(character, updater, options = {}) {
   const current = normalizeCharacterInventory(character, options);
-  const result = typeof updater === "function" ? updater(current) : { ...current, ...updater };
-  return normalizeCharacterInventory(result || current, options);
+  const result = applyRecordUpdater(current, updater);
+  return normalizeCharacterInventory(result, options);
 }
 
 export function findInventoryItemIndex(inventory = [], target = {}) {

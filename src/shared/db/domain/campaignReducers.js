@@ -4,6 +4,7 @@ import {
   createInstanceId,
   normalizeCharacterInventory,
 } from "./inventoryReducers.js";
+import { applyRecordUpdater } from "./updateHelpers.js";
 
 export function isSoftDeleted(record) {
   return Boolean(record?.deletedAt);
@@ -53,20 +54,22 @@ export function createCharacterRecord(character, options = {}) {
 
 export function applyCampaignUpdate(campaign, updater) {
   const current = cloneValue(campaign) || {};
-  const result = typeof updater === "function" ? updater(current) : { ...current, ...updater };
-  return result || current;
+  return applyRecordUpdater(current, updater);
 }
 
 export function buildCampaignViewModel(campaign) {
   const next = cloneValue(campaign) || {};
   const characterSplit = splitActiveArchived(next.characters || []);
   const questSplit = splitActiveArchived(next.quests || []);
+  const lootBagSplit = splitActiveArchived(next.lootBags || []);
   const encounterSplit = splitActiveArchived(next.encounters || []);
   const mapSplit = splitActiveArchived(next.maps || []);
   next.characters = characterSplit.active;
   next.archivedCharacters = characterSplit.archived;
   next.quests = questSplit.active;
   next.archivedQuests = questSplit.archived;
+  next.lootBags = lootBagSplit.active;
+  next.archivedLootBags = lootBagSplit.archived;
   next.encounters = encounterSplit.active;
   next.archivedEncounters = encounterSplit.archived;
   next.maps = mapSplit.active;

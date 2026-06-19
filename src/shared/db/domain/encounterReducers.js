@@ -1,5 +1,6 @@
 import { isSoftDeleted, markDeleted, markRestored } from "./campaignReducers.js";
 import { cloneValue, createInstanceId } from "./inventoryReducers.js";
+import { applyRecordUpdater } from "./updateHelpers.js";
 
 export function createEncounterRecord(nameOrEncounter, options = {}) {
   const { createId = () => createInstanceId("encounter") } = options;
@@ -61,8 +62,8 @@ export function createCombatantRecord(type, data, options = {}) {
 
 export function applyEncounterUpdate(encounter, updater) {
   const current = normalizeEncounter(encounter);
-  const result = typeof updater === "function" ? updater(cloneValue(current)) : { ...current, ...updater };
-  return normalizeEncounter(result || current);
+  const result = applyRecordUpdater(cloneValue(current), updater);
+  return normalizeEncounter(result);
 }
 
 export function createEncounterInCampaign(campaign, nameOrEncounter, options = {}) {

@@ -33,6 +33,7 @@ export default function ItemsViewLayout({
     dataActions,
     editingItem,
     executeItemAction,
+    filterOptions,
     filteredSideItems,
     handleContextMenu,
     handleCreateLoot,
@@ -144,7 +145,7 @@ export default function ItemsViewLayout({
                         activeFilters={activeFilters}
                         onFiltersChange={setActiveFilters}
                         columns={Object.keys(COLUMNS_CONFIG)}
-                        optionsMap={{ type: uniqueTypes, category: uniqueCategories, group: uniqueGroups, rarity: uniqueRarities, traits: SHOP_INDEX_FILTER_OPTIONS.traits, bulk: ['L', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], Available: true, Formula: true }}
+                        optionsMap={filterOptions}
                         columnLabels={{ Available: 'Available', Formula: 'Formula' }}
                         extraLeft={
                             <div style={{ display: 'flex', gap: 0, border: '1px solid #444', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>

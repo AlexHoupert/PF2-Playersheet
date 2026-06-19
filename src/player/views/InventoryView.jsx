@@ -8,6 +8,7 @@ import { shouldStack } from '../../shared/utils/inventoryUtils';
 import { getWeaponCapacity, getWeaponAttackBonus, isEquipableInventoryItem, getInventoryBucket } from '../../shared/utils/combatUtils';
 import { calculateWeaponDamage } from '../../utils/rules/damage';
 import { selectCustomShopItem } from '../../shared/db/selectors/shopSelectors';
+import { selectLootBagLists } from '../../shared/db/selectors/campaignSelectors';
 
 export function InventoryView({
     character,
@@ -32,6 +33,7 @@ export function InventoryView({
     const equipTapRef = useRef({ key: null, time: 0 });
     const equipTapTimeoutRef = useRef(null);
     const { activeCampaign } = useCampaign();
+    const { lootBags } = selectLootBagLists(db, activeCampaign, activeCampaign?.id);
 
     // Helper functions from PlayerApp logic (Assuming they are not exported elsewhere yet)
     // We'll need to duplicate them or extract them to a util file if they are large.
@@ -403,7 +405,7 @@ export function InventoryView({
         <div className="sub-tabs">
             {['Equipment', 'Consumables', 'Misc', /*hasLoot ? 'Loot' : null*/ 'Loot'].map(t => {
                 const isLoot = t === 'Loot';
-                const visibleBags = (activeCampaign?.lootBags || []).filter(b => !b.isLocked);
+                const visibleBags = lootBags.filter(b => !b.isLocked);
                 // Check items AND gold for visibility
                 const bagsWithLoot = visibleBags.filter(b => (b.items && b.items.some(i => !i.claimedBy)) || (b.goldValue || 0) > 0);
                 const hasLoot = lootItems.length > 0 || bagsWithLoot.length > 0;
@@ -475,7 +477,7 @@ export function InventoryView({
 
             {itemSubTab === 'Loot' && (
                 (() => {
-                    const visibleBags = (activeCampaign?.lootBags || []).filter(b => !b.isLocked);
+                    const visibleBags = lootBags.filter(b => !b.isLocked);
                     const bagsWithLoot = visibleBags.filter(b => (b.items && b.items.some(i => !i.claimedBy)) || b.goldValue > 0);
 
                     if (bagsWithLoot.length === 0 && lootItems.length === 0) {

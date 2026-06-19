@@ -17,7 +17,7 @@ export function AttributesSection({ character, onOpenModal, onLongPress }) {
         return (
             <div className="attributes-container">
                 {orderedKeys.map(key => {
-                    const val = character.stats.attributes[key] || 0;
+                    const val = character?.stats?.attributes?.[key] || 0;
                     return (
                         <LongPressable
                             className="attr-box"

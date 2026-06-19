@@ -6,12 +6,14 @@ import {
     transferInventoryItem,
 } from '../src/shared/db/domain/inventoryReducers.js';
 import {
+    applyLootBagUpdate,
     claimLootGoldState,
     claimLootItemState,
     splitLootGoldState,
 } from '../src/shared/db/domain/lootReducers.js';
 import {
     addPartyXpInCampaign,
+    applyCampaignUpdate,
     assignUserInDb,
     buildCampaignViewModel,
     createCharacterRecord,
@@ -24,6 +26,7 @@ import {
     softDeleteCharacterInDb,
 } from '../src/shared/db/domain/campaignReducers.js';
 import {
+    applyQuestUpdate,
     restoreQuestTreeInCampaign,
     softDeleteQuestTreeInCampaign,
     toggleQuestObjectiveInCampaign,
@@ -33,6 +36,7 @@ import {
     addAllPlayersToEncounterInCampaign,
     addCombatantToEncounterInCampaign,
     addConditionToCombatantInCampaign,
+    applyEncounterUpdate,
     createEncounterInCampaign,
     endEncounterTurnInCampaign,
     removeCombatantFromEncounterInCampaign,
@@ -42,6 +46,7 @@ import {
     updateCombatantInEncounterInCampaign,
 } from '../src/shared/db/domain/encounterReducers.js';
 import {
+    applyMapUpdate,
     createMapRecord,
     deleteMapPinInCampaign,
     reorderMapsInCampaign,
@@ -133,6 +138,8 @@ test('normalizes character runtime shape on create and update', () => {
     assert.deepEqual(created.impulses, []);
     assert.equal(created.isKineticist, false);
     assert.equal(created.isCaster, false);
+    assert.equal(created.stats.attributes.strength, 0);
+    assert.equal(created.stats.attributes.charisma, 0);
     assert.equal(created.stats.impulse_proficiency, 0);
     assert.equal(created.stats.spell_proficiency, 0);
 
@@ -147,8 +154,47 @@ test('normalizes character runtime shape on create and update', () => {
     assert.equal(updated.skills.Performance, 3);
     assert.equal(updated.skills.intimidate, undefined);
     assert.equal(updated.skills.Perform, undefined);
+    assert.equal(updated.stats.attributes.dexterity, 0);
     assert.equal(updated.stats.impulse_proficiency, 0);
     assert.equal(updated.stats.spell_proficiency, 0);
+});
+
+test('record updaters keep mutated records when callbacks return primitives', () => {
+    const character = applyCharacterUpdate({ id: 'char1', gold: 0, stats: {}, inventory: [] }, (char) => char.gold = 10);
+    assert.equal(character.gold, 10);
+    assert.equal(character.id, 'char1');
+
+    const nested = applyCharacterUpdate({ id: 'char1', level: 1, stats: {}, inventory: [] }, (char) => char.level = 3);
+    assert.equal(nested.level, 3);
+
+    const attribute = applyCharacterUpdate({ id: 'char1', stats: {}, inventory: [] }, (char) => char.stats.attributes.strength = 4);
+    assert.equal(attribute.stats.attributes.strength, 4);
+
+    const lootBag = applyLootBagUpdate({ id: 'loot1', name: 'Chest', items: [], goldValue: 0 }, (bag) => bag.goldValue = 25);
+    assert.equal(lootBag.goldValue, 25);
+    assert.equal(lootBag.id, 'loot1');
+
+    const campaign = applyCampaignUpdate({ id: 'camp1', name: 'Old' }, (entry) => entry.name = 'New');
+    assert.equal(campaign.name, 'New');
+
+    const quest = applyQuestUpdate({ id: 'quest1', title: 'Old', objectives: [] }, (entry) => entry.title = 'New');
+    assert.equal(quest.title, 'New');
+
+    const encounter = applyEncounterUpdate({ id: 'enc1', name: 'Old', combatants: [] }, (entry) => entry.name = 'New');
+    assert.equal(encounter.name, 'New');
+
+    const map = applyMapUpdate({ id: 'map1', name: 'Old', pins: [] }, (entry) => entry.name = 'New');
+    assert.equal(map.name, 'New');
+});
+
+test('record updaters still allow object return replacements', () => {
+    const character = applyCharacterUpdate({ id: 'char1', gold: 0, stats: {}, inventory: [] }, (char) => ({
+        ...char,
+        gold: 5,
+    }));
+
+    assert.equal(character.gold, 5);
+    assert.equal(character.id, 'char1');
 });
 
 test('claims loot once and records the claimant without duplicating inventory', () => {

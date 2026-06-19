@@ -1,5 +1,6 @@
 import { isSoftDeleted, markDeleted, markRestored } from "./campaignReducers.js";
 import { applyCharacterUpdate, cloneValue, createInstanceId } from "./inventoryReducers.js";
+import { applyRecordUpdater } from "./updateHelpers.js";
 
 export function createQuestRecord(quest = {}, options = {}) {
   const { createId = () => createInstanceId("quest") } = options;
@@ -23,8 +24,8 @@ export function createQuestRecord(quest = {}, options = {}) {
 
 export function applyQuestUpdate(quest, updater, options = {}) {
   const current = normalizeQuest(quest);
-  const result = typeof updater === "function" ? updater(cloneValue(current)) : { ...current, ...updater };
-  return normalizeQuest(result || current, options);
+  const result = applyRecordUpdater(cloneValue(current), updater);
+  return normalizeQuest(result, options);
 }
 
 export function upsertQuestInCampaign(campaign, quest, options = {}) {

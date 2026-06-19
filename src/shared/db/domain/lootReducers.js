@@ -4,6 +4,7 @@ import {
   createInstanceId,
   ensureInventoryItemIdentity,
 } from "./inventoryReducers.js";
+import { applyRecordUpdater } from "./updateHelpers.js";
 
 export function normalizeLootItems(items = [], options = {}) {
   const { createId = () => createInstanceId("loot") } = options;
@@ -19,8 +20,8 @@ export function normalizeLootBag(lootBag, options = {}) {
 
 export function applyLootBagUpdate(lootBag, updater, options = {}) {
   const current = normalizeLootBag(lootBag, options);
-  const result = typeof updater === "function" ? updater(current) : { ...current, ...updater };
-  return normalizeLootBag(result || current, options);
+  const result = applyRecordUpdater(current, updater);
+  return normalizeLootBag(result, options);
 }
 
 export function updateCampaignLootBag(campaign, lootBagId, updater, options = {}) {

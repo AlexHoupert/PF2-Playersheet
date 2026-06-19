@@ -4,6 +4,7 @@ import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { SHOP_INDEX_FILTER_OPTIONS, SHOP_INDEX_ITEMS, fetchShopItemDetailBySourceFile } from '../shared/catalog/shopIndex';
 import ItemsViewLayout from './items/ItemsViewLayout';
 import { selectShop } from '../shared/db/selectors/shopSelectors';
+import { selectLootBagLists } from '../shared/db/selectors/campaignSelectors';
 
 const uniqueTypes = SHOP_INDEX_FILTER_OPTIONS.types;
 const uniqueCategories = SHOP_INDEX_FILTER_OPTIONS.categories;
@@ -22,6 +23,17 @@ const COLUMNS_CONFIG = {
     damage: { label: 'Damage', type: 'text' },
     range: { label: 'Range', type: 'text' },
     bulk: { label: 'Bulk', type: 'text' }
+};
+
+const FILTER_OPTIONS = {
+    type: uniqueTypes,
+    category: uniqueCategories,
+    group: uniqueGroups,
+    rarity: uniqueRarities,
+    traits: SHOP_INDEX_FILTER_OPTIONS.traits,
+    bulk: ['L', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+    Available: true,
+    Formula: true,
 };
 
 // Scrollbar styling
@@ -182,7 +194,7 @@ export default function ItemsView({ db, onInspectItem }) {
 
     // --- SIDE PANEL DATA ---
     const activeTrader = shopState.traders.find(t => t.id === selectedTraderId);
-    const campaignLootBags = activeCampaign?.lootBags || [];
+    const { lootBags: campaignLootBags } = selectLootBagLists(db, activeCampaign, activeCampaign?.id);
     const activeLoot = campaignLootBags.find(b => b.id === selectedLootId);
 
     const sideItems = useMemo(() => {
@@ -430,7 +442,12 @@ export default function ItemsView({ db, onInspectItem }) {
     const handleCreateLoot = () => {
         const name = prompt("Loot Bag Name:");
         if (!name || !activeCampaign) return;
-        runDataAction(dataActions.loot.createLootBag(activeCampaign.id, { id: Date.now(), name, items: [], goldValue: 0 }));
+        const id = Date.now();
+        runDataAction(dataActions.loot.createLootBag(activeCampaign.id, { id, name, items: [], goldValue: 0 }));
+        setSideMode('loot');
+        setSelectedLootId(id);
+        setSelectedSideItems([]);
+        if (isMobile) setMobileSideOpen(true);
     };
 
     // Double-click handler for info modal
@@ -455,6 +472,7 @@ export default function ItemsView({ db, onInspectItem }) {
             dataActions={dataActions}
             editingItem={editingItem}
             executeItemAction={executeItemAction}
+            filterOptions={FILTER_OPTIONS}
             filteredSideItems={filteredSideItems}
             handleContextMenu={handleContextMenu}
             handleCreateLoot={handleCreateLoot}
