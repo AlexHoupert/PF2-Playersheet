@@ -34,6 +34,21 @@ test('legacy data actions update character, inventory, loot, quest, encounter, m
     });
 
     await harness.actions.character.updateCharacter('camp1', 'char1', { notes: 'ready' });
+    await harness.actions.character.setGold('camp1', 'char1', 10.5);
+    await harness.actions.character.adjustGold('camp1', 'char1', -2);
+    await harness.actions.character.setAttribute('camp1', 'char1', 'strength', -1);
+    await harness.actions.character.adjustAttribute('camp1', 'char1', 'strength', 3);
+    await harness.actions.character.setMaxHp('camp1', 'char1', 20);
+    await harness.actions.character.adjustMaxHp('camp1', 'char1', -5);
+    await harness.actions.character.setHp('camp1', 'char1', 14);
+    await harness.actions.character.adjustHp('camp1', 'char1', -4);
+    await harness.actions.character.setTempHp('camp1', 'char1', 7);
+    await harness.actions.character.adjustTempHp('camp1', 'char1', -2);
+    await harness.actions.character.setSpeed('camp1', 'char1', 'land', 30);
+    await harness.actions.character.adjustSpeed('camp1', 'char1', 'land', -5);
+    await harness.actions.character.setClassDc('camp1', 'char1', 18);
+    await harness.actions.character.adjustClassDc('camp1', 'char1', 1);
+    await harness.actions.character.setDailyCraftingMax('camp1', 'char1', 6);
     await harness.actions.inventory.addItem('camp1', 'char1', { name: 'Torch', type: 'consumable' });
     await harness.actions.loot.claimGold('camp1', 'loot1', 'char1', 2);
     await harness.actions.quest.toggleObjective('camp1', 'quest1', 0, true);
@@ -46,7 +61,14 @@ test('legacy data actions update character, inventory, loot, quest, encounter, m
     const character = campaign.characters[0];
     assert.equal(character.notes, 'ready');
     assert.equal(character.inventory.some(item => item.name === 'Torch'), true);
-    assert.equal(character.gold, 2);
+    assert.equal(character.gold, 10.5);
+    assert.equal(character.stats.attributes.strength, 2);
+    assert.equal(character.stats.hp.max, 15);
+    assert.equal(character.stats.hp.current, 10);
+    assert.equal(character.stats.hp.temp, 5);
+    assert.equal(character.stats.speed.land, 25);
+    assert.equal(character.stats.class_dc, 19);
+    assert.equal(character.dailyCraftingMax, 6);
     assert.equal(campaign.lootBags[0].goldValue, 3);
     assert.equal(campaign.quests[0].objectives[0].completed, true);
     assert.equal(campaign.encounters[0].combatants.length, 1);

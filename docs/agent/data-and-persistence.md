@@ -128,7 +128,7 @@ Files:
 
 Current migrated write paths:
 
-- Player character updates through `dataActions.character.updateCharacter`.
+- Player character updates through `dataActions.character.updateCharacter`; player basis edits for gold, attributes, HP/temp/max HP, speed, Class DC, and daily crafting max use targeted character basis actions.
 - Player inventory transfer through `dataActions.inventory.transferItem`.
 - Player loot claim, gold claim, and gold split through `dataActions.loot`.
 - Campaign/session flows through `dataActions.campaign`, `dataActions.character`, and `dataActions.member`.

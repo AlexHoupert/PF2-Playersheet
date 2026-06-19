@@ -38,6 +38,7 @@ import { getShopIndexItemByName } from '../shared/catalog/shopIndex';
  * @param {Function} props.setModalData - Function to set the modal data.
  * @param {Object} props.character - The character object.
  * @param {Function} props.updateCharacter - Function to update the character.
+ * @param {Object} props.characterActions - Targeted character edit actions.
  * @param {Function} props.onClose - Callback to close the modal.
  * @param {Function} props.onBack - Callback for back navigation.
  * @param {boolean} props.hasHistory - Whether there is modal history.
@@ -59,6 +60,7 @@ export function ModalManager({
     setModalData,
     character,
     updateCharacter,
+    characterActions,
     onClose,
     onBack,
     hasHistory,
@@ -83,7 +85,7 @@ export function ModalManager({
     // --- SIMPLE EDIT MODALS ---
 
     if (modalMode === 'hp') {
-        return <ManageHPModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
+        return <ManageHPModal character={character} characterActions={characterActions} onClose={onClose} />;
     }
     if (modalMode === 'addAction') {
         return <AddActionModal onSave={saveNewAction} onClose={onClose} />;
@@ -108,22 +110,22 @@ export function ModalManager({
     }
 
     if (modalMode === 'gold') {
-        return <EditGoldModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
+        return <EditGoldModal character={character} characterActions={characterActions} onClose={onClose} />;
     }
     if (modalMode === 'edit_level' || modalMode === 'level') { // Handle both just in case
         return <EditLevelModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
     }
     if (modalMode === 'edit_max_hp' || modalMode === 'hp') {
-        return <EditHPModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
+        return <EditHPModal character={character} characterActions={characterActions} onClose={onClose} />;
     }
     if (modalMode === 'edit_speed') {
-        return <EditSpeedModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
+        return <EditSpeedModal character={character} characterActions={characterActions} onClose={onClose} />;
     }
     if (modalMode === 'edit_attribute') {
-        return <EditAttributeModal character={character} updateCharacter={updateCharacter} onClose={onClose} modalData={modalData} />;
+        return <EditAttributeModal character={character} characterActions={characterActions} onClose={onClose} modalData={modalData} />;
     }
     if (modalMode === 'edit_proficiency') {
-        return <EditProficiencyModal character={character} updateCharacter={updateCharacter} onClose={onClose} modalData={modalData} />;
+        return <EditProficiencyModal character={character} updateCharacter={updateCharacter} characterActions={characterActions} onClose={onClose} modalData={modalData} />;
     }
     if (modalMode === 'edit_armor_prof') {
         return <EditArmorProficiencyModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
@@ -164,7 +166,7 @@ export function ModalManager({
     // --- COMPLEX / FEATURE MODALS ---
 
     if (modalMode === 'quicksheet') {
-        return <QuickSheetModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
+        return <QuickSheetModal character={character} updateCharacter={updateCharacter} characterActions={characterActions} onClose={onClose} />;
     }
 
     if (modalMode === 'conditions' || modalMode === 'conditionInfo') {
@@ -191,6 +193,7 @@ export function ModalManager({
             <FormulaBookModal
                 character={character}
                 updateCharacter={updateCharacter}
+                characterActions={characterActions}
                 dailyPrepQueue={dailyPrepQueue}
                 setDailyPrepQueue={setDailyPrepQueue}
                 setModalData={setModalData}

@@ -192,6 +192,12 @@ export function ACModal({ character, updateCharacter, onClose }) {
                         <strong>Armor:</strong> {acData.armorName ? `${acData.armorName} (${acData.armorCategory || 'untyped'})` : 'None (Unarmored)'}
                         {acData.armorItemBonus ? <span style={{ color: '#888' }}> — Item +{acData.armorItemBonus} AC</span> : null}
                     </div>
+                    {acData.scalySkinActive && (
+                        <div style={{ marginTop: 6 }}>
+                            <strong>Scaly Skin:</strong> +{acData.scalySkinBonus} item AC
+                            <span style={{ color: '#888' }}> (Dex cap +3 while unarmored)</span>
+                        </div>
+                    )}
                     {acData.shieldName && (
                         <div style={{ marginTop: 6 }}>
                             <strong>Shield:</strong> {acData.shieldName} {acData.shieldRaised ? '(Raised)' : '(Lowered)'}
@@ -349,7 +355,9 @@ export function ShieldModal({ character, updateCharacter, onClose }) {
                             }
                         })}>-</button>
                         <input type="number" className="modal-input" style={{ width: 80, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="Amount" />
-                        <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.ac.shield_hp = Math.min(shieldMax, (c.stats.ac.shield_hp || 0) + (parseInt(editVal) || 0)))}>+</button>
+                        <button className="qty-btn" onClick={() => updateCharacter(c => {
+                            c.stats.ac.shield_hp = Math.min(shieldMax, (c.stats.ac.shield_hp || 0) + (parseInt(editVal) || 0));
+                        })}>+</button>
                     </div>
 
                     <div style={{ marginTop: 15, display: 'flex', justifyContent: 'center' }}>
@@ -357,7 +365,9 @@ export function ShieldModal({ character, updateCharacter, onClose }) {
                             className="set-btn"
                             style={{ width: 'auto', padding: '5px 15px', fontSize: '0.9em' }}
                             onClick={() => {
-                                updateCharacter(c => c.stats.ac.shield_hp = shieldMax);
+                                updateCharacter(c => {
+                                    c.stats.ac.shield_hp = shieldMax;
+                                });
                                 setEditVal("");
                             }}
                         >Full Repair</button>

@@ -1,6 +1,6 @@
 # Agent Context
 
-Last deep scan: 2026-06-18.
+Last deep scan: 2026-06-19.
 
 ## Project Identity
 
@@ -83,6 +83,7 @@ Current domain action files:
 - `src/shared/db/domain/createDataActions.js`: adapter selection and public action API.
 - `src/shared/db/domain/campaignReducers.js`: campaign/session reducers, soft delete, user assignment, party XP.
 - `src/shared/db/domain/inventoryReducers.js`: pure character/inventory reducers and identity normalization.
+- `src/shared/db/domain/characterEditReducers.js`: pure Player basis-value reducers for gold, attributes, HP, speed, Class DC, and daily crafting batches.
 - `src/shared/db/domain/lootReducers.js`: pure loot-bag, claim, and gold reducers.
 - `src/shared/db/domain/questReducers.js`: pure quest, objective, reward, notification, and quest soft-delete reducers.
 - `src/shared/db/domain/encounterReducers.js`: pure encounter, combatant, initiative, turn, condition, and encounter soft-delete reducers.
@@ -101,6 +102,7 @@ Migrated paths:
 - Admin Player tab character updates and party XP set/add.
 
 - Player local `updateCharacter` wrapper, covering most inventory/equipment/rune/weapon/formula handlers.
+- Player basis edits for gold, attributes, current/temp/max HP, speed, Class DC, and Formula Book daily batch max use targeted `dataActions.character` methods.
 - Player item transfer.
 - Player loot item claim, gold claim, and gold split.
 - GM ItemsView loot bag add/remove/quantity/create/lock/gold updates.

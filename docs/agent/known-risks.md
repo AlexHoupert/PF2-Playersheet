@@ -1,6 +1,6 @@
 # Known Risks And Modernization Notes
 
-Last updated: 2026-06-18.
+Last updated: 2026-06-19.
 
 ## Highest-Impact Risks
 
@@ -39,6 +39,10 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 
 - `migrateDb` mutates the input object in place by design. Be careful when calling it with shared references.
 - Character runtime defaults and old skill names are normalized in `src/shared/db/domain/characterShape.js` during load, V2 migration, create, and update paths.
+- Player basis edits for gold, attributes, current/temp/max HP, speed, Class DC, and Formula Book daily batch limits use targeted `dataActions.character` methods. Keep direct nested writes for these fields out of Player modals.
+- Remaining Player UI-local edit paths include saves/skills, weapon/armor proficiencies, magic slots, armor/shield state, companion state, and inventory-driven gold/HP changes. They rely on `applyCharacterUpdate` plus `normalizeCharacterRuntimeShape` for shape safety and are candidates for later focused actions.
+- Wands are reusable inventory items with `system.wand = { charges, max }`, not consumable stacks. Inventory double-tap and spell detail casting should reduce charges only; Daily Preparation recharges them. Keep wand detection centralized in `src/shared/utils/wandUtils.js`.
+- Scaly Skin is currently implemented as a specific AC rule in the shared AC calculation: while unarmored or wearing Explorer's Clothing, it adds item AC and applies Dex cap +3. This should eventually move into a general effects/rules engine.
 - Root `quests` and `lootBags` still exist for compatibility. Some code paths may read them when campaign data is absent.
 - Player-created custom item catalog registration uses `dataActions.globalContent.saveCustomItem`. The immediate inventory add still uses `onUpdateCharacter`.
 - Campaign, character, quest/subquest, encounter, and map deletion is soft delete. Do not hard-delete these documents unless a future purge flow is explicitly designed and approved.
@@ -81,7 +85,7 @@ Short-term:
 
 - Add docs and tests for new migration fields.
 - Extract inventory identity helpers and reuse in player/admin/loot paths.
-- Move runtime character field defaults into `migrateDb`.
+- Continue moving remaining Player UI-local edit paths to targeted character or inventory actions when those workflows are touched.
 - Restore/admin-wire rebuild status to `/api/admin/rebuild-index/:type` if needed.
 - Replace stale analysis comments in `AdminApp.jsx` with actionable TODOs or remove them.
 

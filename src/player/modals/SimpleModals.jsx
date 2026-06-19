@@ -13,19 +13,16 @@ const ARMOR_RANKS = [
  * Modal to manage character gold.
  * @param {Object} props
  * @param {Object} props.character - The character object.
- * @param {Function} props.updateCharacter - Function to update the character state.
+ * @param {Object} props.characterActions - Targeted character edit actions.
  * @param {Function} props.onClose - Function to close the modal.
  * @returns {JSX.Element}
  */
-export function EditGoldModal({ character, updateCharacter, onClose }) {
+export function EditGoldModal({ character, characterActions, onClose }) {
     const [editVal, setEditVal] = useState("");
     const parseGold = (value) => Number.parseFloat(value || 0) || 0;
-    const currentGold = Number.parseFloat(parseGold(character.gold).toFixed(2));
+    const currentGold = Number.parseFloat(parseGold(character?.gold).toFixed(2));
     const applyDelta = (amount) => {
-        updateCharacter(c => {
-            const currentGold = parseGold(c.gold);
-            c.gold = Number.parseFloat((currentGold + amount).toFixed(2));
-        });
+        characterActions?.adjustGold(amount);
     };
     return (
         <div style={{
@@ -46,9 +43,7 @@ export function EditGoldModal({ character, updateCharacter, onClose }) {
                     <button className="qty-btn" style={{ borderColor: 'var(--accent-green)', color: 'var(--accent-green)' }} onClick={() => applyDelta(parseGold(editVal))}>+</button>
                 </div>
                 <button className="set-btn" onClick={() => {
-                    updateCharacter(c => {
-                        c.gold = Number.parseFloat(parseGold(editVal).toFixed(2));
-                    });
+                    characterActions?.setGold(parseGold(editVal));
                     setEditVal("");
                     onClose();
                 }}>Set to Value</button>
@@ -79,9 +74,13 @@ export function EditLevelModal({ character, updateCharacter, onClose }) {
             }} onClick={e => e.stopPropagation()}>
                 <h2>Edit Level</h2>
                 <div className="qty-control-box">
-                    <button className="qty-btn" onClick={() => updateCharacter(c => c.level = Math.max(1, (c.level || 1) - 1))}>-</button>
+                    <button className="qty-btn" onClick={() => updateCharacter(c => {
+                        c.level = Math.max(1, (c.level || 1) - 1);
+                    })}>-</button>
                     <span style={{ fontSize: '2em', width: 60, textAlign: 'center' }}>{character.level}</span>
-                    <button className="qty-btn" onClick={() => updateCharacter(c => c.level = (c.level || 1) + 1)}>+</button>
+                    <button className="qty-btn" onClick={() => updateCharacter(c => {
+                        c.level = (c.level || 1) + 1;
+                    })}>+</button>
                 </div>
                 <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
             </div>
@@ -93,11 +92,12 @@ export function EditLevelModal({ character, updateCharacter, onClose }) {
  * Modal to edit character Max HP.
  * @param {Object} props
  * @param {Object} props.character - The character object.
- * @param {Function} props.updateCharacter - Function to update the character state.
+ * @param {Object} props.characterActions - Targeted character edit actions.
  * @param {Function} props.onClose - Function to close the modal.
  * @returns {JSX.Element}
  */
-export function EditHPModal({ character, updateCharacter, onClose }) {
+export function EditHPModal({ character, characterActions, onClose }) {
+    const maxHp = character?.stats?.hp?.max ?? 1;
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -111,9 +111,9 @@ export function EditHPModal({ character, updateCharacter, onClose }) {
             }} onClick={e => e.stopPropagation()}>
                 <h2>Edit Max HP</h2>
                 <div className="qty-control-box">
-                    <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.hp.max = Math.max(1, (c.stats.hp.max || 10) - 1))}>-</button>
-                    <span style={{ fontSize: '2em', width: 80, textAlign: 'center' }}>{character.stats.hp.max}</span>
-                    <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.hp.max = (c.stats.hp.max || 10) + 1)}>+</button>
+                    <button className="qty-btn" onClick={() => characterActions?.adjustMaxHp(-1)}>-</button>
+                    <span style={{ fontSize: '2em', width: 80, textAlign: 'center' }}>{maxHp}</span>
+                    <button className="qty-btn" onClick={() => characterActions?.adjustMaxHp(1)}>+</button>
                 </div>
                 <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
             </div>
@@ -125,11 +125,12 @@ export function EditHPModal({ character, updateCharacter, onClose }) {
  * Modal to edit character speeds.
  * @param {Object} props
  * @param {Object} props.character - The character object.
- * @param {Function} props.updateCharacter - Function to update the character state.
+ * @param {Object} props.characterActions - Targeted character edit actions.
  * @param {Function} props.onClose - Function to close the modal.
  * @returns {JSX.Element}
  */
-export function EditSpeedModal({ character, updateCharacter, onClose }) {
+export function EditSpeedModal({ character, characterActions, onClose }) {
+    const speed = character?.stats?.speed || { land: 25 };
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -142,13 +143,13 @@ export function EditSpeedModal({ character, updateCharacter, onClose }) {
                 color: '#e0e0e0', textAlign: 'center'
             }} onClick={e => e.stopPropagation()}>
                 <h2>Edit Speed</h2>
-                {Object.entries(character.stats.speed).map(([k, v]) => (
+                {Object.entries(speed).map(([k, v]) => (
                     <div key={k} className="modal-form-group">
                         <label style={{ textTransform: 'capitalize' }}>{k}</label>
                         <div className="qty-control-box">
-                            <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.speed[k] = Math.max(0, (c.stats.speed[k] || 0) - 5))}>-5</button>
+                            <button className="qty-btn" onClick={() => characterActions?.adjustSpeed(k, -5)}>-5</button>
                             <span style={{ fontSize: '1.5em', width: 60, textAlign: 'center' }}>{v}</span>
-                            <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.speed[k] = (c.stats.speed[k] || 0) + 5)}>+5</button>
+                            <button className="qty-btn" onClick={() => characterActions?.adjustSpeed(k, 5)}>+5</button>
                         </div>
                     </div>
                 ))}
@@ -162,24 +163,19 @@ export function EditSpeedModal({ character, updateCharacter, onClose }) {
  * Modal to edit a specific attribute score.
  * @param {Object} props
  * @param {Object} props.character - The character object.
- * @param {Function} props.updateCharacter - Function to update the character state.
+ * @param {Object} props.characterActions - Targeted character edit actions.
  * @param {Function} props.onClose - Function to close the modal.
  * @param {Object} props.modalData - Data containing the attribute key and label.
  * @returns {JSX.Element}
  */
-export function EditAttributeModal({ character, updateCharacter, onClose, modalData }) {
-    const key = modalData.item.key;
+export function EditAttributeModal({ character, characterActions, onClose, modalData }) {
+    const key = modalData?.item?.key;
     const attributes = character?.stats?.attributes || {};
     const val = attributes[key] || 0;
-    const label = modalData.item.label;
+    const label = modalData?.item?.label || key || "Attribute";
     const updateAttribute = (delta) => {
-        updateCharacter(c => {
-            if (!c.stats || typeof c.stats !== 'object') c.stats = {};
-            if (!c.stats.attributes || typeof c.stats.attributes !== 'object' || Array.isArray(c.stats.attributes)) {
-                c.stats.attributes = {};
-            }
-            c.stats.attributes[key] = (Number(c.stats.attributes[key]) || 0) + delta;
-        });
+        if (!key) return;
+        characterActions?.adjustAttribute(key, delta);
     };
 
     return (
@@ -210,17 +206,18 @@ export function EditAttributeModal({ character, updateCharacter, onClose, modalD
  * @param {Object} props
  * @param {Object} props.character - The character object.
  * @param {Function} props.updateCharacter - Function to update the character state.
+ * @param {Object} props.characterActions - Targeted character edit actions for Class DC edits.
  * @param {Function} props.onClose - Function to close the modal.
  * @param {Object} props.modalData - Data defining the type (skill, save, impulse) and key to edit.
  * @returns {JSX.Element}
  */
-export function EditProficiencyModal({ character, updateCharacter, onClose, modalData }) {
+export function EditProficiencyModal({ character, updateCharacter, characterActions, onClose, modalData }) {
     const isSkill = modalData.type === 'skill';
     const isSave = modalData.type === 'save';
     const isImpulse = modalData.type === 'impulse';
     const key = isSkill ? modalData.item.key : (isSave ? String(modalData.item).toLowerCase() : 'class_dc');
 
-    const currentVal = isSkill ? (character.skills[key] || (key === 'Performance' ? character.skills['Perform'] : 0)) : (isSave ? (character.stats.saves?.[key] || 0) : (isImpulse ? (character.stats.impulse_proficiency || 0) : character.stats.class_dc));
+    const currentVal = isSkill ? (character?.skills?.[key] || (key === 'Performance' ? character?.skills?.['Perform'] : 0)) : (isSave ? (character?.stats?.saves?.[key] || 0) : (isImpulse ? (character?.stats?.impulse_proficiency || 0) : (character?.stats?.class_dc || 10)));
 
     // Determine if this is a custom lore (starts with "Lore") or otherwise removable
     // Standard skills: acrobatics, arcana, athletics, crafting, deception, diplomacy, intimidation, medicine, nature, occultism, performance, religion, society, stealth, survival, thievery
@@ -264,9 +261,9 @@ export function EditProficiencyModal({ character, updateCharacter, onClose, moda
                 ) : (
                     // Class DC might just be a number edit if no prof structure
                     <div className="qty-control-box">
-                        <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.class_dc = (c.stats.class_dc || 10) - 1)}>-</button>
+                        <button className="qty-btn" onClick={() => characterActions?.adjustClassDc(-1)}>-</button>
                         <span style={{ fontSize: '2em', width: 60, textAlign: 'center' }}>{currentVal}</span>
-                        <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.class_dc = (c.stats.class_dc || 10) + 1)}>+</button>
+                        <button className="qty-btn" onClick={() => characterActions?.adjustClassDc(1)}>+</button>
                     </div>
                 )}
 
@@ -444,7 +441,7 @@ export function EditArmorProficiencyModal({ character, updateCharacter, onClose 
  * @returns {JSX.Element}
  */
 export function EditLanguagesModal({ character, updateCharacter, onClose }) {
-    const [langs, setLangs] = useState(character.languages.join(', '));
+    const [langs, setLangs] = useState((Array.isArray(character?.languages) ? character.languages : []).join(', '));
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -465,7 +462,9 @@ export function EditLanguagesModal({ character, updateCharacter, onClose }) {
                 />
                 <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
                     <button className="set-btn" onClick={() => {
-                        updateCharacter(c => c.languages = langs.split(',').map(s => s.trim()).filter(Boolean));
+                        updateCharacter(c => {
+                            c.languages = langs.split(',').map(s => s.trim()).filter(Boolean);
+                        });
                         onClose();
                     }}>Save</button>
                     <button className="set-btn" onClick={onClose} style={{ background: '#444' }}>Cancel</button>
@@ -589,11 +588,11 @@ export function EditPerceptionModal({ character, updateCharacter, onClose }) {
  * Modal to manage Current and Temporary HP.
  * @param {Object} props
  * @param {Object} props.character - The character object.
- * @param {Function} props.updateCharacter - Function to update the character state.
+ * @param {Object} props.characterActions - Targeted character edit actions.
  * @param {Function} props.onClose - Function to close the modal.
  * @returns {JSX.Element}
  */
-export function ManageHPModal({ character, updateCharacter, onClose }) {
+export function ManageHPModal({ character, characterActions, onClose }) {
     const [editVal, setEditVal] = useState("");
     const [showTempHp, setShowTempHp] = useState(false);
 
@@ -618,6 +617,10 @@ export function ManageHPModal({ character, updateCharacter, onClose }) {
         );
     }
 
+    const hp = character.stats.hp;
+    const level = character.level || 1;
+    const editAmount = () => parseInt(editVal, 10) || 0;
+
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -631,26 +634,26 @@ export function ManageHPModal({ character, updateCharacter, onClose }) {
             }} onClick={e => e.stopPropagation()}>
                 <h2>Manage Hit Points</h2>
                 <p style={{ textAlign: 'center', color: '#888' }}>
-                    Current HP: <span style={{ color: 'var(--text-gold)', fontWeight: 'bold' }}>{character.stats.hp.current}</span>
-                    <span style={{ fontSize: '0.8em', color: '#666' }}> / {Math.max(1, character.stats.hp.max - (getCondLevel('drained', character) * character.level))}</span>
+                    Current HP: <span style={{ color: 'var(--text-gold)', fontWeight: 'bold' }}>{hp.current}</span>
+                    <span style={{ fontSize: '0.8em', color: '#666' }}> / {Math.max(1, hp.max - (getCondLevel('drained', character) * level))}</span>
                     &nbsp; | &nbsp;
                     <span
                         onClick={() => setShowTempHp(!showTempHp)}
                         style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 4, color: '#888' }}
                     >
-                        Temp: <span style={{ color: 'var(--accent-blue)', fontWeight: 'bold' }}>{character.stats.hp.temp}</span>
+                        Temp: <span style={{ color: 'var(--accent-blue)', fontWeight: 'bold' }}>{hp.temp}</span>
                     </span>
                 </p>
 
                 <div className="modal-form-group" style={{ textAlign: 'center' }}>
                     <label>Hit Points</label>
                     <div className="qty-control-box">
-                        <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.hp.current = Math.max(0, c.stats.hp.current - (parseInt(editVal) || 0)))}>-</button>
+                        <button className="qty-btn" onClick={() => characterActions?.adjustHp(-editAmount())}>-</button>
                         <input type="number" className="modal-input" style={{ width: 100, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="0" />
-                        <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.hp.current = Math.max(0, c.stats.hp.current + (parseInt(editVal) || 0)))}>+</button>
+                        <button className="qty-btn" onClick={() => characterActions?.adjustHp(editAmount())}>+</button>
                     </div>
                     <div style={{ marginTop: 10 }}>
-                        <button className="set-btn" onClick={() => { updateCharacter(c => c.stats.hp.current = parseInt(editVal) || 0); setEditVal(""); onClose(); }}>Set HP</button>
+                        <button className="set-btn" onClick={() => { characterActions?.setHp(editAmount()); setEditVal(""); onClose(); }}>Set HP</button>
                     </div>
                 </div>
 
@@ -658,11 +661,11 @@ export function ManageHPModal({ character, updateCharacter, onClose }) {
                     <div className="modal-form-group" style={{ textAlign: 'center', marginTop: 20, borderTop: '1px solid #444', paddingTop: 20 }}>
                         <label style={{ color: 'var(--accent-blue)' }}>Temp HP</label>
                         <div className="qty-control-box">
-                            <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.hp.temp = Math.max(0, c.stats.hp.temp - (parseInt(editVal) || 0)))}>-</button>
+                            <button className="qty-btn" onClick={() => characterActions?.adjustTempHp(-editAmount())}>-</button>
                             <input type="number" className="modal-input" style={{ width: 100, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="0" />
-                            <button className="qty-btn" onClick={() => updateCharacter(c => c.stats.hp.temp = c.stats.hp.temp + (parseInt(editVal) || 0))}>+</button>
+                            <button className="qty-btn" onClick={() => characterActions?.adjustTempHp(editAmount())}>+</button>
                         </div>
-                        <button className="set-btn" onClick={() => { updateCharacter(c => c.stats.hp.temp = parseInt(editVal) || 0); setEditVal(""); onClose(); }}>Set Temp to Value</button>
+                        <button className="set-btn" onClick={() => { characterActions?.setTempHp(editAmount()); setEditVal(""); onClose(); }}>Set Temp to Value</button>
                     </div>
                 )}
                 <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>

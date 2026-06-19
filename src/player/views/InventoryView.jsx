@@ -9,6 +9,7 @@ import { getWeaponCapacity, getWeaponAttackBonus, isEquipableInventoryItem, getI
 import { calculateWeaponDamage } from '../../utils/rules/damage';
 import { selectCustomShopItem } from '../../shared/db/selectors/shopSelectors';
 import { selectLootBagLists } from '../../shared/db/selectors/campaignSelectors';
+import { consumeWandCharge, getWandCharges, getWandMaxCharges, getWandSpell, isWandItem } from '../../shared/utils/wandUtils';
 
 export function InventoryView({
     character,
@@ -103,6 +104,34 @@ export function InventoryView({
     const miscItems = wrappedItems.filter(({ item }) => getInventoryBucket(item) === 'misc' && !item.isLoot);
     const lootItems = wrappedItems.filter(({ item }) => item.isLoot);
 
+    const findInventoryItemIndex = (inventory, target) => {
+        if (!Array.isArray(inventory) || !target) return -1;
+        if (Number.isInteger(target._index) && inventory[target._index]?.name === target.name) {
+            return target._index;
+        }
+        if (target.instanceId) {
+            const byInstance = inventory.findIndex(i => i.instanceId === target.instanceId);
+            if (byInstance > -1) return byInstance;
+        }
+        return inventory.findIndex(i =>
+            i.name === target.name &&
+            !!i.equipped === !!target.equipped &&
+            (target.addedAt === undefined || i.addedAt === target.addedAt)
+        );
+    };
+
+    const consumeWandFromInventory = (wandItem) => {
+        if (!onUpdateCharacter) {
+            onInspectItem(wandItem);
+            return;
+        }
+        onUpdateCharacter(c => {
+            const idx = findInventoryItemIndex(c.inventory, wandItem);
+            if (idx < 0) return;
+            consumeWandCharge(c.inventory[idx]);
+        });
+    };
+
     const renderRow = (item, index, { enableEquipTap = false } = {}) => {
         // Item is already resolved/merged in wrappedItems
         const merged = item;
@@ -114,6 +143,10 @@ export function InventoryView({
         const weaponAttackBonus = isWeapon ? getWeaponAttackBonus(merged, character) : null;
         const weaponHasPenalty = (weaponAttackBonus?.penalty || 0) < 0;
         const weaponHasBonus = (weaponAttackBonus?.penalty || 0) > 0;
+        const isWand = isWandItem(merged);
+        const wandCharges = isWand ? getWandCharges(merged) : 0;
+        const wandMax = isWand ? getWandMaxCharges(merged) : 1;
+        const linkedSpell = getWandSpell(merged) || merged.system?.spell;
 
         let clickHandler;
         if (enableEquipTap && isEquipableInventoryItem(item)) {
@@ -169,6 +202,14 @@ export function InventoryView({
                 if (isDoubleTap && item.name === 'Versatile Vial') {
                     equipTapRef.current = { key: null, time: 0 };
                     setVialActivation(merged);
+                    return;
+                } else if (isDoubleTap && isWand) {
+                    equipTapRef.current = { key: null, time: 0 };
+                    if (wandCharges <= 0) {
+                        onInspectItem(merged);
+                    } else {
+                        consumeWandFromInventory(merged);
+                    }
                     return;
                 } else if (isDoubleTap && (item.type === 'Consumable' || item.consumable || item.type === 'consumable')) {
                     // Consumption Confirmation
@@ -236,6 +277,11 @@ export function InventoryView({
                             {item.system?.staff?.max > 0 && (
                                 <span style={{ color: '#aaa', marginLeft: 6, fontSize: '0.85em', fontWeight: 'normal' }}>
                                     ({item.system.staff.charges || 0}/{item.system.staff.max})
+                                </span>
+                            )}
+                            {isWand && (
+                                <span style={{ color: '#b39ddb', marginLeft: 6, fontSize: '0.85em', fontWeight: 'normal' }}>
+                                    ({wandCharges}/{wandMax})
                                 </span>
                             )}
                             {item.prepared && (
@@ -315,16 +361,16 @@ export function InventoryView({
                     </div>
 
                     {/* Linked Spell (Scrolls/Wands) */}
-                    {merged.system?.spell && (
+                    {linkedSpell && (
                         <div
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onOpenModal('item', { ...merged.system.spell, _entityType: 'spell' });
+                                onOpenModal('item', { ...linkedSpell, _entityType: 'spell' });
                             }}
                             style={{ fontSize: '0.85em', color: '#b39ddb', cursor: 'pointer', marginTop: 2, display: 'inline-block' }}
                         >
                             <span style={{ marginRight: 4 }}>✨</span>
-                            <span style={{ textDecoration: 'underline' }}>{merged.system.spell.name}</span>
+                            <span style={{ textDecoration: 'underline' }}>{linkedSpell.name}</span>
                         </div>
                     )}
 

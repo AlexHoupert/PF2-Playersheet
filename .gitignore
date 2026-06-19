@@ -16,6 +16,7 @@ Thumbs.db
 .env.local
 *.env
 .vite-dev.log
+.vite-dev-current.*
 
 # Generated data and local backups
 src/data/creature_catalog.json

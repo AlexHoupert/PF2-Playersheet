@@ -13,7 +13,7 @@ const ARMOR_RANKS = [
 ];
 
 const LanguagesTab = ({ languages, updateCharacter }) => {
-    const [localText, setLocalText] = useState(languages.join(', '));
+    const [localText, setLocalText] = useState((Array.isArray(languages) ? languages : []).join(', '));
 
     return (
         <div className="qs-content">
@@ -24,13 +24,15 @@ const LanguagesTab = ({ languages, updateCharacter }) => {
                 onChange={e => setLocalText(e.target.value)}
             />
             <button className="qs-btn-save" onClick={() => {
-                updateCharacter(c => c.languages = localText.split(',').map(s => s.trim()).filter(Boolean));
+                updateCharacter(c => {
+                    c.languages = localText.split(',').map(s => s.trim()).filter(Boolean);
+                });
             }}>Update Languages</button>
         </div>
     );
 };
 
-export default function QuickSheetModal({ character, updateCharacter, onClose }) {
+export default function QuickSheetModal({ character, updateCharacter, characterActions, onClose }) {
     const [tab, setTab] = useState('main'); // main, proficiencies, languages
 
     const renderProficiencyToggle = (currentVal, onChange) => {
@@ -57,13 +59,7 @@ export default function QuickSheetModal({ character, updateCharacter, onClose })
                     const key = attr.toLowerCase();
                     const val = character?.stats?.attributes?.[key] || 0;
                     const updateAttribute = (delta) => {
-                        updateCharacter(c => {
-                            if (!c.stats || typeof c.stats !== 'object') c.stats = {};
-                            if (!c.stats.attributes || typeof c.stats.attributes !== 'object' || Array.isArray(c.stats.attributes)) {
-                                c.stats.attributes = {};
-                            }
-                            c.stats.attributes[key] = (Number(c.stats.attributes[key]) || 0) + delta;
-                        });
+                        characterActions?.adjustAttribute(key, delta);
                     };
                     return (
                         <div key={attr} className="qs-stat-box">
@@ -86,20 +82,14 @@ export default function QuickSheetModal({ character, updateCharacter, onClose })
             <div className="qs-grid-2">
                 {SPEEDS.map(type => {
                     const key = type.toLowerCase();
-                    const val = character.stats.speed?.[key] ?? 0;
+                    const val = character?.stats?.speed?.[key] ?? 0;
                     return (
                         <div key={type} className="qs-stat-box">
                             <div className="qs-label">{type}</div>
                             <div className="qs-controls">
-                                <button onClick={() => updateCharacter(c => {
-                                    if (!c.stats.speed) c.stats.speed = { land: 25 };
-                                    c.stats.speed[key] = Math.max(0, (c.stats.speed[key] || 0) - 5);
-                                })}>-</button>
+                                <button onClick={() => characterActions?.adjustSpeed(key, -5)}>-</button>
                                 <span className="qs-val">{val}</span>
-                                <button onClick={() => updateCharacter(c => {
-                                    if (!c.stats.speed) c.stats.speed = { land: 25 };
-                                    c.stats.speed[key] = (c.stats.speed[key] || 0) + 5;
-                                })}>+</button>
+                                <button onClick={() => characterActions?.adjustSpeed(key, 5)}>+</button>
                             </div>
                         </div>
                     );
@@ -128,14 +118,14 @@ export default function QuickSheetModal({ character, updateCharacter, onClose })
     );
 
     const renderClassDC = () => {
-        const val = character.stats.class_dc || 10;
+        const val = character?.stats?.class_dc || 10;
         return (
             <div className="qs-section">
                 <h3>Class DC</h3>
                 <div className="qs-controls centered">
-                    <button onClick={() => updateCharacter(c => c.stats.class_dc = (c.stats.class_dc || 10) - 1)}>-</button>
+                    <button onClick={() => characterActions?.adjustClassDc(-1)}>-</button>
                     <span className="qs-val">{val}</span>
-                    <button onClick={() => updateCharacter(c => c.stats.class_dc = (c.stats.class_dc || 10) + 1)}>+</button>
+                    <button onClick={() => characterActions?.adjustClassDc(1)}>+</button>
                 </div>
             </div>
         );
@@ -147,9 +137,13 @@ export default function QuickSheetModal({ character, updateCharacter, onClose })
                 <div className="qs-stat-box">
                     <div className="qs-label">LEVEL</div>
                     <div className="qs-controls compact">
-                        <button onClick={() => updateCharacter(c => c.level = Math.max(1, (c.level || 1) - 1))}>-</button>
+                        <button onClick={() => updateCharacter(c => {
+                            c.level = Math.max(1, (c.level || 1) - 1);
+                        })}>-</button>
                         <span>{character.level}</span>
-                        <button onClick={() => updateCharacter(c => c.level = (c.level || 1) + 1)}>+</button>
+                        <button onClick={() => updateCharacter(c => {
+                            c.level = (c.level || 1) + 1;
+                        })}>+</button>
                     </div>
                 </div>
             </div>
@@ -166,7 +160,9 @@ export default function QuickSheetModal({ character, updateCharacter, onClose })
                 <div style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap' }}>
                     <div
                         style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#ccc', cursor: 'pointer' }}
-                        onClick={() => updateCharacter(c => c.isKineticist = !c.isKineticist)}
+                        onClick={() => updateCharacter(c => {
+                            c.isKineticist = !c.isKineticist;
+                        })}
                     >
                         <div className={`qs-switch ${character.isKineticist ? 'active' : ''}`}>
                             <div className="qs-slider"></div>
@@ -176,7 +172,9 @@ export default function QuickSheetModal({ character, updateCharacter, onClose })
 
                     <div
                         style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#ccc', cursor: 'pointer' }}
-                        onClick={() => updateCharacter(c => c.isCaster = !c.isCaster)}
+                        onClick={() => updateCharacter(c => {
+                            c.isCaster = !c.isCaster;
+                        })}
                     >
                         <div className={`qs-switch ${character.isCaster ? 'active' : ''}`}>
                             <div className="qs-slider"></div>
@@ -186,7 +184,9 @@ export default function QuickSheetModal({ character, updateCharacter, onClose })
 
                     <div
                         style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#ccc', cursor: 'pointer' }}
-                        onClick={() => updateCharacter(c => c.has_companion = !c.has_companion)}
+                        onClick={() => updateCharacter(c => {
+                            c.has_companion = !c.has_companion;
+                        })}
                     >
                         <div className={`qs-switch ${character.has_companion ? 'active' : ''}`}>
                             <div className="qs-slider"></div>
@@ -280,7 +280,7 @@ export default function QuickSheetModal({ character, updateCharacter, onClose })
                 <div className="qs-body">
                     {tab === 'main' && renderMainTab()}
                     {tab === 'proficiencies' && renderProficienciesTab()}
-                    {tab === 'languages' && <LanguagesTab languages={character.languages} updateCharacter={updateCharacter} />}
+                    {tab === 'languages' && <LanguagesTab languages={character?.languages} updateCharacter={updateCharacter} />}
                 </div>
 
                 <style>{`

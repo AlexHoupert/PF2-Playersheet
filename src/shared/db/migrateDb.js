@@ -79,8 +79,28 @@ export function migrateDb(db) {
         return out;
     };
 
+    const numberOr = (value, fallback) => {
+        const numberValue = Number(value);
+        return Number.isFinite(numberValue) ? numberValue : fallback;
+    };
+
+    const normalizeHp = (hp) => {
+        const source = hp && typeof hp === 'object' ? hp : {};
+        return {
+            current: Math.max(0, numberOr(source.current ?? source.value, 0)),
+            max: Math.max(1, numberOr(source.max, source.current ?? source.value ?? 1)),
+            temp: Math.max(0, numberOr(source.temp, 0)),
+        };
+    };
+
     const normalizeCharacter = (c) => {
-        const character = normalizeCharacterRuntimeShape(c);
+        const source = c && typeof c === 'object' ? c : {};
+        const hasLegacyRootHp = source.hp && !(source.stats && typeof source.stats === 'object' && source.stats.hp);
+        const character = normalizeCharacterRuntimeShape(source);
+        if (hasLegacyRootHp) {
+            character.stats.hp = normalizeHp(source.hp);
+            delete character.hp;
+        }
         return {
             ...character,
             initiative: character.initiative ?? 0,

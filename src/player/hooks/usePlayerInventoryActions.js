@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
 import { shouldStack } from '../../shared/utils/inventoryUtils';
 import { getWeaponCapacity, isEquipableInventoryItem } from '../../shared/utils/combatUtils';
+import { consumeWandCharge, isWandItem, rechargeWand } from '../../shared/utils/wandUtils';
 
 export function usePlayerInventoryActions({
     activeCampaign,
@@ -26,8 +27,28 @@ export function usePlayerInventoryActions({
         if (longPressTimer.current) clearTimeout(longPressTimer.current);
     }, []);
 
+    const findInventoryItemIndex = (inventory, item) => {
+        if (!Array.isArray(inventory) || !item) return -1;
+        if (Number.isInteger(item._index) && inventory[item._index]?.name === item.name) {
+            return item._index;
+        }
+        if (item.instanceId) {
+            const byInstance = inventory.findIndex(i => i.instanceId === item.instanceId);
+            if (byInstance > -1) return byInstance;
+        }
+        return inventory.findIndex(i => i.name === item.name);
+    };
+
     const handleConsumeItem = (item) => {
         const name = item.name;
+        if (isWandItem(item)) {
+            updateCharacter(c => {
+                const invIdx = findInventoryItemIndex(c.inventory, item);
+                if (invIdx > -1) consumeWandCharge(c.inventory[invIdx]);
+            });
+            return;
+        }
+
         updateCharacter(c => {
             let invIdx = -1;
             if (item._index !== undefined) {
@@ -77,7 +98,10 @@ export function usePlayerInventoryActions({
 
         if (tapTimeout.current) clearTimeout(tapTimeout.current);
 
-        if (isDouble && (item.type === 'Consumable' || item.consumable)) {
+        if (isDouble && isWandItem(item)) {
+            handleConsumeItem(item);
+            tapRef.current = { id: null, time: 0 };
+        } else if (isDouble && (item.type === 'Consumable' || item.consumable)) {
             handleConsumeItem(item);
             tapRef.current = { id: null, time: 0 };
         } else {
@@ -152,6 +176,9 @@ export function usePlayerInventoryActions({
                 }
             }
             (c.inventory || []).forEach(item => {
+                if (isWandItem(item)) {
+                    rechargeWand(item);
+                }
                 if (!item.equipped) return;
                 const rawTraits = item.system?.traits?.value || item.traits || [];
                 const traitsList = (Array.isArray(rawTraits) ? rawTraits : []).map(t => String(t).toLowerCase());

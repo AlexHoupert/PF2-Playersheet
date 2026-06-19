@@ -51,6 +51,17 @@ Any new broad write outside those files should be treated as a regression.
 - Player root-notification clearing uses `dataActions.globalContent.clearRootNotification`.
 - Player skill-name runtime repair uses `dataActions.character.updateCharacter`.
 
+## Completed In Player Edit Stability Wave
+
+- Player Gold, Attribute, HP, Temp HP, Max HP, Speed, Class DC, and Formula Book daily batch edits use targeted `dataActions.character` basis actions.
+- `normalizeCharacterRuntimeShape` initializes missing Player-edit subtrees: `stats.hp`, `stats.speed`, `stats.attributes`, `stats.saves`, `stats.ac`, `stats.proficiencies`, `magic`, `formulaBook`, `languages`, `senses`, and root `proficiencies`.
+- Static UI regression tests guard the migrated Player modal fields against expression-bodied direct nested writes.
+
+Remaining Player-local edit paths:
+
+- Saves/skills, armor/weapon proficiencies, spell/impulse proficiencies, magic slots, armor/shield state, companion state, and inventory-driven gold/HP changes still use focused local updaters through `updateCharacter`.
+- These are shape-hardened by the character normalizer, but should move to targeted actions when their workflows are next touched.
+
 ## Remaining By Domain
 
 ### Campaign Compatibility

@@ -9,8 +9,8 @@ function createActionHarness(db = {}) {
     const repositories = {
         characterRepo: {
             async updateCharacter(_firestore, campaignId, characterId, updater) {
-                calls.push(['character.updateCharacter', campaignId, characterId]);
-                updater({ id: characterId, inventory: [] });
+                const result = updater({ id: characterId, inventory: [] });
+                calls.push(['character.updateCharacter', campaignId, characterId, result]);
             },
             async updateCharacters(_firestore, campaignId, characterIds, updater) {
                 calls.push(['character.updateCharacters', campaignId, characterIds]);
@@ -137,6 +137,38 @@ test('v2 adapter uses targeted repositories for migrated campaign domains', asyn
         'campaign.updateCampaign',
         'campaign.updateCampaign',
     ]);
+});
+
+test('v2 adapter routes character basis edits through character repository', async () => {
+    const { actions, calls } = createActionHarness();
+
+    await actions.character.setGold('camp1', 'char1', 7.25);
+    await actions.character.adjustAttribute('camp1', 'char1', 'dexterity', 2);
+    await actions.character.setHp('camp1', 'char1', 5);
+    await actions.character.setTempHp('camp1', 'char1', 3);
+    await actions.character.adjustMaxHp('camp1', 'char1', 4);
+    await actions.character.setSpeed('camp1', 'char1', 'land', 30);
+    await actions.character.adjustClassDc('camp1', 'char1', 1);
+    await actions.character.setDailyCraftingMax('camp1', 'char1', 4);
+
+    assert.deepEqual(calls.map(call => call[0]), [
+        'character.updateCharacter',
+        'character.updateCharacter',
+        'character.updateCharacter',
+        'character.updateCharacter',
+        'character.updateCharacter',
+        'character.updateCharacter',
+        'character.updateCharacter',
+        'character.updateCharacter',
+    ]);
+    assert.equal(calls[0][3].gold, 7.25);
+    assert.equal(calls[1][3].stats.attributes.dexterity, 2);
+    assert.equal(calls[2][3].stats.hp.current, 5);
+    assert.equal(calls[3][3].stats.hp.temp, 3);
+    assert.equal(calls[4][3].stats.hp.max, 5);
+    assert.equal(calls[5][3].stats.speed.land, 30);
+    assert.equal(calls[6][3].stats.class_dc, 11);
+    assert.equal(calls[7][3].dailyCraftingMax, 4);
 });
 
 test('v2 adapter uses global repositories for shop and custom content', async () => {

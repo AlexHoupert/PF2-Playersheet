@@ -34,3 +34,32 @@ test('quest fallback reads stay centralized in selectors', () => {
     assert.match(playerSource, /selectQuestLists/);
     assert.match(gmSource, /selectQuestLists/);
 });
+
+test('player basis edit modals use targeted character actions', () => {
+    const sources = [
+        'src/player/modals/ACModals.jsx',
+        'src/player/modals/SimpleModals.jsx',
+        'src/player/modals/FormulaBookModal.jsx',
+        'src/player/QuickSheetModal.jsx',
+    ];
+    const forbiddenPatterns = [
+        /updateCharacter\(c\s*=>\s*c\./,
+        /updateCharacter\(c\s*=>\s*c\.gold\s*=/,
+        /updateCharacter\(c\s*=>\s*c\.stats\.attributes/,
+        /updateCharacter\(c\s*=>\s*c\.stats\.hp\.(current|temp|max)\s*=/,
+        /updateCharacter\(c\s*=>\s*c\.stats\.speed/,
+        /updateCharacter\(c\s*=>\s*c\.stats\.class_dc\s*=/,
+        /updateCharacter\(c\s*=>\s*c\.dailyCraftingMax\s*=/,
+    ];
+
+    sources.forEach((path) => {
+        const source = readSource(path);
+        forbiddenPatterns.forEach((pattern) => {
+            assert.equal(pattern.test(source), false, `${path} contains a direct basis-value update: ${pattern}`);
+        });
+    });
+
+    assert.match(readSource('src/player/modals/SimpleModals.jsx'), /characterActions/);
+    assert.match(readSource('src/player/modals/FormulaBookModal.jsx'), /setDailyCraftingMax/);
+    assert.match(readSource('src/player/QuickSheetModal.jsx'), /characterActions/);
+});

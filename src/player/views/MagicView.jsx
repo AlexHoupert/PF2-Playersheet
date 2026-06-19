@@ -2,6 +2,7 @@ import { calculateSpellAttackAndDC } from '../../utils/rules';
 import { parseFoundry, ACTION_ICONS } from '../../shared/utils/foundryParser';
 import { getSpellIndexItemByName } from '../../shared/catalog/spellIndex';
 import { LongPressable } from '../../shared/components/LongPressable';
+import { getWandSpellCasts, getWandSpellKey } from '../../shared/utils/wandUtils';
 
 export const MagicView = ({ character, updateCharacter, setModalData, setModalMode, setCatalogMode, onLongPress }) => {
     // Guard for missing magic data
@@ -63,13 +64,37 @@ export const MagicView = ({ character, updateCharacter, setModalData, setModalMo
     // --- 2. SPELLS LIST COLUMN (RIGHT) ---
     const spellsByLevel = {};
     const spellList = Array.isArray(magic.list) ? magic.list : [];
+    const wandSpellCasts = getWandSpellCasts(character?.inventory);
+    const wandCastsByKey = new Map(wandSpellCasts.map(group => [group.key, group]));
+    const attachedWandKeys = new Set();
 
     spellList.forEach(s => {
         const spellFromIndex = getSpellIndexItemByName(s.name);
         const spellData = { ...(spellFromIndex || {}), ...s, _entityType: 'spell' };
-        const lvl = s.level;
+        const lvl = String(s.level ?? spellData.level ?? '1');
+        const wandKey = getWandSpellKey({ ...spellData, level: lvl });
+        const wandCasts = wandCastsByKey.get(wandKey);
+        if (wandCasts) {
+            spellData.wandCasts = wandCasts;
+            attachedWandKeys.add(wandKey);
+        }
         if (!spellsByLevel[lvl]) spellsByLevel[lvl] = [];
         spellsByLevel[lvl].push(spellData);
+    });
+
+    wandSpellCasts.forEach(group => {
+        if (attachedWandKeys.has(group.key)) return;
+        const spellFromIndex = getSpellIndexItemByName(group.spell.name);
+        const spellData = {
+            ...(spellFromIndex || {}),
+            ...group.spell,
+            level: group.level,
+            _entityType: 'spell',
+            _wandOnly: true,
+            wandCasts: group
+        };
+        if (!spellsByLevel[group.level]) spellsByLevel[group.level] = [];
+        spellsByLevel[group.level].push(spellData);
     });
 
     const sortedLevels = Object.keys(spellsByLevel).sort((a, b) => {
@@ -85,6 +110,21 @@ export const MagicView = ({ character, updateCharacter, setModalData, setModalMo
                 <div className="spell-list-header">{label}</div>
                 {spellsByLevel[lvl].map(spell => {
                     const isBloodline = spell.Bloodmagic === true;
+                    const wandCasts = spell.wandCasts || null;
+                    const openWandItem = (event) => {
+                        if (event) event.stopPropagation();
+                        if (!wandCasts?.openItem) return;
+                        setModalData({ ...wandCasts.openItem, _entityType: 'item' });
+                        setModalMode('item');
+                    };
+                    const openSpell = () => {
+                        if (spell._wandOnly && wandCasts?.openItem) {
+                            openWandItem();
+                            return;
+                        }
+                        setModalData(spell);
+                        setModalMode('item');
+                    };
 
                     // Meta info
                     const rawTarget = spell.target || spell.area || "";
@@ -124,13 +164,33 @@ export const MagicView = ({ character, updateCharacter, setModalData, setModalMo
                     return (
                         <LongPressable
                             className="spell-row"
-                            key={spell.name}
+                            key={`${lvl}-${spell.name}-${spell._wandOnly ? 'wand' : 'spell'}`}
                             onLongPress={() => onLongPress(spell, 'spell')}
-                            onClick={() => { setModalData(spell); setModalMode('item'); }}
+                            onClick={openSpell}
                         >
                             <div style={{ fontWeight: 'bold', color: '#ccc', display: 'flex', alignItems: 'center' }}>
                                 {spell.name}
                                 {isBloodline && <span className="bloodline-drop">🩸</span>}
+                                {wandCasts && (
+                                    <button
+                                        type="button"
+                                        onClick={openWandItem}
+                                        title="Open wand"
+                                        style={{
+                                            marginLeft: 8,
+                                            border: '1px solid #6e56a8',
+                                            background: wandCasts.available > 0 ? '#2d2148' : '#333',
+                                            color: wandCasts.available > 0 ? '#d4c4ff' : '#999',
+                                            borderRadius: 4,
+                                            padding: '1px 5px',
+                                            fontSize: '0.7em',
+                                            lineHeight: 1.4,
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Wand {wandCasts.available}/{wandCasts.total}
+                                    </button>
+                                )}
                             </div>
                             <div className="spell-meta">
                                 {metaParts.reduce((acc, curr, idx) => {

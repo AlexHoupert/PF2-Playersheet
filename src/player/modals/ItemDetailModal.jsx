@@ -5,6 +5,7 @@ import { calculateWeaponDamage } from '../../utils/rules/damage';
 import { applyRune, removeRune, getRunes } from '../../utils/rules/runes';
 import bloodMagicEffects from '../../../ressources/classfeatures/bloodmagic-effects.json';
 import { useState } from 'react';
+import { consumeWandCharge, getWandCharges, getWandMaxCharges, getWandSpell, isWandItem, writeWandCharges } from '../../shared/utils/wandUtils';
 
 export function ItemDetailModal({
     character,
@@ -30,7 +31,12 @@ export function ItemDetailModal({
     const isFeat = modalData._entityType === 'feat' || modalData.type === 'Feat' || !!modalData.featType || (modalData.traits?.value || []).includes('Feat');
 
     // Shop Item (exclude specific types first to avoid 'level' overlap)
-    const isShopItem = !isSpell && !isFeat && (!!modalData.price || modalData.level !== undefined);
+    const isShopItem = !isSpell && !isFeat && (
+        modalData._entityType === 'item' ||
+        !!modalData.price ||
+        modalData.level !== undefined ||
+        !!modalData.system?.spell
+    );
 
     const isAction = !isShopItem && !isSpell && !isFeat && (modalData.actions || modalData.actionType);
 
@@ -171,12 +177,13 @@ export function ItemDetailModal({
     };
 
     // --- WAND & SCROLL LOGIC ---
-    const isWand = !!inventoryMatch?.system?.wand || traitsList.includes('wand') || (modalData.name || "").toLowerCase().includes("wand");
-    const wandCharges = inventoryMatch?.system?.wand?.charges ?? 0;
-    const wandMax = inventoryMatch?.system?.wand?.max ?? 1;
+    const wandSource = inventoryMatch || modalData;
+    const isWand = isWandItem(wandSource) || traitsList.includes('wand');
+    const wandCharges = isWand ? getWandCharges(wandSource) : 0;
+    const wandMax = isWand ? getWandMaxCharges(wandSource) : 1;
 
     // Spell Data from System (if imbued)
-    const imbuedSpell = inventoryMatch?.system?.spell || modalData.system?.spell;
+    const imbuedSpell = getWandSpell(inventoryMatch) || getWandSpell(modalData);
 
     const toggleWandCharge = (idx) => {
         if (!inventoryMatch) return;
@@ -185,9 +192,7 @@ export function ItemDetailModal({
 
         updateCharacter(c => {
             const item = c.inventory[inventoryIndex];
-            if (!item.system) item.system = {};
-            if (!item.system.wand) item.system.wand = {};
-            item.system.wand.charges = newVal;
+            writeWandCharges(item, newVal);
         });
     };
 
@@ -199,9 +204,7 @@ export function ItemDetailModal({
             if (wandCharges > 0) {
                 updateCharacter(c => {
                     const item = c.inventory[inventoryIndex];
-                    if (item.system?.wand?.charges > 0) {
-                        item.system.wand.charges--;
-                    }
+                    consumeWandCharge(item);
                 });
             }
         } else {

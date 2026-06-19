@@ -16,6 +16,7 @@ function isAmmoItem(item) {
 export function FormulaBookModal({
     character,
     updateCharacter,
+    characterActions,
     dailyPrepQueue,
     setDailyPrepQueue,
     setModalData,
@@ -183,9 +184,7 @@ export function FormulaBookModal({
                                 onClick={() => {
                                     const newMax = prompt("Set Maximum Batches:", maxBatches);
                                     if (newMax !== null && !isNaN(newMax)) {
-                                        updateCharacter(c => {
-                                            c.dailyCraftingMax = Math.max(0, parseInt(newMax, 10) || 0);
-                                        });
+                                        characterActions?.setDailyCraftingMax(parseInt(newMax, 10) || 0);
                                     }
                                 }}
                                 title="Click to edit Max Batches"

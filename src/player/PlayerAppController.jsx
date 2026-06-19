@@ -99,6 +99,7 @@ export default function PlayerAppController({ db, setDb }) {
     });
 
     const {
+        characterActions,
         handleClearNotification,
         runDataAction,
         saveNewAction,
@@ -564,6 +565,7 @@ export default function PlayerAppController({ db, setDb }) {
                 setModalData={setModalData}
                 character={character}
                 updateCharacter={updateCharacter}
+                characterActions={characterActions}
                 onClose={() => setModalMode(null)}
                 onBack={handleBack}
                 hasHistory={modalHistory.length > 0}

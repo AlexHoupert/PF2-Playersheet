@@ -6,6 +6,23 @@ import {
     transferInventoryItem,
 } from '../src/shared/db/domain/inventoryReducers.js';
 import {
+    adjustCharacterAttribute,
+    adjustCharacterClassDc,
+    adjustCharacterGold,
+    adjustCharacterHp,
+    adjustCharacterMaxHp,
+    adjustCharacterSpeed,
+    adjustCharacterTempHp,
+    setCharacterAttribute,
+    setCharacterClassDc,
+    setCharacterDailyCraftingMax,
+    setCharacterGold,
+    setCharacterHp,
+    setCharacterMaxHp,
+    setCharacterSpeed,
+    setCharacterTempHp,
+} from '../src/shared/db/domain/characterEditReducers.js';
+import {
     applyLootBagUpdate,
     claimLootGoldState,
     claimLootItemState,
@@ -140,6 +157,17 @@ test('normalizes character runtime shape on create and update', () => {
     assert.equal(created.isCaster, false);
     assert.equal(created.stats.attributes.strength, 0);
     assert.equal(created.stats.attributes.charisma, 0);
+    assert.deepEqual(created.stats.hp, { current: 0, max: 1, temp: 0 });
+    assert.equal(created.stats.speed.land, 25);
+    assert.deepEqual(created.stats.saves, {});
+    assert.equal(created.stats.ac.shield_raised, false);
+    assert.equal(created.stats.ac.armor_equipped, false);
+    assert.deepEqual(created.stats.proficiencies, {});
+    assert.deepEqual(created.magic, { slots: {}, list: [] });
+    assert.deepEqual(created.formulaBook, []);
+    assert.deepEqual(created.languages, []);
+    assert.deepEqual(created.senses, []);
+    assert.deepEqual(created.proficiencies, {});
     assert.equal(created.stats.impulse_proficiency, 0);
     assert.equal(created.stats.spell_proficiency, 0);
 
@@ -155,8 +183,39 @@ test('normalizes character runtime shape on create and update', () => {
     assert.equal(updated.skills.intimidate, undefined);
     assert.equal(updated.skills.Perform, undefined);
     assert.equal(updated.stats.attributes.dexterity, 0);
+    assert.equal(updated.stats.hp.max, 1);
+    assert.equal(updated.stats.speed.land, 25);
+    assert.deepEqual(updated.magic, { slots: {}, list: [] });
     assert.equal(updated.stats.impulse_proficiency, 0);
     assert.equal(updated.stats.spell_proficiency, 0);
+});
+
+test('character basis edit reducers normalize incomplete character shapes', () => {
+    const legacyCharacter = {
+        id: 'char1',
+        gold: 'not-a-number',
+        stats: {},
+    };
+
+    assert.equal(setCharacterGold(legacyCharacter, '10.456').gold, 10.46);
+    assert.equal(adjustCharacterGold({ ...legacyCharacter, gold: 3 }, -10).gold, 0);
+
+    const withAttribute = setCharacterAttribute(legacyCharacter, 'strength', '-1');
+    assert.equal(withAttribute.stats.attributes.strength, -1);
+    assert.equal(adjustCharacterAttribute(withAttribute, 'strength', 2).stats.attributes.strength, 1);
+
+    assert.equal(setCharacterHp(legacyCharacter, '12').stats.hp.current, 12);
+    assert.equal(adjustCharacterHp({ ...legacyCharacter, stats: { hp: { current: 5 } } }, -7).stats.hp.current, 0);
+    assert.equal(setCharacterTempHp(legacyCharacter, '4').stats.hp.temp, 4);
+    assert.equal(adjustCharacterTempHp({ ...legacyCharacter, stats: { hp: { temp: 1 } } }, -2).stats.hp.temp, 0);
+    assert.equal(setCharacterMaxHp(legacyCharacter, 0).stats.hp.max, 1);
+    assert.equal(adjustCharacterMaxHp({ ...legacyCharacter, stats: { hp: { max: 5 } } }, 3).stats.hp.max, 8);
+
+    assert.equal(setCharacterSpeed(legacyCharacter, 'land', 30).stats.speed.land, 30);
+    assert.equal(adjustCharacterSpeed({ ...legacyCharacter, stats: { speed: { land: 10 } } }, 'land', -20).stats.speed.land, 0);
+    assert.equal(setCharacterClassDc(legacyCharacter, 18).stats.class_dc, 18);
+    assert.equal(adjustCharacterClassDc({ ...legacyCharacter, stats: { class_dc: 10 } }, 2).stats.class_dc, 12);
+    assert.equal(setCharacterDailyCraftingMax(legacyCharacter, '3.9').dailyCraftingMax, 3);
 });
 
 test('record updaters keep mutated records when callbacks return primitives', () => {

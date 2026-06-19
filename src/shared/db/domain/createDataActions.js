@@ -29,6 +29,23 @@ import {
   transferInventoryItem,
 } from "./inventoryReducers.js";
 import {
+  adjustCharacterAttribute,
+  adjustCharacterClassDc,
+  adjustCharacterGold,
+  adjustCharacterHp,
+  adjustCharacterMaxHp,
+  adjustCharacterSpeed,
+  adjustCharacterTempHp,
+  setCharacterAttribute,
+  setCharacterClassDc,
+  setCharacterDailyCraftingMax,
+  setCharacterGold,
+  setCharacterHp,
+  setCharacterMaxHp,
+  setCharacterSpeed,
+  setCharacterTempHp,
+} from "./characterEditReducers.js";
+import {
   addItemsToLootBag,
   applyLootBagUpdate,
   claimLootGoldState,
@@ -1188,6 +1205,51 @@ export function createDataActions({
       softDeleteCharacter,
       restoreCharacter,
       importLegacyCharacter,
+      setGold(campaignId, characterId, amount) {
+        return updateCharacter(campaignId, characterId, (character) => setCharacterGold(character, amount));
+      },
+      adjustGold(campaignId, characterId, amount) {
+        return updateCharacter(campaignId, characterId, (character) => adjustCharacterGold(character, amount));
+      },
+      setAttribute(campaignId, characterId, key, value) {
+        return updateCharacter(campaignId, characterId, (character) => setCharacterAttribute(character, key, value));
+      },
+      adjustAttribute(campaignId, characterId, key, amount) {
+        return updateCharacter(campaignId, characterId, (character) => adjustCharacterAttribute(character, key, amount));
+      },
+      setHp(campaignId, characterId, value) {
+        return updateCharacter(campaignId, characterId, (character) => setCharacterHp(character, value));
+      },
+      adjustHp(campaignId, characterId, amount) {
+        return updateCharacter(campaignId, characterId, (character) => adjustCharacterHp(character, amount));
+      },
+      setTempHp(campaignId, characterId, value) {
+        return updateCharacter(campaignId, characterId, (character) => setCharacterTempHp(character, value));
+      },
+      adjustTempHp(campaignId, characterId, amount) {
+        return updateCharacter(campaignId, characterId, (character) => adjustCharacterTempHp(character, amount));
+      },
+      setMaxHp(campaignId, characterId, value) {
+        return updateCharacter(campaignId, characterId, (character) => setCharacterMaxHp(character, value));
+      },
+      adjustMaxHp(campaignId, characterId, amount) {
+        return updateCharacter(campaignId, characterId, (character) => adjustCharacterMaxHp(character, amount));
+      },
+      setSpeed(campaignId, characterId, key, value) {
+        return updateCharacter(campaignId, characterId, (character) => setCharacterSpeed(character, key, value));
+      },
+      adjustSpeed(campaignId, characterId, key, amount) {
+        return updateCharacter(campaignId, characterId, (character) => adjustCharacterSpeed(character, key, amount));
+      },
+      setClassDc(campaignId, characterId, value) {
+        return updateCharacter(campaignId, characterId, (character) => setCharacterClassDc(character, value));
+      },
+      adjustClassDc(campaignId, characterId, amount) {
+        return updateCharacter(campaignId, characterId, (character) => adjustCharacterClassDc(character, amount));
+      },
+      setDailyCraftingMax(campaignId, characterId, value) {
+        return updateCharacter(campaignId, characterId, (character) => setCharacterDailyCraftingMax(character, value));
+      },
     },
     inventory: {
       addItem(campaignId, characterId, item, options = {}) {

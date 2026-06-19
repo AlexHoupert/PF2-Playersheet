@@ -1,6 +1,6 @@
 # Domain Actions
 
-Last updated: 2026-06-18.
+Last updated: 2026-06-19.
 
 ## Purpose
 
@@ -40,6 +40,21 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `s
 - `softDeleteCharacter(campaignId, characterId)`
 - `restoreCharacter(campaignId, characterId)`
 - `importLegacyCharacter(campaignId, character, legacyIndex)`
+- `setGold(campaignId, characterId, amount)`
+- `adjustGold(campaignId, characterId, amount)`
+- `setAttribute(campaignId, characterId, key, value)`
+- `adjustAttribute(campaignId, characterId, key, amount)`
+- `setHp(campaignId, characterId, value)`
+- `adjustHp(campaignId, characterId, amount)`
+- `setTempHp(campaignId, characterId, value)`
+- `adjustTempHp(campaignId, characterId, amount)`
+- `setMaxHp(campaignId, characterId, value)`
+- `adjustMaxHp(campaignId, characterId, amount)`
+- `setSpeed(campaignId, characterId, key, value)`
+- `adjustSpeed(campaignId, characterId, key, amount)`
+- `setClassDc(campaignId, characterId, value)`
+- `adjustClassDc(campaignId, characterId, amount)`
+- `setDailyCraftingMax(campaignId, characterId, value)`
 
 `dataActions.campaign`:
 

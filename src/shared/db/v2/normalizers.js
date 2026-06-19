@@ -305,14 +305,16 @@ function normalizeCampaign(campaign, campaignId, report) {
 }
 
 function normalizeCharacter(character, report, path) {
-    const next = normalizeCharacterRuntimeShape(character || {});
+    const source = character || {};
+    const hasLegacyRootHp = source.hp && !(source.stats && typeof source.stats === 'object' && source.stats.hp);
+    const next = normalizeCharacterRuntimeShape(source);
     next.id = safeDocId(next.id || next.name || path.split('.').pop(), `character_${path.split('.').pop()}`);
     next.name = next.name || 'Unnamed Character';
     next.level = numberOr(next.level, 1);
     next.stats = next.stats && typeof next.stats === 'object' ? next.stats : {};
 
-    if (!next.stats.hp && next.hp) {
-        next.stats.hp = normalizeHp(next.hp);
+    if (hasLegacyRootHp) {
+        next.stats.hp = normalizeHp(source.hp);
         delete next.hp;
         report.renamedFields.push({ from: `${path}.hp`, to: `${path}.stats.hp` });
     } else if (next.stats.hp) {

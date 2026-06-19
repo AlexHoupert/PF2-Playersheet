@@ -1,5 +1,6 @@
 import { getConditionEffects } from '../../utils/rules';
 import { getShopIndexItemByName } from '../catalog/shopIndex';
+import { getScalySkinAcAdjustment } from '../utils/acRules';
 
 export const getArmorClassData = (char) => {
     if (!char) return { totalAC: 10, totalConditionPenalty: 0, shieldRaised: false, shieldName: null };
@@ -47,17 +48,21 @@ export const getArmorClassData = (char) => {
     }
 
     const armorCategory = equippedArmor?.category || null;
+    const profKey = equippedArmor ? getArmorProfKey(armorCategory) : 'Unarmored';
 
     // AC Bonus
     const baseItemAC = Number(equippedArmor?.acBonus ?? equippedArmor?.system?.ac?.value ?? equippedArmor?.ac ?? 0);
     const potency = Number(equippedArmor?.system?.potencyRune?.value ?? equippedArmor?.system?.runes?.potency ?? 0);
-    const armorItemBonus = baseItemAC + potency;
 
     const dexCapVal = equippedArmor?.system?.dex_cap ?? equippedArmor?.dexCap;
-    const dexCap = (dexCapVal === undefined || dexCapVal === null || dexCapVal === "") ? 99 : Number(dexCapVal);
+    const armorDexCap = (dexCapVal === undefined || dexCapVal === null || dexCapVal === "") ? 99 : Number(dexCapVal);
+    const scalySkin = getScalySkinAcAdjustment({ character: char, equippedArmor, profKey, level, armorDexCap });
+    const scalySkinActive = scalySkin.active;
+    const scalySkinBonus = scalySkin.bonus;
+    const armorItemBonus = baseItemAC + potency + scalySkinBonus;
+    const dexCap = scalySkin.dexCap;
     const dexUsed = Math.min(dexMod, dexCap);
 
-    const profKey = equippedArmor ? getArmorProfKey(armorCategory) : 'Unarmored';
     const profRank = getProfValue(profKey);
     const profBonus = profRank > 0 ? profRank + level : 0;
 
@@ -115,6 +120,10 @@ export const getArmorClassData = (char) => {
         armorName: equippedArmor?.name || null,
         armorCategory,
         armorItemBonus,
+        baseItemAC,
+        potency,
+        scalySkinActive,
+        scalySkinBonus,
         equippedShield
     };
 };
