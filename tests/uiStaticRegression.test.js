@@ -32,6 +32,18 @@ test('items layout receives lootbag selection state from ItemsView', () => {
     assert.match(layoutSource, /sameId\(selectedLootId, entry\.id\)/);
 });
 
+test('admin actions use database fallback instead of deployed file writes', () => {
+    const viewSource = readSource('src/admin/ActionsView.jsx');
+    const editorSource = readSource('src/admin/editors/ActionEditor.jsx');
+
+    assert.match(viewSource, /saveCustomAction/);
+    assert.match(viewSource, /normalizeCustomActionRecord/);
+    assert.match(editorSource, /onSaveToDb/);
+    assert.match(editorSource, /import\.meta\.env\.PROD/);
+    assert.match(editorSource, /sourceFile: null/);
+    assert.match(editorSource, /readJsonApiResponse\(res, 'Save action'\)/);
+});
+
 test('quest fallback reads stay centralized in selectors', () => {
     const playerSource = readSource('src/player/PlayerAppController.jsx');
     const gmSource = readSource('src/admin/QuestsView.jsx');

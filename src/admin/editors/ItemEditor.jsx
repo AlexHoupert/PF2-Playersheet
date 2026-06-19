@@ -92,7 +92,7 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, 
                     // Primary damage
                     damage: primaryDamage,
                     // Extra damage entries (custom field for multi-damage)
-                    extraDamage: extraDamages.length > 0 ? extraDamages : undefined,
+                    extraDamage: extraDamages.length > 0 ? extraDamages : [],
                     range: parseInt(formData.range) || null,
                     category: formData.category,
                     group: formData.group

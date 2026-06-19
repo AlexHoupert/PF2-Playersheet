@@ -3,7 +3,7 @@ import { cloneValue } from "./inventoryReducers.js";
 export function saveCustomItemInDb(db, item) {
   if (!item?.name) return db;
   const next = ensureRoot(db);
-  next.shop.customItems[item.name] = item;
+  next.shop.customItems[item.name] = cleanUndefinedValues(item);
   return next;
 }
 
@@ -18,7 +18,7 @@ export function deleteCustomItemInDb(db, itemOrName) {
 export function saveCustomActionInDb(db, action) {
   if (!action?.name) return db;
   const next = ensureRoot(db);
-  next.actions[action.name] = action;
+  next.actions[action.name] = cleanUndefinedValues(action);
   return next;
 }
 
@@ -338,4 +338,20 @@ function ensureRoot(db) {
   if (!Array.isArray(next.lore.articles)) next.lore.articles = [];
   if (!Array.isArray(next.notificationQueue)) next.notificationQueue = [];
   return next;
+}
+
+function cleanUndefinedValues(value) {
+  if (Array.isArray(value)) {
+    return value.map(cleanUndefinedValues).filter((entry) => entry !== undefined);
+  }
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [key, child] of Object.entries(value)) {
+      if (child === undefined) continue;
+      const cleaned = cleanUndefinedValues(child);
+      if (cleaned !== undefined) out[key] = cleaned;
+    }
+    return out;
+  }
+  return value;
 }

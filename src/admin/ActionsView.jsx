@@ -5,12 +5,19 @@ import BottomSheet from '../shared/components/BottomSheet';
 import ContentPreviewCard from './components/ContentPreviewCard';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { getAllActionIndexItems, ACTION_INDEX_FILTER_OPTIONS, fetchActionDetailBySourceFile } from '../shared/catalog/actionIndex';
+import { useCampaign } from '../shared/context/CampaignContext';
+import { readJsonApiResponse } from '../shared/utils/apiResponse';
 
 const uniqueTypes = ACTION_INDEX_FILTER_OPTIONS.types;
 const uniqueSubtypes = ACTION_INDEX_FILTER_OPTIONS.subtypes;
 
-export default function ActionsView({ onInspectItem }) {
+export default function ActionsView({ db, onInspectItem }) {
     const { isMobile } = useWindowSize();
+    const { dataActions } = useCampaign();
+    const runDataAction = (action) => Promise.resolve(action).catch(err => {
+        console.error(err);
+        alert(err?.message || String(err));
+    });
 
     const [itemSearch, setItemSearch] = useState('');
     const [filterType, setFilterType] = useState([]);
@@ -34,7 +41,16 @@ export default function ActionsView({ onInspectItem }) {
             .catch(err => console.error('Failed to load action detail', err));
     }, [previewItem?.sourceFile]);
 
-    const allActions = getAllActionIndexItems();
+    const customActions = useMemo(() => {
+        return Object.values(db?.actions || {}).map(normalizeCustomActionRecord).filter(Boolean);
+    }, [db?.actions]);
+
+    const allActions = useMemo(() => {
+        const byName = new Map();
+        getAllActionIndexItems().forEach(action => byName.set(action.name, action));
+        customActions.forEach(action => byName.set(action.name, action));
+        return [...byName.values()];
+    }, [customActions]);
 
     const filteredItems = useMemo(() => {
         const searchLower = itemSearch.trim().toLowerCase();
@@ -80,13 +96,24 @@ export default function ActionsView({ onInspectItem }) {
         if (!window.confirm(`Delete action "${item.name}"?`)) return;
 
         try {
+            if (item.isCustom) {
+                await dataActions.globalContent.deleteCustomAction(item);
+                setContextMenu(null);
+                return;
+            }
+
+            if (import.meta.env.PROD) {
+                alert('Static action files can only be deleted in the local dev server. Custom actions can be deleted here.');
+                return;
+            }
+
             const filePath = item.sourceFile.startsWith('ressources/') ? item.sourceFile : `ressources/${item.sourceFile}`;
             const res = await fetch('/api/files', {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ filePath })
             });
-            const data = await res.json();
+            const data = await readJsonApiResponse(res, 'Delete action');
             if (!data.success) throw new Error(data.error);
 
             // Rebuild
@@ -102,11 +129,12 @@ export default function ActionsView({ onInspectItem }) {
         return (
             <ActionEditor
                 initialItem={editingItem}
-                onSave={() => {
+                onSave={(result) => {
                     setEditingItem(null);
-                    window.location.reload();
+                    if (result?.message !== 'Saved to Database') window.location.reload();
                 }}
                 onCancel={() => setEditingItem(null)}
+                onSaveToDb={(action) => dataActions.globalContent.saveCustomAction(action)}
             />
         );
     }
@@ -256,4 +284,32 @@ export default function ActionsView({ onInspectItem }) {
             )}
         </div>
     );
+}
+
+function normalizeCustomActionRecord(action) {
+    if (!action?.name) return null;
+    const sys = action.system || {};
+    const cls = sys.classification || {};
+    const actionType = sys.actionType?.value;
+    const actionCount = sys.actions?.value;
+    return {
+        ...action,
+        id: action.id || action.name,
+        isCustom: true,
+        sourceFile: action.sourceFile || null,
+        typeCode: action.typeCode || actionTypeToCode(actionType, actionCount),
+        userType: cls.type || action.userType || (action.type !== 'action' ? action.type : '') || 'Other',
+        userSubtype: cls.subtype || action.userSubtype || action.subtype || 'General',
+        skill: cls.skill || action.skill || '',
+        feat: cls.feat || action.feat || '',
+        traits: sys.traits?.value || action.traits || [],
+        description: sys.description?.value || action.description || '',
+    };
+}
+
+function actionTypeToCode(actionType, actionCount) {
+    if (actionType === 'reaction') return 'R';
+    if (actionType === 'free') return 'F';
+    if (actionType === 'passive') return 'P';
+    return String(actionCount || 1);
 }

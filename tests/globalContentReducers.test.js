@@ -45,6 +45,30 @@ test('global content reducers manage custom items and actions immutably', () => 
     assert.equal(withoutAction.actions['[gold]Parry[/gold]'], undefined);
 });
 
+test('custom item and action saves remove undefined fields before persistence', () => {
+    const initial = { shop: { customItems: {} }, actions: {} };
+    const withItem = saveCustomItemInDb(initial, {
+        name: "Abadar's Flawless Scale",
+        system: {
+            damage: null,
+            extraDamage: undefined,
+            nested: { keep: true, drop: undefined },
+        },
+    });
+    const withAction = saveCustomActionInDb(withItem, {
+        name: 'Custom Action',
+        system: {
+            classification: { type: 'Combat', feat: undefined },
+            traits: { value: ['attack'], rarity: undefined },
+        },
+    });
+
+    assert.equal('extraDamage' in withAction.shop.customItems["Abadar's Flawless Scale"].system, false);
+    assert.equal('drop' in withAction.shop.customItems["Abadar's Flawless Scale"].system.nested, false);
+    assert.equal('feat' in withAction.actions['Custom Action'].system.classification, false);
+    assert.equal('rarity' in withAction.actions['Custom Action'].system.traits, false);
+});
+
 test('shop reducers manage traders and availability lists', () => {
     const created = createTraderInDb({}, { id: 'trader1', name: 'Market', inventory: [], category: 'General' });
     const withItems = addItemsToTraderInDb(created, 'trader1', [{ name: 'Rope' }, { name: 'Rope' }, { name: 'Torch' }]);

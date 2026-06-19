@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import { ACTION_INDEX_FILTER_OPTIONS, fetchActionDetailBySourceFile } from '../../shared/catalog/actionIndex';
+import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 
-export default function ActionEditor({ initialItem, onSave, onCancel }) {
+export default function ActionEditor({ initialItem, onSave, onCancel, onSaveToDb, dbOnly = false }) {
     const [formData, setFormData] = useState({
         name: '',
         userType: 'Combat',
@@ -22,16 +23,18 @@ export default function ActionEditor({ initialItem, onSave, onCancel }) {
 
     useEffect(() => {
         if (initialItem) {
+            const sys = initialItem.system || {};
+            const cls = sys.classification || {};
             // Initial load from index (missing description)
             setFormData({
                 name: initialItem.name || '',
-                userType: initialItem.userType || initialItem.type || 'Combat',
-                userSubtype: initialItem.userSubtype || initialItem.subtype || 'General',
-                typeCode: initialItem.typeCode || '1',
-                skill: initialItem.skill || '',
-                feat: initialItem.feat || '',
-                traits: initialItem.traits || [],
-                description: '', // Will be fetched
+                userType: cls.type || initialItem.userType || (initialItem.type !== 'action' ? initialItem.type : '') || 'Combat',
+                userSubtype: cls.subtype || initialItem.userSubtype || initialItem.subtype || 'General',
+                typeCode: initialItem.typeCode || actionTypeToCode(sys.actionType?.value, sys.actions?.value),
+                skill: cls.skill || initialItem.skill || '',
+                feat: cls.feat || initialItem.feat || '',
+                traits: sys.traits?.value || initialItem.traits || [],
+                description: sys.description?.value || initialItem.description || '',
                 sourceFile: initialItem.sourceFile || null
             });
 
@@ -114,6 +117,17 @@ export default function ActionEditor({ initialItem, onSave, onCancel }) {
             let filePath = formData.sourceFile;
             let isNew = !filePath;
             const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const dbAction = buildDbAction(actionJson, {
+                id: initialItem?.id || safeName,
+                sourceFile: null,
+                isCustom: true,
+            });
+
+            if ((dbOnly || import.meta.env.PROD) && onSaveToDb) {
+                await onSaveToDb(dbAction);
+                onSave({ success: true, message: 'Saved to Database', data: dbAction });
+                return;
+            }
 
             if (isNew) {
                 // Check if it's a "custom" action that was previously in DB but now migrating?
@@ -133,7 +147,7 @@ export default function ActionEditor({ initialItem, onSave, onCancel }) {
                 body: JSON.stringify(payload)
             });
 
-            const data = await res.json();
+            const data = await readJsonApiResponse(res, 'Save action');
             if (!data.success) throw new Error(data.error);
 
             // Trigger Rebuild
@@ -141,6 +155,34 @@ export default function ActionEditor({ initialItem, onSave, onCancel }) {
 
             onSave(data);
         } catch (err) {
+            if (onSaveToDb && !dbOnly) {
+                try {
+                    const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    const fallbackAction = buildDbAction({
+                        name: formData.name,
+                        type: 'action',
+                        img: initialItem?.img || "systems/pf2e/icons/default-icons/action.svg",
+                        system: {
+                            description: { value: formData.description },
+                            actionType: { value: formData.typeCode === 'R' ? 'reaction' : formData.typeCode === 'F' ? 'free' : formData.typeCode === 'P' ? 'passive' : 'action' },
+                            actions: { value: ['R', 'F', 'P'].includes(formData.typeCode) ? null : parseInt(formData.typeCode) || 1 },
+                            traits: { value: formData.traits, rarity: "common" },
+                            classification: {
+                                type: formData.userType,
+                                subtype: formData.userSubtype,
+                                skill: formData.skill,
+                                feat: formData.feat,
+                            },
+                        },
+                    }, { id: initialItem?.id || safeName, sourceFile: null, isCustom: true });
+                    await onSaveToDb(fallbackAction);
+                    onSave({ success: true, message: 'Saved to Database', data: fallbackAction });
+                    return;
+                } catch (dbErr) {
+                    setError(`Failed to save action. Server: ${err.message}. DB: ${dbErr.message}`);
+                    return;
+                }
+            }
             setError(err.message);
         } finally {
             setIsSaving(false);
@@ -239,4 +281,32 @@ export default function ActionEditor({ initialItem, onSave, onCancel }) {
             `}</style>
         </div>
     );
+}
+
+function actionTypeToCode(actionType, actionCount) {
+    if (actionType === 'reaction') return 'R';
+    if (actionType === 'free') return 'F';
+    if (actionType === 'passive') return 'P';
+    return String(actionCount || 1);
+}
+
+function buildDbAction(actionJson, options = {}) {
+    const sys = actionJson.system || {};
+    const cls = sys.classification || {};
+    const actionType = sys.actionType?.value || 'passive';
+    const actionCount = sys.actions?.value;
+    const id = options.id || actionJson.id || actionJson.name?.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    return {
+        ...actionJson,
+        id,
+        isCustom: options.isCustom ?? true,
+        sourceFile: options.sourceFile || null,
+        typeCode: actionTypeToCode(actionType, actionCount),
+        userType: cls.type || 'Other',
+        userSubtype: cls.subtype || 'General',
+        skill: cls.skill || '',
+        feat: cls.feat || '',
+        traits: sys.traits?.value || [],
+        description: sys.description?.value || '',
+    };
 }

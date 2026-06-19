@@ -116,6 +116,11 @@ export default function SpellsView({ onInspectItem }) {
             if (!spellJson.system) spellJson.system = {};
             spellJson.system[property] = newVal;
 
+            if (import.meta.env.PROD) {
+                alert('Static spell files can only be edited in the local dev server. Deployed Vercel builds cannot write resource JSON files yet.');
+                return;
+            }
+
             // 3. Save
             const saveRes = await fetch('/api/files/save', {
                 method: 'POST',

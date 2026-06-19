@@ -4,6 +4,7 @@ import { deepClone } from '../utils/deepClone';
 import { migrateDb } from './migrateDb';
 import { db as firestore } from './firebase-config';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { cleanForFirestore } from './v2/normalizers';
 
 export const DB_STORAGE_KEY = 'pf2e-data';
 const IS_FIREBASE_CONFIGURED = firestore && firestore.app.options.apiKey !== "YOUR_API_KEY";
@@ -120,7 +121,7 @@ export function usePersistedDb(defaultDb) {
 
             // Push to Firebase (async, but we've already applied locally)
             if (IS_FIREBASE_CONFIGURED) {
-                setDoc(doc(firestore, "data", "master"), newValue)
+                setDoc(doc(firestore, "data", "master"), cleanForFirestore(newValue))
                     .then(() => {
                         console.log("[Firebase] Write successful");
                         // Keep pendingWrite true briefly to handle echo

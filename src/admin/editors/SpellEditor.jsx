@@ -111,6 +111,10 @@ export default function SpellEditor({ initialItem, onSave, onCancel }) {
                 ? { directory: `ressources/spells`, filename: `${formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`, content: spellJson }
                 : { filePath: `ressources/${normalizeSpellSourceFile(filePath)}`, content: spellJson };
 
+            if (import.meta.env.PROD) {
+                throw new Error('Static spell files can only be edited in the local dev server. Deployed Vercel builds cannot write resource JSON files yet.');
+            }
+
             const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
