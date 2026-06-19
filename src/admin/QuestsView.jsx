@@ -6,9 +6,12 @@ import { useCampaign } from '../shared/context/CampaignContext';
 export default function QuestsView({ db }) {
     // Get activeCampaignId from context (this is CRITICAL for rewards distribution)
     const { activeCampaignId, activeCampaign, dataActions } = useCampaign();
-    const rawQuests = activeCampaign?.quests || db?.quests || [];
+    const campaignQuests = Array.isArray(activeCampaign?.quests) ? activeCampaign.quests : [];
+    const rootQuests = Array.isArray(db?.quests) ? db.quests : [];
+    const rawQuests = campaignQuests.length > 0 ? campaignQuests : rootQuests;
     const quests = rawQuests.filter(q => !q.deletedAt);
-    const archivedQuests = activeCampaign?.archivedQuests || rawQuests.filter(q => q.deletedAt);
+    const campaignArchivedQuests = Array.isArray(activeCampaign?.archivedQuests) ? activeCampaign.archivedQuests : [];
+    const archivedQuests = campaignArchivedQuests.length > 0 ? campaignArchivedQuests : rawQuests.filter(q => q.deletedAt);
     const [isEditing, setIsEditing] = useState(false);
     const [editingQuest, setEditingQuest] = useState(null);
     const [saveStatus, setSaveStatus] = useState(null);

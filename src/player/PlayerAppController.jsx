@@ -75,6 +75,9 @@ export default function PlayerAppController({ db, setDb }) {
     } = usePlayerModalState();
 
     const [dailyPrepQueue, setDailyPrepQueue] = useState([]);
+    const campaignQuests = Array.isArray(activeCampaign?.quests) ? activeCampaign.quests : [];
+    const rootQuests = Array.isArray(db?.quests) ? db.quests : [];
+    const playerQuests = campaignQuests.length > 0 ? campaignQuests : rootQuests;
 
     const {
         activeCharIndex,
@@ -336,7 +339,7 @@ export default function PlayerAppController({ db, setDb }) {
                 )}
 
                 {activeTab === 'quests' && (
-                    <PlayerQuestsView quests={activeCampaign?.quests || db?.quests || []} />
+                    <PlayerQuestsView quests={playerQuests} />
                 )}
 
                 {activeTab === 'lore' && (

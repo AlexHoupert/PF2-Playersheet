@@ -25,7 +25,8 @@ export function usePlayerNavigation({
         if (appMode === 'story' && !['quests', 'lore', 'maps', 'progress', 'camp'].includes(activeTab)) {
             setActiveTab('quests');
         }
-        if (appMode === 'character' && !mainCharacterTabs(character, db).includes(activeTab)) {
+        const validCharacterTabs = [...mainCharacterTabs(character, db), 'shop'];
+        if (appMode === 'character' && !validCharacterTabs.includes(activeTab)) {
             setActiveTab('stats');
         }
     }, [activeTab, appMode, character, db]);

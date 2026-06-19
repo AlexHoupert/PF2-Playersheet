@@ -19,6 +19,13 @@ const ARMOR_RANKS = [
  */
 export function EditGoldModal({ character, updateCharacter, onClose }) {
     const [editVal, setEditVal] = useState("");
+    const parseGold = (value) => Number.parseFloat(value || 0) || 0;
+    const applyDelta = (amount) => {
+        updateCharacter(c => {
+            const currentGold = parseGold(c.gold);
+            c.gold = Number.parseFloat((currentGold + amount).toFixed(2));
+        });
+    };
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -33,11 +40,11 @@ export function EditGoldModal({ character, updateCharacter, onClose }) {
                 <h2>Manage Gold</h2>
                 <p style={{ textAlign: 'center', color: '#888' }}>Current: <span style={{ color: 'var(--text-gold)', fontWeight: 'bold' }}>{character.gold}</span></p>
                 <div className="qty-control-box">
-                    <button className="qty-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }} onClick={() => updateCharacter(c => c.gold = parseFloat((c.gold - (parseFloat(editVal) || 0)).toFixed(2)))}>-</button>
+                    <button className="qty-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }} onClick={() => applyDelta(-(parseGold(editVal)))}>-</button>
                     <input type="number" className="modal-input" style={{ width: 100, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="0" />
-                    <button className="qty-btn" style={{ borderColor: 'var(--accent-green)', color: 'var(--accent-green)' }} onClick={() => updateCharacter(c => c.gold = parseFloat((c.gold + (parseFloat(editVal) || 0)).toFixed(2)))}>+</button>
+                    <button className="qty-btn" style={{ borderColor: 'var(--accent-green)', color: 'var(--accent-green)' }} onClick={() => applyDelta(parseGold(editVal))}>+</button>
                 </div>
-                <button className="set-btn" onClick={() => { updateCharacter(c => c.gold = parseFloat(editVal) || 0); setEditVal(""); onClose(); }}>Set to Value</button>
+                <button className="set-btn" onClick={() => { updateCharacter(c => c.gold = parseGold(editVal)); setEditVal(""); onClose(); }}>Set to Value</button>
             </div>
         </div>
     );
