@@ -5,6 +5,7 @@ import BottomSheet from '../shared/components/BottomSheet';
 import ContentPreviewCard from './components/ContentPreviewCard';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { SPELL_INDEX_FILTER_OPTIONS, SPELL_INDEX_ITEMS, fetchSpellDetailBySourceFile, fetchSpellRawJsonBySourceFile, normalizeSpellSourceFile } from '../shared/catalog/spellIndex';
+import { readJsonApiResponse } from '../shared/utils/apiResponse';
 
 const uniqueTypes = SPELL_INDEX_FILTER_OPTIONS.types;
 const uniqueRarities = SPELL_INDEX_FILTER_OPTIONS.rarities;
@@ -124,7 +125,7 @@ export default function SpellsView({ onInspectItem }) {
                     content: spellJson
                 })
             });
-            const saveData = await saveRes.json();
+            const saveData = await readJsonApiResponse(saveRes, 'Save spell availability');
             if (!saveData.success) throw new Error(saveData.error);
 
             // 4. Rebuild Index

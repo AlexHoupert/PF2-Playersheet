@@ -23,6 +23,15 @@ test('items layout does not reference split module globals', () => {
     assert.match(source, /optionsMap=\{filterOptions\}/);
 });
 
+test('items layout receives lootbag selection state from ItemsView', () => {
+    const viewSource = readSource('src/admin/ItemsView.jsx');
+    const layoutSource = readSource('src/admin/items/ItemsViewLayout.jsx');
+
+    assert.match(viewSource, /setSelectedLootId=\{setSelectedLootId\}/);
+    assert.match(layoutSource, /setSelectedLootId,/);
+    assert.match(layoutSource, /sameId\(selectedLootId, entry\.id\)/);
+});
+
 test('quest fallback reads stay centralized in selectors', () => {
     const playerSource = readSource('src/player/PlayerAppController.jsx');
     const gmSource = readSource('src/admin/QuestsView.jsx');

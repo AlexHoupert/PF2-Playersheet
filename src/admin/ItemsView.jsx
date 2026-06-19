@@ -44,6 +44,8 @@ const scrollbarStyles = `
     .items-view-scroll::-webkit-scrollbar-thumb:hover { background: #555; }
 `;
 
+const sameId = (a, b) => a != null && b != null && String(a) === String(b);
+
 export default function ItemsView({ db, onInspectItem }) {
     const { activeCampaign, dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
@@ -193,9 +195,9 @@ export default function ItemsView({ db, onInspectItem }) {
     const paginatedItems = sortedGlobalItems.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
     // --- SIDE PANEL DATA ---
-    const activeTrader = shopState.traders.find(t => t.id === selectedTraderId);
+    const activeTrader = shopState.traders.find(t => sameId(t.id, selectedTraderId));
     const { lootBags: campaignLootBags } = selectLootBagLists(db, activeCampaign, activeCampaign?.id);
-    const activeLoot = campaignLootBags.find(b => b.id === selectedLootId);
+    const activeLoot = campaignLootBags.find(b => sameId(b.id, selectedLootId));
 
     const sideItems = useMemo(() => {
         let items = [];
@@ -507,6 +509,7 @@ export default function ItemsView({ db, onInspectItem }) {
             setPage={setPage}
             setPendingSpellAction={setPendingSpellAction}
             setSearch={setSearch}
+            setSelectedLootId={setSelectedLootId}
             setSelectedSideItems={setSelectedSideItems}
             setSelectedTraderId={setSelectedTraderId}
             setShowColSelector={setShowColSelector}

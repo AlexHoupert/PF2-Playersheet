@@ -68,6 +68,7 @@ export default function ItemsViewLayout({
     setPage,
     setPendingSpellAction,
     setSearch,
+    setSelectedLootId,
     setSelectedSideItems,
     setSelectedTraderId,
     setShowColSelector,
@@ -88,6 +89,7 @@ export default function ItemsViewLayout({
     const availableItems = shopState?.availableItems || [];
     const availableFormulas = shopState?.availableFormulas || [];
     const traders = shopState?.traders || [];
+    const sameId = (a, b) => a != null && b != null && String(a) === String(b);
     const isSelected = (item) => selectedItems.some(i => i.name === item.name);
     const isSideSelected = (item) => selectedSideItems.some(i => (i.instanceId || i.name) === (item.instanceId || item.name));
 
@@ -149,9 +151,9 @@ export default function ItemsViewLayout({
                         columnLabels={{ Available: 'Available', Formula: 'Formula' }}
                         extraLeft={
                             <div style={{ display: 'flex', gap: 0, border: '1px solid #444', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
-                                <button style={{ padding: '5px 12px', background: sideMode === 'none' ? '#c5a059' : '#222', color: sideMode === 'none' ? '#000' : '#888', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85em' }} onClick={() => setSideMode('none')}>Items</button>
-                                <button style={{ padding: '5px 12px', background: sideMode === 'trader' ? '#c5a059' : '#222', color: sideMode === 'trader' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('trader'); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Trader</button>
-                                <button style={{ padding: '5px 12px', background: sideMode === 'loot' ? '#c5a059' : '#222', color: sideMode === 'loot' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('loot'); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Loot</button>
+                                <button style={{ padding: '5px 12px', background: sideMode === 'none' ? '#c5a059' : '#222', color: sideMode === 'none' ? '#000' : '#888', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('none'); setSelectedSideItems([]); }}>Items</button>
+                                <button style={{ padding: '5px 12px', background: sideMode === 'trader' ? '#c5a059' : '#222', color: sideMode === 'trader' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('trader'); setSelectedLootId(null); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Trader</button>
+                                <button style={{ padding: '5px 12px', background: sideMode === 'loot' ? '#c5a059' : '#222', color: sideMode === 'loot' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('loot'); setSelectedTraderId(null); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Loot</button>
                             </div>
                         }
                         extraRight={
@@ -260,13 +262,13 @@ export default function ItemsViewLayout({
                                             {sideLists.sliced.map(entry => (
                                                 <tr
                                                     key={entry.id}
-                                                    onClick={() => { setSelectedTraderId(entry.id); setSelectedSideItems([]); }}
+                                                    onClick={() => { setSelectedTraderId(entry.id); setSelectedLootId(null); setSelectedSideItems([]); }}
                                                     onDrop={e => handleDrop(e, 'trader', entry.id)}
                                                     onDragOver={e => e.preventDefault()}
                                                     style={{
                                                         cursor: 'pointer',
                                                         borderBottom: '1px solid #333',
-                                                        background: selectedTraderId === entry.id ? '#333' : 'transparent',
+                                                        background: sameId(selectedTraderId, entry.id) ? '#333' : 'transparent',
                                                         opacity: entry.hidden ? 0.6 : 1
                                                     }}
                                                 >
@@ -294,12 +296,12 @@ export default function ItemsViewLayout({
                                     sideLists.sliced.map(entry => (
                                         <div
                                             key={entry.id}
-                                            onClick={() => { setSelectedLootId(entry.id); setSelectedSideItems([]); }}
+                                            onClick={() => { setSelectedLootId(entry.id); setSelectedTraderId(null); setSelectedSideItems([]); }}
                                             onDrop={e => handleDrop(e, 'loot', entry.id)}
                                             onDragOver={e => e.preventDefault()}
                                             style={{
                                                 padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid #333',
-                                                background: selectedLootId === entry.id ? '#333' : 'transparent',
+                                                background: sameId(selectedLootId, entry.id) ? '#333' : 'transparent',
                                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                                             }}
                                         >
@@ -528,15 +530,15 @@ export default function ItemsViewLayout({
                             </div>
                             {sideMode === 'trader'
                                 ? sideLists.sliced.map(entry => (
-                                    <div key={entry.id} onClick={() => { setSelectedTraderId(entry.id); setSelectedSideItems([]); }}
-                                        style={{ padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #333', background: selectedTraderId === entry.id ? '#333' : 'transparent', display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 }}>
+                                    <div key={entry.id} onClick={() => { setSelectedTraderId(entry.id); setSelectedLootId(null); setSelectedSideItems([]); }}
+                                        style={{ padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #333', background: sameId(selectedTraderId, entry.id) ? '#333' : 'transparent', display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 }}>
                                         <span style={{ color: '#ddd' }}>{entry.name}</span>
                                         <span style={{ color: '#888', fontSize: '0.85em' }}>{entry.category || 'General'} · {entry.inventory.length} items</span>
                                     </div>
                                 ))
                                 : sideLists.sliced.map(entry => (
-                                    <div key={entry.id} onClick={() => { setSelectedLootId(entry.id); setSelectedSideItems([]); }}
-                                        style={{ padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #333', background: selectedLootId === entry.id ? '#333' : 'transparent', display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 }}>
+                                    <div key={entry.id} onClick={() => { setSelectedLootId(entry.id); setSelectedTraderId(null); setSelectedSideItems([]); }}
+                                        style={{ padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #333', background: sameId(selectedLootId, entry.id) ? '#333' : 'transparent', display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 }}>
                                         <span style={{ color: '#ddd' }}>{entry.name}</span>
                                         <span style={{ color: '#888', fontSize: '0.85em' }}>{entry.items.length} items</span>
                                     </div>

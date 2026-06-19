@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import { SPELL_INDEX_FILTER_OPTIONS, fetchSpellDetailBySourceFile, normalizeSpellSourceFile } from '../../shared/catalog/spellIndex';
+import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 
 export default function SpellEditor({ initialItem, onSave, onCancel }) {
     const [formData, setFormData] = useState({
@@ -116,7 +117,7 @@ export default function SpellEditor({ initialItem, onSave, onCancel }) {
                 body: JSON.stringify(payload)
             });
 
-            const data = await res.json();
+            const data = await readJsonApiResponse(res, 'Save spell');
             if (!data.success) throw new Error(data.error);
 
             // Rebuild Index
