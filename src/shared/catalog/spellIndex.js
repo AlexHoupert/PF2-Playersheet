@@ -1,5 +1,6 @@
 
 import spellIndexData from '../../data/spell_index.json';
+import { fetchJsonFromResourceCandidates, getResourceCandidateUrls, normalizeResourceSourceFile } from './resourceFetch';
 
 const dict = spellIndexData?.dict || {};
 const typeDict = Array.isArray(dict.t) ? dict.t : [''];
@@ -76,14 +77,25 @@ export function getSpellIndexItemByName(name) {
     return SPELL_INDEX_BY_NAME.get(name) || SPELL_INDEX_BY_LOWER_NAME.get(String(name).toLowerCase()) || null;
 }
 
+export function normalizeSpellSourceFile(sourceFile) {
+    return normalizeResourceSourceFile(sourceFile);
+}
+
+export function getSpellResourceUrls(sourceFile) {
+    return getResourceCandidateUrls(sourceFile, { isProd: Boolean(import.meta.env?.PROD) });
+}
+
+async function fetchJsonFromCandidateUrls(sourceFile) {
+    return fetchJsonFromResourceCandidates(sourceFile, { isProd: Boolean(import.meta.env?.PROD) });
+}
+
+export async function fetchSpellRawJsonBySourceFile(sourceFile) {
+    return fetchJsonFromCandidateUrls(sourceFile);
+}
+
 export async function fetchSpellDetailBySourceFile(sourceFile) {
     if (!sourceFile) return null;
-    const baseUrl = import.meta.env.PROD ? '/ressources' : '/api/static';
-    const response = await fetch(`${baseUrl}/${sourceFile}`); // The sourceFile from the index already includes the subdirectory, so we just append it to ressources
-    if (!response.ok) {
-        throw new Error(`Failed to load spell: ${sourceFile}`);
-    }
-    const data = await response.json();
+    const data = await fetchSpellRawJsonBySourceFile(sourceFile);
     const sys = data.system || {};
 
     // Convert area object to readable string, e.g. {type:"emanation", value:5} → "5-foot emanation"

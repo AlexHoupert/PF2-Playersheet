@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
-import { SPELL_INDEX_FILTER_OPTIONS, fetchSpellDetailBySourceFile } from '../../shared/catalog/spellIndex';
+import { SPELL_INDEX_FILTER_OPTIONS, fetchSpellDetailBySourceFile, normalizeSpellSourceFile } from '../../shared/catalog/spellIndex';
 
 export default function SpellEditor({ initialItem, onSave, onCancel }) {
     const [formData, setFormData] = useState({
@@ -108,7 +108,7 @@ export default function SpellEditor({ initialItem, onSave, onCancel }) {
             const endpoint = isNew ? '/api/files/create' : '/api/files/save';
             const payload = isNew
                 ? { directory: `ressources/spells`, filename: `${formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`, content: spellJson }
-                : { filePath: (filePath && !filePath.startsWith('ressources/')) ? `ressources/${filePath}` : filePath, content: spellJson };
+                : { filePath: `ressources/${normalizeSpellSourceFile(filePath)}`, content: spellJson };
 
             const res = await fetch(endpoint, {
                 method: 'POST',

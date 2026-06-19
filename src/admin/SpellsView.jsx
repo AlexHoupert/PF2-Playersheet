@@ -4,7 +4,7 @@ import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
 import BottomSheet from '../shared/components/BottomSheet';
 import ContentPreviewCard from './components/ContentPreviewCard';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
-import { SPELL_INDEX_FILTER_OPTIONS, SPELL_INDEX_ITEMS, fetchSpellDetailBySourceFile } from '../shared/catalog/spellIndex';
+import { SPELL_INDEX_FILTER_OPTIONS, SPELL_INDEX_ITEMS, fetchSpellDetailBySourceFile, fetchSpellRawJsonBySourceFile, normalizeSpellSourceFile } from '../shared/catalog/spellIndex';
 
 const uniqueTypes = SPELL_INDEX_FILTER_OPTIONS.types;
 const uniqueRarities = SPELL_INDEX_FILTER_OPTIONS.rarities;
@@ -109,9 +109,7 @@ export default function SpellsView({ onInspectItem }) {
             }
 
             // 1. Fetch RAW JSON
-            const rawRes = await fetch(`/ressources/${item.sourceFile}`);
-            if (!rawRes.ok) throw new Error("Failed to load raw spell file");
-            const spellJson = await rawRes.json();
+            const spellJson = await fetchSpellRawJsonBySourceFile(item.sourceFile);
 
             // 2. Modify
             if (!spellJson.system) spellJson.system = {};
@@ -122,7 +120,7 @@ export default function SpellsView({ onInspectItem }) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    filePath: `ressources/${item.sourceFile}`,
+                    filePath: `ressources/${normalizeSpellSourceFile(item.sourceFile)}`,
                     content: spellJson
                 })
             });

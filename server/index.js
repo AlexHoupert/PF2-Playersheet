@@ -26,6 +26,9 @@ async function createServer() {
     app.use(express.json());
     // Serve 'ressources' directory statically under a safe namespace
     app.use('/api/static', express.static(path.resolve(__dirname, '..', 'ressources')));
+    // Keep legacy resource URLs working in the custom dev server. Several UI
+    // paths and generated content still reference /ressources/... directly.
+    app.use('/ressources', express.static(path.resolve(__dirname, '..', 'ressources')));
 
     // Debug Logger
     app.use('/api', (req, res, next) => {
