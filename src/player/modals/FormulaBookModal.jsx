@@ -1,5 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
+import {
+    filterFormulaItemsByType,
+    filterHighestLevelFormulaItems,
+    getFormulaItemType,
+} from '../utils/formulaBookUtils';
 
 function isAmmoItem(item) {
     return (item?.type || '').toLowerCase() === 'ammunition' ||
@@ -19,6 +24,7 @@ export function FormulaBookModal({
 }) {
     const formulas = character.formulaBook || [];
     const [typeFilter, setTypeFilter] = useState('all');
+    const [highestLevelOnly, setHighestLevelOnly] = useState(false);
 
     // Resolve all formula items once
     const formulaItems = useMemo(() =>
@@ -30,18 +36,21 @@ export function FormulaBookModal({
     const availableTypes = useMemo(() => {
         const types = new Set();
         formulaItems.forEach(item => {
-            const t = (item.type || item.category || '').trim();
+            const t = getFormulaItemType(item);
             if (t) types.add(t);
         });
         return [...types].sort();
     }, [formulaItems]);
 
-    const visibleItems = typeFilter === 'all'
-        ? formulaItems
-        : formulaItems.filter(item => {
-            const t = (item.type || item.category || '').trim();
-            return t === typeFilter;
-        });
+    const levelFilteredItems = useMemo(
+        () => filterHighestLevelFormulaItems(formulaItems, highestLevelOnly),
+        [formulaItems, highestLevelOnly]
+    );
+
+    const visibleItems = useMemo(
+        () => filterFormulaItemsByType(levelFilteredItems, typeFilter),
+        [levelFilteredItems, typeFilter]
+    );
 
     // Daily Crafting Logic
     const hasMunitionsCrafter = (character.feats || []).includes("Munitions Crafter");
@@ -49,7 +58,8 @@ export function FormulaBookModal({
     const canDailyCraft = hasMunitionsCrafter || hasAdvAlchemy;
 
     // Max Batches (Stored in character or default)
-    const maxBatches = character.dailyCraftingMax || 5;
+    const storedMaxBatches = Number(character.dailyCraftingMax);
+    const maxBatches = Number.isFinite(storedMaxBatches) ? storedMaxBatches : 5;
     const currentBatches = dailyPrepQueue.reduce((acc, i) => acc + (i.batches || 1), 0);
 
     return (
@@ -71,28 +81,45 @@ export function FormulaBookModal({
                 <h2>Formula Book ({formulas.length})</h2>
                 {formulas.length === 0 && <div style={{ color: '#888', fontStyle: 'italic' }}>No known formulas. Buy them effectively from the shop.</div>}
 
-                {availableTypes.length > 1 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                        <span style={{ fontSize: '0.85em', color: '#888', flexShrink: 0 }}>Filter:</span>
-                        <select
-                            value={typeFilter}
-                            onChange={e => setTypeFilter(e.target.value)}
-                            style={{
-                                flex: 1, background: '#1a1a1d', color: '#e0e0e0',
-                                border: '1px solid #555', borderRadius: 4, padding: '4px 6px',
-                                fontSize: '0.85em', cursor: 'pointer'
-                            }}
-                        >
-                            <option value="all">All Types ({formulas.length})</option>
-                            {availableTypes.map(t => {
-                                const count = formulaItems.filter(i => (i.type || i.category || '').trim() === t).length;
-                                return <option key={t} value={t}>{t} ({count})</option>;
-                            })}
-                        </select>
+                {formulas.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+                        {availableTypes.length > 1 && (
+                            <>
+                                <span style={{ fontSize: '0.85em', color: '#888', flexShrink: 0 }}>Filter:</span>
+                                <select
+                                    value={typeFilter}
+                                    onChange={e => setTypeFilter(e.target.value)}
+                                    style={{
+                                        flex: 1, minWidth: 160, background: '#1a1a1d', color: '#e0e0e0',
+                                        border: '1px solid #555', borderRadius: 4, padding: '4px 6px',
+                                        fontSize: '0.85em', cursor: 'pointer'
+                                    }}
+                                >
+                                    <option value="all">All Types ({levelFilteredItems.length})</option>
+                                    {availableTypes.map(t => {
+                                        const count = levelFilteredItems.filter(i => getFormulaItemType(i) === t).length;
+                                        return <option key={t} value={t}>{t} ({count})</option>;
+                                    })}
+                                </select>
+                            </>
+                        )}
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.85em', color: '#ddd', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={highestLevelOnly}
+                                onChange={e => setHighestLevelOnly(e.target.checked)}
+                            />
+                            Nur höchstes Lvl
+                        </label>
                     </div>
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10, maxHeight: '40vh', overflowY: 'auto' }}>
+                    {visibleItems.length === 0 && formulas.length > 0 && (
+                        <div style={{ color: '#888', fontStyle: 'italic', padding: 10, textAlign: 'center' }}>
+                            No formulas match the current filters.
+                        </div>
+                    )}
                     {visibleItems.map(item => {
                         return (
                             <div key={item.name}
@@ -156,7 +183,9 @@ export function FormulaBookModal({
                                 onClick={() => {
                                     const newMax = prompt("Set Maximum Batches:", maxBatches);
                                     if (newMax !== null && !isNaN(newMax)) {
-                                        updateCharacter(c => c.dailyCraftingMax = parseInt(newMax));
+                                        updateCharacter(c => {
+                                            c.dailyCraftingMax = Math.max(0, parseInt(newMax, 10) || 0);
+                                        });
                                     }
                                 }}
                                 title="Click to edit Max Batches"
