@@ -42,7 +42,7 @@ function createActionHarness(db = {}) {
             },
             async updateActor(_firestore, campaignId, actorId, updater) {
                 const result = updater({ id: actorId, kind: 'pc', name: 'Hero', level: 1 });
-                calls.push(['actor.updateActor', campaignId, actorId, result.deletedAt ? 'deleted' : result.name]);
+                calls.push(['actor.updateActor', campaignId, actorId, result]);
             },
         },
         effectRepo: {
@@ -190,7 +190,7 @@ test('v2 adapter uses targeted repositories for migrated campaign domains', asyn
     ]);
 });
 
-test('v2 adapter routes character basis edits through character repository', async () => {
+test('v2 adapter routes character basis edits through actor repository', async () => {
     const { actions, calls } = createActionHarness();
 
     await actions.character.setGold('camp1', 'char1', 7.25);
@@ -203,23 +203,23 @@ test('v2 adapter routes character basis edits through character repository', asy
     await actions.character.setDailyCraftingMax('camp1', 'char1', 4);
 
     assert.deepEqual(calls.map(call => call[0]), [
-        'character.updateCharacter',
-        'character.updateCharacter',
-        'character.updateCharacter',
-        'character.updateCharacter',
-        'character.updateCharacter',
-        'character.updateCharacter',
-        'character.updateCharacter',
-        'character.updateCharacter',
+        'actor.updateActor',
+        'actor.updateActor',
+        'actor.updateActor',
+        'actor.updateActor',
+        'actor.updateActor',
+        'actor.updateActor',
+        'actor.updateActor',
+        'actor.updateActor',
     ]);
-    assert.equal(calls[0][3].gold, 7.25);
+    assert.equal(calls[0][3].sheet.gold, 7.25);
     assert.equal(calls[1][3].stats.attributes.dexterity, 2);
     assert.equal(calls[2][3].stats.hp.current, 5);
     assert.equal(calls[3][3].stats.hp.temp, 3);
     assert.equal(calls[4][3].stats.hp.max, 5);
     assert.equal(calls[5][3].stats.speed.land, 30);
     assert.equal(calls[6][3].stats.class_dc, 11);
-    assert.equal(calls[7][3].dailyCraftingMax, 4);
+    assert.equal(calls[7][3].sheet.dailyCraftingMax, 4);
 });
 
 test('v2 adapter mirrors character lifecycle to pc actors', async () => {

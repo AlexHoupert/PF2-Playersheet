@@ -8,7 +8,7 @@ The `v2-convergence` branch has started the V2-only cutover. `src/App.jsx` now s
 
 Existing screens still mostly expect a legacy-shaped `db` object. Firestore V2 currently normalizes storage and still projects documents back into that shape for UI compatibility, but this projection is now a temporary bridge rather than the long-term UI contract.
 
-This means a feature is not fully v2-ready just because it works through `setDb`; v2 may still need normalizer support so data is written into the intended collection and reconstructed correctly.
+This means a feature is not fully v2-ready just because it appears in the legacy-shaped projection; v2 still needs targeted repository/actions so data is written into the intended collection and reconstructed correctly.
 
 ## Legacy Mode
 
@@ -102,17 +102,22 @@ Read path:
 7. Run `migrateDb`.
 8. Cache projection to LocalStorage.
 
-Write path:
+Runtime write path:
 
-1. `setDb` receives next legacy-shaped DB.
-2. Run `migrateDb`.
-3. Compare previous and next by calling `normalizeMasterToV2` on both.
-4. Write changed docs and delete missing docs through `writeLegacyDbDiffToV2`.
+1. UI calls `CampaignContext.dataActions`.
+2. `createDataActions` selects targeted V2 repositories/transactions.
+3. Firestore snapshots rebuild `v2Store` plus the temporary legacy projection.
+
+Compatibility projection updates:
+
+- `useFirestoreV2Db` keeps a local `legacyProjection` for old screens.
+- The hook no longer broad-diffs that projection back into Firestore.
+- `writeLegacyDbDiffToV2` remains only in legacy import/migration code.
 
 Important transitional limitation:
 
-- There are repository functions in `src/shared/db/v2/repositories.js`, but compatibility support for broad legacy diffs still exists for future non-migrated paths.
-- `setDb` and `writeLegacyDbDiffToV2` still exist inside the V2 hook for compatibility. They are not the target architecture and should be removed after UI reads/writes stop requiring the legacy-shaped projection.
+- There are still transitional screens that read the legacy-shaped projection, but runtime writes should not use it as a persistence contract.
+- `setDb` no longer flows through Player/Admin runtime components on `v2-convergence`.
 - Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, and Player runtime fallbacks now use targeted domain actions instead of broad runtime UI writes.
 - Actor, Actor Effect, Effect Template, and Catalog Override repositories/actions have been introduced as the foundation for the planned Effects/Conditions and Companion/Minion systems.
 
@@ -138,9 +143,10 @@ Files:
 
 Current migrated write paths:
 
-- Player character updates through `dataActions.character.updateCharacter`; player basis edits for gold, attributes, HP/temp/max HP, speed, Class DC, and daily crafting max use targeted character basis actions.
+- Player character updates through `dataActions.character.updateCharacter`; player basis edits for gold, attributes, HP/temp/max HP, speed, Class DC, and daily crafting max keep the `character.*` API but write PC Actor documents directly in V2.
 - New character create/import/archive/restore mirrors PC documents into campaign-scoped `actors`.
-- Conditions in `ConditionsModal` use `dataActions.effect` when campaign/actor context is available; the legacy updater remains only as fallback.
+- Conditions in `ConditionsModal`, Player Stats, Admin CharacterCard backlash, and item mutagen effects use `dataActions.effect` and campaign-scoped `actorEffects`.
+- Companion UI reads and writes owned Actor documents instead of `character.companion`; companion conditions also use `actorEffects`.
 - Custom item/action/ability/creature saves also create `catalogOverrides`; deployed spell editing writes directly to `catalogOverrides`.
 - Player inventory transfer through `dataActions.inventory.transferItem`.
 - Player loot claim, gold claim, and gold split through `dataActions.loot`.
@@ -176,9 +182,9 @@ Soft delete:
 
 Adapter behavior:
 
-- Legacy mode uses pure reducers against the legacy campaign snapshot and writes with `setDb`.
+- Legacy adapter tests still use pure reducers against a legacy campaign snapshot and write with `setDb`.
 - Firestore v2 mode uses targeted repository updates and transactions.
-- Missing Firestore config falls back to legacy adapter behavior.
+- Missing Firestore config no longer creates broad runtime V2 writes; local non-Firestore editing is not the convergence target.
 - Runtime Firestore repositories are injected by `CampaignContext`; tests can inject fake repositories without loading Firebase.
 
 See `docs/agent/domain-actions.md` for the detailed API and migration status.
@@ -209,7 +215,8 @@ File: `src/shared/db/v2/normalizers.js`
 - Builds the legacy projection used by existing screens.
 - Reassembles campaign subcollections into `db.campaigns[campaignId]`.
 - Reassembles `actors`, `actorEffects`, and `effectTemplates` into campaign view data.
-- Overlays character `conditions` from `actorEffects` when available.
+- Prefers PC Actors over stale Character documents for `campaign.characters` compatibility rows.
+- Overlays transitional character `conditions` from `actorEffects` when compatibility screens still need that shape.
 - Converts `members` docs back into `db.users`.
 - Rehydrates global config including shop, bestiary reveal-state/metadata, pacts, abilities, custom collections, and lore.
 - Sets root `quests` and `lootBags` from the first campaign for compatibility.

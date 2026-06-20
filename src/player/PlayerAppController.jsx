@@ -34,6 +34,8 @@ import { usePlayerInventoryActions } from './hooks/usePlayerInventoryActions';
 import { usePlayerModalState } from './hooks/usePlayerModalState';
 import { usePlayerNavigation } from './hooks/usePlayerNavigation';
 import { selectLootBagLists, selectQuestLists } from '../shared/db/selectors/campaignSelectors';
+import { selectOwnedActors } from '../shared/db/selectors/actorSelectors';
+import { selectConditionViewModels } from '../shared/db/selectors/effectSelectors';
 // Top of file
 import NotificationOverlay from './components/NotificationOverlay';
 import XpOverlay from './components/XpOverlay';
@@ -52,8 +54,8 @@ const ARMOR_RANKS = [
 
 
 
-export default function PlayerAppController({ db, setDb }) {
-    const { activeCampaign, myCharacter, isGM, dataActions } = useCampaign();
+export default function PlayerAppController({ db }) {
+    const { activeCampaign, myActor, myCharacter, isGM, dataActions } = useCampaign();
 
     const {
         actionModal,
@@ -74,6 +76,8 @@ export default function PlayerAppController({ db, setDb }) {
     const [dailyPrepQueue, setDailyPrepQueue] = useState([]);
     const { quests: playerQuests } = selectQuestLists(db, activeCampaign);
     const { lootBags: playerLootBags } = selectLootBagLists(db, activeCampaign);
+    const ownedCompanionActors = selectOwnedActors(activeCampaign, myActor?.id)
+        .filter(actor => ['animal_companion', 'familiar', 'pet'].includes(actor.kind));
 
     const {
         activeCharIndex,
@@ -90,9 +94,12 @@ export default function PlayerAppController({ db, setDb }) {
     } = usePlayerNavigation({
         activeCampaign,
         db,
+        hasCompanionActors: ownedCompanionActors.length > 0,
         modalMode,
         myCharacter,
     });
+
+    const characterConditions = selectConditionViewModels(activeCampaign, myActor?.id || character?.id);
 
     const {
         characterActions,
@@ -326,6 +333,7 @@ export default function PlayerAppController({ db, setDb }) {
                 {activeTab === 'stats' && (
                     <StatsView
                         character={character}
+                        conditions={characterConditions}
                         updateCharacter={updateCharacter}
                         onOpenModal={(mode, data) => {
                             setModalMode(mode);
@@ -385,7 +393,15 @@ export default function PlayerAppController({ db, setDb }) {
                 {activeTab === 'maps' && <MapsView />}
                 {activeTab === 'progress' && <ProgressView />}
                 {activeTab === 'camp' && <CampScreen />}
-                {activeTab === 'companion' && <CompanionTab character={character} updateCharacter={updateCharacter} />}
+                {activeTab === 'companion' && (
+                    <CompanionTab
+                        character={character}
+                        ownerActor={myActor}
+                        companionActors={ownedCompanionActors}
+                        dataActions={dataActions}
+                        activeCampaignId={activeCampaign?.id}
+                    />
+                )}
                 {activeTab === 'pact' && <PactView character={character} db={db} />}
             </div>
 
@@ -560,6 +576,7 @@ export default function PlayerAppController({ db, setDb }) {
                 modalData={modalData}
                 setModalData={setModalData}
                 character={character}
+                conditions={characterConditions}
                 updateCharacter={updateCharacter}
                 characterActions={characterActions}
                 onClose={() => setModalMode(null)}

@@ -17,7 +17,7 @@ const EMPTY_PACT = {
     }
 };
 
-export default function PactAdminView({ db, setDb }) {
+export default function PactAdminView({ db }) {
     const { dataActions } = useCampaign();
     const pacts = useMemo(() => selectPactList(db), [db]);
 

@@ -59,7 +59,7 @@ Any new broad write outside those files should be treated as a regression.
 
 Remaining Player-local edit paths:
 
-- Saves/skills, armor/weapon proficiencies, spell/impulse proficiencies, magic slots, armor/shield state, companion state, and inventory-driven gold/HP changes still use focused local updaters through `updateCharacter`.
+- Saves/skills, armor/weapon proficiencies, spell/impulse proficiencies, magic slots, armor/shield state, and inventory-driven gold/HP changes still use focused local updaters through `updateCharacter`.
 - These are shape-hardened by the character normalizer, but should move to targeted actions when their workflows are next touched.
 
 ## Completed In V2 Convergence Foundation Wave
@@ -72,6 +72,17 @@ Remaining Player-local edit paths:
 - Conditions can write `actorEffects` through `dataActions.effect`; old character-condition writes remain fallback-only.
 - Deployed spell editing writes `catalogOverrides` instead of depending on production file writes.
 - Firestore rules cover `actors`, `actorEffects`, `effectTemplates`, and `catalogOverrides`.
+
+## Completed In V2 Read Cutover / Actor Runtime Slice
+
+- `useFirestoreV2Db` returns `{ legacyProjection, v2Store, status }` and no longer writes broad legacy diffs back to Firestore.
+- `writeLegacyDbDiffToV2` is isolated to migration/import code.
+- Player/Admin runtime trees no longer carry `setDb` props.
+- PC Actor documents are preferred over stale Character documents when building `campaign.characters` compatibility rows.
+- Player basis-value actions keep the `dataActions.character.*` facade but write PC Actor documents in V2.
+- Player Stats, ConditionsModal, Admin CharacterCard backlash, and mutagen item effects read/write `actorEffects`.
+- `CompanionTab` reads and writes owned companion Actors and stores companion conditions as `actorEffects`.
+- Static guards now fail runtime reintroduction of `character.conditions`, `character.companion`, root `db.characters`, broad `setDb`, broad V2 diffs, or unguarded production `/api/files/save`.
 
 ## Remaining By Domain
 
@@ -94,7 +105,7 @@ Remaining:
 
 ### Legacy V2 Compatibility
 
-- `useFirestoreV2Db` still contains broad legacy diff support for any future non-migrated path.
-- `writeLegacyDbDiffToV2` must remain confined to the V2 compatibility layer.
+- `useFirestoreV2Db` still builds a legacy-shaped projection for transitional reads, but it is no longer a write contract.
+- `writeLegacyDbDiffToV2` must remain confined to legacy import/migration code.
 - `composeLegacyDbFromV2Documents` is still the main UI compatibility contract; `composeV2ViewModelFromDocuments` exists, but the runtime UI has not fully cut over to it yet.
 - Legacy `characters` still exist as redundant transition data while `actors` are introduced. End state is actors-only runtime plus legacy import/backup.

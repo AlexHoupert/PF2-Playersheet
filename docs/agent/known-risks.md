@@ -25,9 +25,9 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary are now centr
 
 Inventory and loot code sometimes uses `name`, sometimes `_index`, sometimes `instanceId`, sometimes `addedAt` plus equipment/prepared flags. This can break stacked items, duplicate items, and transfer/claim flows.
 
-4. Whole-DB writes in compatibility paths
+4. Legacy write compatibility
 
-Normal UI write paths for Campaign/Session, Character/Inventory/Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary, and Player runtime fallbacks now use `dataActions` and targeted repositories. UI and context broad writes are guarded against regressions; broad writes remain only in the `createDataActions` legacy adapter and the v2 broad-diff compatibility layer.
+Normal UI write paths for Campaign/Session, Character/Inventory/Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary, actor effects, companion actors, and Player runtime fallbacks now use `dataActions` and targeted repositories. UI and context broad writes are guarded against regressions; broad writes remain only in the `createDataActions` legacy adapter used by legacy tests/import compatibility.
 
 5. Generated data size and source duplication
 
@@ -40,9 +40,9 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 - `migrateDb` mutates the input object in place by design. Be careful when calling it with shared references.
 - Character runtime defaults and old skill names are normalized in `src/shared/db/domain/characterShape.js` during load, V2 migration, create, and update paths.
 - Player basis edits for gold, attributes, current/temp/max HP, speed, Class DC, and Formula Book daily batch limits use targeted `dataActions.character` methods. Keep direct nested writes for these fields out of Player modals.
-- Remaining Player UI-local edit paths include saves/skills, weapon/armor proficiencies, magic slots, armor/shield state, companion state, and inventory-driven gold/HP changes. They rely on `applyCharacterUpdate` plus `normalizeCharacterRuntimeShape` for shape safety and are candidates for later focused actions.
-- PC character lifecycle is mirrored into campaign-scoped `actors(kind="pc")`; companion snapshots are backfilled as owned actors. Until the actor cutover is complete, character and actor documents can be redundant transition data.
-- Conditions can now be stored as campaign-scoped `actorEffects`, and the legacy projection overlays character conditions from those effects. Runtime code must avoid deepening the old `character.conditions` contract.
+- Remaining Player UI-local edit paths include saves/skills, weapon/armor proficiencies, magic slots, armor/shield state, and inventory-driven gold/HP changes. They rely on `applyCharacterUpdate` plus `normalizeCharacterRuntimeShape` for shape safety and are candidates for later focused actions.
+- PC character lifecycle is mirrored into campaign-scoped `actors(kind="pc")`; companion snapshots are backfilled as owned actors and `CompanionTab` now edits owned actors directly. Until the actor cutover is complete, character and actor documents can be redundant transition data.
+- Conditions are campaign-scoped `actorEffects` for Player Stats, ConditionsModal, Admin CharacterCard backlash, mutagen effects, and companion conditions. The legacy projection still overlays character conditions for compatibility/import surfaces only.
 - Catalog overrides are the production-safe write target for deployed spell/action/item/ability/creature editing. Static resource file APIs should stay local-dev only.
 - Wands are reusable inventory items with `system.wand = { charges, max }`, not consumable stacks. Inventory double-tap and spell detail casting should reduce charges only; Daily Preparation recharges them. Keep wand detection centralized in `src/shared/utils/wandUtils.js`.
 - Scaly Skin is currently implemented as a specific AC rule in the shared AC calculation: while unarmored or wearing Explorer's Clothing, it adds item AC and applies Dex cap +3. This should eventually move into a general effects/rules engine.
@@ -52,6 +52,7 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 - Campaign, character, quest/subquest, encounter, and map deletion is soft delete. Do not hard-delete these documents unless a future purge flow is explicitly designed and approved.
 - `CampaignContext.updateActiveCampaign` has been removed from the public context API.
 - Broad UI and context writes are guarded by `scripts/check_broad_writes.js`; see `docs/agent/migration-backlog.md`.
+- The broad-write guard also rejects runtime `character.conditions`, `character.companion`, root `db.characters`, broad V2 diff writes, and unguarded production `/api/files/save`.
 - Quest rewards are idempotent and not automatically rolled back when objectives are later marked incomplete.
 - Quest reward notifications are campaign-scoped; root `notificationQueue` remains only a legacy fallback.
 - `ItemsView` trader, availability/formula, custom-item, loot-bag, and character assignment paths have been moved to `dataActions`.
@@ -80,7 +81,7 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 - Dev server file APIs can save, create, delete, list, and upload under the project/resource tree. They guard against path traversal but should remain dev/admin-only.
 - `server/index.js` uses `exec` for rebuild commands. It maps a limited set of route params to known npm commands, which is good; keep it constrained.
 - Firestore v2 migration writes many documents and creates backups. Never run write migration without explicit approval and a backup plan.
-- V2 default mode is not enabled. Use `docs/agent/v2-default-readiness.md` before changing `VITE_DB_MODE` defaults.
+- The convergence branch starts V2 directly, but it is not yet production-cutover ready. Use `docs/agent/v2-default-readiness.md` before deploying it as the main play branch.
 - LocalStorage is the first load path. Browser state can mask seed or Firestore changes during manual testing.
 
 ## Modernization Opportunities
@@ -103,7 +104,5 @@ Medium-term:
 
 Long-term:
 
-- Split `PlayerApp.jsx` into route shell, modal orchestration, and domain hooks.
-- Split `ItemsView.jsx` into catalog table, side panels, context menu, and item actions.
 - Treat Firestore V2 as the only runtime store and isolate legacy as import/backup code after migration is proven.
 - Replace browser prompts with shared modal primitives.

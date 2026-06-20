@@ -1,4 +1,5 @@
 import React from 'react';
+import { selectActiveCharacters } from '../../shared/db/selectors/characterSelectors';
 
 export function usePlayerCharacterActions({
     activeCampaign,
@@ -16,17 +17,17 @@ export function usePlayerCharacterActions({
 
     const updateCharacter = React.useCallback((updater) => {
         const campaignId = activeCampaign?.id;
-        const characterId = character?.id || activeCampaign?.characters?.[activeCharIndex]?.id;
+        const characterId = character?.id || selectActiveCharacters(activeCampaign)[activeCharIndex]?.id;
         if (!campaignId || !characterId) return;
         runDataAction(dataActions.character.updateCharacter(campaignId, characterId, updater));
     }, [activeCampaign, activeCharIndex, character?.id, dataActions, runDataAction]);
 
     const getTargetIds = React.useCallback(() => {
         const campaignId = activeCampaign?.id;
-        const characterId = character?.id || activeCampaign?.characters?.[activeCharIndex]?.id;
+        const characterId = character?.id || selectActiveCharacters(activeCampaign)[activeCharIndex]?.id;
         if (!campaignId || !characterId) return null;
         return { campaignId, characterId };
-    }, [activeCampaign?.id, activeCampaign?.characters, activeCharIndex, character?.id]);
+    }, [activeCampaign, activeCharIndex, character?.id]);
 
     const runCharacterAction = React.useCallback((actionName, ...args) => {
         const ids = getTargetIds();

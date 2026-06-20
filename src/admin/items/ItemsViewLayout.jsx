@@ -3,6 +3,7 @@ import ItemEditor from '../editors/ItemEditor';
 import FilterBar from '../components/FilterBar';
 import BottomSheet from '../../shared/components/BottomSheet';
 import { SHOP_CATEGORIES } from '../../shared/constants/shop';
+import { selectActiveCharacters } from '../../shared/db/selectors/characterSelectors';
 import SpellScrollSelectorModal from '../../player/modals/SpellScrollSelectorModal';
 
 const Card = ({ children, style, className, ...rest }) => (
@@ -89,6 +90,7 @@ export default function ItemsViewLayout({
     const availableItems = shopState?.availableItems || [];
     const availableFormulas = shopState?.availableFormulas || [];
     const traders = shopState?.traders || [];
+    const playerTargets = selectActiveCharacters(activeCampaign);
     const sameId = (a, b) => a != null && b != null && String(a) === String(b);
     const isSelected = (item) => selectedItems.some(i => i.name === item.name);
     const isSideSelected = (item) => selectedSideItems.some(i => (i.instanceId || i.name) === (item.instanceId || item.name));
@@ -494,7 +496,7 @@ export default function ItemsViewLayout({
                                         <CtxItem icon="🎁" label="Give to Player" hasSubmenu />
                                         {contextSubMenu === 'player' && (
                                             <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
-                                                {(activeCampaign?.characters || []).map(p => <CtxItem key={p.id} label={p.name} onClick={() => performAction('giveToPlayer', p.id)} />)}
+                                                {playerTargets.map(p => <CtxItem key={p.id} label={p.name} onClick={() => performAction('giveToPlayer', p.id)} />)}
                                             </div>
                                         )}
                                     </div>
@@ -502,7 +504,7 @@ export default function ItemsViewLayout({
                                         <CtxItem icon="📜" label="Give Formula to Player" hasSubmenu />
                                         {contextSubMenu === 'formula' && (
                                             <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
-                                                {(activeCampaign?.characters || []).map(p => <CtxItem key={p.id} label={p.name} onClick={() => performAction('giveFormulaToPlayer', p.id)} />)}
+                                                {playerTargets.map(p => <CtxItem key={p.id} label={p.name} onClick={() => performAction('giveFormulaToPlayer', p.id)} />)}
                                             </div>
                                         )}
                                     </div>

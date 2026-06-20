@@ -263,7 +263,7 @@ Soft delete:
 
 - Campaigns and characters are archived with `deletedAt` and optional `deletedBy`.
 - Restores remove `deletedAt`/`deletedBy` and set `restoredAt`/`restoredBy`.
-- `CampaignContext.campaigns` and `activeCampaign.characters` expose only active records.
+- `CampaignContext.campaigns` and actor-first character selectors expose only active records.
 - `CampaignContext.archivedCampaigns` and `activeCampaign.archivedCharacters` expose archived records for restore UI.
 - Quests/Subquests and Encounters are also archived with the same metadata and exposed as `activeCampaign.archivedQuests` and `activeCampaign.archivedEncounters`.
 - Maps are archived with the same metadata and exposed as `activeCampaign.archivedMaps`.
@@ -359,6 +359,6 @@ Expected after the broad-write cleanup:
 - `CampaignContext` no longer exposes `updateActiveCampaign`.
 - `AdminApp` no longer writes root-level campaignless characters.
 - Only the legacy adapter branch in `createDataActions` intentionally writes through `setDb`.
-- `useFirestoreV2Db` still keeps broad diff writes for non-migrated paths.
+- `useFirestoreV2Db` no longer broad-diffs the legacy projection back to Firestore.
 
-Next migrations should keep shrinking compatibility reads and the root legacy projection before switching V2 to default.
+Next migrations should keep shrinking compatibility reads and the root legacy projection before treating the V2 branch as production-cutover ready.

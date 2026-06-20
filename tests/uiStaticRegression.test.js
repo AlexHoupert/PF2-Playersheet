@@ -98,3 +98,38 @@ test('player basis edit modals use targeted character actions', () => {
     assert.match(readSource('src/player/modals/FormulaBookModal.jsx'), /setDailyCraftingMax/);
     assert.match(readSource('src/player/QuickSheetModal.jsx'), /characterActions/);
 });
+
+test('firestore v2 runtime no longer broad-diffs legacy projections', () => {
+    const source = readSource('src/shared/db/v2/useFirestoreV2Db.js');
+    const appSource = readSource('src/App.jsx');
+
+    assert.equal(source.includes('writeLegacyDbDiffToV2'), false);
+    assert.match(source, /legacyProjection/);
+    assert.match(source, /v2Store/);
+    assert.match(appSource, /legacyProjection/);
+    assert.match(appSource, /v2Store/);
+    assert.equal(appSource.includes('setDb='), false);
+});
+
+test('runtime views do not carry legacy setDb or character condition contracts', () => {
+    const runtimeSources = [
+        'src/App.jsx',
+        'src/admin/AdminApp.jsx',
+        'src/admin/AdminTabContent.jsx',
+        'src/admin/EncounterView.jsx',
+        'src/admin/encounter/EncounterPanels.jsx',
+        'src/admin/components/CharacterCard.jsx',
+        'src/player/PlayerAppController.jsx',
+        'src/player/views/StatsView.jsx',
+        'src/player/views/CompanionTab.jsx',
+        'src/player/hooks/usePlayerInventoryActions.js',
+    ];
+
+    runtimeSources.forEach((path) => {
+        const source = readSource(path);
+        assert.equal(source.includes('setDb'), false, `${path} should not carry setDb`);
+        assert.equal(source.includes('character.conditions'), false, `${path} should not read character.conditions`);
+        assert.equal(source.includes('character.companion'), false, `${path} should not read character.companion`);
+        assert.equal(source.includes('has_companion'), false, `${path} should not use has_companion`);
+    });
+});

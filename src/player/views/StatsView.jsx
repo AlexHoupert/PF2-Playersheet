@@ -6,15 +6,16 @@ import { DefensesSection } from '../sections/DefensesSection';
 import { AttributesSection } from '../sections/AttributesSection';
 import { SkillsSection } from '../sections/SkillsSection';
 
-export function StatsView({ character, updateCharacter, onOpenModal, onLongPress }) {
+export function StatsView({ character, conditions = [], updateCharacter, onOpenModal, onLongPress }) {
     if (!character) return null;
 
-    const condDrained = getCondLevel('drained', character);
+    const activeConditions = Array.isArray(conditions) ? conditions : [];
+    const condDrained = getCondLevel('drained', { conditions: activeConditions });
     // Drained reduces max HP by level * value
     const drainedPenalty = (condDrained || 0) * (character.level || 1);
 
     // Quicksilver Mutagen Penalty (2 * Level)
-    const hasQuicksilver = character.conditions?.some(c => c.name.toLowerCase().includes('quicksilver mutagen'));
+    const hasQuicksilver = activeConditions.some(c => String(c?.name || '').toLowerCase().includes('quicksilver mutagen'));
     const quicksilverPenalty = hasQuicksilver ? ((character.level || 1) * 2) : 0;
 
     const totalPenalty = drainedPenalty + quicksilverPenalty;
@@ -41,7 +42,7 @@ export function StatsView({ character, updateCharacter, onOpenModal, onLongPress
             </div>
 
             <ConditionList
-                conditions={character.conditions}
+                conditions={activeConditions}
                 onClick={(c) => onOpenModal('conditionInfo', c.name)}
                 onAdd={() => onOpenModal('conditions', null)}
             />

@@ -182,17 +182,6 @@ export default function QuickSheetModal({ character, updateCharacter, characterA
                         Spellcaster
                     </div>
 
-                    <div
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#ccc', cursor: 'pointer' }}
-                        onClick={() => updateCharacter(c => {
-                            c.has_companion = !c.has_companion;
-                        })}
-                    >
-                        <div className={`qs-switch ${character.has_companion ? 'active' : ''}`}>
-                            <div className="qs-slider"></div>
-                        </div>
-                        Familiar / Companion
-                    </div>
                 </div>
             </div>
 

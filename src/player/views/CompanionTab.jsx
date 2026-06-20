@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useCampaign } from '../../shared/context/CampaignContext';
+import { selectConditionViewModels } from '../../shared/db/selectors/effectSelectors';
 import {
     COMPANION_TYPES, FAMILIAR_GROUPS, COMPANION_GROUPS, SPECIALIZATIONS,
     FAMILIAR_ABILITIES, MASTER_ABILITIES, COMPANION_DEFAULTS, ACTION_COST_SYMBOLS
@@ -548,21 +550,132 @@ function HpBar({ current, max, onChange }) {
 
 // ── Main Tab ─────────────────────────────────────────────────────────────────
 
-export default function CompanionTab({ character, updateCharacter }) {
-    const companion = character.companion || null;
+function actorToCompanionForm(actor) {
+    if (!actor) return null;
+    const sheet = actor.sheet || {};
+    return {
+        ...sheet,
+        id: actor.id,
+        name: sheet.name || actor.name || '',
+        type: sheet.type || actor.progression?.type || (actor.kind === 'familiar' ? 'familiar' : 'young'),
+        specialization: sheet.specialization || actor.progression?.specialization || '',
+        species: sheet.species || actor.baseTemplateId || '',
+        hp: { current: 0, max: 1, ...(sheet.hp || actor.stats?.hp || {}) },
+        ac: sheet.ac ?? actor.stats?.ac ?? 16,
+        perception: sheet.perception ?? actor.stats?.perception ?? 5,
+        speeds: { land: 25, ...(sheet.speeds || actor.stats?.speed || {}) },
+        saves: { fortitude: 5, reflex: 5, will: 3, ...(sheet.saves || actor.stats?.saves || {}) },
+        attacks: Array.isArray(sheet.attacks) ? sheet.attacks : [],
+        abilities: Array.isArray(sheet.abilities) ? sheet.abilities : [],
+        familiarAbilities: Array.isArray(sheet.familiarAbilities) ? sheet.familiarAbilities : [],
+        masterAbilities: Array.isArray(sheet.masterAbilities) ? sheet.masterAbilities : [],
+        notes: sheet.notes || '',
+    };
+}
+
+function companionFormToActorInput(companion, { ownerActor, existingActor } = {}) {
+    const type = companion?.type || 'young';
+    const kind = isFamiliarType(type)
+        ? 'familiar'
+        : type === 'pet'
+            ? 'pet'
+            : 'animal_companion';
+    const sheet = { ...(existingActor?.sheet || {}), ...(companion || {}) };
+    delete sheet.conditions;
+    return {
+        ...(existingActor || {}),
+        kind,
+        ownerActorId: ownerActor?.id || existingActor?.ownerActorId || null,
+        controllerActorId: ownerActor?.id || existingActor?.controllerActorId || null,
+        controllerUserEmail: existingActor?.controllerUserEmail || ownerActor?.controllerUserEmail || null,
+        commandMode: existingActor?.commandMode || (kind === 'familiar' ? 'direct_follower' : 'command_animal'),
+        ruleset: existingActor?.ruleset || ownerActor?.ruleset || 'pf2e_remaster',
+        name: companion?.name || existingActor?.name || 'Unnamed Companion',
+        level: Number.isFinite(Number(companion?.level)) ? Number(companion.level) : (ownerActor?.level || existingActor?.level || 1),
+        baseTemplateId: companion?.species || companion?.type || existingActor?.baseTemplateId || null,
+        progression: {
+            ...(existingActor?.progression || {}),
+            type,
+            specialization: companion?.specialization || null,
+        },
+        selectionSlots: {
+            ...(existingActor?.selectionSlots || {}),
+            familiarAbilities: companion?.familiarAbilities || [],
+            masterAbilities: companion?.masterAbilities || [],
+        },
+        sourceStatus: existingActor?.sourceStatus || 'manual_current',
+        sheet,
+        stats: {
+            ...(existingActor?.stats || {}),
+            hp: companion?.hp || { current: 0, max: 1 },
+            ac: companion?.ac ?? null,
+            perception: companion?.perception ?? null,
+            saves: companion?.saves || {},
+            speed: companion?.speeds || { land: 25 },
+        },
+        inventory: existingActor?.inventory || companion?.inventory || [],
+        magic: existingActor?.magic || companion?.magic || { slots: {}, list: [] },
+    };
+}
+
+export default function CompanionTab({ character, ownerActor, companionActors = [], dataActions, activeCampaignId }) {
+    const { activeCampaign } = useCampaign();
+    const companionActor = companionActors[0] || null;
+    const companion = useMemo(() => actorToCompanionForm(companionActor), [companionActor]);
+    const companionConditions = useMemo(
+        () => selectConditionViewModels(activeCampaign, companionActor?.id)
+            .map(condition => ({ ...condition, value: condition.level })),
+        [activeCampaign, companionActor?.id]
+    );
     const [showEdit, setShowEdit] = useState(!companion);
     const [editingMode, setEditingMode] = useState(false);
 
+    useEffect(() => {
+        if (companion) setShowEdit(false);
+    }, [companion?.id]);
+
     const save = (data) => {
-        updateCharacter(c => { c.companion = data; });
+        if (!activeCampaignId || !ownerActor?.id || !dataActions?.actor) {
+            alert('No active actor is available for companion updates.');
+            return;
+        }
+        const actorInput = companionFormToActorInput(data, { ownerActor, existingActor: companionActor });
+        const action = companionActor?.id
+            ? dataActions.actor.updateActor(activeCampaignId, companionActor.id, () => actorInput)
+            : dataActions.actor.createActor(activeCampaignId, actorInput);
+        Promise.resolve(action).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
         setShowEdit(false);
         setEditingMode(false);
     };
 
     const setCompanionField = (fn) => {
-        updateCharacter(c => {
-            if (!c.companion) return;
-            fn(c.companion);
+        if (!companionActor?.id || !activeCampaignId || !dataActions?.actor) return;
+        const nextCompanion = { ...(companion || {}) };
+        fn(nextCompanion);
+        const actorInput = companionFormToActorInput(nextCompanion, { ownerActor, existingActor: companionActor });
+        Promise.resolve(dataActions.actor.updateActor(activeCampaignId, companionActor.id, () => actorInput)).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
+        });
+    };
+
+    const setCompanionConditions = (conditions) => {
+        if (!companionActor?.id || !activeCampaignId || !dataActions?.effect) return;
+        const deletes = companionConditions
+            .filter(condition => condition.sourceEffectId || condition.id)
+            .map(condition => dataActions.effect.deleteEffect(activeCampaignId, condition.sourceEffectId || condition.id));
+        const creates = conditions.map(condition => dataActions.effect.createEffect(activeCampaignId, companionActor.id, {
+            label: condition.name,
+            category: 'condition',
+            value: condition.value ?? condition.level ?? 1,
+            source: { type: 'manual', name: condition.name, actorId: companionActor.id },
+        }));
+        Promise.all([...deletes, ...creates]).catch(err => {
+            console.error(err);
+            alert(err?.message || String(err));
         });
     };
 
@@ -619,8 +732,8 @@ export default function CompanionTab({ character, updateCharacter }) {
             <div className="comp-card">
                 <div className="comp-card-label">Conditions</div>
                 <ConditionAdder
-                    conditions={companion.conditions || []}
-                    onChange={conds => setCompanionField(c => { c.conditions = conds; })}
+                    conditions={companionConditions}
+                    onChange={setCompanionConditions}
                 />
             </div>
 

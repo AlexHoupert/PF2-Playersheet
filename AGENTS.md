@@ -56,7 +56,7 @@ The dev command runs `server/index.js`, not plain `vite`. Use it when testing ca
 - Run `npm test` after changes touching data migration, normalizers, persistence, or rules helpers.
 - Run the narrow build script after changing a catalog builder, for example `npm run build:shop`.
 - Run `npm run build` for changes affecting imports, generated data, routing, or deployment output when feasible.
-- When changing Firestore rules or v2 persistence, test both `?db=v2` and default legacy mode conceptually or manually.
+- When changing Firestore rules or v2 persistence on `v2-convergence`, test the V2 runtime path conceptually or manually; legacy is import/backup compatibility, not the normal app runtime.
 
 ## Documentation Maintenance
 

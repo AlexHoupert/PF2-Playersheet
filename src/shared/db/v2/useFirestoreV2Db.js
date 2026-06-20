@@ -6,7 +6,6 @@ import { deepClone } from '../../utils/deepClone';
 import { migrateDb } from '../migrateDb';
 import { composeLegacyDbFromV2Documents } from './normalizers.js';
 import { composeV2ViewModelFromDocuments } from './viewModel.js';
-import { writeLegacyDbDiffToV2 } from './firestoreMigration.js';
 import { V2_COLLECTIONS } from './schema.js';
 
 export const V2_DB_STORAGE_KEY = 'pf2e-data-v2-projection';
@@ -34,7 +33,8 @@ const TOP_LEVEL_COLLECTIONS = [
 
 export function useFirestoreV2Db(defaultDb) {
     const [localDb] = useLocalStorageJson(V2_DB_STORAGE_KEY, () => deepClone(defaultDb), { migrate: migrateDb });
-    const [dbState, setDbState] = useState(localDb);
+    const [legacyProjection, setLegacyProjectionState] = useState(localDb);
+    const [v2Store, setV2Store] = useState(() => composeV2ViewModelFromDocuments([]));
     const [status, setStatus] = useState({
         mode: 'firestore-v2',
         configured: IS_FIREBASE_CONFIGURED,
@@ -43,22 +43,21 @@ export function useFirestoreV2Db(defaultDb) {
         documentCount: 0,
     });
 
-    const dbStateRef = useRef(localDb);
     const docsRef = useRef(new Map());
     const campaignUnsubsRef = useRef(new Map());
     const hasCampaignSnapshotRef = useRef(!IS_FIREBASE_CONFIGURED);
 
     const projectDocsToDb = useCallback((docsMap) => {
         const documents = Array.from(docsMap.entries()).map(([path, data]) => ({ path, data }));
-        const v2ViewModel = composeV2ViewModelFromDocuments(documents);
+        const nextV2Store = composeV2ViewModelFromDocuments(documents);
         const projected = migrateDb(composeLegacyDbFromV2Documents(documents, defaultDb));
-        dbStateRef.current = projected;
-        setDbState(projected);
+        setV2Store(nextV2Store);
+        setLegacyProjectionState(projected);
         setStatus(prev => ({
             ...prev,
             ready: true,
             documentCount: documents.length,
-            v2ViewModel,
+            v2ViewModel: nextV2Store,
             error: null,
         }));
         try {
@@ -176,10 +175,10 @@ export function useFirestoreV2Db(defaultDb) {
         };
     }, [replaceCollectionDocs]);
 
-    const setDb = useCallback((newValueOrFn) => {
-        setDbState(currentState => {
+    const updateLegacyProjection = useCallback((newValueOrFn) => {
+        setLegacyProjectionState(currentState => {
             if (IS_FIREBASE_CONFIGURED && !hasCampaignSnapshotRef.current) {
-                console.warn('[Firestore V2] Ignoring write before initial campaign snapshot');
+                console.warn('[Firestore V2] Ignoring legacy projection update before initial campaign snapshot');
                 return currentState;
             }
 
@@ -187,29 +186,22 @@ export function useFirestoreV2Db(defaultDb) {
                 ? newValueOrFn(currentState)
                 : newValueOrFn;
             const migrated = migrateDb(nextValue);
-            const previous = dbStateRef.current;
 
-            dbStateRef.current = migrated;
             try {
                 localStorage.setItem(V2_DB_STORAGE_KEY, JSON.stringify(migrated));
             } catch (err) {
-                console.warn('[Firestore V2] Failed to cache optimistic state', err);
+                console.warn('[Firestore V2] Failed to cache compatibility projection', err);
             }
 
-            if (IS_FIREBASE_CONFIGURED) {
-                writeLegacyDbDiffToV2(firestore, previous, migrated)
-                    .then(result => {
-                        console.log('[Firestore V2] Wrote normalized diff', result);
-                    })
-                    .catch(err => {
-                        console.error('[Firestore V2] Write failed', err);
-                        setStatus(prev => ({ ...prev, error: err.message || String(err) }));
-                    });
-            }
-
+            console.warn('[Firestore V2] Compatibility projection update did not write to Firestore; use dataActions instead.');
             return migrated;
         });
     }, []);
 
-    return [dbState, setDb, status];
+    return {
+        legacyProjection,
+        v2Store,
+        status,
+        updateLegacyProjection,
+    };
 }

@@ -10,7 +10,7 @@ All screens are behind Firebase Auth via `AuthProvider`. Once signed in, `App.js
 - `?admin=true`: GM/admin app
 - `?party=true`: read-only party encounter display
 - `?camp=true`: camp overview
-- add `?db=v2` to test the normalized Firestore v2 backend
+- the `v2-convergence` branch starts the normalized Firestore V2 runtime directly
 
 `CampaignProvider` is active for all routes and marks admin, party, and camp routes as GM-capable context.
 
@@ -20,7 +20,7 @@ File: `src/player/PlayerApp.jsx`
 
 Primary responsibilities:
 
-- Select assigned character from `activeCampaign.characters`.
+- Select assigned PC actor through actor-first character selectors.
 - Let GMs cycle characters in preview mode.
 - Maintain active tab and mode.
 - Run small runtime migrations/defaults for older character shapes.

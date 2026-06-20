@@ -66,19 +66,24 @@ export function generateId(name, suffix = '') {
     return base + (suffix ? '_' + suffix : '') + '_' + Date.now();
 }
 
-/** Apply backlash effects to character.conditions (mutates immer draft). */
-export function applyBacklashEffects(characterDraft, effects, tier) {
-    if (!characterDraft.conditions) characterDraft.conditions = [];
-    (effects || []).forEach(eff => {
-        // Remove existing instance of the same backlash condition first (upsert by name+tier)
-        characterDraft.conditions = characterDraft.conditions.filter(
-            c => !(c.type === 'backlash' && c.name === eff.conditionName && c.backlashTier === tier)
-        );
-        characterDraft.conditions.push({
-            name: eff.conditionName,
-            level: eff.value ?? 1,
-            type: 'backlash',
-            backlashTier: tier
-        });
+/** Build actorEffect records for pact backlash conditions. */
+export function buildBacklashEffectInputs({ effects, tier, pactId, actorId }) {
+    return (effects || []).map(eff => {
+        const conditionName = eff.conditionName || 'drained';
+        return {
+            label: conditionName,
+            category: 'condition',
+            value: eff.value ?? 1,
+            source: {
+                type: 'backlash',
+                id: `${pactId || 'pact'}:${tier}:${conditionName}`,
+                name: `${BACKLASH_LABELS[tier] || 'Backlash'}: ${conditionName}`,
+                actorId,
+            },
+            metadata: {
+                backlashTier: tier,
+                pactId: pactId || null,
+            },
+        };
     });
 }

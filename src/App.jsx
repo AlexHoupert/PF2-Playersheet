@@ -14,11 +14,11 @@ export default function App() {
 }
 
 function FirestoreV2App() {
-    const [db, setDb, status] = useFirestoreV2Db(dbData);
-    return <AppRoutes db={db} setDb={setDb} dbMode="firestore-v2" dbStatus={status} />;
+    const { legacyProjection, v2Store, status } = useFirestoreV2Db(dbData);
+    return <AppRoutes db={legacyProjection} v2Store={v2Store} dbMode="firestore-v2" dbStatus={status} />;
 }
 
-function AppRoutes({ db, setDb, dbMode, dbStatus }) {
+function AppRoutes({ db, v2Store, dbMode, dbStatus }) {
     const queryParams = new URLSearchParams(window.location.search);
 
     if (!db) return <div style={{ color: '#fff' }}>Loading...</div>;
@@ -28,7 +28,7 @@ function AppRoutes({ db, setDb, dbMode, dbStatus }) {
     const isCamp  = queryParams.get('camp')  === 'true';
 
     return (
-        <CampaignProvider db={db} setDb={setDb} isAdmin={isAdmin || isParty || isCamp} dbMode={dbMode} dbStatus={dbStatus}>
+        <CampaignProvider db={db} v2Store={v2Store} isAdmin={isAdmin || isParty || isCamp} dbMode={dbMode} dbStatus={dbStatus}>
             <ErrorBoundary>
                 <Suspense fallback={<RouteFallback />}>
                     {isParty
@@ -36,8 +36,8 @@ function AppRoutes({ db, setDb, dbMode, dbStatus }) {
                         : isCamp
                             ? <CampScreenWrapper />
                             : isAdmin
-                                ? <AdminApp db={db} setDb={setDb} />
-                                : <PlayerApp db={db} setDb={setDb} />
+                                ? <AdminApp db={db} />
+                                : <PlayerApp db={db} />
                     }
                 </Suspense>
             </ErrorBoundary>

@@ -38,7 +38,7 @@ const COL_PRIORITY = {
     group: 3,
 };
 
-export default function BestiaryView({ db, setDb, initialFilterType, onContentLinkClick }) {
+export default function BestiaryView({ db, initialFilterType, onContentLinkClick }) {
     const { dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
 

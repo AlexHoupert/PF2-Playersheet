@@ -6,7 +6,7 @@ import { selectLoreArticle, selectLoreArticles, selectLoreArticlesByCategory } f
 
 const LORE_CATEGORIES = ['History', 'Locations', 'NPCs', 'Bestiary'];
 
-export default function LoreAdminView({ db, setDb }) {
+export default function LoreAdminView({ db }) {
     const { dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
     const [selectedCategory, setSelectedCategory] = useState('History');

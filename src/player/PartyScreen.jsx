@@ -10,6 +10,7 @@ import CreatureCard from '../shared/components/CreatureCard';
 import { CharacterCard } from '../admin/components/CharacterCard';
 import InitiativeCard from '../admin/components/InitiativeCard';
 import { selectBestiaryRevealState, selectCustomCreatureData } from '../shared/db/selectors/bestiarySelectors';
+import { selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
 import './PartyScreen.css';
 
 export default function PartyScreen({ db }) {
@@ -17,7 +18,7 @@ export default function PartyScreen({ db }) {
     const [creatureDataCache, setCreatureDataCache] = useState({});
 
     const encounters = activeCampaign?.encounters || [];
-    const characters = activeCampaign?.characters || [];
+    const characters = useMemo(() => selectActiveCharacters(activeCampaign), [activeCampaign]);
     const activeEncounter = encounters.find(e => e.isActive) || null;
 
     // Only show visible combatants, rotated so active is on top
@@ -160,7 +161,6 @@ export default function PartyScreen({ db }) {
                             <CharacterCard
                                 character={infoCharData}
                                 db={db}
-                                setDb={() => { }}
                                 updateCharacter={() => { }}
                                 setModalMode={() => { }}
                                 setModalData={() => { }}

@@ -41,6 +41,9 @@ export function usePlayerInventoryActions({
 
     const handleConsumeItem = (item) => {
         const name = item.name;
+        const lowerName = String(name || '').toLowerCase();
+        const level = parseInt(item.level) || 1;
+        const createsMutagenEffect = lowerName.includes("mutagen");
         if (isWandItem(item)) {
             updateCharacter(c => {
                 const invIdx = findInventoryItemIndex(c.inventory, item);
@@ -66,13 +69,7 @@ export function usePlayerInventoryActions({
                     invItem.qty--;
                     if (invItem.qty === 0) c.inventory.splice(invIdx, 1);
 
-                    const lowerName = name.toLowerCase();
-                    const level = parseInt(item.level) || 1;
-
                     if (lowerName.includes("mutagen")) {
-                        if (!c.conditions) c.conditions = [];
-                        c.conditions.push({ name, level, type: 'item_effect' });
-
                         if (lowerName.includes("juggernaut")) {
                             let thp = 5;
                             if (level >= 17) thp = 40;
@@ -89,6 +86,15 @@ export function usePlayerInventoryActions({
                 }
             }
         });
+
+        if (createsMutagenEffect && activeCampaign?.id && character?.id && dataActions?.effect?.createEffect) {
+            runDataAction(dataActions.effect.createEffect(activeCampaign.id, character.id, {
+                label: name,
+                category: 'item',
+                value: level,
+                source: { type: 'item', id: item.instanceId || item.id || name, name, actorId: character.id },
+            }));
+        }
     };
 
     const handleItemClick = (item) => {

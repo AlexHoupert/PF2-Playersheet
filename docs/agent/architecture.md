@@ -106,14 +106,14 @@ Catalog content links are produced by `parseFoundry` as spans with `.content-lin
 
 ## Data Flow
 
-Legacy compatibility still has a top-level `[db, setDb]` pair, but runtime UI writes should not call it directly:
+The V2 convergence runtime has a native V2 store plus a temporary legacy-shaped projection for old reads. Runtime UI writes should not call broad DB setters:
 
 1. User action calls local handler.
 2. Handler calls a scoped `dataActions` method.
-3. The selected adapter applies the shared reducer to legacy data or writes targeted Firestore v2 documents.
+3. The V2 adapter writes targeted Firestore v2 documents or transactions.
 4. `CampaignContext` re-derives active campaign and user data.
 
-The old broad write model is now confined to the legacy adapter in `createDataActions` and the v2 compatibility diff layer.
+The old broad write model is confined to the legacy adapter branch in `createDataActions` and import/migration code.
 
 ## Design Implications For Future Work
 

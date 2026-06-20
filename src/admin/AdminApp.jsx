@@ -9,6 +9,7 @@ import { fetchImpulseDetailBySourceFile } from '../shared/catalog/impulseIndex';
 import { fetchFeatDetailBySourceFile, getFeatIndexItemByName } from '../shared/catalog/featIndex';
 import { fetchActionDetailBySourceFile, getActionIndexItemByName } from '../shared/catalog/actionIndex';
 import { getConditionCatalogEntry } from '../shared/constants/conditionsCatalog';
+import { selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
 
 import AdminTabContent from './AdminTabContent';
 import { ModalManager } from '../player/ModalManager';
@@ -20,7 +21,7 @@ import Breadcrumbs from './components/Breadcrumbs';
 import '../App.css';
 import './AdminApp.css';
 
-export default function AdminApp({ db, setDb }) {
+export default function AdminApp({ db }) {
     const { activeCampaign, assignUser, revokeUser, setPartyXp, addPartyXp, dataActions } = useCampaign();
     const [activeTab, setActiveTab] = useState('sessions');
     const [playerTabMode, setPlayerTabMode] = useState('cards'); // 'cards' or 'users'
@@ -92,7 +93,7 @@ export default function AdminApp({ db, setDb }) {
 
     // --- HELPERS ---
     const updateCharacter = (index, fn) => {
-        const characterId = activeCampaign?.characters?.[index]?.id;
+        const characterId = characters[index]?.id;
         if (!activeCampaign?.id || !characterId) return;
         runDataAction(dataActions.character.updateCharacter(activeCampaign.id, characterId, fn));
     };
@@ -167,7 +168,7 @@ export default function AdminApp({ db, setDb }) {
     const [rebuildStatus, setRebuildStatus] = useState(null); // Re-add state
 
     // --- RENDER ---
-    const characters = activeCampaign?.characters || [];
+    const characters = selectActiveCharacters(activeCampaign);
 
     return (
         <div className="app-container admin-theme" onClick={handleContentLinkClick}>
@@ -198,7 +199,6 @@ export default function AdminApp({ db, setDb }) {
                             resetData={resetData}
                             revokeUser={revokeUser}
                             setActiveCharIndex={setActiveCharIndex}
-                            setDb={setDb}
                             setModalData={setModalData}
                             setModalMode={setModalMode}
                             setPartyXp={setPartyXp}

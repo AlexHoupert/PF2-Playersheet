@@ -38,14 +38,13 @@ export default function AdminTabContent({
     resetData,
     revokeUser,
     setActiveCharIndex,
-    setDb,
     setModalData,
     setModalMode,
     setPartyXp,
     setPlayerTabMode,
     updateCharacter,
 }) {
-    if (activeTab === 'sessions') return <SessionManager db={db} setDb={setDb} />;
+    if (activeTab === 'sessions') return <SessionManager db={db} />;
     if (activeTab === 'players') {
         return (
             <PlayersTab
@@ -57,7 +56,6 @@ export default function AdminTabContent({
                 playerTabMode={playerTabMode}
                 revokeUser={revokeUser}
                 setActiveCharIndex={setActiveCharIndex}
-                setDb={setDb}
                 setModalData={setModalData}
                 setModalMode={setModalMode}
                 setPartyXp={setPartyXp}
@@ -66,29 +64,29 @@ export default function AdminTabContent({
             />
         );
     }
-    if (activeTab === 'items') return withAdminSuspense(<ItemsView db={db} setDb={setDb} onInspectItem={onInspectItem} />);
-    if (activeTab === 'spells') return withAdminSuspense(<SpellsView db={db} setDb={setDb} onInspectItem={onInspectSpell} />);
-    if (activeTab === 'impulses') return withAdminSuspense(<ImpulsesView db={db} setDb={setDb} onInspectItem={onInspectImpulse} />);
-    if (activeTab === 'feats') return withAdminSuspense(<FeatsView db={db} setDb={setDb} onInspectItem={onInspectFeat} />);
-    if (activeTab === 'actions') return withAdminSuspense(<ActionsView db={db} setDb={setDb} onInspectItem={onInspectAction} />);
-    if (activeTab === 'abilities') return withAdminSuspense(<AbilitiesView db={db} setDb={setDb} />);
-    if (activeTab === 'quests') return withAdminSuspense(<QuestsView db={db} setDb={setDb} />);
-    if (activeTab === 'lore') return withAdminSuspense(<LoreAdminView db={db} setDb={setDb} />);
+    if (activeTab === 'items') return withAdminSuspense(<ItemsView db={db} onInspectItem={onInspectItem} />);
+    if (activeTab === 'spells') return withAdminSuspense(<SpellsView db={db} onInspectItem={onInspectSpell} />);
+    if (activeTab === 'impulses') return withAdminSuspense(<ImpulsesView db={db} onInspectItem={onInspectImpulse} />);
+    if (activeTab === 'feats') return withAdminSuspense(<FeatsView db={db} onInspectItem={onInspectFeat} />);
+    if (activeTab === 'actions') return withAdminSuspense(<ActionsView db={db} onInspectItem={onInspectAction} />);
+    if (activeTab === 'abilities') return withAdminSuspense(<AbilitiesView db={db} />);
+    if (activeTab === 'quests') return withAdminSuspense(<QuestsView db={db} />);
+    if (activeTab === 'lore') return withAdminSuspense(<LoreAdminView db={db} />);
     if (activeTab === 'maps') return withAdminSuspense(<MapAdminView />);
     if (activeTab === 'progress') return withAdminSuspense(<ProgressAdminView />);
     if (activeTab === 'camping') return withAdminSuspense(<CampingAdminView />);
-    if (activeTab === 'deviant_abilities') return withAdminSuspense(<DeviantAbilitiesAdminView db={db} setDb={setDb} />);
-    if (activeTab === 'pacts') return withAdminSuspense(<PactAdminView db={db} setDb={setDb} />);
+    if (activeTab === 'deviant_abilities') return withAdminSuspense(<DeviantAbilitiesAdminView db={db} />);
+    if (activeTab === 'pacts') return withAdminSuspense(<PactAdminView db={db} />);
     if (activeTab === 'bestiary' || activeTab === 'bestiary_overview') {
-        return withAdminSuspense(<BestiaryView db={db} setDb={setDb} onContentLinkClick={handleContentLinkClick} />);
+        return withAdminSuspense(<BestiaryView db={db} onContentLinkClick={handleContentLinkClick} />);
     }
     if (activeTab === 'bestiary_creatures') {
-        return withAdminSuspense(<BestiaryView db={db} setDb={setDb} initialFilterType={['npc']} onContentLinkClick={handleContentLinkClick} />);
+        return withAdminSuspense(<BestiaryView db={db} initialFilterType={['npc']} onContentLinkClick={handleContentLinkClick} />);
     }
     if (activeTab === 'bestiary_hazards') {
-        return withAdminSuspense(<BestiaryView db={db} setDb={setDb} initialFilterType={['hazard']} onContentLinkClick={handleContentLinkClick} />);
+        return withAdminSuspense(<BestiaryView db={db} initialFilterType={['hazard']} onContentLinkClick={handleContentLinkClick} />);
     }
-    if (activeTab === 'encounters') return withAdminSuspense(<EncounterView db={db} setDb={setDb} />);
+    if (activeTab === 'encounters') return withAdminSuspense(<EncounterView db={db} />);
     if (activeTab === 'system') {
         return (
             <div style={{ padding: 20, height: '100%', overflowY: 'auto' }}>
@@ -118,7 +116,6 @@ function PlayersTab({
     playerTabMode,
     revokeUser,
     setActiveCharIndex,
-    setDb,
     setModalData,
     setModalMode,
     setPartyXp,
@@ -171,7 +168,6 @@ function PlayersTab({
                             key={char.id || i}
                             character={char}
                             db={db}
-                            setDb={setDb}
                             updateCharacter={(fn) => updateCharacter(i, fn)}
                             setModalMode={setModalMode}
                             setModalData={setModalData}

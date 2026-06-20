@@ -4,22 +4,25 @@ import { InventoryView } from '../../player/views/InventoryView';
 import { MagicView } from '../../player/views/MagicView';
 import { FeatsView } from '../../player/views/FeatsView';
 import { ImpulsesView } from '../../player/views/ImpulsesView';
-import { ELEMENTS, BACKLASH_TIERS, BACKLASH_LABELS, BACKLASH_COLORS, applyBacklashEffects } from '../../pacts/pactsData';
+import { ELEMENTS, BACKLASH_TIERS, BACKLASH_LABELS, BACKLASH_COLORS, buildBacklashEffectInputs } from '../../pacts/pactsData';
+import { useCampaign } from '../../shared/context/CampaignContext';
 import { selectDeviantAbility } from '../../shared/db/selectors/abilitySelectors';
+import { selectConditionViewModels } from '../../shared/db/selectors/effectSelectors';
 import { selectPact, selectPactList } from '../../shared/db/selectors/pactSelectors';
 
 export function CharacterCard({
     character,
     db,
-    setDb,
     updateCharacter,
     setModalMode,
     setModalData,
     onOpenModalLong,
     onOpenModal
 }) {
+    const { activeCampaign, activeCampaignId, dataActions } = useCampaign();
     const [activeTab, setActiveTab] = useState('stats');
     const [backlashOpen, setBacklashOpen] = useState(false);
+    const conditions = useMemo(() => selectConditionViewModels(activeCampaign, character?.id), [activeCampaign, character?.id]);
 
     // Resolve the character's assigned pact from db
     const assignedPact = useMemo(() => {
@@ -76,8 +79,29 @@ export function CharacterCard({
             alert(`${BACKLASH_LABELS[tier]}: No condition effects defined for this tier.`);
             return;
         }
-        updateCharacter(c => {
-            applyBacklashEffects(c, tierData.effects, tier);
+        if (!activeCampaignId || !character?.id || !dataActions?.effect) {
+            alert('No active actor is available for backlash effects.');
+            return;
+        }
+        const existingEffects = activeCampaign?.actorEffects || [];
+        buildBacklashEffectInputs({
+            effects: tierData.effects,
+            tier,
+            pactId: assignedPact.id,
+            actorId: character.id,
+        }).forEach(effectInput => {
+            const existing = existingEffects.find(effect =>
+                effect.targetActorId === character.id &&
+                effect.source?.type === 'backlash' &&
+                effect.source?.id === effectInput.source.id
+            );
+            const action = existing
+                ? dataActions.effect.updateEffect(activeCampaignId, existing.id, effect => ({ ...effect, ...effectInput }))
+                : dataActions.effect.createEffect(activeCampaignId, character.id, effectInput);
+            Promise.resolve(action).catch(err => {
+                console.error(err);
+                alert(err?.message || String(err));
+            });
         });
         setBacklashOpen(false);
     };
@@ -122,6 +146,7 @@ export function CharacterCard({
                         )}
                         <StatsView
                             character={character}
+                            conditions={conditions}
                             updateCharacter={updateCharacter}
                             onOpenModal={handleOpenModal}
                             onLongPress={onOpenModalLong}
@@ -133,7 +158,6 @@ export function CharacterCard({
                         character={character}
                         db={db}
                         onUpdateCharacter={updateCharacter}
-                        onSetDb={setDb}
                         onOpenModal={handleOpenModal}
                         onToggleEquip={handleToggleEquip}
                         onInspectItem={(item) => handleOpenModal('item', item)}

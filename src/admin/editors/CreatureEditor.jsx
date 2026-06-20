@@ -203,6 +203,9 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
                 const safeName = name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
                 filePath = `ressources/bestiary/custom/${safeName}.json`;
             }
+            if (import.meta.env.PROD) {
+                throw new Error('Static creature files can only be edited in the local dev server. Use DB-backed custom creatures in deployed builds.');
+            }
 
             // Save File
             const endpoint = isNew && !sourceFile ? '/api/files/create' : '/api/files/save';

@@ -2,7 +2,7 @@ import React from 'react';
 import { getConditionImgSrc } from '../constants/conditionsCatalog';
 import { getConditionIcon, NEG_CONDS, POS_CONDS } from '../constants/conditions';
 
-export function ConditionList({ conditions, onClick, onAdd }) {
+export function ConditionList({ conditions = [], onClick, onAdd }) {
     // Filter active conditions
     const active = conditions.filter(c => c.level > 0);
 

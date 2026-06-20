@@ -8,13 +8,14 @@ import { useCampaign } from '../shared/context/CampaignContext';
 import { deepClone } from '../shared/utils/deepClone';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
 import { selectBestiaryRevealState, selectCustomCreatureData, selectCustomCreatureList } from '../shared/db/selectors/bestiarySelectors';
+import { selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
 import BottomSheet from '../shared/components/BottomSheet';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import InitiativeCard from './components/InitiativeCard';
 import { EncounterInfoPanel, EncounterSidebar } from './encounter/EncounterPanels';
 import './EncounterView.css';
 
-export default function EncounterView({ db, setDb }) {
+export default function EncounterView({ db }) {
     const { activeCampaign, activeCampaignId, dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
 
@@ -27,7 +28,7 @@ export default function EncounterView({ db, setDb }) {
 
     const encounters = activeCampaign?.encounters || [];
     const archivedEncounters = activeCampaign?.archivedEncounters || [];
-    const characters = activeCampaign?.characters || [];
+    const characters = useMemo(() => selectActiveCharacters(activeCampaign), [activeCampaign]);
     const activeEncounter = encounters.find(e => e.isActive) || null;
 
     // Selected encounter for sidebar editing (doesn't have to be active)
@@ -269,7 +270,6 @@ export default function EncounterView({ db, setDb }) {
             infoCreatureData={infoCreatureData}
             selectedCombatant={selectedCombatant}
             getRevealState={getRevealState}
-            setDb={setDb}
             onRevealChange={(field, mode) => {
                 runEncounterAction(dataActions.bestiary.updateRevealState(selectedCombatant.creatureId, field, mode));
             }}

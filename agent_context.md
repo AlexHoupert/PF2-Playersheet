@@ -68,13 +68,14 @@ Firestore V2 runtime:
 - Subscribes to normalized collections from `src/shared/db/v2/schema.js`.
 - Uses `composeLegacyDbFromV2Documents` to create the legacy projection.
 - Uses `composeV2ViewModelFromDocuments` to expose a native grouped V2 view model through `dbStatus.v2ViewModel`.
-- Non-migrated runtime writes still diff whole legacy DBs via `writeLegacyDbDiffToV2`.
+- Returns `{ legacyProjection, v2Store, status }`; the projection is a temporary compatibility read model, not a write contract.
+- Broad legacy DB diffs are no longer part of the V2 runtime write path. `writeLegacyDbDiffToV2` is isolated to migration/import code.
 - Campaign/Session, Character, Actor, Actor Effect, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, catalog overrides, and Player runtime fallbacks now go through `CampaignContext.dataActions` and targeted V2 repositories/transactions where migrated.
 - `CampaignContext` and global-facing views use pure selectors under `src/shared/db/selectors/` for campaign/character/actor/effect, shop, pact, ability, lore, and bestiary reads.
 
 Firestore V2 collections include `campaigns`, campaign subcollections `characters`, `actors`, `actorEffects`, `effectTemplates`, `quests`, `lootBags`, `encounters`, `maps`, `members`, plus top-level `global`, `customItems`, `customCreatures`, `customActions`, `catalogOverrides`, `loreArticles`, and `migrationBackups`.
 
-V2 is not the default. Before switching, use `docs/agent/v2-default-readiness.md` for the required manual smoke checklist and Firestore rules audit.
+V2 is the convergence branch runtime, but the branch is not yet production-cutover ready. Before deploying it as the play branch, use `docs/agent/v2-default-readiness.md` for the required manual smoke checklist and Firestore rules audit.
 
 ## Domain Actions Snapshot
 
@@ -104,10 +105,11 @@ Migrated paths:
 - User assign/revoke and Admin Player tab user revoke.
 - Admin Player tab character updates and party XP set/add.
 - PC character lifecycle mirrors into campaign-scoped `actors(kind="pc")`; `CampaignContext` exposes `actors`, `archivedActors`, and `myActor` in addition to transitional character fields.
-- `ConditionsModal` writes V2 actor effect documents when actor context is available, with legacy character-condition fallback only for compatibility.
+- `ConditionsModal`, Player Stats, Admin CharacterCard backlash, and item mutagen effects use campaign-scoped `actorEffects`; runtime UI no longer writes `character.conditions`.
+- `CompanionTab` reads and writes owned companion Actors (`animal_companion`, `familiar`, `pet`) instead of `character.companion`; companion conditions use `actorEffects`.
 - Deployed spell editing writes Firestore `catalogOverrides`; static resource file APIs remain local-dev helpers.
 
-- Player local `updateCharacter` wrapper, covering most inventory/equipment/rune/weapon/formula handlers.
+- Player local `updateCharacter` wrapper remains for not-yet-migrated PC sheet edits, but V2 basis actions now write PC Actor documents directly.
 - Player basis edits for gold, attributes, current/temp/max HP, speed, Class DC, and Formula Book daily batch max use targeted `dataActions.character` methods.
 - Player item transfer.
 - Player loot item claim, gold claim, and gold split.
@@ -131,11 +133,11 @@ Migrated paths:
 - Player skill-name runtime repair uses `dataActions.character.updateCharacter`.
 - Pacts, Abilities, Lore, Bestiary, Shop, Items, Encounter, Party, and Player inventory reads use selector helpers instead of component-local root-field fallbacks.
 
-Soft delete uses `deletedAt`/`deletedBy`; restore removes those fields and sets `restoredAt`/`restoredBy`. `CampaignContext.campaigns`, `activeCampaign.characters`, `activeCampaign.quests`, `activeCampaign.encounters`, and `activeCampaign.maps` expose active records; `archivedCampaigns`, `activeCampaign.archivedCharacters`, `activeCampaign.archivedQuests`, `activeCampaign.archivedEncounters`, and `activeCampaign.archivedMaps` expose archived records.
+Soft delete uses `deletedAt`/`deletedBy`; restore removes those fields and sets `restoredAt`/`restoredBy`. `CampaignContext.campaigns`, actor-first character selectors, `activeCampaign.quests`, `activeCampaign.encounters`, and `activeCampaign.maps` expose active records; `archivedCampaigns`, actor-first archived character selectors, `activeCampaign.archivedQuests`, `activeCampaign.archivedEncounters`, and `activeCampaign.archivedMaps` expose archived records.
 
 Quest rewards are idempotent via applied markers and are not automatically rolled back if an objective is later marked incomplete. Quest reward notifications are campaign-scoped via `campaign.notificationQueue`; root `db.notificationQueue` remains a legacy fallback.
 
-Broad UI and context writes have been removed from `AdminApp` and `CampaignContext`. The only permitted broad write path is the legacy adapter implementation inside `createDataActions`; all runtime UI writes should go through `dataActions`. Remaining compatibility debt is tracked in `docs/agent/migration-backlog.md`, `docs/agent/domain-actions.md`, and `docs/agent/known-risks.md`. `scripts/check_broad_writes.js` fails new broad writes outside that adapter.
+Broad UI and context writes have been removed from Player/Admin route trees and `CampaignContext`. The only permitted broad write path is the legacy adapter implementation inside `createDataActions`; all runtime UI writes should go through `dataActions`. `scripts/check_broad_writes.js` also guards against reintroducing runtime `character.conditions`, `character.companion`, root `db.characters`, and unguarded production `/api/files/save` dependencies.
 
 ## Data Model Snapshot
 
@@ -217,7 +219,7 @@ Bundle model:
 For new features, decide first:
 
 - Is this campaign-scoped, global, or catalog/resource data?
-- Does it need to work in both legacy and `?db=v2` modes?
+- Is this runtime work, or legacy import/backup compatibility?
 - Is the best source of truth `src/data/new_db.json`, Firestore v2 documents, generated catalog data, or raw `ressources/` files?
 - Which UI shells need it: player, admin, party screen, camp screen, or all?
 

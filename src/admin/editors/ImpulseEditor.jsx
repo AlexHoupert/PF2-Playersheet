@@ -110,6 +110,9 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel }) {
                 const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
                 filePath = `ressources/spells/impulses/${safeName}.json`;
             }
+            if (import.meta.env.PROD) {
+                throw new Error('Static impulse files can only be edited in the local dev server. Deployed impulse overrides are not enabled yet.');
+            }
 
             // Save File
             const endpoint = isNew ? '/api/files/create' : '/api/files/save';

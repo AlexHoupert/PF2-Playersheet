@@ -199,7 +199,7 @@ function AbilityPreviewContent({ selected, setAbilityForm, copyRef, showToast, s
 }
 
 // ── Main View ─────────────────────────────────────────────────────────────────
-export default function AbilitiesView({ db, setDb }) {
+export default function AbilitiesView({ db }) {
     const { dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
 

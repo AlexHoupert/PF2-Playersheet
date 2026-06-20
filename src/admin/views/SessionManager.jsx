@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../../shared/context/CampaignContext';
+import { selectActiveCharacters, selectArchivedCharacters } from '../../shared/db/selectors/characterSelectors';
 import { useWindowSize } from '../../shared/hooks/useWindowSize';
 
-export default function SessionManager({ db, setDb }) {
+export default function SessionManager({ db }) {
     const { isMobile } = useWindowSize();
     const {
         campaigns,
@@ -28,6 +29,8 @@ export default function SessionManager({ db, setDb }) {
     const [newCharName, setNewCharName] = useState('');
     const [newCharLvl, setNewCharLvl] = useState(1);
     const [isSpellcaster, setIsSpellcaster] = useState(false);
+    const activeCharacters = selectActiveCharacters(activeCampaign);
+    const archivedCharacters = selectArchivedCharacters(activeCampaign);
 
     // Skeleton Character
     const handleCreateCharacter = () => {
@@ -133,7 +136,7 @@ export default function SessionManager({ db, setDb }) {
                             )}
                             <h3 style={{ margin: '0 0 5px 0', color: activeCampaignId === camp.id ? '#c5a059' : '#e0e0e0' }}>{camp.name}</h3>
                             <div style={{ fontSize: '0.8em', color: '#888' }}>
-                                {camp.characters?.length || 0} characters • Created {new Date(camp.createdAt).toLocaleDateString()}
+                                {selectActiveCharacters(camp).length || 0} characters • Created {new Date(camp.createdAt).toLocaleDateString()}
                             </div>
                             {camp.id !== activeCampaignId && (
                                 <button
@@ -242,7 +245,7 @@ export default function SessionManager({ db, setDb }) {
 
                         {/* ACTIVE CHARACTERS LIST */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 20 }}>
-                            {activeCampaign.characters?.map(char => (
+                            {activeCharacters.map(char => (
                                 <div key={char.id} style={{ display: 'flex', justifyContent: 'space-between', background: '#333', padding: '10px', borderRadius: 4, alignItems: 'center' }}>
                                     <span>
                                         <strong>{char.name}</strong> <span style={{ opacity: 0.7, fontSize: '0.9em' }}>Lvl {char.level}</span>
@@ -250,14 +253,14 @@ export default function SessionManager({ db, setDb }) {
                                     <button onClick={() => handleDeleteChar(char.id)} style={{ color: '#d32f2f', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1em' }} title="Delete Character">🗑️</button>
                                 </div>
                             ))}
-                            {(!activeCampaign.characters?.length) && <div style={{ color: '#888', fontStyle: 'italic', textAlign: 'center' }}>No characters in this campaign yet.</div>}
+                            {(!activeCharacters.length) && <div style={{ color: '#888', fontStyle: 'italic', textAlign: 'center' }}>No characters in this campaign yet.</div>}
                         </div>
 
-                        {activeCampaign.archivedCharacters?.length > 0 && (
+                        {archivedCharacters.length > 0 && (
                             <div style={{ borderTop: '1px solid #444', paddingTop: 15, marginBottom: 20 }}>
                                 <h4 style={{ color: '#d7b38a', marginTop: 0 }}>Archived Characters</h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                    {activeCampaign.archivedCharacters.map(char => (
+                                    {archivedCharacters.map(char => (
                                         <div key={char.id} style={{ display: 'flex', justifyContent: 'space-between', background: '#2b2424', padding: '10px', borderRadius: 4, alignItems: 'center' }}>
                                             <span>
                                                 <strong>{char.name}</strong> <span style={{ opacity: 0.7, fontSize: '0.9em' }}>Lvl {char.level}</span>
@@ -316,7 +319,7 @@ export default function SessionManager({ db, setDb }) {
                                     style={{ flex: '1 1 140px', padding: 8, background: '#111', border: '1px solid #444', color: '#fff', minHeight: 40 }}
                                 >
                                     <option value="">-- Character --</option>
-                                    {activeCampaign.characters?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    {activeCharacters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </select>
                                 <button
                                     onClick={() => {
@@ -336,7 +339,8 @@ export default function SessionManager({ db, setDb }) {
                         <div style={{ fontSize: '0.9em', color: '#aaa' }}>
                             {Object.entries(db.users || {}).map(([email, info]) => {
                                 const campName = campaigns[info.campaignId]?.name;
-                                const charName = campaigns[info.campaignId]?.characters?.find(c => c.id === info.characterId)?.name;
+                                const assignedId = info.assignedActorId || info.actorId || info.characterId;
+                                const charName = selectActiveCharacters(campaigns[info.campaignId]).find(c => c.id === assignedId)?.name;
                                 return (
                                     <div key={email} style={{ borderBottom: '1px solid #333', padding: '5px 0' }}>
                                         <div style={{ color: '#fff' }}>{email} <span style={{ background: '#444', padding: '2px 4px', borderRadius: 3, fontSize: '0.7em' }}>{info.role || 'player'}</span></div>

@@ -39,8 +39,28 @@ const broadWritePatterns = [
 
 const legacyDiffAllowedFiles = new Set([
   "src/shared/db/v2/firestoreMigration.js",
-  "src/shared/db/v2/useFirestoreV2Db.js",
 ]);
+
+const forbiddenRuntimeContracts = [
+  {
+    name: "character.conditions",
+    pattern: "character.conditions",
+    allowedFiles: new Set(["src/shared/db/v2/normalizers.js"]),
+  },
+  {
+    name: "character.companion",
+    pattern: "character.companion",
+    allowedFiles: new Set(["src/shared/db/v2/normalizers.js"]),
+  },
+  {
+    name: "db.characters",
+    pattern: "db.characters",
+    allowedFiles: new Set([
+      "src/shared/db/v2/normalizers.js",
+      "src/admin/views/SessionManager.jsx",
+    ]),
+  },
+];
 
 const failures = [];
 const seenBroadWriteFiles = new Set();
@@ -62,7 +82,17 @@ for (const file of listSourceFiles(srcRoot)) {
   }
 
   if (text.includes("writeLegacyDbDiffToV2") && !legacyDiffAllowedFiles.has(rel)) {
-    failures.push(`${rel}: writeLegacyDbDiffToV2 is only allowed in the V2 compatibility layer`);
+    failures.push(`${rel}: writeLegacyDbDiffToV2 is only allowed in legacy import/migration code`);
+  }
+
+  for (const contract of forbiddenRuntimeContracts) {
+    if (text.includes(contract.pattern) && !contract.allowedFiles.has(rel)) {
+      failures.push(`${rel}: ${contract.name} is isolated to migration/import/projection code`);
+    }
+  }
+
+  if (text.includes("/api/files/save") && !text.includes("import.meta.env.PROD")) {
+    failures.push(`${rel}: /api/files/save must be guarded by a production-safe DB override path`);
   }
 }
 

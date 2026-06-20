@@ -164,6 +164,31 @@ test('composes v2 documents back into the legacy projection used by existing scr
     });
 });
 
+test('legacy projection prefers pc actor sheet over stale character documents', () => {
+    const db = composeLegacyDbFromV2Documents([
+        { path: 'campaigns/camp1', data: { id: 'camp1', name: 'Campaign One' } },
+        { path: 'campaigns/camp1/characters/char1', data: { id: 'char1', name: 'Stale Hero', gold: 0 } },
+        {
+            path: 'campaigns/camp1/actors/char1',
+            data: {
+                id: 'char1',
+                kind: 'pc',
+                name: 'Actor Hero',
+                level: 3,
+                sheet: { id: 'char1', name: 'Actor Hero', gold: 9 },
+                stats: { hp: { current: 7, max: 20, temp: 0 } },
+                inventory: [],
+                magic: { slots: {}, list: [] },
+            },
+        },
+    ]);
+
+    assert.equal(db.campaigns.camp1.characters.length, 1);
+    assert.equal(db.campaigns.camp1.characters[0].name, 'Actor Hero');
+    assert.equal(db.campaigns.camp1.characters[0].gold, 9);
+    assert.equal(db.campaigns.camp1.characters[0].stats.hp.current, 7);
+});
+
 test('composes normalized documents into a v2-native view model', () => {
     const result = normalizeMasterToV2({
         campaigns: {

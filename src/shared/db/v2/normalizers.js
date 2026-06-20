@@ -292,9 +292,9 @@ export function composeLegacyDbFromV2Documents(documents, baseDb = {}) {
 
     for (const campaign of Object.values(db.campaigns)) {
         const effectsByActorId = groupByTargetActorId(campaign.actorEffects || []);
-        if ((!campaign.characters || campaign.characters.length === 0) && Array.isArray(campaign.actors)) {
-            campaign.characters = campaign.actors
-                .filter(actor => actor.kind === 'pc')
+        const pcActors = Array.isArray(campaign.actors) ? campaign.actors.filter(actor => actor.kind === 'pc') : [];
+        if (pcActors.length > 0) {
+            campaign.characters = pcActors
                 .map(actor => actorToLegacyCharacter(actor, effectsByActorId[actor.id] || []));
         } else {
             campaign.characters = (campaign.characters || []).map(character => {

@@ -11,7 +11,7 @@ const EMPTY_ABILITY = {
     awakening2: { name: '', levelNote: '', description: '' },
 };
 
-export default function DeviantAbilitiesAdminView({ db, setDb }) {
+export default function DeviantAbilitiesAdminView({ db }) {
     const { dataActions } = useCampaign();
     const abilities = useMemo(() => selectDeviantAbilityList(db), [db]);
 

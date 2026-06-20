@@ -206,6 +206,45 @@ export function createDataActions({
     return updateCharacterLegacy(campaignId, characterId, updater);
   };
 
+  const updatePcActorAsCharacter = (campaignId, actorId, updater) => {
+    if (useFirestoreV2) {
+      return repos.actorRepo.updateActor(firestore, campaignId, actorId, (actorDoc) => {
+        const currentCharacter = {
+          ...(actorDoc.sheet || {}),
+          id: actorDoc.sheet?.id || actorDoc.id || actorId,
+          name: actorDoc.sheet?.name || actorDoc.name,
+          level: actorDoc.sheet?.level ?? actorDoc.level,
+          stats: actorDoc.stats || actorDoc.sheet?.stats,
+          inventory: actorDoc.inventory || actorDoc.sheet?.inventory,
+          magic: actorDoc.magic || actorDoc.sheet?.magic,
+        };
+        const nextCharacter = applyCharacterUpdate(currentCharacter, updater, { createId });
+        return applyActorUpdate({
+          ...actorDoc,
+          id: actorDoc.id || actorId,
+          kind: actorDoc.kind || "pc",
+          name: nextCharacter.name || actorDoc.name,
+          level: nextCharacter.level ?? actorDoc.level,
+          stats: nextCharacter.stats,
+          inventory: nextCharacter.inventory,
+          magic: nextCharacter.magic,
+          sheet: {
+            ...(actorDoc.sheet || {}),
+            ...nextCharacter,
+            id: nextCharacter.id || actorDoc.sheet?.id || actorDoc.id || actorId,
+            stats: nextCharacter.stats,
+            inventory: nextCharacter.inventory,
+            magic: nextCharacter.magic,
+          },
+        }, {
+          createId: () => createDomainId("actor"),
+          campaignId,
+        });
+      });
+    }
+    return updateCharacterLegacy(campaignId, actorId, updater);
+  };
+
   const updateActorLegacy = (campaignId, actorId, updater) =>
     updateCampaignLegacy(campaignId, (campaign) => {
       const next = cloneValue(campaign);
@@ -1444,49 +1483,49 @@ export function createDataActions({
       restoreCharacter,
       importLegacyCharacter,
       setGold(campaignId, characterId, amount) {
-        return updateCharacter(campaignId, characterId, (character) => setCharacterGold(character, amount));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterGold(character, amount));
       },
       adjustGold(campaignId, characterId, amount) {
-        return updateCharacter(campaignId, characterId, (character) => adjustCharacterGold(character, amount));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterGold(character, amount));
       },
       setAttribute(campaignId, characterId, key, value) {
-        return updateCharacter(campaignId, characterId, (character) => setCharacterAttribute(character, key, value));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterAttribute(character, key, value));
       },
       adjustAttribute(campaignId, characterId, key, amount) {
-        return updateCharacter(campaignId, characterId, (character) => adjustCharacterAttribute(character, key, amount));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterAttribute(character, key, amount));
       },
       setHp(campaignId, characterId, value) {
-        return updateCharacter(campaignId, characterId, (character) => setCharacterHp(character, value));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterHp(character, value));
       },
       adjustHp(campaignId, characterId, amount) {
-        return updateCharacter(campaignId, characterId, (character) => adjustCharacterHp(character, amount));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterHp(character, amount));
       },
       setTempHp(campaignId, characterId, value) {
-        return updateCharacter(campaignId, characterId, (character) => setCharacterTempHp(character, value));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterTempHp(character, value));
       },
       adjustTempHp(campaignId, characterId, amount) {
-        return updateCharacter(campaignId, characterId, (character) => adjustCharacterTempHp(character, amount));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterTempHp(character, amount));
       },
       setMaxHp(campaignId, characterId, value) {
-        return updateCharacter(campaignId, characterId, (character) => setCharacterMaxHp(character, value));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterMaxHp(character, value));
       },
       adjustMaxHp(campaignId, characterId, amount) {
-        return updateCharacter(campaignId, characterId, (character) => adjustCharacterMaxHp(character, amount));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterMaxHp(character, amount));
       },
       setSpeed(campaignId, characterId, key, value) {
-        return updateCharacter(campaignId, characterId, (character) => setCharacterSpeed(character, key, value));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterSpeed(character, key, value));
       },
       adjustSpeed(campaignId, characterId, key, amount) {
-        return updateCharacter(campaignId, characterId, (character) => adjustCharacterSpeed(character, key, amount));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterSpeed(character, key, amount));
       },
       setClassDc(campaignId, characterId, value) {
-        return updateCharacter(campaignId, characterId, (character) => setCharacterClassDc(character, value));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterClassDc(character, value));
       },
       adjustClassDc(campaignId, characterId, amount) {
-        return updateCharacter(campaignId, characterId, (character) => adjustCharacterClassDc(character, amount));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterClassDc(character, amount));
       },
       setDailyCraftingMax(campaignId, characterId, value) {
-        return updateCharacter(campaignId, characterId, (character) => setCharacterDailyCraftingMax(character, value));
+        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterDailyCraftingMax(character, value));
       },
     },
     inventory: {

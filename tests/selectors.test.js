@@ -10,8 +10,8 @@ import {
     selectTargetCampaignId,
 } from '../src/shared/db/selectors/campaignSelectors.js';
 import { selectActorBuckets, selectMyActor, selectOwnedActors, selectPcActors } from '../src/shared/db/selectors/actorSelectors.js';
-import { selectMyCharacter } from '../src/shared/db/selectors/characterSelectors.js';
-import { selectActorEffects, selectConditionEffects, selectVisibleEffectTemplates } from '../src/shared/db/selectors/effectSelectors.js';
+import { selectActiveCharacters, selectMyCharacter } from '../src/shared/db/selectors/characterSelectors.js';
+import { selectActorEffects, selectConditionEffects, selectConditionViewModels, selectVisibleEffectTemplates } from '../src/shared/db/selectors/effectSelectors.js';
 import {
     selectCustomAbility,
     selectCustomAbilityList,
@@ -78,7 +78,25 @@ test('character and root fallback selectors keep legacy reads centralized', () =
     };
 
     assert.equal(selectMyCharacter(db.campaigns.camp1, { characterId: 'char1' }).name, 'Hero');
+    assert.equal(selectMyCharacter(db.campaigns.camp1, { assignedActorId: 'char1' }).name, 'Hero');
     assert.equal(selectRootFallbackList(db, 'quests', 'camp1')[0].id, 'legacyQuest');
+});
+
+test('character selectors prefer pc actors over stale character projection', () => {
+    const campaign = {
+        id: 'camp1',
+        characters: [{ id: 'pc1', name: 'Stale Hero', level: 1 }],
+        actors: [{
+            id: 'pc1',
+            kind: 'pc',
+            name: 'Actor Hero',
+            level: 5,
+            sheet: { id: 'pc1', name: 'Actor Sheet Hero', level: 6 },
+        }],
+    };
+
+    assert.deepEqual(selectActiveCharacters(campaign).map(character => character.name), ['Actor Sheet Hero']);
+    assert.equal(selectMyCharacter(campaign, { assignedActorId: 'pc1' }).level, 6);
 });
 
 test('quest and lootbag selectors prefer campaign data and fall back to legacy roots', () => {
@@ -198,5 +216,13 @@ test('actor and effect selectors expose v2 actor viewmodels', () => {
     assert.deepEqual(selectPcActors(campaign).map(actor => actor.id), ['pc1']);
     assert.deepEqual(selectActorEffects(campaign, 'pc1').map(effect => effect.id), ['frightened', 'item']);
     assert.deepEqual(selectConditionEffects(campaign, 'pc1').map(effect => effect.id), ['frightened']);
+    assert.deepEqual(selectConditionViewModels(campaign, 'pc1'), [{
+        id: 'frightened',
+        sourceEffectId: 'frightened',
+        name: 'Frightened',
+        level: 1,
+        hidden: undefined,
+        disabled: undefined,
+    }]);
     assert.deepEqual(selectVisibleEffectTemplates(campaign).map(template => template.id), ['slippery']);
 });

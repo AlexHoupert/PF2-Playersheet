@@ -59,6 +59,7 @@ export function ModalManager({
     modalData,
     setModalData,
     character,
+    conditions,
     updateCharacter,
     characterActions,
     onClose,
@@ -178,6 +179,7 @@ export function ModalManager({
         return (
             <ConditionsModal
                 character={character}
+                conditions={conditions}
                 updateCharacter={updateCharacter}
                 onClose={onClose}
                 initialCondition={initial}

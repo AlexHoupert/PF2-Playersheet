@@ -36,7 +36,7 @@ Status meanings:
 | Character archive/restore | Ready by tests/code | Soft delete only; member assignments are cleared on archive and not restored automatically; PC actor docs mirror archive/restore. |
 | User assign/revoke | Ready by tests/code | Email keys are normalized; V2 uses campaign member docs with `assignedActorId`. |
 | Party XP set/add | Ready by tests/code | V2 adapter updates campaign and known character documents transactionally. |
-| Reload persistence in `?db=v2` | Needs manual smoke | Covered structurally by subscriptions/projection; still needs a browser check against real Firestore. |
+| Reload persistence on `v2-convergence` | Needs manual smoke | Covered structurally by subscriptions/projection; still needs a browser check against real Firestore. |
 
 ## Player Flows
 

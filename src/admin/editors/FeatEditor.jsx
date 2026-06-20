@@ -94,6 +94,9 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
                 const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
                 filePath = `ressources/feats/${safeName}.json`;
             }
+            if (import.meta.env.PROD) {
+                throw new Error('Static feat files can only be edited in the local dev server. Deployed feat overrides are not enabled yet.');
+            }
 
             // Save File
             const endpoint = isNew ? '/api/files/create' : '/api/files/save';

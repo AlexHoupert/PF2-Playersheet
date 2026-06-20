@@ -14,9 +14,10 @@ export const STAT_MAP = {
 export const PROF_NAMES = { 0: "Untrained", 2: "Trained", 4: "Expert", 6: "Master", 8: "Legendary" };
 
 export function getCondLevel(condName, character) {
-    if (!character || !character.conditions) return 0;
+    const conditions = getConditionList(character);
+    if (conditions.length === 0) return 0;
     const target = String(condName).toLowerCase();
-    const found = character.conditions.find(cond => {
+    const found = conditions.find(cond => {
         if (typeof cond === 'string') return cond.toLowerCase() === target;
         return String(cond?.name || '').toLowerCase() === target;
     });
@@ -30,7 +31,7 @@ export function getCondLevel(condName, character) {
 }
 
 export function getConditionEffects(character, statName, attributeName) {
-    const conds = character.conditions || [];
+    const conds = getConditionList(character);
     const modifiers = [];
 
     // 1. Collect all modifiers (Standard + Mutagens)
@@ -164,6 +165,11 @@ export function getConditionEffects(character, statName, attributeName) {
             circSource: [...new Set(meta.circSource)]
         }
     };
+}
+
+function getConditionList(character) {
+    const { conditions = [] } = character || {};
+    return Array.isArray(conditions) ? conditions : [];
 }
 
 export function calculateStat(character, statName, profValue) {

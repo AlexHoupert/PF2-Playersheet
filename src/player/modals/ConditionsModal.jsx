@@ -34,6 +34,7 @@ import { useCampaign } from '../../shared/context/CampaignContext';
  */
 export function ConditionsModal({
     character,
+    conditions = [],
     updateCharacter,
     onClose,
     initialCondition = null,
@@ -49,7 +50,7 @@ export function ConditionsModal({
     const [selectedCondition, setSelectedCondition] = useState(initialCondition);
 
     // Tab state for the list view
-    const safeConds = character?.conditions || [];
+    const safeConds = Array.isArray(conditions) ? conditions : [];
     const hasActive = safeConds.some(c => {
         const name = (typeof c === 'string') ? c : c?.name;
         const level = (typeof c === 'string') ? 1 : (c?.level || 0);
@@ -148,95 +149,41 @@ export function ConditionsModal({
         const actorId = myActor?.id || character?.id;
         const valued = isConditionValued(condName);
 
-        if (activeCampaignId && actorId && dataActions?.effect) {
-            const currentLevel = typeof active === 'string' ? 1 : (Number(active?.level) || 0);
-            const nextLevel = valued ? currentLevel + delta : (delta > 0 ? 1 : 0);
-            const effectId = typeof active === 'object' ? active.id : null;
-            const effectAction = nextLevel <= 0
-                ? (effectId ? dataActions.effect.deleteEffect(activeCampaignId, effectId) : Promise.resolve())
-                : effectId
-                    ? dataActions.effect.updateEffect(activeCampaignId, effectId, effect => ({
-                        ...effect,
-                        label: canonicalName,
-                        value: Math.max(1, nextLevel),
-                    }))
-                    : dataActions.effect.createEffect(activeCampaignId, actorId, {
-                        label: canonicalName,
-                        category: 'condition',
-                        value: Math.max(1, nextLevel),
-                        source: { type: 'manual', name: canonicalName, actorId },
-                    });
-
-            Promise.resolve(effectAction)
-                .then(() => {
-                    if (targetKey === 'drained' && delta > 0 && dataActions?.character?.adjustHp) {
-                        const charLevel = Math.max(1, parseInt(character?.level) || 1);
-                        return dataActions.character.adjustHp(activeCampaignId, character.id, -(charLevel * Math.max(1, delta)));
-                    }
-                    return null;
-                })
-                .catch(err => {
-                    console.error(err);
-                    alert(err?.message || String(err));
-                });
+        if (!activeCampaignId || !actorId || !dataActions?.effect) {
+            alert('No active actor is available for condition updates.');
             return;
         }
 
-        updateCharacter(c => {
-            if (!c.conditions) c.conditions = [];
-            const idx = c.conditions.findIndex(x => {
-                const name = (typeof x === 'string') ? x : x?.name;
-                return String(name || '').toLowerCase() === targetKey;
-            });
-
-            if (idx > -1 && typeof c.conditions[idx] === 'string') {
-                c.conditions[idx] = { name: c.conditions[idx], level: 1 };
-            }
-            if (idx > -1 && c.conditions[idx] && typeof c.conditions[idx] === 'object') {
-                c.conditions[idx].name = canonicalName;
-            }
-
-            const isDrained = targetKey === 'drained';
-            const prevDrained = isDrained && idx > -1 ? (parseInt(c.conditions[idx].level) || 0) : 0;
-
-            if (!valued) {
-                // Binary conditions (toggle)
-                if (delta > 0) {
-                    if (idx === -1) c.conditions.push({ name: canonicalName, level: 1 });
-                } else {
-                    if (idx > -1) c.conditions.splice(idx, 1);
-                }
-                return;
-            }
-
-            // Valued conditions (Frightened 1, 2, etc.)
-            if (delta > 0) {
-                if (idx > -1) c.conditions[idx].level = (c.conditions[idx].level || 0) + 1;
-                else c.conditions.push({ name: canonicalName, level: 1 });
-            } else if (idx > -1) {
-                const nextLevel = (c.conditions[idx].level || 0) - 1;
-                if (nextLevel <= 0) c.conditions.splice(idx, 1);
-                else c.conditions[idx].level = nextLevel;
-            }
-
-            // Drained: lose HP equal to (level * increase), without counting as damage.
-            if (isDrained && delta > 0) {
-                const newIdx = c.conditions.findIndex(x => {
-                    const name = (typeof x === 'string') ? x : x?.name;
-                    return String(name || '').toLowerCase() === targetKey;
+        const currentLevel = typeof active === 'string' ? 1 : (Number(active?.level) || 0);
+        const nextLevel = valued ? currentLevel + delta : (delta > 0 ? 1 : 0);
+        const effectId = typeof active === 'object' ? active.sourceEffectId || active.id : null;
+        const effectAction = nextLevel <= 0
+            ? (effectId ? dataActions.effect.deleteEffect(activeCampaignId, effectId) : Promise.resolve())
+            : effectId
+                ? dataActions.effect.updateEffect(activeCampaignId, effectId, effect => ({
+                    ...effect,
+                    label: canonicalName,
+                    value: Math.max(1, nextLevel),
+                }))
+                : dataActions.effect.createEffect(activeCampaignId, actorId, {
+                    label: canonicalName,
+                    category: 'condition',
+                    value: Math.max(1, nextLevel),
+                    source: { type: 'manual', name: canonicalName, actorId },
                 });
-                const nextDrained = newIdx > -1 ? (parseInt(c.conditions[newIdx].level) || 0) : 0;
-                const diff = Math.max(0, nextDrained - prevDrained);
-                if (diff > 0) {
-                    const charLevel = Math.max(1, parseInt(c.level) || 1);
-                    const hpLoss = charLevel * diff;
-                    if (!c.stats) c.stats = {};
-                    if (!c.stats.hp) c.stats.hp = { current: 0, max: 0, temp: 0 };
-                    const currentHp = parseInt(c.stats.hp.current) || 0;
-                    c.stats.hp.current = Math.max(0, currentHp - hpLoss);
+
+        Promise.resolve(effectAction)
+            .then(() => {
+                if (targetKey === 'drained' && delta > 0 && dataActions?.character?.adjustHp) {
+                    const charLevel = Math.max(1, parseInt(character?.level) || 1);
+                    return dataActions.character.adjustHp(activeCampaignId, character.id, -(charLevel * Math.max(1, delta)));
                 }
-            }
-        });
+                return null;
+            })
+            .catch(err => {
+                console.error(err);
+                alert(err?.message || String(err));
+            });
     };
 
 

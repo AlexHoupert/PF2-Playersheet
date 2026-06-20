@@ -10,7 +10,6 @@ export function EncounterInfoPanel({
     onUpdateCharacter,
     selectedCombatant,
     getRevealState,
-    setDb,
 }) {
     if (!selectedCombatant) return null;
     return (
@@ -30,7 +29,6 @@ export function EncounterInfoPanel({
                 <CharacterCard
                     character={infoCharData}
                     db={db}
-                    setDb={setDb}
                     updateCharacter={onUpdateCharacter}
                     setModalMode={() => { }}
                     setModalData={() => { }}

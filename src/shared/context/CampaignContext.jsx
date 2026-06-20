@@ -40,19 +40,19 @@ export function useCampaign() {
     return useContext(CampaignContext);
 }
 
-export function CampaignProvider({ db, setDb, children, isAdmin = false, dbMode = 'legacy', dbStatus = null }) {
+export function CampaignProvider({ db, v2Store = null, children, isAdmin = false, dbMode = 'legacy', dbStatus = null }) {
     const { user } = useAuth();
     const userEmail = normalizeEmail(user?.email);
+    const v2UserInfo = useMemo(() => selectUserInfoFromV2Store(v2Store, userEmail), [v2Store, userEmail]);
     const dataActions = useMemo(
         () => createDataActions({
             db,
-            setDb,
             mode: dbMode,
             actorEmail: userEmail,
             firestore: firestoreDb,
             repositories: defaultRepositories,
         }),
-        [db, setDb, dbMode, userEmail]
+        [db, dbMode, userEmail]
     );
 
     // We need to determine:
@@ -60,7 +60,8 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false, dbMode 
     // 2. What is their assigned campaign?
     // 3. What is their assigned character?
 
-    const userInfo = user && db.users ? (db.users[userEmail] || db.users[user.email]) : null;
+    const legacyUserInfo = user && db.users ? (db.users[userEmail] || db.users[user.email]) : null;
+    const userInfo = v2UserInfo || legacyUserInfo;
     const isGM = (userInfo?.role === 'gm') || isAdmin; // Simple GM check or Admin View override
 
     // For Players: Resolve Campaign ID from assignment
@@ -174,6 +175,7 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false, dbMode 
         dbMode,
         dbStatus,
         dataActions,
+        v2Store,
         // GM Actions
         setSelectedCampaignId,
         createCampaign,
@@ -187,11 +189,30 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false, dbMode 
         importLegacyCharacter,
         setPartyXp,
         addPartyXp
-    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, actors, archivedActors, myCharacter, myActor, isGM, userInfo, dbMode, dbStatus, dataActions, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setPartyXp, addPartyXp]);
+    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, actors, archivedActors, myCharacter, myActor, isGM, userInfo, dbMode, dbStatus, dataActions, v2Store, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setPartyXp, addPartyXp]);
 
     return (
         <CampaignContext.Provider value={value}>
             {children}
         </CampaignContext.Provider>
     );
+}
+
+function selectUserInfoFromV2Store(v2Store, userEmail) {
+    if (!userEmail || !v2Store?.campaigns) return null;
+    for (const campaign of Object.values(v2Store.campaigns)) {
+        const members = campaign?.members || {};
+        const direct = members[userEmail];
+        const member = direct || Object.values(members).find((entry) => normalizeEmail(entry?.email || entry?.id) === userEmail);
+        if (!member) continue;
+        return {
+            ...member,
+            email: normalizeEmail(member.email || member.id || userEmail),
+            campaignId: campaign.id,
+            characterId: member.characterId || member.assignedCharacterId || null,
+            actorId: member.assignedActorId || member.actorId || member.characterId || null,
+            assignedActorId: member.assignedActorId || member.actorId || member.characterId || null,
+        };
+    }
+    return null;
 }
