@@ -35,6 +35,10 @@ import {
     selectShopTraders,
     selectVisibleTraders,
 } from '../src/shared/db/selectors/shopSelectors.js';
+import {
+    mergeCatalogIndexWithOverrides,
+    selectCatalogOverrideEntries,
+} from '../src/shared/db/selectors/catalogOverrideSelectors.js';
 import { composeLegacyDbFromV2Documents } from '../src/shared/db/v2/normalizers.js';
 
 test('campaign selectors separate active and archived campaigns and characters', () => {
@@ -225,4 +229,50 @@ test('actor and effect selectors expose v2 actor viewmodels', () => {
         disabled: undefined,
     }]);
     assert.deepEqual(selectVisibleEffectTemplates(campaign).map(template => template.id), ['slippery']);
+});
+
+test('catalog override selector merges custom override and hide records', () => {
+    const staticItems = [
+        { id: 'fireball', name: 'Fireball', sourceFile: 'spells/fireball.json', level: 3 },
+        { id: 'hidden', name: 'Hidden Spell', sourceFile: 'spells/hidden.json', level: 1 },
+    ];
+    const db = {
+        catalogOverrides: {
+            override_fireball: {
+                id: 'override_fireball',
+                catalogType: 'spell',
+                baseId: 'spells/fireball.json',
+                mode: 'override',
+                label: 'Fireball',
+                payload: {
+                    name: 'Fireball',
+                    level: 4,
+                    sourceFile: null,
+                    overrideSourceFile: 'spells/fireball.json',
+                },
+            },
+            custom_spark: {
+                id: 'custom_spark',
+                catalogType: 'spell',
+                mode: 'custom',
+                label: 'Spark',
+                payload: { name: 'Spark', level: 1, sourceFile: null },
+            },
+            hide_hidden: {
+                id: 'hide_hidden',
+                catalogType: 'spell',
+                baseId: 'spells/hidden.json',
+                mode: 'hide',
+                label: 'Hidden Spell',
+                payload: {},
+            },
+        },
+    };
+
+    const merged = mergeCatalogIndexWithOverrides(staticItems, db, 'spell');
+    assert.deepEqual(merged.map(item => item.name), ['Fireball', 'Spark']);
+    assert.equal(merged[0].level, 4);
+    assert.equal(merged[0].overrideSourceFile, 'spells/fireball.json');
+    assert.equal(merged[1].isCustom, true);
+    assert.deepEqual(selectCatalogOverrideEntries(db, 'spell').map(item => item.name), ['Fireball', 'Spark']);
 });

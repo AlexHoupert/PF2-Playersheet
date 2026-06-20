@@ -197,11 +197,42 @@ export function createDataActions({
       return next;
     });
 
+  const actorDocToCharacter = (actorDoc, actorId) => ({
+    ...(actorDoc?.sheet || {}),
+    id: actorDoc?.sheet?.id || actorDoc?.id || actorId,
+    name: actorDoc?.sheet?.name || actorDoc?.name,
+    level: actorDoc?.sheet?.level ?? actorDoc?.level,
+    stats: actorDoc?.stats || actorDoc?.sheet?.stats,
+    inventory: actorDoc?.inventory || actorDoc?.sheet?.inventory,
+    magic: actorDoc?.magic || actorDoc?.sheet?.magic,
+  });
+
+  const characterToPcActorDoc = (actorDoc, character, campaignId, actorId) =>
+    applyActorUpdate({
+      ...actorDoc,
+      id: actorDoc?.id || actorId,
+      kind: actorDoc?.kind || "pc",
+      name: character.name || actorDoc?.name,
+      level: character.level ?? actorDoc?.level,
+      stats: character.stats,
+      inventory: character.inventory,
+      magic: character.magic,
+      sheet: {
+        ...(actorDoc?.sheet || {}),
+        ...character,
+        id: character.id || actorDoc?.sheet?.id || actorDoc?.id || actorId,
+        stats: character.stats,
+        inventory: character.inventory,
+        magic: character.magic,
+      },
+    }, {
+      createId: () => createDomainId("actor"),
+      campaignId,
+    });
+
   const updateCharacter = (campaignId, characterId, updater) => {
     if (useFirestoreV2) {
-      return repos.characterRepo.updateCharacter(firestore, campaignId, characterId, (character) =>
-        applyCharacterUpdate({ ...character, id: character.id || characterId }, updater, { createId })
-      );
+      return updatePcActorAsCharacter(campaignId, characterId, updater);
     }
     return updateCharacterLegacy(campaignId, characterId, updater);
   };
@@ -209,37 +240,9 @@ export function createDataActions({
   const updatePcActorAsCharacter = (campaignId, actorId, updater) => {
     if (useFirestoreV2) {
       return repos.actorRepo.updateActor(firestore, campaignId, actorId, (actorDoc) => {
-        const currentCharacter = {
-          ...(actorDoc.sheet || {}),
-          id: actorDoc.sheet?.id || actorDoc.id || actorId,
-          name: actorDoc.sheet?.name || actorDoc.name,
-          level: actorDoc.sheet?.level ?? actorDoc.level,
-          stats: actorDoc.stats || actorDoc.sheet?.stats,
-          inventory: actorDoc.inventory || actorDoc.sheet?.inventory,
-          magic: actorDoc.magic || actorDoc.sheet?.magic,
-        };
+        const currentCharacter = actorDocToCharacter(actorDoc, actorId);
         const nextCharacter = applyCharacterUpdate(currentCharacter, updater, { createId });
-        return applyActorUpdate({
-          ...actorDoc,
-          id: actorDoc.id || actorId,
-          kind: actorDoc.kind || "pc",
-          name: nextCharacter.name || actorDoc.name,
-          level: nextCharacter.level ?? actorDoc.level,
-          stats: nextCharacter.stats,
-          inventory: nextCharacter.inventory,
-          magic: nextCharacter.magic,
-          sheet: {
-            ...(actorDoc.sheet || {}),
-            ...nextCharacter,
-            id: nextCharacter.id || actorDoc.sheet?.id || actorDoc.id || actorId,
-            stats: nextCharacter.stats,
-            inventory: nextCharacter.inventory,
-            magic: nextCharacter.magic,
-          },
-        }, {
-          createId: () => createDomainId("actor"),
-          campaignId,
-        });
+        return characterToPcActorDoc(actorDoc, nextCharacter, campaignId, actorId);
       });
     }
     return updateCharacterLegacy(campaignId, actorId, updater);
@@ -443,16 +446,22 @@ export function createDataActions({
 
   const claimItem = (campaignId, lootBagId, item, characterId) => {
     if (useFirestoreV2) {
-      return repos.lootRepo.updateLootBagAndCharacter(
+      return repos.lootRepo.updateLootBagAndActor(
         firestore,
         campaignId,
         lootBagId,
         characterId,
-        (lootBag, character) =>
-          claimLootItemState(lootBag, { ...character, id: character.id || characterId }, item, {
+        (lootBag, actorDoc) => {
+          const character = actorDocToCharacter(actorDoc, characterId);
+          const result = claimLootItemState(lootBag, { ...character, id: character.id || characterId }, item, {
             createId,
             claimedBy: characterId,
-          })
+          });
+          return {
+            lootBag: result.lootBag,
+            actor: characterToPcActorDoc(actorDoc, result.character, campaignId, characterId),
+          };
+        }
       );
     }
 
@@ -473,12 +482,19 @@ export function createDataActions({
 
   const claimGold = (campaignId, lootBagId, characterId, amount) => {
     if (useFirestoreV2) {
-      return repos.lootRepo.updateLootBagAndCharacter(
+      return repos.lootRepo.updateLootBagAndActor(
         firestore,
         campaignId,
         lootBagId,
         characterId,
-        (lootBag, character) => claimLootGoldState(lootBag, { ...character, id: character.id || characterId }, amount)
+        (lootBag, actorDoc) => {
+          const character = actorDocToCharacter(actorDoc, characterId);
+          const result = claimLootGoldState(lootBag, { ...character, id: character.id || characterId }, amount);
+          return {
+            lootBag: result.lootBag,
+            actor: characterToPcActorDoc(actorDoc, result.character, campaignId, characterId),
+          };
+        }
       );
     }
 
@@ -498,24 +514,24 @@ export function createDataActions({
 
   const splitGold = (campaignId, lootBagId) => {
     const campaign = db?.campaigns?.[campaignId];
-    const characterIds = (campaign?.characters || []).map((character) => character.id).filter(Boolean);
+    const characterIds = getActivePcActorIds(campaign);
 
     if (useFirestoreV2) {
-      return repos.lootRepo.updateLootBagAndCharacters(
+      return repos.lootRepo.updateLootBagAndActors(
         firestore,
         campaignId,
         lootBagId,
         characterIds,
-        (lootBag, charactersById) => {
-          const orderedCharacters = characterIds.map((characterId) => ({
-            ...charactersById[characterId],
-            id: charactersById[characterId]?.id || characterId,
-          }));
+        (lootBag, actorsById) => {
+          const orderedCharacters = characterIds.map((characterId) => actorDocToCharacter(actorsById[characterId], characterId));
           const result = splitLootGoldState(lootBag, orderedCharacters, { createId });
           return {
             lootBag: result.lootBag,
-            charactersById: Object.fromEntries(
-              result.characters.map((character, index) => [characterIds[index], character])
+            actorsById: Object.fromEntries(
+              result.characters.map((character, index) => [
+                characterIds[index],
+                characterToPcActorDoc(actorsById[characterIds[index]], character, campaignId, characterIds[index]),
+              ])
             ),
           };
         }
@@ -576,10 +592,7 @@ export function createDataActions({
 
   const toggleObjective = (campaignId, questId, objectiveIndex, completed) => {
     const campaign = db?.campaigns?.[campaignId];
-    const activeCharacterIds = (campaign?.characters || [])
-      .filter((character) => !character.deletedAt)
-      .map((character) => character.id)
-      .filter(Boolean);
+    const activeActorIds = getActivePcActorIds(campaign);
     const options = {
       now: nowIso(),
       actorEmail: actor,
@@ -587,20 +600,17 @@ export function createDataActions({
     };
 
     if (useFirestoreV2) {
-      return repos.questRepo.updateQuestAndCampaignAndCharacters(
+      return repos.questRepo.updateQuestAndCampaignAndActors(
         firestore,
         campaignId,
         questId,
-        activeCharacterIds,
-        (questDoc, campaignDoc, charactersById) => {
+        activeActorIds,
+        (questDoc, campaignDoc, actorsById) => {
           const current = {
             ...campaignDoc,
             id: campaignDoc.id || campaignId,
             quests: [{ ...questDoc, id: questDoc.id || questId }],
-            characters: activeCharacterIds.map((characterId) => ({
-              ...charactersById[characterId],
-              id: charactersById[characterId]?.id || characterId,
-            })),
+            characters: activeActorIds.map((actorId) => actorDocToCharacter(actorsById[actorId], actorId)),
           };
           const nextCampaign = toggleQuestObjectiveInCampaign(
             current,
@@ -613,8 +623,11 @@ export function createDataActions({
           return {
             quest: nextQuest || questDoc,
             campaign: stripChildCollections(nextCampaign),
-            charactersById: Object.fromEntries(
-              (nextCampaign.characters || []).map((character) => [character.id, character])
+            actorsById: Object.fromEntries(
+              (nextCampaign.characters || []).map((character) => [
+                character.id,
+                characterToPcActorDoc(actorsById[character.id], character, campaignId, character.id),
+              ])
             ),
           };
         }
@@ -1078,30 +1091,27 @@ export function createDataActions({
 
   const setPartyXp = (campaignId, xp) => {
     const campaign = db?.campaigns?.[campaignId];
-    const activeCharacterIds = (campaign?.characters || [])
-      .filter((character) => !character.deletedAt)
-      .map((character) => character.id)
-      .filter(Boolean);
+    const activeActorIds = getActivePcActorIds(campaign);
 
     if (useFirestoreV2) {
-      return repos.campaignRepo.updateCampaignAndCharacters(
+      return repos.campaignRepo.updateCampaignAndActors(
         firestore,
         campaignId,
-        activeCharacterIds,
-        (campaignDoc, charactersById) => {
+        activeActorIds,
+        (campaignDoc, actorsById) => {
           const current = {
             ...campaignDoc,
             id: campaignDoc.id || campaignId,
-            characters: activeCharacterIds.map((characterId) => ({
-              ...charactersById[characterId],
-              id: charactersById[characterId]?.id || characterId,
-            })),
+            characters: activeActorIds.map((actorId) => actorDocToCharacter(actorsById[actorId], actorId)),
           };
           const nextCampaign = setPartyXpInCampaign(current, xp);
           return {
             campaign: stripChildCollections(nextCampaign),
-            charactersById: Object.fromEntries(
-              nextCampaign.characters.map((character) => [character.id, character])
+            actorsById: Object.fromEntries(
+              nextCampaign.characters.map((character) => [
+                character.id,
+                characterToPcActorDoc(actorsById[character.id], character, campaignId, character.id),
+              ])
             ),
           };
         }
@@ -1113,31 +1123,28 @@ export function createDataActions({
 
   const addPartyXp = (campaignId, amount) => {
     const campaign = db?.campaigns?.[campaignId];
-    const activeCharacterIds = (campaign?.characters || [])
-      .filter((character) => !character.deletedAt)
-      .map((character) => character.id)
-      .filter(Boolean);
+    const activeActorIds = getActivePcActorIds(campaign);
     const notificationId = Date.now();
 
     if (useFirestoreV2) {
-      return repos.campaignRepo.updateCampaignAndCharacters(
+      return repos.campaignRepo.updateCampaignAndActors(
         firestore,
         campaignId,
-        activeCharacterIds,
-        (campaignDoc, charactersById) => {
+        activeActorIds,
+        (campaignDoc, actorsById) => {
           const current = {
             ...campaignDoc,
             id: campaignDoc.id || campaignId,
-            characters: activeCharacterIds.map((characterId) => ({
-              ...charactersById[characterId],
-              id: charactersById[characterId]?.id || characterId,
-            })),
+            characters: activeActorIds.map((actorId) => actorDocToCharacter(actorsById[actorId], actorId)),
           };
           const nextCampaign = addPartyXpInCampaign(current, amount, { notificationId });
           return {
             campaign: stripChildCollections(nextCampaign),
-            charactersById: Object.fromEntries(
-              nextCampaign.characters.map((character) => [character.id, character])
+            actorsById: Object.fromEntries(
+              nextCampaign.characters.map((character) => [
+                character.id,
+                characterToPcActorDoc(actorsById[character.id], character, campaignId, character.id),
+              ])
             ),
           };
         }
@@ -1176,13 +1183,10 @@ export function createDataActions({
   const createCharacter = (campaignId, character) => {
     const normalizedCharacter = createCharacterRecord(character, { createId });
     if (useFirestoreV2) {
-      return Promise.all([
-        repos.characterRepo.createCharacter(firestore, campaignId, normalizedCharacter),
-        repos.actorRepo.createActor(firestore, campaignId, createActorRecord(normalizedCharacter, {
-          campaignId,
-          createId: () => normalizedCharacter.id,
-        })),
-      ]);
+      return repos.actorRepo.createActor(firestore, campaignId, createActorRecord(normalizedCharacter, {
+        campaignId,
+        createId: () => normalizedCharacter.id,
+      }));
     }
     return updateCampaignLegacy(campaignId, (campaign) =>
       createCharacterInCampaign(campaign, normalizedCharacter, { createId })
@@ -1191,21 +1195,26 @@ export function createDataActions({
 
   const softDeleteCharacter = (campaignId, characterId) => {
     const options = { now: nowIso(), actorEmail: actor };
-    const affectedEmails = Object.entries(db?.users || {})
-      .filter(([, info]) => info?.campaignId === campaignId && info?.characterId === characterId)
-      .map(([email]) => normalizeEmail(email));
+    const affectedMembers = Object.entries(db?.users || {})
+      .filter(([, info]) =>
+        info?.campaignId === campaignId &&
+        [info?.assignedActorId, info?.actorId, info?.characterId].some((id) => id === characterId)
+      )
+      .map(([email, info]) => [normalizeEmail(email), info])
+      .filter(([email]) => email);
 
     if (useFirestoreV2) {
       return Promise.all([
-        repos.characterRepo.updateCharacterAndMembers(
-          firestore,
-          campaignId,
-          characterId,
-          affectedEmails,
-          (character) => markDeleted(character, options),
-          (member) => ({ ...member, characterId: null, assignedActorId: null })
-        ),
         repos.actorRepo.updateActor(firestore, campaignId, characterId, (actorDoc) => markDeleted(actorDoc, options)),
+        ...affectedMembers.map(([email, info]) =>
+          repos.memberRepo.assignUser(firestore, campaignId, email, {
+            ...info,
+            role: info?.role || "player",
+            characterId: null,
+            actorId: null,
+            assignedActorId: null,
+          })
+        ),
       ]);
     }
 
@@ -1215,12 +1224,7 @@ export function createDataActions({
   const restoreCharacter = (campaignId, characterId) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return Promise.all([
-        repos.characterRepo.updateCharacter(firestore, campaignId, characterId, (character) =>
-          markRestored(character, options)
-        ),
-        repos.actorRepo.updateActor(firestore, campaignId, characterId, (actorDoc) => markRestored(actorDoc, options)),
-      ]);
+      return repos.actorRepo.updateActor(firestore, campaignId, characterId, (actorDoc) => markRestored(actorDoc, options));
     }
     return updateCampaignLegacy(campaignId, (campaign) =>
       restoreCharacterInCampaign(campaign, characterId, options)
@@ -1230,13 +1234,10 @@ export function createDataActions({
   const importLegacyCharacter = (campaignId, character, legacyIndex) => {
     const normalizedCharacter = createCharacterRecord(character, { createId });
     if (useFirestoreV2) {
-      return Promise.all([
-        repos.characterRepo.createCharacter(firestore, campaignId, normalizedCharacter),
-        repos.actorRepo.createActor(firestore, campaignId, createActorRecord(normalizedCharacter, {
-          campaignId,
-          createId: () => normalizedCharacter.id,
-        })),
-      ]);
+      return repos.actorRepo.createActor(firestore, campaignId, createActorRecord(normalizedCharacter, {
+        campaignId,
+        createId: () => normalizedCharacter.id,
+      }));
     }
     return updateDbLegacy((prev) =>
       importLegacyCharacterInDb(prev, campaignId, normalizedCharacter, legacyIndex, { createId })
@@ -1252,78 +1253,62 @@ export function createDataActions({
 
   const saveCustomItem = (item) => {
     if (useFirestoreV2) {
-      return Promise.all([
-        repos.globalRepo.setCustomItem(firestore, item),
-        repos.catalogOverrideRepo.setCatalogOverride(firestore, createCatalogOverrideRecord({
-          id: buildCatalogOverrideId("item", item),
-          catalogType: "item",
-          mode: "custom",
-          label: item?.name,
-          payload: item,
-        })),
-      ]);
+      return repos.catalogOverrideRepo.setCatalogOverride(firestore, createCatalogOverrideRecord({
+        id: buildCatalogOverrideId("item", item),
+        catalogType: "item",
+        mode: "custom",
+        label: item?.name,
+        payload: item,
+      }));
     }
     return updateDbLegacy((prev) => saveCustomItemInDb(prev, item));
   };
 
   const deleteCustomItem = (itemOrName) => {
     if (useFirestoreV2) {
-      return Promise.all([
-        repos.globalRepo.deleteCustomItem(firestore, itemOrName),
-        repos.catalogOverrideRepo.deleteCatalogOverride(firestore, buildCatalogOverrideId("item", itemOrName)),
-      ]);
+      return repos.catalogOverrideRepo.deleteCatalogOverride(firestore, buildCatalogOverrideId("item", itemOrName));
     }
     return updateDbLegacy((prev) => deleteCustomItemInDb(prev, itemOrName));
   };
 
   const saveCustomAction = (action) => {
     if (useFirestoreV2) {
-      return Promise.all([
-        repos.globalRepo.setCustomAction(firestore, action),
-        repos.catalogOverrideRepo.setCatalogOverride(firestore, createCatalogOverrideRecord({
-          id: buildCatalogOverrideId("action", action),
-          catalogType: "action",
-          mode: "custom",
-          label: action?.name,
-          payload: action,
-        })),
-      ]);
+      return repos.catalogOverrideRepo.setCatalogOverride(firestore, createCatalogOverrideRecord({
+        id: buildCatalogOverrideId("action", action),
+        catalogType: "action",
+        mode: "custom",
+        label: action?.name,
+        payload: action,
+      }));
     }
     return updateDbLegacy((prev) => saveCustomActionInDb(prev, action));
   };
 
   const deleteCustomAction = (actionOrName) => {
     if (useFirestoreV2) {
-      return Promise.all([
-        repos.globalRepo.deleteCustomAction(firestore, actionOrName),
-        repos.catalogOverrideRepo.deleteCatalogOverride(firestore, buildCatalogOverrideId("action", actionOrName)),
-      ]);
+      return repos.catalogOverrideRepo.deleteCatalogOverride(firestore, buildCatalogOverrideId("action", actionOrName));
     }
     return updateDbLegacy((prev) => deleteCustomActionInDb(prev, actionOrName));
   };
 
   const saveCustomAbility = (ability) => {
-    const globalWrite = updateGlobalConfig((current) => saveCustomAbilityInDb(current, ability));
-    if (!useFirestoreV2) return globalWrite;
-    return Promise.all([
-      globalWrite,
-      repos.catalogOverrideRepo.setCatalogOverride(firestore, createCatalogOverrideRecord({
+    if (useFirestoreV2) {
+      return repos.catalogOverrideRepo.setCatalogOverride(firestore, createCatalogOverrideRecord({
         id: buildCatalogOverrideId("ability", ability),
         catalogType: "ability",
         mode: "custom",
         label: ability?.name,
         payload: ability,
-      })),
-    ]);
+      }));
+    }
+    return updateGlobalConfig((current) => saveCustomAbilityInDb(current, ability));
   };
 
   const deleteCustomAbility = (abilityOrId) => {
-    const globalWrite = updateGlobalConfig((current) => deleteCustomAbilityInDb(current, abilityOrId));
-    if (!useFirestoreV2) return globalWrite;
-    return Promise.all([
-      globalWrite,
-      repos.catalogOverrideRepo.deleteCatalogOverride(firestore, buildCatalogOverrideId("ability", abilityOrId)),
-    ]);
+    if (useFirestoreV2) {
+      return repos.catalogOverrideRepo.deleteCatalogOverride(firestore, buildCatalogOverrideId("ability", abilityOrId));
+    }
+    return updateGlobalConfig((current) => deleteCustomAbilityInDb(current, abilityOrId));
   };
 
   const savePact = (pact) => updateGlobalConfig((current) => savePactInDb(current, pact));
@@ -1385,23 +1370,24 @@ export function createDataActions({
 
   const saveCustomCreature = (creature) => {
     if (useFirestoreV2) {
-      return Promise.all([
-        repos.globalRepo.setCustomCreature(firestore, creature),
-        repos.catalogOverrideRepo.setCatalogOverride(firestore, createCatalogOverrideRecord({
-          id: buildCatalogOverrideId("creature", creature),
-          catalogType: "creature",
-          mode: "custom",
-          label: creature?.name,
-          payload: creature,
-        })),
-      ]);
+      return repos.catalogOverrideRepo.setCatalogOverride(firestore, createCatalogOverrideRecord({
+        id: buildCatalogOverrideId("creature", creature),
+        catalogType: "creature",
+        mode: "custom",
+        label: creature?.name,
+        payload: creature,
+      }));
     }
     return updateDbLegacy((prev) => saveCustomCreatureInDb(prev, creature));
   };
 
   const updateCustomCreature = (creatureId, updater) => {
     if (useFirestoreV2) {
-      return repos.globalRepo.updateCustomCreature(firestore, creatureId, updater);
+      const current = findCustomCreatureById(db, creatureId) || { id: creatureId, _id: creatureId };
+      const next = typeof updater === "function"
+        ? updater(cloneValue(current))
+        : { ...cloneValue(current), ...updater };
+      return saveCustomCreature({ ...next, id: next?.id || creatureId, _id: next?._id || creatureId });
     }
     return updateDbLegacy((prev) => updateCustomCreatureInDb(prev, creatureId, updater));
   };
@@ -1410,7 +1396,6 @@ export function createDataActions({
     if (useFirestoreV2) {
       return Promise.all([
         repos.globalRepo.updateGlobalConfig(firestore, (current) => deleteCreatureInDb(current, creatureId)),
-        repos.globalRepo.deleteCustomCreature(firestore, creatureId),
         repos.catalogOverrideRepo.deleteCatalogOverride(firestore, buildCatalogOverrideId("creature", creatureId)),
       ]);
     }
@@ -1558,17 +1543,17 @@ export function createDataActions({
       },
       transferItem(campaignId, fromCharacterId, toCharacterId, item, qty) {
         if (useFirestoreV2) {
-          return repos.characterRepo.updateCharacters(
+          return repos.actorRepo.updateActors(
             firestore,
             campaignId,
             [fromCharacterId, toCharacterId],
-            (charactersById) => {
+            (actorsById) => {
               const nextCampaign = transferInventoryItem(
                 {
                   id: campaignId,
                   characters: [
-                    { ...charactersById[fromCharacterId], id: charactersById[fromCharacterId]?.id || fromCharacterId },
-                    { ...charactersById[toCharacterId], id: charactersById[toCharacterId]?.id || toCharacterId },
+                    actorDocToCharacter(actorsById[fromCharacterId], fromCharacterId),
+                    actorDocToCharacter(actorsById[toCharacterId], toCharacterId),
                   ],
                 },
                 fromCharacterId,
@@ -1577,7 +1562,12 @@ export function createDataActions({
                 qty,
                 { createId }
               );
-              return Object.fromEntries(nextCampaign.characters.map((character) => [character.id, character]));
+              return Object.fromEntries(
+                nextCampaign.characters.map((character) => [
+                  character.id,
+                  characterToPcActorDoc(actorsById[character.id], character, campaignId, character.id),
+                ])
+              );
             }
           );
         }
@@ -1592,6 +1582,123 @@ export function createDataActions({
       updateActor,
       softDeleteActor,
       restoreActor,
+      setHp(campaignId, actorId, value) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => setCharacterHp(character, value));
+      },
+      adjustHp(campaignId, actorId, amount) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => adjustCharacterHp(character, amount));
+      },
+      setGold(campaignId, actorId, value) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => setCharacterGold(character, value));
+      },
+      adjustGold(campaignId, actorId, amount) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => adjustCharacterGold(character, amount));
+      },
+      setStat(campaignId, actorId, key, value) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => setCharacterAttribute(character, key, value));
+      },
+      setSkill(campaignId, actorId, skillKey, value) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
+          const next = cloneValue(character);
+          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
+          next.stats.skills = next.stats.skills && typeof next.stats.skills === "object" ? cloneValue(next.stats.skills) : {};
+          next.stats.skills[skillKey] = value;
+          return next;
+        });
+      },
+      setSave(campaignId, actorId, saveKey, value) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
+          const next = cloneValue(character);
+          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
+          next.stats.saves = next.stats.saves && typeof next.stats.saves === "object" ? cloneValue(next.stats.saves) : {};
+          next.stats.saves[saveKey] = value;
+          return next;
+        });
+      },
+      setProficiency(campaignId, actorId, proficiencyKey, value) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
+          const next = cloneValue(character);
+          next.proficiencies = next.proficiencies && typeof next.proficiencies === "object"
+            ? cloneValue(next.proficiencies)
+            : {};
+          next.proficiencies[proficiencyKey] = value;
+          return next;
+        });
+      },
+      setMagicSlot(campaignId, actorId, slotKey, value) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
+          const next = cloneValue(character);
+          next.magic = next.magic && typeof next.magic === "object" ? cloneValue(next.magic) : { slots: {}, list: [] };
+          next.magic.slots = next.magic.slots && typeof next.magic.slots === "object" ? cloneValue(next.magic.slots) : {};
+          next.magic.slots[slotKey] = Number(value) || 0;
+          return next;
+        });
+      },
+      setEquipmentState(campaignId, actorId, patch) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
+          const next = cloneValue(character);
+          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
+          next.stats.ac = next.stats.ac && typeof next.stats.ac === "object" ? cloneValue(next.stats.ac) : {};
+          Object.assign(next.stats.ac, patch || {});
+          return next;
+        });
+      },
+      addItem(campaignId, actorId, item, options = {}) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) =>
+          addItemToCharacter(character, item, { ...options, createId })
+        );
+      },
+      updateItem(campaignId, actorId, item, updater) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
+          const next = normalizeCharacterInventory(character, { createId });
+          const index = findInventoryItemIndex(next.inventory, item);
+          if (index < 0) return next;
+          next.inventory[index] =
+            typeof updater === "function"
+              ? updater(next.inventory[index])
+              : { ...next.inventory[index], ...updater };
+          return normalizeCharacterInventory(next, { createId });
+        });
+      },
+      removeItem(campaignId, actorId, item) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) =>
+          removeInventoryItem(character, item, { createId })
+        );
+      },
+      transferItem(campaignId, fromActorId, toActorId, item, qty) {
+        if (useFirestoreV2) {
+          return repos.actorRepo.updateActors(
+            firestore,
+            campaignId,
+            [fromActorId, toActorId],
+            (actorsById) => {
+              const nextCampaign = transferInventoryItem(
+                {
+                  id: campaignId,
+                  characters: [
+                    actorDocToCharacter(actorsById[fromActorId], fromActorId),
+                    actorDocToCharacter(actorsById[toActorId], toActorId),
+                  ],
+                },
+                fromActorId,
+                toActorId,
+                item,
+                qty,
+                { createId }
+              );
+              return Object.fromEntries(
+                nextCampaign.characters.map((character) => [
+                  character.id,
+                  characterToPcActorDoc(actorsById[character.id], character, campaignId, character.id),
+                ])
+              );
+            }
+          );
+        }
+        return updateCampaignLegacy(campaignId, (campaign) =>
+          transferInventoryItem(campaign, fromActorId, toActorId, item, qty, { createId })
+        );
+      },
     },
     effect: {
       createEffect,
@@ -1731,6 +1838,27 @@ function stripChildCollections(campaign) {
   delete next.archivedEncounters;
   delete next.maps;
   return next;
+}
+
+function findCustomCreatureById(db, creatureId) {
+  const entries = Object.values(db?.bestiary?.customCreatures || {});
+  return entries.find((creature) =>
+    String(creature?.id || creature?._id || creature?.name) === String(creatureId)
+  ) || null;
+}
+
+function getActivePcActorIds(campaign) {
+  const actors = Array.isArray(campaign?.actors) ? campaign.actors : [];
+  if (actors.length) {
+    return actors
+      .filter((actor) => actor?.kind === "pc" && !actor?.deletedAt)
+      .map((actor) => actor.id)
+      .filter(Boolean);
+  }
+  return (campaign?.characters || [])
+    .filter((character) => !character?.deletedAt)
+    .map((character) => character.id)
+    .filter(Boolean);
 }
 
 function buildCatalogOverrideId(catalogType, value) {

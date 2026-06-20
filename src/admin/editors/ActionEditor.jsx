@@ -35,7 +35,7 @@ export default function ActionEditor({ initialItem, onSave, onCancel, onSaveToDb
                 feat: cls.feat || initialItem.feat || '',
                 traits: sys.traits?.value || initialItem.traits || [],
                 description: sys.description?.value || initialItem.description || '',
-                sourceFile: initialItem.sourceFile || null
+                sourceFile: initialItem.sourceFile || initialItem.overrideSourceFile || null
             });
 
             // Fetch full details if sourceFile exists
@@ -122,10 +122,11 @@ export default function ActionEditor({ initialItem, onSave, onCancel, onSaveToDb
                 sourceFile: null,
                 isCustom: true,
             });
+            const actionOverride = buildActionOverride(dbAction, initialItem);
 
             if ((dbOnly || import.meta.env.PROD) && onSaveToDb) {
-                await onSaveToDb(dbAction);
-                onSave({ success: true, message: 'Saved to Database', data: dbAction });
+                await onSaveToDb(actionOverride);
+                onSave({ success: true, message: 'Saved to Database', data: actionOverride });
                 return;
             }
 
@@ -175,8 +176,9 @@ export default function ActionEditor({ initialItem, onSave, onCancel, onSaveToDb
                             },
                         },
                     }, { id: initialItem?.id || safeName, sourceFile: null, isCustom: true });
-                    await onSaveToDb(fallbackAction);
-                    onSave({ success: true, message: 'Saved to Database', data: fallbackAction });
+                    const fallbackOverride = buildActionOverride(fallbackAction, initialItem);
+                    await onSaveToDb(fallbackOverride);
+                    onSave({ success: true, message: 'Saved to Database', data: fallbackOverride });
                     return;
                 } catch (dbErr) {
                     setError(`Failed to save action. Server: ${err.message}. DB: ${dbErr.message}`);
@@ -308,5 +310,28 @@ function buildDbAction(actionJson, options = {}) {
         feat: cls.feat || '',
         traits: sys.traits?.value || [],
         description: sys.description?.value || '',
+    };
+}
+
+export function buildActionOverride(actionRecord, initialItem) {
+    const safeId = String(initialItem?.id || initialItem?._id || actionRecord?.id || actionRecord?.name || 'action')
+        .replace(/[^a-z0-9]/gi, '_')
+        .toLowerCase();
+    const sourceFile = initialItem?.sourceFile || initialItem?.overrideSourceFile || null;
+    return {
+        id: initialItem?.catalogOverrideId || `action_${safeId}`,
+        catalogType: 'action',
+        baseId: initialItem?.baseId || sourceFile || null,
+        mode: sourceFile ? 'override' : 'custom',
+        label: actionRecord?.name || safeId,
+        payload: {
+            ...actionRecord,
+            id: safeId,
+            _id: safeId,
+            sourceFile: null,
+            overrideSourceFile: sourceFile,
+            isCustom: !sourceFile,
+        },
+        sourceFile: null,
     };
 }

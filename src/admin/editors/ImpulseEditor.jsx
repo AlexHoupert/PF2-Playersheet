@@ -6,8 +6,9 @@ import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 // For now, we'll import from spellIndex for reuse of Schools/Traditions lists if they apply, 
 // or define custom ones. Impulse index might have generated options too.
 import { IMPULSE_INDEX_FILTER_OPTIONS, fetchImpulseDetailBySourceFile } from '../../shared/catalog/impulseIndex';
+import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 
-export default function ImpulseEditor({ initialItem, onSave, onCancel }) {
+export default function ImpulseEditor({ initialItem, onSave, onCancel, onSaveToDb }) {
     const [formData, setFormData] = useState({
         name: '',
         level: 1,
@@ -45,7 +46,7 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel }) {
                 duration: initialItem.duration || '',
                 defense: initialItem.defense || '',
                 description: initialItem.description || '',
-                sourceFile: initialItem.sourceFile || null
+                sourceFile: initialItem.sourceFile || initialItem.overrideSourceFile || null
             });
 
             // Fetch full details if sourceFile exists (index items lack description, target, etc.)
@@ -102,22 +103,29 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel }) {
                 }
             };
 
-            // Determine Path
             let filePath = formData.sourceFile;
             let isNew = !filePath;
+            const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const impulseOverride = buildImpulseOverride(impulseJson, formData, initialItem);
+
+            if (import.meta.env.PROD && onSaveToDb) {
+                await onSaveToDb(impulseOverride);
+                onSave({ success: true, message: 'Saved impulse override to database', data: impulseOverride });
+                return;
+            }
+
+            if (import.meta.env.PROD) {
+                throw new Error('No database save handler is configured for deployed impulse editing.');
+            }
 
             if (isNew) {
-                const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
                 filePath = `ressources/spells/impulses/${safeName}.json`;
-            }
-            if (import.meta.env.PROD) {
-                throw new Error('Static impulse files can only be edited in the local dev server. Deployed impulse overrides are not enabled yet.');
             }
 
             // Save File
             const endpoint = isNew ? '/api/files/create' : '/api/files/save';
             const payload = isNew
-                ? { directory: `ressources/spells/impulses`, filename: `${formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`, content: impulseJson }
+                ? { directory: `ressources/spells/impulses`, filename: `${safeName}.json`, content: impulseJson }
                 : { filePath: (filePath && !filePath.startsWith('ressources/')) ? `ressources/${filePath}` : filePath, content: impulseJson };
 
             const res = await fetch(endpoint, {
@@ -126,7 +134,7 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel }) {
                 body: JSON.stringify(payload)
             });
 
-            const data = await res.json();
+            const data = await readJsonApiResponse(res, 'Save impulse');
             if (!data.success) throw new Error(data.error);
 
             // Rebuild Index
@@ -134,6 +142,38 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel }) {
 
             onSave(data);
         } catch (err) {
+            if (onSaveToDb) {
+                try {
+                    const fallbackJson = {
+                        name: formData.name,
+                        type: 'impulse',
+                        img: initialItem?.img || "systems/pf2e/icons/default-icons/spell.svg",
+                        system: {
+                            description: { value: formData.description },
+                            level: { value: parseInt(formData.level) },
+                            school: { value: formData.school },
+                            traits: {
+                                value: formData.traits,
+                                rarity: formData.rarity,
+                                traditions: formData.traditions
+                            },
+                            time: { value: formData.time },
+                            range: { value: formData.range },
+                            target: { value: formData.target },
+                            area: { value: formData.area },
+                            duration: { value: formData.duration },
+                            defense: { save: { statistic: formData.defense } }
+                        }
+                    };
+                    const fallbackOverride = buildImpulseOverride(fallbackJson, formData, initialItem);
+                    await onSaveToDb(fallbackOverride);
+                    onSave({ success: true, message: 'Saved impulse override to database', data: fallbackOverride });
+                    return;
+                } catch (dbErr) {
+                    setError(`Failed to save impulse. Server: ${err.message}. DB: ${dbErr.message}`);
+                    return;
+                }
+            }
             setError(err.message);
         } finally {
             setIsSaving(false);
@@ -221,4 +261,39 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel }) {
             `}</style>
         </div>
     );
+}
+
+export function buildImpulseOverride(impulseJson, formData, initialItem) {
+    const safeId = String(initialItem?.id || initialItem?._id || formData.name || 'impulse')
+        .replace(/[^a-z0-9]/gi, '_')
+        .toLowerCase();
+    const sourceFile = formData.sourceFile || initialItem?.sourceFile || initialItem?.overrideSourceFile || null;
+    return {
+        id: initialItem?.catalogOverrideId || `impulse_${safeId}`,
+        catalogType: 'impulse',
+        baseId: initialItem?.baseId || sourceFile || null,
+        mode: sourceFile ? 'override' : 'custom',
+        label: formData.name,
+        payload: {
+            ...impulseJson,
+            id: safeId,
+            _id: safeId,
+            sourceFile: null,
+            overrideSourceFile: sourceFile,
+            isCustom: !sourceFile,
+            level: parseInt(formData.level) || 0,
+            school: formData.school || '',
+            traditions: formData.traditions || [],
+            traits: formData.traits || [],
+            rarity: formData.rarity || 'common',
+            time: formData.time || '',
+            range: formData.range || '',
+            target: formData.target || '',
+            area: formData.area || '',
+            duration: formData.duration || '',
+            defense: formData.defense || '',
+            description: formData.description || '',
+        },
+        sourceFile: null,
+    };
 }

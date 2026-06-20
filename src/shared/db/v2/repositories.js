@@ -26,13 +26,13 @@ export const campaignRepo = {
         });
     },
 
-    async updateCampaignAndCharacters(firestore, campaignId, characterIds, updater) {
+    async updateCampaignAndActors(firestore, campaignId, actorIds, updater) {
         const campaignRef = campaignDocRef(firestore, campaignId);
-        const uniqueIds = [...new Set(characterIds.filter(Boolean))];
+        const uniqueIds = [...new Set(actorIds.filter(Boolean))];
         const refsById = Object.fromEntries(
-            uniqueIds.map(characterId => [
-                characterId,
-                campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.characters, characterId),
+            uniqueIds.map(actorId => [
+                actorId,
+                campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actors, actorId),
             ])
         );
 
@@ -40,114 +40,25 @@ export const campaignRepo = {
             const campaignSnapshot = await transaction.get(campaignRef);
             if (!campaignSnapshot.exists()) throw new Error(`Campaign not found: ${campaignId}`);
 
-            const characterEntries = await Promise.all(
-                uniqueIds.map(async characterId => {
-                    const snapshot = await transaction.get(refsById[characterId]);
-                    if (!snapshot.exists()) throw new Error(`Character not found: ${characterId}`);
-                    return [characterId, snapshot.data()];
+            const actorEntries = await Promise.all(
+                uniqueIds.map(async actorId => {
+                    const snapshot = await transaction.get(refsById[actorId]);
+                    if (!snapshot.exists()) throw new Error(`Actor not found: ${actorId}`);
+                    return [actorId, snapshot.data()];
                 })
             );
 
-            const result = updater(campaignSnapshot.data(), Object.fromEntries(characterEntries));
+            const result = updater(campaignSnapshot.data(), Object.fromEntries(actorEntries));
             transaction.set(campaignRef, cleanForFirestore(stampRuntime(result.campaign)));
-            Object.entries(result.charactersById || {}).forEach(([characterId, character]) => {
-                if (!refsById[characterId]) return;
-                transaction.set(refsById[characterId], cleanForFirestore(stampRuntime(character)));
+            Object.entries(result.actorsById || {}).forEach(([actorId, actor]) => {
+                if (!refsById[actorId]) return;
+                transaction.set(refsById[actorId], cleanForFirestore(stampRuntime(actor)));
             });
         });
     },
 
     async updateSettings(firestore, campaignId, patch) {
         await updateDoc(campaignDocRef(firestore, campaignId), cleanForFirestore(stampRuntime(patch)));
-    },
-};
-
-export const characterRepo = {
-    async createCharacter(firestore, campaignId, character) {
-        const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.characters, character.id);
-        await setDoc(ref, cleanForFirestore(stampRuntime(character)));
-    },
-
-    async updateCharacter(firestore, campaignId, characterId, updater) {
-        const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.characters, characterId);
-        await runTransaction(firestore, async transaction => {
-            const snapshot = await transaction.get(ref);
-            if (!snapshot.exists()) throw new Error(`Character not found: ${characterId}`);
-            const current = snapshot.data();
-            const next = typeof updater === 'function' ? updater(current) : { ...current, ...updater };
-            transaction.set(ref, cleanForFirestore(stampRuntime(next)));
-        });
-    },
-
-    async updateCharacterAndMembers(firestore, campaignId, characterId, memberEmails, characterUpdater, memberUpdater) {
-        const characterRef = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.characters, characterId);
-        const normalizedEmails = [...new Set(memberEmails.filter(Boolean))];
-        const memberRefsByEmail = Object.fromEntries(
-            normalizedEmails.map(email => [
-                email,
-                campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.members, email),
-            ])
-        );
-
-        await runTransaction(firestore, async transaction => {
-            const characterSnapshot = await transaction.get(characterRef);
-            if (!characterSnapshot.exists()) throw new Error(`Character not found: ${characterId}`);
-
-            const memberEntries = await Promise.all(
-                normalizedEmails.map(async email => {
-                    const snapshot = await transaction.get(memberRefsByEmail[email]);
-                    return [email, snapshot.exists() ? snapshot.data() : null];
-                })
-            );
-
-            const nextCharacter = characterUpdater(characterSnapshot.data());
-            transaction.set(characterRef, cleanForFirestore(stampRuntime(nextCharacter)));
-
-            Object.entries(Object.fromEntries(memberEntries)).forEach(([email, member]) => {
-                if (!member) return;
-                const nextMember = memberUpdater(member);
-                transaction.set(memberRefsByEmail[email], cleanForFirestore(stampRuntime(nextMember)));
-            });
-        });
-    },
-
-    async updateCharacters(firestore, campaignId, characterIds, updater) {
-        const uniqueIds = [...new Set(characterIds.filter(Boolean))];
-        const refsById = Object.fromEntries(
-            uniqueIds.map(characterId => [
-                characterId,
-                campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.characters, characterId),
-            ])
-        );
-
-        await runTransaction(firestore, async transaction => {
-            const entries = await Promise.all(
-                uniqueIds.map(async characterId => {
-                    const snapshot = await transaction.get(refsById[characterId]);
-                    if (!snapshot.exists()) throw new Error(`Character not found: ${characterId}`);
-                    return [characterId, snapshot.data()];
-                })
-            );
-            const currentById = Object.fromEntries(entries);
-            const nextById = typeof updater === 'function' ? updater(currentById) : updater;
-
-            Object.entries(nextById || currentById).forEach(([characterId, character]) => {
-                if (!refsById[characterId]) return;
-                transaction.set(refsById[characterId], cleanForFirestore(stampRuntime(character)));
-            });
-        });
-    },
-
-    async updateInventoryItem(firestore, campaignId, characterId, instanceId, updater) {
-        await characterRepo.updateCharacter(firestore, campaignId, characterId, character => {
-            const inventory = Array.isArray(character.inventory) ? [...character.inventory] : [];
-            const index = inventory.findIndex(item => item.instanceId === instanceId || item.id === instanceId);
-            if (index === -1) throw new Error(`Inventory item not found: ${instanceId}`);
-            inventory[index] = typeof updater === 'function'
-                ? updater(inventory[index])
-                : { ...inventory[index], ...updater };
-            return { ...character, inventory };
-        });
     },
 };
 
@@ -399,14 +310,14 @@ export const questRepo = {
         });
     },
 
-    async updateQuestAndCampaignAndCharacters(firestore, campaignId, questId, characterIds, updater) {
+    async updateQuestAndCampaignAndActors(firestore, campaignId, questId, actorIds, updater) {
         const questRef = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.quests, questId);
         const campaignRef = campaignDocRef(firestore, campaignId);
-        const uniqueCharacterIds = [...new Set(characterIds.filter(Boolean))];
-        const characterRefsById = Object.fromEntries(
-            uniqueCharacterIds.map(characterId => [
-                characterId,
-                campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.characters, characterId),
+        const uniqueActorIds = [...new Set(actorIds.filter(Boolean))];
+        const actorRefsById = Object.fromEntries(
+            uniqueActorIds.map(actorId => [
+                actorId,
+                campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actors, actorId),
             ])
         );
 
@@ -418,20 +329,20 @@ export const questRepo = {
             if (!questSnapshot.exists()) throw new Error(`Quest not found: ${questId}`);
             if (!campaignSnapshot.exists()) throw new Error(`Campaign not found: ${campaignId}`);
 
-            const characterEntries = await Promise.all(
-                uniqueCharacterIds.map(async characterId => {
-                    const snapshot = await transaction.get(characterRefsById[characterId]);
-                    if (!snapshot.exists()) throw new Error(`Character not found: ${characterId}`);
-                    return [characterId, snapshot.data()];
+            const actorEntries = await Promise.all(
+                uniqueActorIds.map(async actorId => {
+                    const snapshot = await transaction.get(actorRefsById[actorId]);
+                    if (!snapshot.exists()) throw new Error(`Actor not found: ${actorId}`);
+                    return [actorId, snapshot.data()];
                 })
             );
 
-            const result = updater(questSnapshot.data(), campaignSnapshot.data(), Object.fromEntries(characterEntries));
+            const result = updater(questSnapshot.data(), campaignSnapshot.data(), Object.fromEntries(actorEntries));
             transaction.set(questRef, cleanForFirestore(stampRuntime(result.quest)));
             transaction.set(campaignRef, cleanForFirestore(stampRuntime(result.campaign)));
-            Object.entries(result.charactersById || {}).forEach(([characterId, character]) => {
-                if (!characterRefsById[characterId]) return;
-                transaction.set(characterRefsById[characterId], cleanForFirestore(stampRuntime(character)));
+            Object.entries(result.actorsById || {}).forEach(([actorId, actor]) => {
+                if (!actorRefsById[actorId]) return;
+                transaction.set(actorRefsById[actorId], cleanForFirestore(stampRuntime(actor)));
             });
         });
     },
@@ -542,31 +453,31 @@ export const lootRepo = {
         });
     },
 
-    async updateLootBagAndCharacter(firestore, campaignId, lootBagId, characterId, updater) {
+    async updateLootBagAndActor(firestore, campaignId, lootBagId, actorId, updater) {
         const lootRef = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.lootBags, lootBagId);
-        const characterRef = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.characters, characterId);
+        const actorRef = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actors, actorId);
 
         await runTransaction(firestore, async transaction => {
-            const [lootSnapshot, characterSnapshot] = await Promise.all([
+            const [lootSnapshot, actorSnapshot] = await Promise.all([
                 transaction.get(lootRef),
-                transaction.get(characterRef),
+                transaction.get(actorRef),
             ]);
             if (!lootSnapshot.exists()) throw new Error(`Loot bag not found: ${lootBagId}`);
-            if (!characterSnapshot.exists()) throw new Error(`Character not found: ${characterId}`);
+            if (!actorSnapshot.exists()) throw new Error(`Actor not found: ${actorId}`);
 
-            const result = updater(lootSnapshot.data(), characterSnapshot.data());
+            const result = updater(lootSnapshot.data(), actorSnapshot.data());
             transaction.set(lootRef, cleanForFirestore(stampRuntime(result.lootBag)));
-            transaction.set(characterRef, cleanForFirestore(stampRuntime(result.character)));
+            transaction.set(actorRef, cleanForFirestore(stampRuntime(result.actor)));
         });
     },
 
-    async updateLootBagAndCharacters(firestore, campaignId, lootBagId, characterIds, updater) {
-        const uniqueCharacterIds = [...new Set(characterIds.filter(Boolean))];
+    async updateLootBagAndActors(firestore, campaignId, lootBagId, actorIds, updater) {
+        const uniqueActorIds = [...new Set(actorIds.filter(Boolean))];
         const lootRef = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.lootBags, lootBagId);
-        const characterRefsById = Object.fromEntries(
-            uniqueCharacterIds.map(characterId => [
-                characterId,
-                campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.characters, characterId),
+        const actorRefsById = Object.fromEntries(
+            uniqueActorIds.map(actorId => [
+                actorId,
+                campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actors, actorId),
             ])
         );
 
@@ -574,53 +485,24 @@ export const lootRepo = {
             const lootSnapshot = await transaction.get(lootRef);
             if (!lootSnapshot.exists()) throw new Error(`Loot bag not found: ${lootBagId}`);
 
-            const characterEntries = await Promise.all(
-                uniqueCharacterIds.map(async characterId => {
-                    const snapshot = await transaction.get(characterRefsById[characterId]);
-                    if (!snapshot.exists()) throw new Error(`Character not found: ${characterId}`);
-                    return [characterId, snapshot.data()];
+            const actorEntries = await Promise.all(
+                uniqueActorIds.map(async actorId => {
+                    const snapshot = await transaction.get(actorRefsById[actorId]);
+                    if (!snapshot.exists()) throw new Error(`Actor not found: ${actorId}`);
+                    return [actorId, snapshot.data()];
                 })
             );
-            const charactersById = Object.fromEntries(characterEntries);
-            const result = updater(lootSnapshot.data(), charactersById);
+            const actorsById = Object.fromEntries(actorEntries);
+            const result = updater(lootSnapshot.data(), actorsById);
 
             transaction.set(lootRef, cleanForFirestore(stampRuntime(result.lootBag)));
-            Object.entries(result.charactersById || charactersById).forEach(([characterId, character]) => {
-                if (!characterRefsById[characterId]) return;
-                transaction.set(characterRefsById[characterId], cleanForFirestore(stampRuntime(character)));
+            Object.entries(result.actorsById || actorsById).forEach(([actorId, actor]) => {
+                if (!actorRefsById[actorId]) return;
+                transaction.set(actorRefsById[actorId], cleanForFirestore(stampRuntime(actor)));
             });
         });
     },
 
-    async claimItem(firestore, campaignId, lootBagId, itemInstanceId, characterId) {
-        const lootRef = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.lootBags, lootBagId);
-        const characterRef = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.characters, characterId);
-
-        await runTransaction(firestore, async transaction => {
-            const [lootSnapshot, characterSnapshot] = await Promise.all([
-                transaction.get(lootRef),
-                transaction.get(characterRef),
-            ]);
-            if (!lootSnapshot.exists()) throw new Error(`Loot bag not found: ${lootBagId}`);
-            if (!characterSnapshot.exists()) throw new Error(`Character not found: ${characterId}`);
-
-            const lootBag = lootSnapshot.data();
-            const character = characterSnapshot.data();
-            const items = Array.isArray(lootBag.items) ? [...lootBag.items] : [];
-            const index = items.findIndex(item => item.instanceId === itemInstanceId || item.id === itemInstanceId);
-            if (index === -1) throw new Error(`Loot item not found: ${itemInstanceId}`);
-            if (items[index].claimedBy) throw new Error('Loot item is already claimed.');
-
-            const claimedItem = { ...items[index], claimedBy: characterId };
-            items[index] = claimedItem;
-
-            const inventory = Array.isArray(character.inventory) ? [...character.inventory] : [];
-            inventory.push({ ...claimedItem, claimedAt: new Date().toISOString() });
-
-            transaction.set(lootRef, cleanForFirestore(stampRuntime({ ...lootBag, items })));
-            transaction.set(characterRef, cleanForFirestore(stampRuntime({ ...character, inventory })));
-        });
-    },
 };
 
 function normalizeCustomCreatureDocument(creature) {

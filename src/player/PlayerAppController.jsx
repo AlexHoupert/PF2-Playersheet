@@ -54,8 +54,8 @@ const ARMOR_RANKS = [
 
 
 
-export default function PlayerAppController({ db }) {
-    const { activeCampaign, myActor, myCharacter, isGM, dataActions } = useCampaign();
+export default function PlayerAppController() {
+    const { activeCampaign, myActor, myCharacter, isGM, dataActions, db } = useCampaign();
 
     const {
         actionModal,

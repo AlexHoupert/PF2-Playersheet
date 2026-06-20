@@ -124,6 +124,7 @@ export function createCatalogOverrideRecord(override, options = {}) {
   const { createId = () => createInstanceId("catalog_override") } = options;
   const catalogType = String(override?.catalogType || "item");
   const id = override?.id || createId(override);
+  const timestamp = override?.updatedAt || new Date().toISOString();
   return {
     id,
     catalogType,
@@ -132,6 +133,9 @@ export function createCatalogOverrideRecord(override, options = {}) {
     label: override?.label || override?.payload?.name || id,
     payload: cloneValue(override?.payload || {}),
     sourceFile: null,
+    createdAt: override?.createdAt || timestamp,
+    updatedAt: timestamp,
+    updatedBy: override?.updatedBy || null,
   };
 }
 

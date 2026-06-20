@@ -22,7 +22,7 @@ Status meanings:
 | --- | --- | --- |
 | Auth/Login | Needs manual smoke | Firebase Auth is still the entry gate. V2 does not alter auth, but deployed auth config must be verified in the target environment. |
 | Route mode selection | Ready by tests/code | `src/App.jsx` starts `useFirestoreV2Db` directly on the convergence branch. |
-| V2 projection cache | Ready by tests/code | `useFirestoreV2Db` caches the legacy projection under `pf2e-data-v2-projection` while the UI still transitions. |
+| V2 compatibility cache | Ready by tests/code | `useFirestoreV2Db` caches the compatibility projection under `pf2e-data-v2-projection`; normal runtime context now composes from `v2Store`. |
 | V2-native view model | Ready by tests/code | `composeV2ViewModelFromDocuments` groups campaigns, actors, actor effects, effect templates, catalog overrides, and global content. |
 | DB status object | Ready by tests/code | `CampaignContext` exposes `dbStatus`, including the current V2 view model for debug/transition work. |
 
@@ -32,10 +32,10 @@ Status meanings:
 | --- | --- | --- |
 | Campaign create/select | Ready by tests/code | Uses `dataActions.campaign`; selected campaign remains local in `gm_selected_campaign`. |
 | Campaign archive/restore | Ready by tests/code | Soft delete only; document is retained with `deletedAt`. |
-| Character create/import | Ready by tests/code | Uses `dataActions.character`; character shape and inventory identities are normalized and mirrored into `actors(kind="pc")`. |
-| Character archive/restore | Ready by tests/code | Soft delete only; member assignments are cleared on archive and not restored automatically; PC actor docs mirror archive/restore. |
+| Character create/import | Ready by tests/code | Uses `dataActions.character`; character shape and inventory identities are normalized and stored as `actors(kind="pc")` in V2. |
+| Character archive/restore | Ready by tests/code | Soft delete only; member assignments are cleared on archive and not restored automatically; PC actor docs are the V2 write target. |
 | User assign/revoke | Ready by tests/code | Email keys are normalized; V2 uses campaign member docs with `assignedActorId`. |
-| Party XP set/add | Ready by tests/code | V2 adapter updates campaign and known character documents transactionally. |
+| Party XP set/add | Ready by tests/code | V2 adapter updates campaign and known PC Actor documents transactionally. |
 | Reload persistence on `v2-convergence` | Needs manual smoke | Covered structurally by subscriptions/projection; still needs a browser check against real Firestore. |
 
 ## Player Flows
@@ -43,9 +43,9 @@ Status meanings:
 | Flow | Status | Notes |
 | --- | --- | --- |
 | Character stats/runtime shape | Ready by tests/code | Old skill names and missing runtime defaults are normalized by `characterShape.js` on load/create/update. |
-| Inventory consume/qty/buy/formula/equip/rune/load/fire/transfer | Ready by tests/code | Routed through character/inventory actions and targeted V2 character writes. |
-| Loot claim/gold claim/split | Ready by tests/code | Uses loot actions and V2 transactions. |
-| Quests/rewards | Ready by tests/code | Campaign-scoped quests and notifications; rewards are idempotent and not rolled back automatically. |
+| Inventory consume/qty/buy/formula/equip/rune/load/fire/transfer | Ready by tests/code | Routed through character/inventory compatibility actions and targeted V2 Actor writes. |
+| Loot claim/gold claim/split | Ready by tests/code | Uses loot actions and V2 Actor transactions. |
+| Quests/rewards | Ready by tests/code | Campaign-scoped quests and notifications; rewards are idempotent, not rolled back automatically, and write PC Actors. |
 | Maps | Ready by tests/code | Map data is campaign-scoped and archived through domain actions. |
 | Progress | Ready by tests/code | Player reads active-only reducer output. |
 | Camping | Ready by tests/code | Settings, custom activities, assignments, rolls, and unassign are domain-action backed. |
@@ -58,13 +58,13 @@ Status meanings:
 | Flow | Status | Notes |
 | --- | --- | --- |
 | Players tab character edits | Ready by tests/code | Campaign-scoped only; campaignless root-character fallback has been removed. |
-| Items/custom items/formulas | Ready by tests/code | Uses shop/global content actions and selector-backed reads; custom content now also writes catalog overrides. |
+| Items/custom items/formulas | Ready by tests/code | Uses shop/global content actions and selector-backed reads; V2 custom item writes go through catalog overrides. |
 | Traders/shop availability | Ready by tests/code | Uses `dataActions.shop`; V2 writes `global/config.shop`. |
 | Loot bag management | Ready by tests/code | Uses loot actions; V2 writes campaign-scoped loot bag documents. |
-| Bestiary metadata/reveal/custom creatures | Ready by tests/code | Uses bestiary actions; V2 writes `global/config.bestiary.creatures` and `customCreatures`. |
+| Bestiary metadata/reveal/custom creatures | Ready by tests/code | Uses bestiary actions; metadata writes `global/config.bestiary.creatures`, custom creature writes use catalog overrides in V2. |
 | Lore | Ready by tests/code | Uses global content actions and `loreArticles`. |
 | Abilities/custom/deviant | Ready by tests/code | Uses global content and pact actions; V2 stores ability catalogs in `global/config`. |
-| Spell editing | Ready by tests/code | Deployed spell editing writes `catalogOverrides`; local dev can still use file APIs. |
+| Production catalog editing | Ready by tests/code | Deployed item, spell, action, feat, impulse, ability, and creature editing writes `catalogOverrides`; local dev can still use guarded file APIs. |
 | Encounters | Ready by tests/code | Uses encounter actions and campaign-scoped encounter documents. |
 | Maps/progress/camping admin | Ready by tests/code | Uses domain actions and soft-delete metadata. |
 | Firebase migration UI | Needs manual smoke | Dry-run/write tooling remains admin-only and must not be run without explicit approval. |
@@ -86,7 +86,7 @@ Verified against current V2 repositories and action paths:
 - `campaigns/{campaignId}/lootBags/{lootBagId}`: campaign member/global admin read; member/global admin update; create/delete require campaign GM/global admin.
 - `campaigns/{campaignId}/encounters/{encounterId}` and `maps/{mapId}`: campaign member/global admin read; campaign GM/global admin write.
 - `global/{documentId}`: signed-in read; global admin write.
-- `customItems/{documentId}`, `customCreatures/{documentId}`, `customActions/{documentId}`, `catalogOverrides/{documentId}`, `loreArticles/{documentId}`: signed-in read; global admin write.
+- `customItems/{documentId}`, `customCreatures/{documentId}`, `customActions/{documentId}`, `catalogOverrides/{documentId}`, `loreArticles/{documentId}`: signed-in read; global admin write. New production catalog writes target `catalogOverrides`; old custom collections remain readable transition data.
 - `migrationBackups/{documentId}` and subdocuments: global admin read/write.
 
 The convergence branch added explicit rules for actors, actor effects, effect templates, and catalog overrides. Before deployment, confirm the deployed Firebase project has these rules or stricter compatible equivalents.
@@ -116,5 +116,5 @@ Do not deploy the convergence branch as the main production path until:
 
 - All required manual smoke items are marked completed for the target Firebase project.
 - The deployed Firestore rules match the repository rules or are stricter in a compatible way.
-- The team accepts that the legacy projection and broad V2 diff still exist as temporary bridges, or those bridges have been removed.
+- The team accepts that compatibility projections/selectors still exist as temporary bridges, or those bridges have been removed. Broad V2 diff is not part of the normal runtime write path.
 - A rollback path is documented: redeploy the last known-good legacy deployment or keep a tagged production release before the V2 convergence branch.

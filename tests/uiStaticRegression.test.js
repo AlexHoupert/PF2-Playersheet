@@ -36,9 +36,11 @@ test('admin actions use database fallback instead of deployed file writes', () =
     const viewSource = readSource('src/admin/ActionsView.jsx');
     const editorSource = readSource('src/admin/editors/ActionEditor.jsx');
 
-    assert.match(viewSource, /saveCustomAction/);
+    assert.match(viewSource, /catalogOverride\.saveCatalogOverride/);
+    assert.match(viewSource, /mergeCatalogIndexWithOverrides/);
     assert.match(viewSource, /normalizeCustomActionRecord/);
     assert.match(editorSource, /onSaveToDb/);
+    assert.match(editorSource, /buildActionOverride/);
     assert.match(editorSource, /import\.meta\.env\.PROD/);
     assert.match(editorSource, /sourceFile: null/);
     assert.match(editorSource, /readJsonApiResponse\(res, 'Save action'\)/);
@@ -56,6 +58,35 @@ test('admin spells use catalog override fallback instead of deployed-only file w
     assert.match(editorSource, /catalogType: 'spell'/);
     assert.match(editorSource, /import\.meta\.env\.PROD/);
     assert.match(editorSource, /readJsonApiResponse\(res, 'Save spell'\)/);
+});
+
+test('admin feats and impulses use catalog override production editing', () => {
+    const featViewSource = readSource('src/admin/FeatsView.jsx');
+    const featEditorSource = readSource('src/admin/editors/FeatEditor.jsx');
+    const impulseViewSource = readSource('src/admin/ImpulsesView.jsx');
+    const impulseEditorSource = readSource('src/admin/editors/ImpulseEditor.jsx');
+
+    assert.match(featViewSource, /catalogOverride\.saveCatalogOverride/);
+    assert.match(featViewSource, /mergeCatalogIndexWithOverrides/);
+    assert.match(featEditorSource, /onSaveToDb/);
+    assert.match(featEditorSource, /buildFeatOverride/);
+    assert.match(featEditorSource, /readJsonApiResponse\(res, 'Save feat'\)/);
+    assert.equal(featEditorSource.includes('Deployed feat overrides are not enabled yet'), false);
+
+    assert.match(impulseViewSource, /catalogOverride\.saveCatalogOverride/);
+    assert.match(impulseViewSource, /mergeCatalogIndexWithOverrides/);
+    assert.match(impulseEditorSource, /onSaveToDb/);
+    assert.match(impulseEditorSource, /buildImpulseOverride/);
+    assert.match(impulseEditorSource, /readJsonApiResponse\(res, 'Save impulse'\)/);
+    assert.equal(impulseEditorSource.includes('Deployed impulse overrides are not enabled yet'), false);
+});
+
+test('admin item production editing skips file writes and uses database fallback', () => {
+    const editorSource = readSource('src/admin/editors/ItemEditor.jsx');
+
+    assert.match(editorSource, /dbOnly \|\| import\.meta\.env\.PROD/);
+    assert.match(editorSource, /onSaveToDb/);
+    assert.match(editorSource, /readJsonApiResponse\(res, 'Save item'\)/);
 });
 
 test('quest fallback reads stay centralized in selectors', () => {
@@ -132,4 +163,14 @@ test('runtime views do not carry legacy setDb or character condition contracts',
         assert.equal(source.includes('character.companion'), false, `${path} should not read character.companion`);
         assert.equal(source.includes('has_companion'), false, `${path} should not use has_companion`);
     });
+});
+
+test('v2 runtime actions do not inject or call characterRepo', () => {
+    const actionSource = readSource('src/shared/db/domain/createDataActions.js');
+    const contextSource = readSource('src/shared/context/CampaignContext.jsx');
+    const hookSource = readSource('src/shared/db/v2/useFirestoreV2Db.js');
+
+    assert.equal(actionSource.includes('repos.characterRepo'), false);
+    assert.equal(contextSource.includes('characterRepo'), false);
+    assert.equal(hookSource.includes('V2_COLLECTIONS.characters'), false);
 });

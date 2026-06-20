@@ -5,6 +5,7 @@ import ItemDetailContent from '../../shared/components/ItemDetailContent';
 import ImagePicker from '../../shared/components/ImagePicker';
 import { useWindowSize } from '../../shared/hooks/useWindowSize';
 import { SHOP_INDEX_FILTER_OPTIONS } from '../../shared/catalog/shopIndex';
+import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 
 export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, dbOnly = false }) {
     const [formData, setFormData] = useState({
@@ -58,7 +59,7 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, 
                 damages: damages,
                 range: initialItem.range || initialItem.system?.range || '',
                 description: initialItem.system?.description?.value || initialItem.description?.value || initialItem.description || '',
-                sourceFile: initialItem.sourceFile || null,
+                sourceFile: initialItem.sourceFile || initialItem.overrideSourceFile || null,
                 img: initialItem.img || null
             });
         }
@@ -99,8 +100,8 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, 
                 }
             };
 
-            // If dbOnly, skip the file API entirely and go straight to DB
-            if (dbOnly) {
+            // Production editing is DB-backed; local dev may still use file APIs.
+            if (dbOnly || import.meta.env.PROD) {
                 if (!onSaveToDb) { setError("No save handler provided."); setIsSaving(false); return; }
                 const safeId = itemJson.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
                 const hasDamage = formData.damages && formData.damages.length > 0 && formData.damages.some(d => d.dice > 0);
@@ -108,7 +109,7 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, 
                     ...itemJson, _id: safeId, sourceFile: null, isCustom: true,
                     system: { ...itemJson.system, level: { value: parseInt(formData.level) }, price: { value: { gp: parseFloat(formData.price) } }, damage: hasDamage ? itemJson.system.damage : null }
                 };
-                try { await onSaveToDb(dbItem); onSave({ success: true, data: dbItem }); }
+                try { await onSaveToDb(dbItem); onSave({ success: true, message: 'Saved to Database', data: dbItem }); }
                 catch (err) { setError(err.message); }
                 finally { setIsSaving(false); }
                 return;
@@ -147,7 +148,7 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, 
                     throw new Error(`Server responded with ${res.status}`);
                 }
 
-                const data = await res.json();
+                const data = await readJsonApiResponse(res, 'Save item');
                 if (!data.success) throw new Error(data.error);
 
                 // Rebuild Index

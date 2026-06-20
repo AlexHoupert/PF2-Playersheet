@@ -44,9 +44,9 @@ Any new broad write outside those files should be treated as a regression.
 ## Completed In Global Admin Content Wave
 
 - Pacts and Deviant Abilities use `dataActions.pact`.
-- Custom Abilities use `dataActions.globalContent`.
+- Custom Abilities use `dataActions.globalContent`; V2 persists new writes as catalog overrides.
 - Lore articles use `dataActions.globalContent` and the `loreArticles` collection.
-- Bestiary custom creatures use the `customCreatures` collection through `dataActions.bestiary`.
+- Bestiary custom creatures use `dataActions.bestiary`; V2 persists new writes as catalog overrides while old custom creature docs remain readable transition data.
 - Bestiary metadata, reveal state, catalog initialization, group changes, and bestiary toggles use `global/config.bestiary.creatures` through `dataActions.bestiary`.
 - Player root-notification clearing uses `dataActions.globalContent.clearRootNotification`.
 - Player skill-name runtime repair uses `dataActions.character.updateCharacter`.
@@ -68,9 +68,9 @@ Remaining Player-local edit paths:
 - Schema version 3 adds campaign-scoped `actors`, `actorEffects`, `effectTemplates`, and top-level `catalogOverrides`.
 - V2 migration/backfill writes PC actors from characters, owned companion actors from legacy companions, actor effects from legacy conditions, and catalog overrides from custom content.
 - `CampaignContext` exposes `actors`, `archivedActors`, and `myActor` alongside transitional character fields.
-- Character create/import/archive/restore mirrors into actor documents.
+- Character create/import/archive/restore writes actor documents in V2.
 - Conditions can write `actorEffects` through `dataActions.effect`; old character-condition writes remain fallback-only.
-- Deployed spell editing writes `catalogOverrides` instead of depending on production file writes.
+- Deployed item, spell, action, feat, impulse, ability, and creature editing writes `catalogOverrides` instead of depending on production file writes.
 - Firestore rules cover `actors`, `actorEffects`, `effectTemplates`, and `catalogOverrides`.
 
 ## Completed In V2 Read Cutover / Actor Runtime Slice
@@ -80,6 +80,8 @@ Remaining Player-local edit paths:
 - Player/Admin runtime trees no longer carry `setDb` props.
 - PC Actor documents are preferred over stale Character documents when building `campaign.characters` compatibility rows.
 - Player basis-value actions keep the `dataActions.character.*` facade but write PC Actor documents in V2.
+- Inventory transfer, loot claim/gold split, quest rewards, and party XP write PC Actor documents in V2 instead of character documents.
+- `CampaignContext` no longer injects `characterRepo` into runtime `dataActions`.
 - Player Stats, ConditionsModal, Admin CharacterCard backlash, and mutagen item effects read/write `actorEffects`.
 - `CompanionTab` reads and writes owned companion Actors and stores companion conditions as `actorEffects`.
 - Static guards now fail runtime reintroduction of `character.conditions`, `character.companion`, root `db.characters`, broad `setDb`, broad V2 diffs, or unguarded production `/api/files/save`.
@@ -107,5 +109,5 @@ Remaining:
 
 - `useFirestoreV2Db` still builds a legacy-shaped projection for transitional reads, but it is no longer a write contract.
 - `writeLegacyDbDiffToV2` must remain confined to legacy import/migration code.
-- `composeLegacyDbFromV2Documents` is still the main UI compatibility contract; `composeV2ViewModelFromDocuments` exists, but the runtime UI has not fully cut over to it yet.
-- Legacy `characters` still exist as redundant transition data while `actors` are introduced. End state is actors-only runtime plus legacy import/backup.
+- `composeLegacyDbFromV2Documents` still exists for import/backup compatibility and tests, but `CampaignContext` builds the normal runtime compatibility DB from `v2Store`.
+- Legacy `characters` docs may still exist as transition data. Runtime writes now target Actors; remaining work is to isolate/remove legacy character collection readers and migration helpers.

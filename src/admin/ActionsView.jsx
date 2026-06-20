@@ -7,13 +7,15 @@ import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { getAllActionIndexItems, ACTION_INDEX_FILTER_OPTIONS, fetchActionDetailBySourceFile } from '../shared/catalog/actionIndex';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { readJsonApiResponse } from '../shared/utils/apiResponse';
+import { mergeCatalogIndexWithOverrides } from '../shared/db/selectors/catalogOverrideSelectors';
 
 const uniqueTypes = ACTION_INDEX_FILTER_OPTIONS.types;
 const uniqueSubtypes = ACTION_INDEX_FILTER_OPTIONS.subtypes;
 
 export default function ActionsView({ db, onInspectItem }) {
     const { isMobile } = useWindowSize();
-    const { dataActions } = useCampaign();
+    const { db: contextDb, dataActions } = useCampaign();
+    const effectiveDb = db || contextDb;
     const runDataAction = (action) => Promise.resolve(action).catch(err => {
         console.error(err);
         alert(err?.message || String(err));
@@ -42,15 +44,16 @@ export default function ActionsView({ db, onInspectItem }) {
     }, [previewItem?.sourceFile]);
 
     const customActions = useMemo(() => {
-        return Object.values(db?.actions || {}).map(normalizeCustomActionRecord).filter(Boolean);
-    }, [db?.actions]);
+        return Object.values(effectiveDb?.actions || {}).map(normalizeCustomActionRecord).filter(Boolean);
+    }, [effectiveDb?.actions]);
 
     const allActions = useMemo(() => {
         const byName = new Map();
-        getAllActionIndexItems().forEach(action => byName.set(action.name, action));
+        mergeCatalogIndexWithOverrides(getAllActionIndexItems(), effectiveDb, 'action')
+            .forEach(action => byName.set(action.name, action));
         customActions.forEach(action => byName.set(action.name, action));
         return [...byName.values()];
-    }, [customActions]);
+    }, [customActions, effectiveDb]);
 
     const filteredItems = useMemo(() => {
         const searchLower = itemSearch.trim().toLowerCase();
@@ -96,6 +99,12 @@ export default function ActionsView({ db, onInspectItem }) {
         if (!window.confirm(`Delete action "${item.name}"?`)) return;
 
         try {
+            if (item.catalogOverrideId) {
+                await dataActions.catalogOverride.deleteCatalogOverride(item.catalogOverrideId);
+                setContextMenu(null);
+                return;
+            }
+
             if (item.isCustom) {
                 await dataActions.globalContent.deleteCustomAction(item);
                 setContextMenu(null);
@@ -134,7 +143,7 @@ export default function ActionsView({ db, onInspectItem }) {
                     if (result?.message !== 'Saved to Database') window.location.reload();
                 }}
                 onCancel={() => setEditingItem(null)}
-                onSaveToDb={(action) => dataActions.globalContent.saveCustomAction(action)}
+                onSaveToDb={(override) => dataActions.catalogOverride.saveCatalogOverride(override)}
             />
         );
     }

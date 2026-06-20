@@ -66,14 +66,15 @@ Firestore V2 runtime:
 - `src/shared/db/v2/useFirestoreV2Db.js`
 - LocalStorage key `pf2e-data-v2-projection`.
 - Subscribes to normalized collections from `src/shared/db/v2/schema.js`.
-- Uses `composeLegacyDbFromV2Documents` to create the legacy projection.
+- Uses `composeRuntimeDbFromV2Store` in `CampaignContext` as the normal runtime compatibility DB; this is derived from V2 documents, not from the legacy projection hook output.
+- Still creates `legacyProjection` for explicit import/backup compatibility and remaining migration tests.
 - Uses `composeV2ViewModelFromDocuments` to expose a native grouped V2 view model through `dbStatus.v2ViewModel`.
 - Returns `{ legacyProjection, v2Store, status }`; the projection is a temporary compatibility read model, not a write contract.
 - Broad legacy DB diffs are no longer part of the V2 runtime write path. `writeLegacyDbDiffToV2` is isolated to migration/import code.
 - Campaign/Session, Character, Actor, Actor Effect, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, catalog overrides, and Player runtime fallbacks now go through `CampaignContext.dataActions` and targeted V2 repositories/transactions where migrated.
 - `CampaignContext` and global-facing views use pure selectors under `src/shared/db/selectors/` for campaign/character/actor/effect, shop, pact, ability, lore, and bestiary reads.
 
-Firestore V2 collections include `campaigns`, campaign subcollections `characters`, `actors`, `actorEffects`, `effectTemplates`, `quests`, `lootBags`, `encounters`, `maps`, `members`, plus top-level `global`, `customItems`, `customCreatures`, `customActions`, `catalogOverrides`, `loreArticles`, and `migrationBackups`.
+Firestore V2 collections include `campaigns`, campaign subcollections `actors`, `actorEffects`, `effectTemplates`, `quests`, `lootBags`, `encounters`, `maps`, `members`, plus top-level `global`, `catalogOverrides`, `loreArticles`, and `migrationBackups`. Old `characters`, `customItems`, `customCreatures`, and `customActions` collections remain readable transition/import data, but new runtime writes should not target them.
 
 V2 is the convergence branch runtime, but the branch is not yet production-cutover ready. Before deploying it as the play branch, use `docs/agent/v2-default-readiness.md` for the required manual smoke checklist and Firestore rules audit.
 
@@ -104,12 +105,12 @@ Migrated paths:
 - Character create/archive/restore/import and SessionManager character restore UI.
 - User assign/revoke and Admin Player tab user revoke.
 - Admin Player tab character updates and party XP set/add.
-- PC character lifecycle mirrors into campaign-scoped `actors(kind="pc")`; `CampaignContext` exposes `actors`, `archivedActors`, and `myActor` in addition to transitional character fields.
+- PC character lifecycle writes campaign-scoped `actors(kind="pc")`; `CampaignContext` exposes `actors`, `archivedActors`, and `myActor` in addition to transitional character viewmodels derived from PC Actors.
 - `ConditionsModal`, Player Stats, Admin CharacterCard backlash, and item mutagen effects use campaign-scoped `actorEffects`; runtime UI no longer writes `character.conditions`.
 - `CompanionTab` reads and writes owned companion Actors (`animal_companion`, `familiar`, `pet`) instead of `character.companion`; companion conditions use `actorEffects`.
-- Deployed spell editing writes Firestore `catalogOverrides`; static resource file APIs remain local-dev helpers.
+- Deployed item, spell, action, feat, impulse, ability, and creature editing writes Firestore `catalogOverrides`; static resource file APIs remain local-dev helpers.
 
-- Player local `updateCharacter` wrapper remains for not-yet-migrated PC sheet edits, but V2 basis actions now write PC Actor documents directly.
+- Player local `updateCharacter` wrapper remains for not-yet-migrated PC sheet edits, but V2 character compatibility actions now write PC Actor documents through the actor repository rather than the old characters collection.
 - Player basis edits for gold, attributes, current/temp/max HP, speed, Class DC, and Formula Book daily batch max use targeted `dataActions.character` methods.
 - Player item transfer.
 - Player loot item claim, gold claim, and gold split.

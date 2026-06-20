@@ -60,6 +60,11 @@ const forbiddenRuntimeContracts = [
       "src/admin/views/SessionManager.jsx",
     ]),
   },
+  {
+    name: "repos.characterRepo",
+    pattern: "repos.characterRepo",
+    allowedFiles: new Set([]),
+  },
 ];
 
 const failures = [];

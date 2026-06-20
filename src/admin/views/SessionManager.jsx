@@ -10,6 +10,7 @@ export default function SessionManager({ db }) {
         archivedCampaigns,
         activeCampaign,
         activeCampaignId,
+        legacyDb,
         createCampaign,
         deleteCampaign,
         restoreCampaign,
@@ -31,6 +32,7 @@ export default function SessionManager({ db }) {
     const [isSpellcaster, setIsSpellcaster] = useState(false);
     const activeCharacters = selectActiveCharacters(activeCampaign);
     const archivedCharacters = selectArchivedCharacters(activeCampaign);
+    const legacyCharacters = Array.isArray(legacyDb?.characters) ? legacyDb.characters : [];
 
     // Skeleton Character
     const handleCreateCharacter = () => {
@@ -278,12 +280,12 @@ export default function SessionManager({ db }) {
                         )}
 
                         {/* LEGACY / UNASSIGNED CHARACTERS IMPORT */}
-                        {db.characters && db.characters.length > 0 && (
+                        {legacyCharacters.length > 0 && (
                             <div style={{ borderTop: '1px solid #444', paddingTop: 15 }}>
                                 <h4 style={{ color: '#aaa', marginTop: 0 }}>Import Legacy Characters</h4>
                                 <p style={{ fontSize: '0.8em', color: '#666', marginBottom: 10 }}>Characters from before the update are here. Move them to this campaign:</p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                    {db.characters.map((char, originalIndex) => (
+                                    {legacyCharacters.map((char, originalIndex) => (
                                         <div key={char.id || originalIndex} style={{ display: 'flex', justifyContent: 'space-between', background: '#2b2b2e', padding: '8px', borderRadius: 4, alignItems: 'center', border: '1px dashed #555' }}>
                                             <span style={{ color: '#aaa' }}>{char.name} (Lvl {char.level})</span>
                                             <button

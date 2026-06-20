@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import { FEAT_INDEX_FILTER_OPTIONS, fetchFeatDetailBySourceFile } from '../../shared/catalog/featIndex';
+import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 
-export default function FeatEditor({ initialItem, onSave, onCancel }) {
+export default function FeatEditor({ initialItem, onSave, onCancel, onSaveToDb }) {
     const [formData, setFormData] = useState({
         name: '',
         level: 1,
@@ -35,7 +36,7 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
                 actionType: initialItem.actionType || '',
                 prerequisites: initialItem.prerequisites ? (Array.isArray(initialItem.prerequisites) ? initialItem.prerequisites.join(', ') : initialItem.prerequisites) : '',
                 description: initialItem.description || '',
-                sourceFile: initialItem.sourceFile || null
+                sourceFile: initialItem.sourceFile || initialItem.overrideSourceFile || null
             });
 
             // Fetch full details if sourceFile exists (index items lack description)
@@ -86,22 +87,29 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
                 }
             };
 
-            // Determine Path
             let filePath = formData.sourceFile;
             let isNew = !filePath;
+            const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const featOverride = buildFeatOverride(featJson, formData, initialItem);
+
+            if (import.meta.env.PROD && onSaveToDb) {
+                await onSaveToDb(featOverride);
+                onSave({ success: true, message: 'Saved feat override to database', data: featOverride });
+                return;
+            }
+
+            if (import.meta.env.PROD) {
+                throw new Error('No database save handler is configured for deployed feat editing.');
+            }
 
             if (isNew) {
-                const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
                 filePath = `ressources/feats/${safeName}.json`;
-            }
-            if (import.meta.env.PROD) {
-                throw new Error('Static feat files can only be edited in the local dev server. Deployed feat overrides are not enabled yet.');
             }
 
             // Save File
             const endpoint = isNew ? '/api/files/create' : '/api/files/save';
             const payload = isNew
-                ? { directory: `ressources/feats`, filename: `${formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`, content: featJson }
+                ? { directory: `ressources/feats`, filename: `${safeName}.json`, content: featJson }
                 : { filePath: (filePath && !filePath.startsWith('ressources/')) ? `ressources/${filePath}` : filePath, content: featJson };
 
             const res = await fetch(endpoint, {
@@ -110,7 +118,7 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
                 body: JSON.stringify(payload)
             });
 
-            const data = await res.json();
+            const data = await readJsonApiResponse(res, 'Save feat');
             if (!data.success) throw new Error(data.error);
 
             // Rebuild Index
@@ -118,6 +126,34 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
 
             onSave(data);
         } catch (err) {
+            if (onSaveToDb) {
+                try {
+                    const fallbackJson = {
+                        name: formData.name,
+                        type: 'feat',
+                        img: initialItem?.img || "systems/pf2e/icons/default-icons/feat.svg",
+                        system: {
+                            description: { value: formData.description },
+                            level: { value: parseInt(formData.level) },
+                            traits: {
+                                value: formData.traits,
+                                rarity: formData.rarity
+                            },
+                            actionType: { value: formData.actionType },
+                            actions: { value: null },
+                            prerequisites: { value: formData.prerequisites ? [formData.prerequisites] : [] },
+                            category: formData.category.toLowerCase()
+                        }
+                    };
+                    const fallbackOverride = buildFeatOverride(fallbackJson, formData, initialItem);
+                    await onSaveToDb(fallbackOverride);
+                    onSave({ success: true, message: 'Saved feat override to database', data: fallbackOverride });
+                    return;
+                } catch (dbErr) {
+                    setError(`Failed to save feat. Server: ${err.message}. DB: ${dbErr.message}`);
+                    return;
+                }
+            }
             setError(err.message);
         } finally {
             setIsSaving(false);
@@ -190,4 +226,36 @@ export default function FeatEditor({ initialItem, onSave, onCancel }) {
             `}</style>
         </div>
     );
+}
+
+export function buildFeatOverride(featJson, formData, initialItem) {
+    const safeId = String(initialItem?.id || initialItem?._id || formData.name || 'feat')
+        .replace(/[^a-z0-9]/gi, '_')
+        .toLowerCase();
+    const sourceFile = formData.sourceFile || initialItem?.sourceFile || initialItem?.overrideSourceFile || null;
+    return {
+        id: initialItem?.catalogOverrideId || `feat_${safeId}`,
+        catalogType: 'feat',
+        baseId: initialItem?.baseId || sourceFile || null,
+        mode: sourceFile ? 'override' : 'custom',
+        label: formData.name,
+        payload: {
+            ...featJson,
+            id: safeId,
+            _id: safeId,
+            sourceFile: null,
+            overrideSourceFile: sourceFile,
+            isCustom: !sourceFile,
+            level: parseInt(formData.level) || 0,
+            category: formData.category,
+            traits: formData.traits || [],
+            rarity: formData.rarity || 'common',
+            actionType: formData.actionType || '',
+            prerequisites: formData.prerequisites
+                ? formData.prerequisites.split(',').map((entry) => entry.trim()).filter(Boolean)
+                : [],
+            description: formData.description || '',
+        },
+        sourceFile: null,
+    };
 }

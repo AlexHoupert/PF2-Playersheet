@@ -6,7 +6,7 @@ Last updated: 2026-06-20.
 
 The `v2-convergence` branch has started the V2-only cutover. `src/App.jsx` now starts the Firestore V2 hook directly instead of selecting the legacy runtime.
 
-Existing screens still mostly expect a legacy-shaped `db` object. Firestore V2 currently normalizes storage and still projects documents back into that shape for UI compatibility, but this projection is now a temporary bridge rather than the long-term UI contract.
+Existing screens still expect some compatibility props, but `CampaignContext` now builds its normal runtime view from the V2 store. The hook-level `legacyProjection` is kept as an explicit import/backup bridge and for migration tests, not as the normal UI contract.
 
 This means a feature is not fully v2-ready just because it appears in the legacy-shaped projection; v2 still needs targeted repository/actions so data is written into the intended collection and reconstructed correctly.
 
@@ -69,7 +69,6 @@ Campaign subcollections:
 
 - `actors`
 - `actorEffects`
-- `characters`
 - `effectTemplates`
 - `quests`
 - `lootBags`
@@ -98,9 +97,11 @@ Read path:
 3. For every campaign, subscribe to known subcollections.
 4. Store documents in a `Map` keyed by Firestore path.
 5. Build a V2-native debug/read view with `composeV2ViewModelFromDocuments`.
-6. Call `composeLegacyDbFromV2Documents` for current UI compatibility.
-7. Run `migrateDb`.
+6. Call `composeLegacyDbFromV2Documents` only for explicit compatibility/import use.
+7. Run `migrateDb` on that compatibility projection.
 8. Cache projection to LocalStorage.
+
+`CampaignContext` uses `composeRuntimeDbFromV2Store` for the normal runtime compatibility DB and exposes V2-native viewmodels such as `actors`, `pcActors`, `myActor`, quests, loot bags, maps, shop, lore, pacts, abilities, bestiary, and catalog overrides.
 
 Runtime write path:
 
@@ -118,7 +119,7 @@ Important transitional limitation:
 
 - There are still transitional screens that read the legacy-shaped projection, but runtime writes should not use it as a persistence contract.
 - `setDb` no longer flows through Player/Admin runtime components on `v2-convergence`.
-- Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, and Player runtime fallbacks now use targeted domain actions instead of broad runtime UI writes.
+- Campaign/Session, Actor-backed Character compatibility, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, Catalog Overrides, and Player runtime fallbacks now use targeted domain actions instead of broad runtime UI writes.
 - Actor, Actor Effect, Effect Template, and Catalog Override repositories/actions have been introduced as the foundation for the planned Effects/Conditions and Companion/Minion systems.
 
 ## Domain Action Layer
@@ -143,11 +144,11 @@ Files:
 
 Current migrated write paths:
 
-- Player character updates through `dataActions.character.updateCharacter`; player basis edits for gold, attributes, HP/temp/max HP, speed, Class DC, and daily crafting max keep the `character.*` API but write PC Actor documents directly in V2.
-- New character create/import/archive/restore mirrors PC documents into campaign-scoped `actors`.
+- Player character compatibility updates through `dataActions.character.updateCharacter`; in V2 these delegate to PC Actor updates. Player basis edits for gold, attributes, HP/temp/max HP, speed, Class DC, and daily crafting max write PC Actor documents directly in V2.
+- New character create/import/archive/restore writes campaign-scoped PC Actors in V2. Old character documents remain import/transition data and are not the runtime write target.
 - Conditions in `ConditionsModal`, Player Stats, Admin CharacterCard backlash, and item mutagen effects use `dataActions.effect` and campaign-scoped `actorEffects`.
 - Companion UI reads and writes owned Actor documents instead of `character.companion`; companion conditions also use `actorEffects`.
-- Custom item/action/ability/creature saves also create `catalogOverrides`; deployed spell editing writes directly to `catalogOverrides`.
+- Custom item/action/ability/creature saves write `catalogOverrides` in V2. Deployed item, spell, action, feat, impulse, ability, and creature editors use catalog overrides instead of `/api/files/*`.
 - Player inventory transfer through `dataActions.inventory.transferItem`.
 - Player loot claim, gold claim, and gold split through `dataActions.loot`.
 - Campaign/session flows through `dataActions.campaign`, `dataActions.character`, and `dataActions.member`.
@@ -177,7 +178,7 @@ Soft delete:
 - Custom Camping Activity deletion is also archival via `deletedAt` and optional `deletedBy`.
 - Restore removes deletion fields and stamps `restoredAt`/`restoredBy`.
 - `CampaignContext` filters active Campaigns, Characters, Quests, Encounters, and Maps for normal screens and exposes archived records for restore UI.
-- Firestore v2 keeps Campaign and Character documents; member assignments are cleared when a character is archived.
+- Firestore v2 keeps Campaign and Actor documents; member assignments are cleared when an assigned PC Actor is archived.
 - Quest rewards are idempotent via applied markers and are not automatically rolled back when objectives are later marked incomplete.
 
 Adapter behavior:

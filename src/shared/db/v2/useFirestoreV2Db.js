@@ -14,7 +14,6 @@ const IS_FIREBASE_CONFIGURED = firestore && firestore.app.options.apiKey !== 'YO
 const CAMPAIGN_SUBCOLLECTIONS = [
     V2_COLLECTIONS.actors,
     V2_COLLECTIONS.actorEffects,
-    V2_COLLECTIONS.characters,
     V2_COLLECTIONS.effectTemplates,
     V2_COLLECTIONS.quests,
     V2_COLLECTIONS.lootBags,

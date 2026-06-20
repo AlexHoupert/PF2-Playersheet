@@ -3,14 +3,15 @@ import { useAuth } from '../auth/AuthProvider';
 import { db as firestoreDb } from '../db/firebase-config';
 import { createDataActions } from '../db/domain/createDataActions';
 import { isSoftDeleted, normalizeEmail } from '../db/domain/campaignReducers';
-import { selectActorBuckets, selectMyActor } from '../db/selectors/actorSelectors';
-import { selectActiveCampaign, selectCampaignBuckets, selectTargetCampaignId } from '../db/selectors/campaignSelectors';
+import { selectActorBuckets, selectMyActor, selectOwnedActors, selectPcActors } from '../db/selectors/actorSelectors';
+import { selectActiveCampaign, selectCampaignBuckets, selectLootBagLists, selectQuestLists, selectTargetCampaignId } from '../db/selectors/campaignSelectors';
 import { selectMyCharacter } from '../db/selectors/characterSelectors';
+import { selectShop } from '../db/selectors/shopSelectors';
+import { composeRuntimeDbFromV2Store } from '../db/v2/runtimeDb';
 import {
     actorRepo,
     campaignRepo,
     catalogOverrideRepo,
-    characterRepo,
     effectRepo,
     encounterRepo,
     globalRepo,
@@ -26,7 +27,6 @@ const defaultRepositories = {
     actorRepo,
     campaignRepo,
     catalogOverrideRepo,
-    characterRepo,
     effectRepo,
     encounterRepo,
     globalRepo,
@@ -40,8 +40,9 @@ export function useCampaign() {
     return useContext(CampaignContext);
 }
 
-export function CampaignProvider({ db, v2Store = null, children, isAdmin = false, dbMode = 'legacy', dbStatus = null }) {
+export function CampaignProvider({ legacyDb = null, v2Store = null, children, isAdmin = false, dbMode = 'legacy', dbStatus = null }) {
     const { user } = useAuth();
+    const db = useMemo(() => composeRuntimeDbFromV2Store(v2Store), [v2Store]);
     const userEmail = normalizeEmail(user?.email);
     const v2UserInfo = useMemo(() => selectUserInfoFromV2Store(v2Store, userEmail), [v2Store, userEmail]);
     const dataActions = useMemo(
@@ -94,10 +95,16 @@ export function CampaignProvider({ db, v2Store = null, children, isAdmin = false
 
     const activeCampaign = selectActiveCampaign(campaigns, targetCampaignId);
     const { actors, archivedActors } = useMemo(() => selectActorBuckets(activeCampaign), [activeCampaign]);
+    const pcActors = useMemo(() => selectPcActors(activeCampaign), [activeCampaign]);
 
     // Active Character (User's specific character)
     const myCharacter = selectMyCharacter(activeCampaign, userInfo);
     const myActor = selectMyActor(activeCampaign, userInfo);
+    const ownedActors = useMemo(() => selectOwnedActors(activeCampaign, myActor?.id), [activeCampaign, myActor?.id]);
+    const questLists = useMemo(() => selectQuestLists(db, activeCampaign, targetCampaignId), [db, activeCampaign, targetCampaignId]);
+    const lootBagLists = useMemo(() => selectLootBagLists(db, activeCampaign, targetCampaignId), [db, activeCampaign, targetCampaignId]);
+    const shop = useMemo(() => selectShop(db), [db]);
+    const bestiary = db.bestiary || { creatures: {}, customCreatures: {} };
 
     useEffect(() => {
         if (selectedCampaignId && !campaigns[selectedCampaignId]) {
@@ -168,13 +175,34 @@ export function CampaignProvider({ db, v2Store = null, children, isAdmin = false
         activeCampaignId: targetCampaignId,
         actors,
         archivedActors,
+        pcActors,
+        ownedActors,
         myCharacter,
         myActor,
+        quests: questLists.quests,
+        archivedQuests: questLists.archivedQuests,
+        allQuests: questLists.allQuests,
+        lootBags: lootBagLists.lootBags,
+        archivedLootBags: lootBagLists.archivedLootBags,
+        allLootBags: lootBagLists.allLootBags,
+        encounters: activeCampaign?.encounters || [],
+        archivedEncounters: activeCampaign?.archivedEncounters || [],
+        maps: activeCampaign?.maps || [],
+        archivedMaps: activeCampaign?.archivedMaps || [],
+        members: activeCampaign?.members || {},
+        shop,
+        bestiary,
+        lore: db.lore || { articles: [] },
+        pacts: db.pacts || {},
+        abilities: db.abilities || { custom: {}, deviant: {} },
+        catalogOverrides: db.catalogOverrides || {},
         isGM,
         userInfo,
         dbMode,
         dbStatus,
         dataActions,
+        db,
+        legacyDb,
         v2Store,
         // GM Actions
         setSelectedCampaignId,
@@ -189,7 +217,7 @@ export function CampaignProvider({ db, v2Store = null, children, isAdmin = false
         importLegacyCharacter,
         setPartyXp,
         addPartyXp
-    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, actors, archivedActors, myCharacter, myActor, isGM, userInfo, dbMode, dbStatus, dataActions, v2Store, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setPartyXp, addPartyXp]);
+    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, actors, archivedActors, pcActors, ownedActors, myCharacter, myActor, questLists, lootBagLists, shop, bestiary, isGM, userInfo, dbMode, dbStatus, dataActions, db, legacyDb, v2Store, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setPartyXp, addPartyXp]);
 
     return (
         <CampaignContext.Provider value={value}>

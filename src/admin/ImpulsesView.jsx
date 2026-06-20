@@ -4,6 +4,8 @@ import BottomSheet from '../shared/components/BottomSheet';
 import ContentPreviewCard from './components/ContentPreviewCard';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { IMPULSE_INDEX_FILTER_OPTIONS, IMPULSE_INDEX_ITEMS, fetchImpulseDetailBySourceFile } from '../shared/catalog/impulseIndex';
+import { useCampaign } from '../shared/context/CampaignContext';
+import { mergeCatalogIndexWithOverrides } from '../shared/db/selectors/catalogOverrideSelectors';
 
 const ImpulseEditor = React.lazy(() => import('./editors/ImpulseEditor'));
 
@@ -15,6 +17,7 @@ const uniqueSchools = IMPULSE_INDEX_FILTER_OPTIONS.schools;
 
 export default function ImpulsesView({ onInspectItem }) {
     const { isMobile } = useWindowSize();
+    const { db, dataActions } = useCampaign();
 
     const [itemSearch, setItemSearch] = useState('');
     const [filterType, setFilterType] = useState([]);
@@ -47,17 +50,22 @@ export default function ImpulsesView({ onInspectItem }) {
             .catch(err => console.error('Failed to load impulse detail', err));
     }, [previewItem?.sourceFile]);
 
+    const catalogItems = useMemo(
+        () => mergeCatalogIndexWithOverrides(IMPULSE_INDEX_ITEMS, db, 'impulse'),
+        [db]
+    );
+
     const filteredItems = useMemo(() => {
         const searchLower = itemSearch.trim().toLowerCase();
-        return IMPULSE_INDEX_ITEMS.filter(i => {
+        return catalogItems.filter(i => {
             if (filterType.length && !filterType.includes(i.type)) return false;
             if (filterRarity.length && !filterRarity.includes(i.rarity)) return false;
             if (filterSchool.length && !filterSchool.includes(i.school)) return false;
-            if (filterTraditions.length && !filterTraditions.some(t => i.traditions.includes(t))) return false;
-            if (filterTraits.length && !filterTraits.every(t => i.traits.includes(t))) return false;
+            if (filterTraditions.length && !filterTraditions.some(t => (i.traditions || []).includes(t))) return false;
+            if (filterTraits.length && !filterTraits.every(t => (i.traits || []).includes(t))) return false;
             return i.name.toLowerCase().includes(searchLower);
         });
-    }, [filterType, filterRarity, filterTraditions, filterTraits, filterSchool, itemSearch]);
+    }, [catalogItems, filterType, filterRarity, filterTraditions, filterTraits, filterSchool, itemSearch]);
 
     const sortedItems = useMemo(() => {
         const items = [...filteredItems];
@@ -144,7 +152,11 @@ export default function ImpulsesView({ onInspectItem }) {
             <React.Suspense fallback={null}>
                 <ImpulseEditor
                     initialItem={Object.keys(editingItem).length === 0 ? null : editingItem}
-                    onSave={() => window.location.reload()}
+                    onSave={(result) => {
+                        setEditingItem(null);
+                        if (!String(result?.message || '').includes('database')) window.location.reload();
+                    }}
+                    onSaveToDb={(override) => dataActions.catalogOverride.saveCatalogOverride(override)}
                     onCancel={() => setEditingItem(null)}
                 />
             </React.Suspense>

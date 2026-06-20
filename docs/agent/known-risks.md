@@ -15,11 +15,11 @@ The worst route/component files have been cut into shells/controllers/layouts:
 
 The residual risk moved to the new hooks and controller/layout files. Continue extracting focused pure helpers while touching specific workflows.
 
-2. Legacy projection as hidden contract
+2. Compatibility viewmodels as hidden contract
 
-The `v2-convergence` branch starts Firestore V2 directly, but most screens still expect the legacy `db` shape. Firestore V2 projects normalized documents back to that shape. New V2 collections or fields must be added to both normalization and composition if they should survive runtime writes.
+The `v2-convergence` branch starts Firestore V2 directly. `CampaignContext` now builds the normal runtime view from `v2Store`, but many screens still receive compatibility-shaped data. New V2 collections or fields must be added to the V2 store composition and selectors before they are safe UI contracts.
 
-Global-facing reads for shop, pacts, abilities, lore, and bestiary are now centralized in selectors, and a native V2 view model exists in `dbStatus.v2ViewModel`, but most UI still consumes the legacy-shaped projection until the dedicated V2 read model replaces it.
+Global-facing reads for shop, pacts, abilities, lore, and bestiary are centralized in selectors, and a native V2 view model exists in `dbStatus.v2ViewModel`. Continue shrinking compatibility props until views consume native V2 selectors directly.
 
 3. Mixed item identity
 
@@ -41,9 +41,9 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 - Character runtime defaults and old skill names are normalized in `src/shared/db/domain/characterShape.js` during load, V2 migration, create, and update paths.
 - Player basis edits for gold, attributes, current/temp/max HP, speed, Class DC, and Formula Book daily batch limits use targeted `dataActions.character` methods. Keep direct nested writes for these fields out of Player modals.
 - Remaining Player UI-local edit paths include saves/skills, weapon/armor proficiencies, magic slots, armor/shield state, and inventory-driven gold/HP changes. They rely on `applyCharacterUpdate` plus `normalizeCharacterRuntimeShape` for shape safety and are candidates for later focused actions.
-- PC character lifecycle is mirrored into campaign-scoped `actors(kind="pc")`; companion snapshots are backfilled as owned actors and `CompanionTab` now edits owned actors directly. Until the actor cutover is complete, character and actor documents can be redundant transition data.
+- PC character lifecycle and migrated PC writes target campaign-scoped `actors(kind="pc")`; companion snapshots are backfilled as owned actors and `CompanionTab` now edits owned actors directly. Old character documents can remain as transition/import data but should not be runtime write targets.
 - Conditions are campaign-scoped `actorEffects` for Player Stats, ConditionsModal, Admin CharacterCard backlash, mutagen effects, and companion conditions. The legacy projection still overlays character conditions for compatibility/import surfaces only.
-- Catalog overrides are the production-safe write target for deployed spell/action/item/ability/creature editing. Static resource file APIs should stay local-dev only.
+- Catalog overrides are the production-safe write target for deployed item/spell/action/feat/impulse/ability/creature editing. Static resource file APIs should stay local-dev only.
 - Wands are reusable inventory items with `system.wand = { charges, max }`, not consumable stacks. Inventory double-tap and spell detail casting should reduce charges only; Daily Preparation recharges them. Keep wand detection centralized in `src/shared/utils/wandUtils.js`.
 - Scaly Skin is currently implemented as a specific AC rule in the shared AC calculation: while unarmored or wearing Explorer's Clothing, it adds item AC and applies Dex cap +3. This should eventually move into a general effects/rules engine.
 - The shared effect resolver now handles typed bonus/penalty stacking, caps, persistent damage, and resistance/weakness offsets for the first actor-effect foundation. It is not yet a full PF2e rules engine.

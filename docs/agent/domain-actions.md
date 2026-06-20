@@ -22,7 +22,7 @@ Location:
 - `src/shared/db/domain/createDataActions.js`
 - `src/shared/db/v2/repositories.js`
 
-The UI still reads the legacy-shaped projection, but migrated write paths call `dataActions` from `CampaignContext`.
+The UI still has compatibility viewmodels, but `CampaignContext` now builds its normal runtime view from the V2 store. Migrated write paths call `dataActions` from `CampaignContext`.
 
 Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `src/shared/db/selectors/` instead of embedding root-field fallback logic inside components.
 
@@ -86,6 +86,20 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `s
 - `updateActor(campaignId, actorId, updater)`
 - `softDeleteActor(campaignId, actorId)`
 - `restoreActor(campaignId, actorId)`
+- `setHp(campaignId, actorId, value)`
+- `adjustHp(campaignId, actorId, amount)`
+- `setGold(campaignId, actorId, value)`
+- `adjustGold(campaignId, actorId, amount)`
+- `setStat(campaignId, actorId, key, value)`
+- `setSkill(campaignId, actorId, skillKey, value)`
+- `setSave(campaignId, actorId, saveKey, value)`
+- `setProficiency(campaignId, actorId, proficiencyKey, value)`
+- `setMagicSlot(campaignId, actorId, slotKey, value)`
+- `setEquipmentState(campaignId, actorId, patch)`
+- `addItem(campaignId, actorId, item, options)`
+- `updateItem(campaignId, actorId, item, updater)`
+- `removeItem(campaignId, actorId, item)`
+- `transferItem(campaignId, fromActorId, toActorId, item, qty)`
 
 `dataActions.effect`:
 
@@ -217,17 +231,17 @@ Legacy mode:
 
 Firestore V2 mode:
 
-- Uses repository transactions for character, inventory transfer, loot item claim, gold claim, and gold split.
-- Uses targeted campaign, character, and member document writes for SessionManager flows.
+- Uses repository transactions for actor-backed character compatibility, inventory transfer, loot item claim, gold claim, and gold split.
+- Uses targeted campaign, actor, and member document writes for SessionManager flows.
 - Uses targeted loot-bag document updates for loot bag create/update/add/remove/quantity.
-- Uses targeted quest, campaign, and character transactions for quest rewards.
+- Uses targeted quest, campaign, and actor transactions for quest rewards.
 - Uses targeted encounter document updates for encounter CRUD, combatants, initiative, and turn state.
 - Uses targeted map document updates for map CRUD/archive/restore, ordering, pins, scale, and image URL writes.
 - Uses targeted campaign document updates for progress sections and top-level progress archives/restores.
 - Uses targeted campaign document updates for camping settings, custom activities, assignments, rolls, and reset/archive/restore behavior.
-- Uses targeted global config/custom document writes for shop/trader state, custom items/actions, custom abilities, pacts, deviant abilities, lore, bestiary reveal-state, bestiary metadata, custom creatures, and root-notification compatibility.
+- Uses targeted global config/document writes for shop/trader state, pacts, deviant abilities, lore, bestiary reveal-state, bestiary metadata, and root-notification compatibility.
 - Uses targeted actor/effect/effect-template writes for the V2 actor/effects foundation.
-- Custom item/action/ability/creature saves also write `catalogOverrides`; deployed spell editing writes `catalogOverrides` directly.
+- Custom item/action/ability/creature saves write `catalogOverrides` in V2; deployed item, spell, action, feat, impulse, ability, and creature editing writes `catalogOverrides` directly.
 - Does not route migrated writes through `writeLegacyDbDiffToV2`.
 
 If Firestore config is missing, the adapter falls back to legacy mode.
@@ -238,7 +252,7 @@ If Firestore config is missing, the adapter falls back to legacy mode.
 
 - Inventory and loot items are normalized with `instanceId` on every domain write.
 - Character runtime shape is normalized on load, V2 migration, create, and update through `normalizeCharacterRuntimeShape`.
-- PC character create/import/archive/restore mirrors to campaign-scoped `actors` while the legacy `characters` collection still exists as transition data.
+- PC character create/import/archive/restore writes campaign-scoped `actors` in V2. The legacy `characters` collection still exists as transition/import data, but it is no longer the runtime write target.
 - Actor effects are the target source for Conditions. The legacy projection overlays `character.conditions` from `actorEffects` when available.
 - Old skill keys `Intimidate`/`intimidate` and `Perform`/`perform` are migrated to `Intimidation` and `Performance`.
 - Missing player runtime fields such as `impulses`, caster flags, and spell/impulse proficiencies are defaulted before UI reads.

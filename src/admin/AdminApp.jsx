@@ -21,8 +21,8 @@ import Breadcrumbs from './components/Breadcrumbs';
 import '../App.css';
 import './AdminApp.css';
 
-export default function AdminApp({ db }) {
-    const { activeCampaign, assignUser, revokeUser, setPartyXp, addPartyXp, dataActions } = useCampaign();
+export default function AdminApp() {
+    const { activeCampaign, assignUser, revokeUser, setPartyXp, addPartyXp, dataActions, db } = useCampaign();
     const [activeTab, setActiveTab] = useState('sessions');
     const [playerTabMode, setPlayerTabMode] = useState('cards'); // 'cards' or 'users'
 

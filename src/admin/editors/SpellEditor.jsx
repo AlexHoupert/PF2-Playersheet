@@ -40,7 +40,7 @@ export default function SpellEditor({ initialItem, onSave, onCancel, onSaveToDb 
                 duration: initialItem.duration || '',
                 defense: initialItem.defense || '',
                 description: initialItem.description || '',
-                sourceFile: initialItem.sourceFile || null
+                sourceFile: initialItem.sourceFile || initialItem.overrideSourceFile || null
             });
 
             // Fetch full details if sourceFile exists (index items lack description, target, etc.)
@@ -268,10 +268,10 @@ export default function SpellEditor({ initialItem, onSave, onCancel, onSaveToDb 
 }
 
 export function buildSpellOverride(spellJson, formData, initialItem) {
-    const safeId = (initialItem?.id || formData.name || 'spell')
+    const safeId = String(initialItem?.id || formData.name || 'spell')
         .replace(/[^a-z0-9]/gi, '_')
         .toLowerCase();
-    const sourceFile = formData.sourceFile || initialItem?.sourceFile || null;
+    const sourceFile = formData.sourceFile || initialItem?.sourceFile || initialItem?.overrideSourceFile || null;
     return {
         id: `spell_${safeId}`,
         catalogType: 'spell',

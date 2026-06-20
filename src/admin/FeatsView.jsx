@@ -5,6 +5,8 @@ import BottomSheet from '../shared/components/BottomSheet';
 import ContentPreviewCard from './components/ContentPreviewCard';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { FEAT_INDEX_FILTER_OPTIONS, FEAT_INDEX_ITEMS, fetchFeatDetailBySourceFile } from '../shared/catalog/featIndex';
+import { useCampaign } from '../shared/context/CampaignContext';
+import { mergeCatalogIndexWithOverrides } from '../shared/db/selectors/catalogOverrideSelectors';
 
 const uniqueRarities = FEAT_INDEX_FILTER_OPTIONS.rarities;
 const uniqueTraits = FEAT_INDEX_FILTER_OPTIONS.traits;
@@ -12,6 +14,7 @@ const uniqueCategories = FEAT_INDEX_FILTER_OPTIONS.categories;
 
 export default function FeatsView({ onInspectItem }) {
     const { isMobile } = useWindowSize();
+    const { db, dataActions } = useCampaign();
 
     const [itemSearch, setItemSearch] = useState('');
     const [filterRarity, setFilterRarity] = useState([]);
@@ -42,15 +45,20 @@ export default function FeatsView({ onInspectItem }) {
             .catch(err => console.error('Failed to load feat detail', err));
     }, [previewItem?.sourceFile]);
 
+    const catalogItems = useMemo(
+        () => mergeCatalogIndexWithOverrides(FEAT_INDEX_ITEMS, db, 'feat'),
+        [db]
+    );
+
     const filteredItems = useMemo(() => {
         const searchLower = itemSearch.trim().toLowerCase();
-        return FEAT_INDEX_ITEMS.filter(i => {
+        return catalogItems.filter(i => {
             if (filterRarity.length && !filterRarity.includes(i.rarity)) return false;
             if (filterCategory.length && !filterCategory.includes(i.category)) return false;
-            if (filterTraits.length && !filterTraits.every(t => i.traits.includes(t))) return false;
+            if (filterTraits.length && !filterTraits.every(t => (i.traits || []).includes(t))) return false;
             return i.name.toLowerCase().includes(searchLower);
         });
-    }, [filterRarity, filterTraits, filterCategory, itemSearch]);
+    }, [catalogItems, filterRarity, filterTraits, filterCategory, itemSearch]);
 
     const sortedItems = useMemo(() => {
         const items = [...filteredItems];
@@ -140,7 +148,11 @@ export default function FeatsView({ onInspectItem }) {
         return (
             <FeatEditor
                 initialItem={Object.keys(editingItem).length === 0 ? null : editingItem}
-                onSave={() => window.location.reload()}
+                onSave={(result) => {
+                    setEditingItem(null);
+                    if (!String(result?.message || '').includes('database')) window.location.reload();
+                }}
+                onSaveToDb={(override) => dataActions.catalogOverride.saveCatalogOverride(override)}
                 onCancel={() => setEditingItem(null)}
             />
         );

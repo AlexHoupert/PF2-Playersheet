@@ -7,27 +7,6 @@ const firestore = { app: { options: { projectId: 'test-project' } } };
 function createActionHarness(db = {}) {
     const calls = [];
     const repositories = {
-        characterRepo: {
-            async createCharacter(_firestore, campaignId, character) {
-                calls.push(['character.createCharacter', campaignId, character.id]);
-            },
-            async updateCharacter(_firestore, campaignId, characterId, updater) {
-                const result = updater({ id: characterId, inventory: [] });
-                calls.push(['character.updateCharacter', campaignId, characterId, result]);
-            },
-            async updateCharacterAndMembers(_firestore, campaignId, characterId, memberEmails, characterUpdater, memberUpdater) {
-                const character = characterUpdater({ id: characterId });
-                const member = memberUpdater({ email: memberEmails[0], characterId });
-                calls.push(['character.updateCharacterAndMembers', campaignId, characterId, character.deletedAt ? 'deleted' : 'active', member.assignedActorId ?? null]);
-            },
-            async updateCharacters(_firestore, campaignId, characterIds, updater) {
-                calls.push(['character.updateCharacters', campaignId, characterIds]);
-                updater(Object.fromEntries(characterIds.map(id => [
-                    id,
-                    { id, inventory: id === 'char1' ? [{ instanceId: 'torch1', name: 'Torch', qty: 1 }] : [] },
-                ])));
-            },
-        },
         memberRepo: {
             async assignUser(_firestore, campaignId, email, member) {
                 calls.push(['member.assignUser', campaignId, email, member.characterId, member.assignedActorId]);
@@ -43,6 +22,13 @@ function createActionHarness(db = {}) {
             async updateActor(_firestore, campaignId, actorId, updater) {
                 const result = updater({ id: actorId, kind: 'pc', name: 'Hero', level: 1 });
                 calls.push(['actor.updateActor', campaignId, actorId, result]);
+            },
+            async updateActors(_firestore, campaignId, actorIds, updater) {
+                calls.push(['actor.updateActors', campaignId, actorIds]);
+                updater(Object.fromEntries(actorIds.map(id => [
+                    id,
+                    { id, kind: 'pc', name: id, inventory: id === 'char1' ? [{ instanceId: 'torch1', name: 'Torch', qty: 1 }] : [] },
+                ])));
             },
         },
         effectRepo: {
@@ -72,18 +58,25 @@ function createActionHarness(db = {}) {
             },
         },
         lootRepo: {
-            async updateLootBagAndCharacter(_firestore, campaignId, lootBagId, characterId, updater) {
-                calls.push(['loot.updateLootBagAndCharacter', campaignId, lootBagId, characterId]);
-                updater({ id: lootBagId, items: [{ instanceId: 'loot_item', name: 'Rope', qty: 1 }], goldValue: 0 }, { id: characterId, inventory: [] });
+            async updateLootBagAndActor(_firestore, campaignId, lootBagId, actorId, updater) {
+                calls.push(['loot.updateLootBagAndActor', campaignId, lootBagId, actorId]);
+                updater({ id: lootBagId, items: [{ instanceId: 'loot_item', name: 'Rope', qty: 1 }], goldValue: 0 }, { id: actorId, kind: 'pc', inventory: [] });
+            },
+            async updateLootBagAndActors(_firestore, campaignId, lootBagId, actorIds, updater) {
+                calls.push(['loot.updateLootBagAndActors', campaignId, lootBagId, actorIds]);
+                updater(
+                    { id: lootBagId, items: [], goldValue: 10 },
+                    Object.fromEntries(actorIds.map(id => [id, { id, kind: 'pc', gold: 0 }]))
+                );
             },
         },
         questRepo: {
-            async updateQuestAndCampaignAndCharacters(_firestore, campaignId, questId, characterIds, updater) {
-                calls.push(['quest.updateQuestAndCampaignAndCharacters', campaignId, questId, characterIds]);
+            async updateQuestAndCampaignAndActors(_firestore, campaignId, questId, actorIds, updater) {
+                calls.push(['quest.updateQuestAndCampaignAndActors', campaignId, questId, actorIds]);
                 updater(
                     { id: questId, objectives: [{ text: 'Done', xp: 1 }], rewards: {} },
                     { id: campaignId, xp: 0 },
-                    Object.fromEntries(characterIds.map(id => [id, { id, xp: { current: 0, max: 1000 }, gold: 0 }]))
+                    Object.fromEntries(actorIds.map(id => [id, { id, kind: 'pc', sheet: { id, xp: { current: 0, max: 1000 }, gold: 0 } }]))
                 );
             },
         },
@@ -103,6 +96,13 @@ function createActionHarness(db = {}) {
             async updateCampaign(_firestore, campaignId, updater) {
                 calls.push(['campaign.updateCampaign', campaignId]);
                 updater({ id: campaignId });
+            },
+            async updateCampaignAndActors(_firestore, campaignId, actorIds, updater) {
+                calls.push(['campaign.updateCampaignAndActors', campaignId, actorIds]);
+                updater(
+                    { id: campaignId, xp: 0 },
+                    Object.fromEntries(actorIds.map(id => [id, { id, kind: 'pc', sheet: { id, xp: { current: 0, max: 1000 } } }]))
+                );
             },
         },
         globalRepo: {
@@ -179,10 +179,10 @@ test('v2 adapter uses targeted repositories for migrated campaign domains', asyn
     await actions.camping.updateSettings('camp1', { zoneDC: 18 });
 
     assert.deepEqual(calls.map(call => call[0]), [
-        'character.updateCharacter',
-        'character.updateCharacters',
-        'loot.updateLootBagAndCharacter',
-        'quest.updateQuestAndCampaignAndCharacters',
+        'actor.updateActor',
+        'actor.updateActors',
+        'loot.updateLootBagAndActor',
+        'quest.updateQuestAndCampaignAndActors',
         'encounter.updateEncounter',
         'map.updateMap',
         'campaign.updateCampaign',
@@ -222,7 +222,7 @@ test('v2 adapter routes character basis edits through actor repository', async (
     assert.equal(calls[7][3].sheet.dailyCraftingMax, 4);
 });
 
-test('v2 adapter mirrors character lifecycle to pc actors', async () => {
+test('v2 adapter stores character lifecycle as pc actors', async () => {
     const { actions, calls } = createActionHarness({
         users: {
             'player@example.com': { campaignId: 'camp1', characterId: 'char1', actorId: 'char1' },
@@ -237,13 +237,10 @@ test('v2 adapter mirrors character lifecycle to pc actors', async () => {
 
     assert.deepEqual(calls.map(call => call[0]), [
         'member.assignUser',
-        'character.createCharacter',
         'actor.createActor',
-        'character.updateCharacterAndMembers',
         'actor.updateActor',
-        'character.updateCharacter',
+        'member.assignUser',
         'actor.updateActor',
-        'character.createCharacter',
         'actor.createActor',
     ]);
     assert.equal(calls[0][4], 'char1');
@@ -277,7 +274,7 @@ test('v2 adapter exposes actor, effect, and catalog override repositories', asyn
     ]);
 });
 
-test('v2 adapter uses global repositories for shop and custom content', async () => {
+test('v2 adapter uses catalog overrides for custom content and global repositories for shop metadata', async () => {
     const { actions, calls } = createActionHarness({
         lore: {
             articles: [
@@ -305,11 +302,8 @@ test('v2 adapter uses global repositories for shop and custom content', async ()
     await actions.bestiary.updateRevealState('goblin', 'hp', 'public');
 
     assert.deepEqual(calls.map(call => call[0]), [
-        'global.setCustomItem',
         'catalogOverride.setCatalogOverride',
-        'global.setCustomAction',
         'catalogOverride.setCatalogOverride',
-        'global.updateGlobalConfig',
         'catalogOverride.setCatalogOverride',
         'global.setLoreArticle',
         'global.updateLoreArticles',
@@ -317,11 +311,9 @@ test('v2 adapter uses global repositories for shop and custom content', async ()
         'global.updateGlobalConfig',
         'global.updateGlobalConfig',
         'global.updateGlobalConfig',
-        'global.setCustomCreature',
         'catalogOverride.setCatalogOverride',
-        'global.updateCustomCreature',
+        'catalogOverride.setCatalogOverride',
         'global.updateGlobalConfig',
-        'global.deleteCustomCreature',
         'catalogOverride.deleteCatalogOverride',
         'global.updateGlobalConfig',
         'global.updateGlobalConfig',

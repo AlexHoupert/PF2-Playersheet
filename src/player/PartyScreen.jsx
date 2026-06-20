@@ -13,8 +13,8 @@ import { selectBestiaryRevealState, selectCustomCreatureData } from '../shared/d
 import { selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
 import './PartyScreen.css';
 
-export default function PartyScreen({ db }) {
-    const { activeCampaign } = useCampaign();
+export default function PartyScreen() {
+    const { activeCampaign, db } = useCampaign();
     const [creatureDataCache, setCreatureDataCache] = useState({});
 
     const encounters = activeCampaign?.encounters || [];

@@ -7,6 +7,7 @@ import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { SPELL_INDEX_FILTER_OPTIONS, SPELL_INDEX_ITEMS, fetchSpellDetailBySourceFile, fetchSpellRawJsonBySourceFile, normalizeSpellSourceFile } from '../shared/catalog/spellIndex';
 import { readJsonApiResponse } from '../shared/utils/apiResponse';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { mergeCatalogIndexWithOverrides } from '../shared/db/selectors/catalogOverrideSelectors';
 
 const uniqueTypes = SPELL_INDEX_FILTER_OPTIONS.types;
 const uniqueRarities = SPELL_INDEX_FILTER_OPTIONS.rarities;
@@ -15,7 +16,7 @@ const uniqueTraits = SPELL_INDEX_FILTER_OPTIONS.traits;
 
 export default function SpellsView({ onInspectItem }) {
     const { isMobile } = useWindowSize();
-    const { dataActions } = useCampaign();
+    const { db, dataActions } = useCampaign();
 
     const [itemSearch, setItemSearch] = useState('');
     const [filterType, setFilterType] = useState([]);
@@ -47,16 +48,21 @@ export default function SpellsView({ onInspectItem }) {
             .catch(err => console.error('Failed to load spell detail', err));
     }, [previewItem?.sourceFile]);
 
+    const catalogItems = useMemo(
+        () => mergeCatalogIndexWithOverrides(SPELL_INDEX_ITEMS, db, 'spell'),
+        [db]
+    );
+
     const filteredItems = useMemo(() => {
         const searchLower = itemSearch.trim().toLowerCase();
-        return SPELL_INDEX_ITEMS.filter(i => {
+        return catalogItems.filter(i => {
             if (filterType.length && !filterType.includes(i.type)) return false;
             if (filterRarity.length && !filterRarity.includes(i.rarity)) return false;
-            if (filterTraditions.length && !filterTraditions.some(t => i.traditions.includes(t))) return false;
-            if (filterTraits.length && !filterTraits.every(t => i.traits.includes(t))) return false;
+            if (filterTraditions.length && !filterTraditions.some(t => (i.traditions || []).includes(t))) return false;
+            if (filterTraits.length && !filterTraits.every(t => (i.traits || []).includes(t))) return false;
             return i.name.toLowerCase().includes(searchLower);
         });
-    }, [filterType, filterRarity, filterTraditions, filterTraits, itemSearch]);
+    }, [catalogItems, filterType, filterRarity, filterTraditions, filterTraits, itemSearch]);
 
     const sortedItems = useMemo(() => {
         const items = [...filteredItems];
@@ -215,7 +221,10 @@ export default function SpellsView({ onInspectItem }) {
         return (
             <SpellEditor
                 initialItem={Object.keys(editingItem).length === 0 ? null : editingItem}
-                onSave={() => window.location.reload()}
+                onSave={(result) => {
+                    setEditingItem(null);
+                    if (!String(result?.message || '').includes('database')) window.location.reload();
+                }}
                 onSaveToDb={(override) => dataActions.catalogOverride.saveCatalogOverride(override)}
                 onCancel={() => setEditingItem(null)}
             />
