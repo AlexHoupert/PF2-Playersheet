@@ -2,6 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getScalySkinAcAdjustment } from '../src/shared/utils/acRules.js';
 import {
+    resolveDamageEffects,
+    resolveEffectModifiers,
+    resolveResistanceWeakness,
+} from '../src/shared/rules/effectResolver.js';
+import {
     consumeWandCharge,
     getWandCharges,
     getWandMaxCharges,
@@ -59,6 +64,40 @@ test('scaly skin works with explorers clothing but not real armor', () => {
     assert.equal(lightArmor.active, false);
     assert.equal(lightArmor.bonus, 0);
     assert.equal(lightArmor.dexCap, 4);
+});
+
+test('effect resolver applies typed stacking and caps', () => {
+    const result = resolveEffectModifiers([
+        { id: 'item1', label: 'Item 1', modifiers: [{ selector: 'ac', mode: 'bonus', bonusType: 'item', value: 1 }] },
+        { id: 'item2', label: 'Item 2', modifiers: [{ selector: 'ac', mode: 'bonus', bonusType: 'item', value: 2 }] },
+        { id: 'statusPenalty', label: 'Frightened', modifiers: [{ selector: 'ac', mode: 'penalty', bonusType: 'status', value: -1 }] },
+        { id: 'statusBonus', label: 'Blessed', modifiers: [{ selector: 'ac', mode: 'bonus', bonusType: 'status', value: 1 }] },
+        { id: 'cap', label: 'Cap', modifiers: [{ selector: 'ac.dex_cap', mode: 'cap', value: 3 }] },
+    ], 'ac');
+    const cap = resolveEffectModifiers([
+        { id: 'cap', label: 'Cap', modifiers: [{ selector: 'ac.dex_cap', mode: 'cap', value: 3 }] },
+    ], 'ac.dex_cap');
+
+    assert.equal(result.total, 2);
+    assert.deepEqual(result.breakdown, { item: 2 });
+    assert.equal(cap.cap, 3);
+});
+
+test('effect resolver keeps highest persistent damage and offsets resistance weakness', () => {
+    const effects = [
+        { id: 'fire1', modifiers: [{ mode: 'persistent_damage', damageType: 'fire', value: 2 }] },
+        { id: 'fire2', modifiers: [{ mode: 'persistent_damage', damageType: 'fire', value: 5 }] },
+        { id: 'resist', modifiers: [{ mode: 'resistance', damageType: 'cold', value: 5 }] },
+        { id: 'weak', modifiers: [{ mode: 'weakness', damageType: 'cold', value: 4 }] },
+    ];
+
+    assert.equal(resolveDamageEffects(effects).persistentByType.fire.value, 5);
+    assert.deepEqual(resolveResistanceWeakness(effects).netByType.cold, {
+        resistance: 5,
+        weakness: 4,
+        netResistance: 1,
+        netWeakness: 0,
+    });
 });
 
 test('wands consume and recharge charges without becoming consumable stacks', () => {

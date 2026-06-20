@@ -8,9 +8,17 @@ function createActionHarness(db = {}) {
     const calls = [];
     const repositories = {
         characterRepo: {
+            async createCharacter(_firestore, campaignId, character) {
+                calls.push(['character.createCharacter', campaignId, character.id]);
+            },
             async updateCharacter(_firestore, campaignId, characterId, updater) {
                 const result = updater({ id: characterId, inventory: [] });
                 calls.push(['character.updateCharacter', campaignId, characterId, result]);
+            },
+            async updateCharacterAndMembers(_firestore, campaignId, characterId, memberEmails, characterUpdater, memberUpdater) {
+                const character = characterUpdater({ id: characterId });
+                const member = memberUpdater({ email: memberEmails[0], characterId });
+                calls.push(['character.updateCharacterAndMembers', campaignId, characterId, character.deletedAt ? 'deleted' : 'active', member.assignedActorId ?? null]);
             },
             async updateCharacters(_firestore, campaignId, characterIds, updater) {
                 calls.push(['character.updateCharacters', campaignId, characterIds]);
@@ -18,6 +26,49 @@ function createActionHarness(db = {}) {
                     id,
                     { id, inventory: id === 'char1' ? [{ instanceId: 'torch1', name: 'Torch', qty: 1 }] : [] },
                 ])));
+            },
+        },
+        memberRepo: {
+            async assignUser(_firestore, campaignId, email, member) {
+                calls.push(['member.assignUser', campaignId, email, member.characterId, member.assignedActorId]);
+            },
+            async revokeUser(_firestore, campaignId, email) {
+                calls.push(['member.revokeUser', campaignId, email]);
+            },
+        },
+        actorRepo: {
+            async createActor(_firestore, campaignId, actor) {
+                calls.push(['actor.createActor', campaignId, actor.id, actor.kind]);
+            },
+            async updateActor(_firestore, campaignId, actorId, updater) {
+                const result = updater({ id: actorId, kind: 'pc', name: 'Hero', level: 1 });
+                calls.push(['actor.updateActor', campaignId, actorId, result.deletedAt ? 'deleted' : result.name]);
+            },
+        },
+        effectRepo: {
+            async createEffect(_firestore, campaignId, effect) {
+                calls.push(['effect.createEffect', campaignId, effect.id, effect.targetActorId]);
+            },
+            async updateEffect(_firestore, campaignId, effectId, updater) {
+                const result = updater({ id: effectId, campaignId, targetActorId: 'actor1', label: 'Frightened', category: 'condition' });
+                calls.push(['effect.updateEffect', campaignId, effectId, result.value]);
+            },
+            async deleteEffect(_firestore, campaignId, effectId) {
+                calls.push(['effect.deleteEffect', campaignId, effectId]);
+            },
+            async setEffectTemplate(_firestore, campaignId, template) {
+                calls.push(['effect.setEffectTemplate', campaignId, template.id]);
+            },
+            async deleteEffectTemplate(_firestore, campaignId, templateId) {
+                calls.push(['effect.deleteEffectTemplate', campaignId, templateId]);
+            },
+        },
+        catalogOverrideRepo: {
+            async setCatalogOverride(_firestore, override) {
+                calls.push(['catalogOverride.setCatalogOverride', override.id, override.catalogType]);
+            },
+            async deleteCatalogOverride(_firestore, overrideId) {
+                calls.push(['catalogOverride.deleteCatalogOverride', overrideId]);
             },
         },
         lootRepo: {
@@ -171,6 +222,61 @@ test('v2 adapter routes character basis edits through character repository', asy
     assert.equal(calls[7][3].dailyCraftingMax, 4);
 });
 
+test('v2 adapter mirrors character lifecycle to pc actors', async () => {
+    const { actions, calls } = createActionHarness({
+        users: {
+            'player@example.com': { campaignId: 'camp1', characterId: 'char1', actorId: 'char1' },
+        },
+    });
+
+    await actions.member.assignUser('PLAYER@example.com', 'camp1', 'char1');
+    await actions.character.createCharacter('camp1', { id: 'char2', name: 'New Hero' });
+    await actions.character.softDeleteCharacter('camp1', 'char1');
+    await actions.character.restoreCharacter('camp1', 'char1');
+    await actions.character.importLegacyCharacter('camp1', { id: 'char3', name: 'Imported' }, 0);
+
+    assert.deepEqual(calls.map(call => call[0]), [
+        'member.assignUser',
+        'character.createCharacter',
+        'actor.createActor',
+        'character.updateCharacterAndMembers',
+        'actor.updateActor',
+        'character.updateCharacter',
+        'actor.updateActor',
+        'character.createCharacter',
+        'actor.createActor',
+    ]);
+    assert.equal(calls[0][4], 'char1');
+});
+
+test('v2 adapter exposes actor, effect, and catalog override repositories', async () => {
+    const { actions, calls } = createActionHarness();
+
+    await actions.actor.createActor('camp1', { id: 'actor1', kind: 'pc', name: 'Hero' });
+    await actions.actor.updateActor('camp1', 'actor1', actor => ({ ...actor, name: 'Renamed Hero' }));
+    await actions.actor.softDeleteActor('camp1', 'actor1');
+    await actions.effect.createEffect('camp1', 'actor1', { id: 'effect1', label: 'Frightened', value: 1 });
+    await actions.effect.updateEffect('camp1', 'effect1', effect => ({ ...effect, value: 2 }));
+    await actions.effect.deleteEffect('camp1', 'effect1');
+    await actions.effect.saveEffectTemplate('camp1', { id: 'slippery', label: 'Slippery' });
+    await actions.effect.deleteEffectTemplate('camp1', 'slippery');
+    await actions.catalogOverride.saveCatalogOverride({ id: 'spell_fireball', catalogType: 'spell', payload: { name: 'Fireball' } });
+    await actions.catalogOverride.deleteCatalogOverride('spell_fireball');
+
+    assert.deepEqual(calls.map(call => call[0]), [
+        'actor.createActor',
+        'actor.updateActor',
+        'actor.updateActor',
+        'effect.createEffect',
+        'effect.updateEffect',
+        'effect.deleteEffect',
+        'effect.setEffectTemplate',
+        'effect.deleteEffectTemplate',
+        'catalogOverride.setCatalogOverride',
+        'catalogOverride.deleteCatalogOverride',
+    ]);
+});
+
 test('v2 adapter uses global repositories for shop and custom content', async () => {
     const { actions, calls } = createActionHarness({
         lore: {
@@ -200,8 +306,11 @@ test('v2 adapter uses global repositories for shop and custom content', async ()
 
     assert.deepEqual(calls.map(call => call[0]), [
         'global.setCustomItem',
+        'catalogOverride.setCatalogOverride',
         'global.setCustomAction',
+        'catalogOverride.setCatalogOverride',
         'global.updateGlobalConfig',
+        'catalogOverride.setCatalogOverride',
         'global.setLoreArticle',
         'global.updateLoreArticles',
         'global.deleteLoreArticle',
@@ -209,9 +318,11 @@ test('v2 adapter uses global repositories for shop and custom content', async ()
         'global.updateGlobalConfig',
         'global.updateGlobalConfig',
         'global.setCustomCreature',
+        'catalogOverride.setCatalogOverride',
         'global.updateCustomCreature',
         'global.updateGlobalConfig',
         'global.deleteCustomCreature',
+        'catalogOverride.deleteCatalogOverride',
         'global.updateGlobalConfig',
         'global.updateGlobalConfig',
         'global.updateGlobalConfig',

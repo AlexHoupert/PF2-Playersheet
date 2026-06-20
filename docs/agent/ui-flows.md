@@ -71,7 +71,7 @@ Key concepts:
 Risks:
 
 - Several handlers assume `activeCampaign.id` and `next.campaigns[campaignId]` exist.
-- Some code still references root `db.characters` in places; verify when changing inventory code.
+- Root `db.characters` is now reserved for legacy import/migration views, not normal player/admin runtime work.
 - Item identity can be name-based, index-based, or `instanceId`-based depending on path.
 
 ## GM/Admin App

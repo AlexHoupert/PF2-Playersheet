@@ -4,6 +4,7 @@ import {
 } from '../../shared/constants/conditions';
 import { getConditionImgSrc, isConditionValued, getConditionCatalogEntry } from '../../shared/constants/conditionsCatalog';
 import { parseFoundry } from '../../shared/utils/foundryParser';
+import { useCampaign } from '../../shared/context/CampaignContext';
 
 /**
  * @typedef {Object} Condition
@@ -41,6 +42,7 @@ export function ConditionsModal({
     onContentLinkClick
 }) {
     // --- STATE ---
+    const { activeCampaignId, myActor, dataActions } = useCampaign();
 
     // Internal state to track which condition is being viewed (if any).
     // If initialCondition is provided, start with that.
@@ -139,6 +141,46 @@ export function ConditionsModal({
         if (!condName) return;
         const targetKey = String(condName).toLowerCase();
         const canonicalName = getConditionCatalogEntry(condName)?.name || condName;
+        const active = safeConds.find(x => {
+            const name = (typeof x === 'string') ? x : x?.name;
+            return String(name || '').toLowerCase() === targetKey;
+        });
+        const actorId = myActor?.id || character?.id;
+        const valued = isConditionValued(condName);
+
+        if (activeCampaignId && actorId && dataActions?.effect) {
+            const currentLevel = typeof active === 'string' ? 1 : (Number(active?.level) || 0);
+            const nextLevel = valued ? currentLevel + delta : (delta > 0 ? 1 : 0);
+            const effectId = typeof active === 'object' ? active.id : null;
+            const effectAction = nextLevel <= 0
+                ? (effectId ? dataActions.effect.deleteEffect(activeCampaignId, effectId) : Promise.resolve())
+                : effectId
+                    ? dataActions.effect.updateEffect(activeCampaignId, effectId, effect => ({
+                        ...effect,
+                        label: canonicalName,
+                        value: Math.max(1, nextLevel),
+                    }))
+                    : dataActions.effect.createEffect(activeCampaignId, actorId, {
+                        label: canonicalName,
+                        category: 'condition',
+                        value: Math.max(1, nextLevel),
+                        source: { type: 'manual', name: canonicalName, actorId },
+                    });
+
+            Promise.resolve(effectAction)
+                .then(() => {
+                    if (targetKey === 'drained' && delta > 0 && dataActions?.character?.adjustHp) {
+                        const charLevel = Math.max(1, parseInt(character?.level) || 1);
+                        return dataActions.character.adjustHp(activeCampaignId, character.id, -(charLevel * Math.max(1, delta)));
+                    }
+                    return null;
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert(err?.message || String(err));
+                });
+            return;
+        }
 
         updateCharacter(c => {
             if (!c.conditions) c.conditions = [];
@@ -146,7 +188,6 @@ export function ConditionsModal({
                 const name = (typeof x === 'string') ? x : x?.name;
                 return String(name || '').toLowerCase() === targetKey;
             });
-            const valued = isConditionValued(condName);
 
             if (idx > -1 && typeof c.conditions[idx] === 'string') {
                 c.conditions[idx] = { name: c.conditions[idx], level: 1 };

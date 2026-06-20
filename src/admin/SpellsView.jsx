@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import SpellEditor from './editors/SpellEditor';
+import SpellEditor, { buildSpellOverride } from './editors/SpellEditor';
 import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
 import BottomSheet from '../shared/components/BottomSheet';
 import ContentPreviewCard from './components/ContentPreviewCard';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { SPELL_INDEX_FILTER_OPTIONS, SPELL_INDEX_ITEMS, fetchSpellDetailBySourceFile, fetchSpellRawJsonBySourceFile, normalizeSpellSourceFile } from '../shared/catalog/spellIndex';
 import { readJsonApiResponse } from '../shared/utils/apiResponse';
+import { useCampaign } from '../shared/context/CampaignContext';
 
 const uniqueTypes = SPELL_INDEX_FILTER_OPTIONS.types;
 const uniqueRarities = SPELL_INDEX_FILTER_OPTIONS.rarities;
@@ -14,6 +15,7 @@ const uniqueTraits = SPELL_INDEX_FILTER_OPTIONS.traits;
 
 export default function SpellsView({ onInspectItem }) {
     const { isMobile } = useWindowSize();
+    const { dataActions } = useCampaign();
 
     const [itemSearch, setItemSearch] = useState('');
     const [filterType, setFilterType] = useState([]);
@@ -116,8 +118,15 @@ export default function SpellsView({ onInspectItem }) {
             if (!spellJson.system) spellJson.system = {};
             spellJson.system[property] = newVal;
 
+            const spellOverride = buildSpellOverride(spellJson, spellJsonToEditorFormData(spellJson, item), item);
+            const saveToDb = async () => {
+                await dataActions.catalogOverride.saveCatalogOverride(spellOverride);
+                setPreviewItem(prev => prev?.sourceFile === item.sourceFile ? { ...prev, [property]: newVal } : prev);
+                setLoadedDetail(prev => prev ? { ...prev, system: { ...(prev.system || {}), [property]: newVal } } : prev);
+            };
+
             if (import.meta.env.PROD) {
-                alert('Static spell files can only be edited in the local dev server. Deployed Vercel builds cannot write resource JSON files yet.');
+                await saveToDb();
                 return;
             }
 
@@ -140,6 +149,21 @@ export default function SpellsView({ onInspectItem }) {
             window.location.reload();
 
         } catch (err) {
+            if (dataActions?.catalogOverride?.saveCatalogOverride) {
+                try {
+                    const spellJson = await fetchSpellRawJsonBySourceFile(item.sourceFile);
+                    if (!spellJson.system) spellJson.system = {};
+                    spellJson.system[property] = newVal;
+                    await dataActions.catalogOverride.saveCatalogOverride(
+                        buildSpellOverride(spellJson, spellJsonToEditorFormData(spellJson, item), item)
+                    );
+                    return;
+                } catch (dbErr) {
+                    console.error(dbErr);
+                    alert(`Error updating spell: ${err.message}; DB fallback failed: ${dbErr.message}`);
+                    return;
+                }
+            }
             console.error(err);
             alert(`Error updating spell: ${err.message}`);
         }
@@ -192,6 +216,7 @@ export default function SpellsView({ onInspectItem }) {
             <SpellEditor
                 initialItem={Object.keys(editingItem).length === 0 ? null : editingItem}
                 onSave={() => window.location.reload()}
+                onSaveToDb={(override) => dataActions.catalogOverride.saveCatalogOverride(override)}
                 onCancel={() => setEditingItem(null)}
             />
         );
@@ -392,4 +417,24 @@ export default function SpellsView({ onInspectItem }) {
             )}
         </div >
     );
+}
+
+function spellJsonToEditorFormData(spellJson, item) {
+    const system = spellJson?.system || {};
+    const traits = system.traits || {};
+    return {
+        name: spellJson?.name || item?.name || '',
+        level: system.level?.value ?? item?.level ?? 0,
+        traditions: traits.traditions || item?.traditions || [],
+        traits: traits.value || item?.traits || [],
+        rarity: traits.rarity || item?.rarity || 'common',
+        time: system.time?.value || item?.time || item?.cast || '',
+        range: system.range?.value || item?.range || '',
+        target: system.target?.value || item?.target || '',
+        area: system.area?.value || item?.area || '',
+        duration: system.duration?.value || item?.duration || '',
+        defense: system.defense?.save?.statistic || item?.defense || '',
+        description: system.description?.value || item?.description || '',
+        sourceFile: item?.sourceFile || null
+    };
 }

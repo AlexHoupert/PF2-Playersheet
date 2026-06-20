@@ -1,3 +1,5 @@
+import { resolveEffectModifiers } from '../rules/effectResolver.js';
+
 const normalizeName = (value) => String(value || '').trim().toLowerCase();
 
 export const hasScalySkinFeat = (char) => {
@@ -20,12 +22,44 @@ export const isUnarmoredClothing = (armor, profKey) => {
 
 export const getScalySkinAcAdjustment = ({ character, equippedArmor, profKey, level, armorDexCap }) => {
     const active = hasScalySkinFeat(character) && isUnarmoredClothing(equippedArmor, profKey);
-    const bonus = active ? (Math.max(0, Math.trunc(Number(level) || 0)) >= 5 ? 2 : 1) : 0;
     const baseDexCap = Number.isFinite(Number(armorDexCap)) ? Number(armorDexCap) : 99;
+    const effect = createScalySkinEffect({ active, level });
+    const acModifiers = resolveEffectModifiers(effect ? [effect] : [], 'ac');
+    const dexCapModifiers = resolveEffectModifiers(effect ? [effect] : [], 'ac.dex_cap');
+    const bonus = acModifiers.breakdown.item || 0;
+    const effectDexCap = dexCapModifiers.cap;
 
     return {
         active,
         bonus,
-        dexCap: active ? Math.min(baseDexCap, 3) : baseDexCap
+        dexCap: active && Number.isFinite(Number(effectDexCap)) ? Math.min(baseDexCap, effectDexCap) : baseDexCap,
+        effect,
     };
 };
+
+export function createScalySkinEffect({ active, level }) {
+    if (!active) return null;
+    const bonus = Math.max(0, Math.trunc(Number(level) || 0)) >= 5 ? 2 : 1;
+    return {
+        id: 'feat_scaly_skin_ac',
+        label: 'Scaly Skin',
+        category: 'feat',
+        modifiers: [
+            {
+                selector: 'ac',
+                mode: 'bonus',
+                bonusType: 'item',
+                value: bonus,
+                stackingKey: 'scaly_skin_ac',
+                dependencyKey: 'ac.item',
+            },
+            {
+                selector: 'ac.dex_cap',
+                mode: 'cap',
+                value: 3,
+                stackingKey: 'scaly_skin_dex_cap',
+                dependencyKey: 'ac.dex_cap',
+            },
+        ],
+    };
+}

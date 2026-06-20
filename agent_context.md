@@ -1,6 +1,6 @@
 # Agent Context
 
-Last deep scan: 2026-06-19.
+Last deep scan: 2026-06-20.
 
 ## Project Identity
 
@@ -25,9 +25,9 @@ The root repo is `PF2-Playersheet`; the parent directory is not the git repo.
 ## Entry Points
 
 - `src/main.jsx` wraps `<App />` in `AuthProvider`.
-- `src/App.jsx` selects persistence mode and route. Player, Admin, Party, and Camp route shells are loaded with `React.lazy`.
-  - default or `VITE_DB_MODE`: legacy `usePersistedDb`.
-  - `?db=v2`: `useFirestoreV2Db`.
+- `src/App.jsx` starts Firestore V2 directly on the `v2-convergence` branch and selects route shells. Player, Admin, Party, and Camp route shells are loaded with `React.lazy`.
+  - Legacy `usePersistedDb` is no longer part of the normal app entry on this branch.
+  - `?db=v2` is no longer required on this branch; the old query-param distinction is kept only in docs/history until final cleanup.
   - `?admin=true`: GM/admin app.
   - `?party=true`: read-only party encounter screen.
   - `?camp=true`: camp overview screen.
@@ -50,27 +50,29 @@ The root repo is `PF2-Playersheet`; the parent directory is not the git repo.
 
 ## Persistence Summary
 
-The UI mostly works against a legacy-shaped `db` object. Even Firestore v2 mode projects normalized documents back into that legacy shape so existing screens can keep working.
+The `v2-convergence` branch starts from Firestore V2. The UI still mostly consumes a legacy-shaped compatibility projection, but `useFirestoreV2Db` also builds a V2-native view model for the ongoing read-model cutover.
 
-Legacy mode:
+Legacy/import compatibility:
 
 - `src/shared/db/usePersistedDb.js`
 - LocalStorage key `pf2e-data`.
 - Optional Firestore document `data/master`.
 - Adds `_lastWriteTimestamp` for echo suppression.
 - Runs `migrateDb` before use.
+- Not used by `src/App.jsx` on `v2-convergence`; keep it as import/backup/reference code until the legacy cleanup phase.
 
-Firestore v2 mode:
+Firestore V2 runtime:
 
 - `src/shared/db/v2/useFirestoreV2Db.js`
 - LocalStorage key `pf2e-data-v2-projection`.
 - Subscribes to normalized collections from `src/shared/db/v2/schema.js`.
 - Uses `composeLegacyDbFromV2Documents` to create the legacy projection.
+- Uses `composeV2ViewModelFromDocuments` to expose a native grouped V2 view model through `dbStatus.v2ViewModel`.
 - Non-migrated runtime writes still diff whole legacy DBs via `writeLegacyDbDiffToV2`.
-- Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, and Player runtime fallbacks now go through `CampaignContext.dataActions` and targeted v2 repositories/transactions.
-- `CampaignContext` and global-facing views use pure selectors under `src/shared/db/selectors/` for campaign/character, shop, pact, ability, lore, and bestiary reads.
+- Campaign/Session, Character, Actor, Actor Effect, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, catalog overrides, and Player runtime fallbacks now go through `CampaignContext.dataActions` and targeted V2 repositories/transactions where migrated.
+- `CampaignContext` and global-facing views use pure selectors under `src/shared/db/selectors/` for campaign/character/actor/effect, shop, pact, ability, lore, and bestiary reads.
 
-Firestore v2 collections include `campaigns`, campaign subcollections `characters`, `quests`, `lootBags`, `encounters`, `maps`, `members`, plus top-level `global`, `customItems`, `customCreatures`, `customActions`, `loreArticles`, and `migrationBackups`.
+Firestore V2 collections include `campaigns`, campaign subcollections `characters`, `actors`, `actorEffects`, `effectTemplates`, `quests`, `lootBags`, `encounters`, `maps`, `members`, plus top-level `global`, `customItems`, `customCreatures`, `customActions`, `catalogOverrides`, `loreArticles`, and `migrationBackups`.
 
 V2 is not the default. Before switching, use `docs/agent/v2-default-readiness.md` for the required manual smoke checklist and Firestore rules audit.
 
@@ -84,6 +86,7 @@ Current domain action files:
 - `src/shared/db/domain/campaignReducers.js`: campaign/session reducers, soft delete, user assignment, party XP.
 - `src/shared/db/domain/inventoryReducers.js`: pure character/inventory reducers and identity normalization.
 - `src/shared/db/domain/characterEditReducers.js`: pure Player basis-value reducers for gold, attributes, HP, speed, Class DC, and daily crafting batches.
+- `src/shared/db/domain/actorReducers.js`: pure actor, actor effect, effect template, and catalog override record helpers.
 - `src/shared/db/domain/lootReducers.js`: pure loot-bag, claim, and gold reducers.
 - `src/shared/db/domain/questReducers.js`: pure quest, objective, reward, notification, and quest soft-delete reducers.
 - `src/shared/db/domain/encounterReducers.js`: pure encounter, combatant, initiative, turn, condition, and encounter soft-delete reducers.
@@ -91,7 +94,7 @@ Current domain action files:
 - `src/shared/db/domain/progressReducers.js`: pure progress normalization, active-only filtering, section updates, and top-level progress soft-delete reducers.
 - `src/shared/db/domain/campingReducers.js`: pure camping settings, activity, assignment, roll, and custom activity soft-delete reducers.
 - `src/shared/db/domain/globalContentReducers.js`: pure shop/trader, global custom content, pact, ability, lore, bestiary metadata/custom creature, notification, and reveal-state reducers.
-- `src/shared/db/selectors/`: pure read selectors for campaign, character, inventory, shop, bestiary, progress, pact, ability, and lore data.
+- `src/shared/db/selectors/`: pure read selectors for campaign, character, actor, effect, inventory, shop, bestiary, progress, pact, ability, and lore data.
 - `src/shared/db/v2/repositories.js`: targeted Firestore v2 document updates and transactions.
 
 Migrated paths:
@@ -100,6 +103,9 @@ Migrated paths:
 - Character create/archive/restore/import and SessionManager character restore UI.
 - User assign/revoke and Admin Player tab user revoke.
 - Admin Player tab character updates and party XP set/add.
+- PC character lifecycle mirrors into campaign-scoped `actors(kind="pc")`; `CampaignContext` exposes `actors`, `archivedActors`, and `myActor` in addition to transitional character fields.
+- `ConditionsModal` writes V2 actor effect documents when actor context is available, with legacy character-condition fallback only for compatibility.
+- Deployed spell editing writes Firestore `catalogOverrides`; static resource file APIs remain local-dev helpers.
 
 - Player local `updateCharacter` wrapper, covering most inventory/equipment/rune/weapon/formula handlers.
 - Player basis edits for gold, attributes, current/temp/max HP, speed, Class DC, and Formula Book daily batch max use targeted `dataActions.character` methods.

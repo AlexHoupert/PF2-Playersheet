@@ -34,6 +34,12 @@ service cloud.firestore {
       return isCampaignMember(campaignId) && memberData(campaignId).characterId == characterId;
     }
 
+    function isAssignedActor(campaignId, actorId) {
+      return isCampaignMember(campaignId)
+        && (memberData(campaignId).assignedActorId == actorId
+          || memberData(campaignId).characterId == actorId);
+    }
+
     match /admins/{email} {
       allow read: if signedIn() && request.auth.token.email == email;
       allow write: if false;
@@ -53,6 +59,31 @@ service cloud.firestore {
         allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
         allow create, delete: if isCampaignGm(campaignId) || isGlobalAdmin();
         allow update: if isCampaignGm(campaignId) || isAssignedCharacter(campaignId, characterId) || isGlobalAdmin();
+      }
+
+      match /actors/{actorId} {
+        allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
+        allow create, delete: if isCampaignGm(campaignId) || isGlobalAdmin();
+        allow update: if isCampaignGm(campaignId) || isAssignedActor(campaignId, actorId) || isGlobalAdmin();
+      }
+
+      match /actorEffects/{effectId} {
+        allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
+        allow create: if isCampaignGm(campaignId)
+          || isAssignedActor(campaignId, request.resource.data.targetActorId)
+          || isGlobalAdmin();
+        allow update: if isCampaignGm(campaignId)
+          || (isAssignedActor(campaignId, resource.data.targetActorId)
+            && isAssignedActor(campaignId, request.resource.data.targetActorId))
+          || isGlobalAdmin();
+        allow delete: if isCampaignGm(campaignId)
+          || isAssignedActor(campaignId, resource.data.targetActorId)
+          || isGlobalAdmin();
+      }
+
+      match /effectTemplates/{templateId} {
+        allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
+        allow write: if isCampaignGm(campaignId) || isGlobalAdmin();
       }
 
       match /quests/{questId} {
@@ -93,6 +124,11 @@ service cloud.firestore {
     }
 
     match /customActions/{documentId} {
+      allow read: if signedIn();
+      allow write: if isGlobalAdmin();
+    }
+
+    match /catalogOverrides/{documentId} {
       allow read: if signedIn();
       allow write: if isGlobalAdmin();
     }

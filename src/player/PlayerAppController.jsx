@@ -1,8 +1,6 @@
-/* d:\Repositories\PF2-Playersheet-1\src\player\PlayerApp.jsx */
 import React, { useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
 import ShopView from './ShopView';
-// import { usePersistedDb } from '../shared/db/usePersistedDb';
 import { NEG_CONDS, POS_CONDS, VIS_CONDS, BINARY_CONDS, CONDITION_ICONS, getConditionIcon } from '../shared/constants/conditions';
 import { conditionsCatalog, getConditionImgSrc, isConditionValued } from '../shared/constants/conditionsCatalog';
 import { SPELL_INDEX_ITEMS, SPELL_INDEX_FILTER_OPTIONS } from '../shared/catalog/spellIndex';
@@ -56,8 +54,6 @@ const ARMOR_RANKS = [
 
 export default function PlayerAppController({ db, setDb }) {
     const { activeCampaign, myCharacter, isGM, dataActions } = useCampaign();
-    // const [db, setDb] = usePersistedDb(dbData);
-    // const [db, setDb] = useState(dbData);
 
     const {
         actionModal,

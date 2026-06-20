@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
-import { DB_STORAGE_KEY } from '../shared/db/usePersistedDb';
+import { V2_DB_STORAGE_KEY } from '../shared/db/v2/useFirestoreV2Db';
 
 // Backend / Services
 import { fetchShopItemDetailBySourceFile, getShopIndexItemByName } from '../shared/catalog/shopIndex';
@@ -99,7 +99,7 @@ export default function AdminApp({ db, setDb }) {
 
     const resetData = () => {
         if (window.confirm("Reset all data to default? This cannot be undone.")) {
-            localStorage.removeItem(DB_STORAGE_KEY);
+            localStorage.removeItem(V2_DB_STORAGE_KEY);
             window.location.reload();
         }
     };
@@ -167,7 +167,7 @@ export default function AdminApp({ db, setDb }) {
     const [rebuildStatus, setRebuildStatus] = useState(null); // Re-add state
 
     // --- RENDER ---
-    const characters = activeCampaign ? activeCampaign.characters : (db.characters || []);
+    const characters = activeCampaign?.characters || [];
 
     return (
         <div className="app-container admin-theme" onClick={handleContentLinkClick}>

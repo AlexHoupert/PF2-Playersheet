@@ -42,11 +42,55 @@ export function normalizeMasterToV2(masterDb, options = {}) {
 
         normalizedCampaign.characters.forEach((character, index) => {
             const characterId = safeDocId(character.id || character.name || `character_${index}`, `character_${index}`);
+            const normalizedCharacter = { ...character, id: characterId, campaignId };
             addDocument(
                 campaignSubPath(campaignId, V2_COLLECTIONS.characters, characterId),
                 'characters',
-                { ...character, id: characterId, campaignId }
+                normalizedCharacter
             );
+
+            const actor = characterToActor(normalizedCharacter, campaignId);
+            addDocument(
+                campaignSubPath(campaignId, V2_COLLECTIONS.actors, actor.id),
+                'actors',
+                actor
+            );
+
+            buildConditionEffects({
+                campaignId,
+                targetActorId: actor.id,
+                conditions: character.conditions,
+                path: `campaigns.${campaignId}.characters.${index}.conditions`,
+                report,
+            }).forEach(effect => {
+                addDocument(
+                    campaignSubPath(campaignId, V2_COLLECTIONS.actorEffects, effect.id),
+                    'actorEffects',
+                    effect
+                );
+            });
+
+            const companionActor = companionToActor(character.companion, normalizedCharacter, campaignId);
+            if (companionActor) {
+                addDocument(
+                    campaignSubPath(campaignId, V2_COLLECTIONS.actors, companionActor.id),
+                    'actors',
+                    companionActor
+                );
+                buildConditionEffects({
+                    campaignId,
+                    targetActorId: companionActor.id,
+                    conditions: character.companion?.conditions,
+                    path: `campaigns.${campaignId}.characters.${index}.companion.conditions`,
+                    report,
+                }).forEach(effect => {
+                    addDocument(
+                        campaignSubPath(campaignId, V2_COLLECTIONS.actorEffects, effect.id),
+                        'actorEffects',
+                        effect
+                    );
+                });
+            }
         });
 
         normalizedCampaign.quests.forEach((quest, index) => {
@@ -98,6 +142,10 @@ export function composeLegacyDbFromV2Documents(documents, baseDb = {}) {
         ...cloneJson(baseDb || {}),
         campaigns: {},
         users: {},
+        actors: [],
+        actorEffects: [],
+        effectTemplates: [],
+        catalogOverrides: {},
         characters: [],
         quests: [],
         lootBags: [],
@@ -132,6 +180,9 @@ export function composeLegacyDbFromV2Documents(documents, baseDb = {}) {
                 id: campaignId,
                 name: campaignId,
                 characters: [],
+                actors: [],
+                actorEffects: [],
+                effectTemplates: [],
                 quests: [],
                 lootBags: [],
                 encounters: [],
@@ -171,6 +222,9 @@ export function composeLegacyDbFromV2Documents(documents, baseDb = {}) {
                 ...data,
                 id: parts[1],
                 characters: campaign.characters || [],
+                actors: campaign.actors || [],
+                actorEffects: campaign.actorEffects || [],
+                effectTemplates: campaign.effectTemplates || [],
                 quests: campaign.quests || [],
                 lootBags: campaign.lootBags || [],
                 encounters: campaign.encounters || [],
@@ -183,6 +237,18 @@ export function composeLegacyDbFromV2Documents(documents, baseDb = {}) {
             const campaignId = parts[1];
             const collectionName = parts[2];
             const campaign = ensureCampaign(campaignId);
+            if (collectionName === V2_COLLECTIONS.actors) {
+                campaign.actors.push(data);
+                db.actors.push(data);
+            }
+            if (collectionName === V2_COLLECTIONS.actorEffects) {
+                campaign.actorEffects.push(data);
+                db.actorEffects.push(data);
+            }
+            if (collectionName === V2_COLLECTIONS.effectTemplates) {
+                campaign.effectTemplates.push(data);
+                db.effectTemplates.push(data);
+            }
             if (collectionName === V2_COLLECTIONS.characters) campaign.characters.push(data);
             if (collectionName === V2_COLLECTIONS.quests) campaign.quests.push(data);
             if (collectionName === V2_COLLECTIONS.lootBags) campaign.lootBags.push(data);
@@ -193,8 +259,14 @@ export function composeLegacyDbFromV2Documents(documents, baseDb = {}) {
                     role: data.role || 'player',
                     campaignId,
                     characterId: data.characterId || null,
+                    actorId: data.assignedActorId || data.actorId || data.characterId || null,
                 };
             }
+            continue;
+        }
+
+        if (parts[0] === V2_COLLECTIONS.catalogOverrides) {
+            db.catalogOverrides[parts[1]] = data;
             continue;
         }
 
@@ -219,7 +291,33 @@ export function composeLegacyDbFromV2Documents(documents, baseDb = {}) {
     }
 
     for (const campaign of Object.values(db.campaigns)) {
+        const effectsByActorId = groupByTargetActorId(campaign.actorEffects || []);
+        if ((!campaign.characters || campaign.characters.length === 0) && Array.isArray(campaign.actors)) {
+            campaign.characters = campaign.actors
+                .filter(actor => actor.kind === 'pc')
+                .map(actor => actorToLegacyCharacter(actor, effectsByActorId[actor.id] || []));
+        } else {
+            campaign.characters = (campaign.characters || []).map(character => {
+                const effects = effectsByActorId[character.id] || [];
+                if (effects.length === 0) return character;
+                return {
+                    ...character,
+                    conditions: effects
+                        .filter(effect => effect.category === 'condition' && !effect.disabled)
+                        .map(effect => ({
+                            id: effect.id,
+                            name: effect.label,
+                            level: numberOr(effect.value, 1),
+                            hidden: effect.hidden || undefined,
+                            disabled: effect.disabled || undefined,
+                        })),
+                };
+            });
+        }
         campaign.characters.sort(sortByNameThenId);
+        campaign.actors.sort(sortByNameThenId);
+        campaign.actorEffects.sort(sortByNameThenId);
+        campaign.effectTemplates.sort(sortByNameThenId);
         campaign.quests.sort(sortByTitleThenId);
         campaign.lootBags.sort(sortByNameThenId);
         campaign.encounters.sort(sortByNameThenId);
@@ -455,6 +553,7 @@ function addMembers(users, campaignEntries, addDocument, report) {
                 campaignId,
                 role: info.role || 'player',
                 characterId: info.characterId || null,
+                assignedActorId: info.actorId || info.assignedActorId || info.characterId || null,
             }
         );
     }
@@ -489,22 +588,191 @@ function addGlobalDocuments(db, addDocument, report) {
             name: item?.name || key,
             data: item,
         });
+        addCatalogOverride(addDocument, 'item', id, 'custom', item, item?.name || key);
     }
 
     for (const [key, creature] of Object.entries(db.bestiary?.customCreatures || {})) {
         const id = safeDocId(creature?.id || key, key);
         addDocument(`${V2_COLLECTIONS.customCreatures}/${id}`, 'customCreatures', { ...creature, id });
+        addCatalogOverride(addDocument, 'creature', id, 'custom', { ...creature, id }, creature?.name || key);
     }
 
     for (const [key, action] of Object.entries(db.actions || {})) {
         const id = safeDocId(action?.id || action?.name || key, key);
         addDocument(`${V2_COLLECTIONS.customActions}/${id}`, 'customActions', { ...action, id });
+        addCatalogOverride(addDocument, 'action', id, 'custom', { ...action, id }, action?.name || key);
+    }
+
+    for (const [key, ability] of Object.entries(db.abilities?.custom || {})) {
+        const id = safeDocId(ability?.id || ability?.name || key, key);
+        addCatalogOverride(addDocument, 'ability', id, 'custom', { ...ability, id }, ability?.name || key);
+    }
+
+    for (const [key, ability] of Object.entries(db.abilities?.deviant || {})) {
+        const id = safeDocId(ability?.id || ability?.name || key, key);
+        addCatalogOverride(addDocument, 'ability', id, 'custom', { ...ability, id, abilityFamily: 'deviant' }, ability?.name || key);
+    }
+
+    for (const [key, spell] of Object.entries(db.spells?.custom || {})) {
+        const id = safeDocId(spell?.id || spell?.name || key, key);
+        addCatalogOverride(addDocument, 'spell', id, 'custom', { ...spell, id }, spell?.name || key);
     }
 
     for (const article of db.lore?.articles || []) {
         const id = safeDocId(article?.id || article?.title, 'article');
         addDocument(`${V2_COLLECTIONS.loreArticles}/${id}`, 'loreArticles', { ...article, id });
     }
+}
+
+function addCatalogOverride(addDocument, catalogType, id, mode, payload, label) {
+    const overrideId = safeDocId(`${catalogType}_${id}`, `${catalogType}_override`);
+    addDocument(`${V2_COLLECTIONS.catalogOverrides}/${overrideId}`, 'catalogOverrides', {
+        id: overrideId,
+        catalogType,
+        baseId: mode === 'custom' ? null : id,
+        mode,
+        label: label || payload?.name || id,
+        payload: payload || {},
+        sourceFile: null,
+    });
+}
+
+function characterToActor(character, campaignId) {
+    const actorId = safeDocId(character?.id || character?.name, 'actor');
+    return cleanForFirestore({
+        id: actorId,
+        kind: 'pc',
+        campaignId,
+        name: character?.name || 'Unnamed Character',
+        level: numberOr(character?.level, 1),
+        ownerActorId: null,
+        controllerUserEmail: character?.controllerUserEmail || null,
+        controllerActorId: null,
+        commandMode: 'self',
+        ruleset: character?.ruleset || 'pf2e_remaster',
+        sheet: {
+            ...cloneJson(character || {}),
+            legacyCharacterId: character?.id || actorId,
+        },
+        stats: cloneJson(character?.stats || {}),
+        inventory: cloneJson(character?.inventory || []),
+        magic: cloneJson(character?.magic || { slots: {}, list: [] }),
+        deletedAt: character?.deletedAt || null,
+        deletedBy: character?.deletedBy || null,
+    });
+}
+
+function companionToActor(companion, ownerCharacter, campaignId) {
+    if (!companion || typeof companion !== 'object') return null;
+    const ownerId = safeDocId(ownerCharacter?.id || ownerCharacter?.name, 'actor');
+    const rawId = companion.id || companion.name || `${ownerId}_companion`;
+    const actorId = safeDocId(rawId, `${ownerId}_companion`);
+    const kind = inferCompanionKind(companion);
+    return cleanForFirestore({
+        id: actorId,
+        kind,
+        campaignId,
+        name: companion.name || 'Unnamed Companion',
+        level: numberOr(companion.level, numberOr(ownerCharacter?.level, 1)),
+        ownerActorId: ownerId,
+        controllerUserEmail: ownerCharacter?.controllerUserEmail || null,
+        controllerActorId: ownerId,
+        commandMode: kind === 'familiar' ? 'command_animal' : 'command_animal',
+        ruleset: companion.ruleset || ownerCharacter?.ruleset || 'pf2e_remaster',
+        baseTemplateId: companion.species || companion.type || null,
+        progression: {
+            type: companion.type || null,
+            specialization: companion.specialization || null,
+        },
+        selectionSlots: {
+            familiarAbilities: cloneJson(companion.familiarAbilities || []),
+            masterAbilities: cloneJson(companion.masterAbilities || []),
+        },
+        sourceStatus: companion.sourceStatus || 'legacy_current',
+        sheet: cloneJson(companion),
+        stats: {
+            hp: normalizeHp(companion.hp || { current: 0, max: 1, temp: 0 }),
+            ac: companion.ac ?? null,
+            perception: companion.perception ?? null,
+            saves: cloneJson(companion.saves || {}),
+            speed: cloneJson(companion.speeds || { land: 25 }),
+        },
+        inventory: cloneJson(companion.inventory || []),
+        magic: cloneJson(companion.magic || { slots: {}, list: [] }),
+        deletedAt: companion.deletedAt || null,
+        deletedBy: companion.deletedBy || null,
+    });
+}
+
+function inferCompanionKind(companion) {
+    const type = String(companion?.type || companion?.family || '').toLowerCase();
+    if (type.includes('familiar')) return 'familiar';
+    if (type.includes('pet')) return 'pet';
+    if (type.includes('eidolon')) return 'eidolon';
+    if (type.includes('follower')) return 'follower';
+    if (type.includes('summon')) return 'summoned';
+    return 'animal_companion';
+}
+
+function buildConditionEffects({ campaignId, targetActorId, conditions, path, report }) {
+    return normalizeConditions(conditions || [], report, path).map((condition, index) => {
+        const label = condition.name || 'unknown';
+        const value = numberOr(condition.level ?? condition.value, 1);
+        return cleanForFirestore({
+            id: safeDocId(`${targetActorId}_${label}_${index}`, `effect_${index}`),
+            campaignId,
+            targetActorId,
+            templateId: safeDocId(`condition_${label}`, 'condition_unknown'),
+            label,
+            category: condition.category || 'condition',
+            value,
+            source: {
+                type: condition.type || 'legacy_condition',
+                id: condition.id || null,
+                name: label,
+                actorId: targetActorId,
+            },
+            modifiers: Array.isArray(condition.modifiers) ? cloneJson(condition.modifiers) : [],
+            duration: condition.duration || null,
+            stage: condition.stage || null,
+            hidden: Boolean(condition.hidden),
+            disabled: Boolean(condition.disabled),
+        });
+    });
+}
+
+function groupByTargetActorId(effects) {
+    return (effects || []).reduce((acc, effect) => {
+        const key = effect?.targetActorId;
+        if (!key) return acc;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(effect);
+        return acc;
+    }, {});
+}
+
+function actorToLegacyCharacter(actor, effects = []) {
+    const sheet = cloneJson(actor.sheet || {});
+    return normalizeCharacterRuntimeShape({
+        ...sheet,
+        id: sheet.id || sheet.legacyCharacterId || actor.id,
+        name: sheet.name || actor.name,
+        level: sheet.level ?? actor.level,
+        stats: sheet.stats || actor.stats || {},
+        inventory: sheet.inventory || actor.inventory || [],
+        magic: sheet.magic || actor.magic || { slots: {}, list: [] },
+        conditions: effects
+            .filter(effect => effect.category === 'condition')
+            .map(effect => ({
+                id: effect.id,
+                name: effect.label,
+                level: numberOr(effect.value, 1),
+                hidden: effect.hidden || undefined,
+                disabled: effect.disabled || undefined,
+            })),
+        deletedAt: sheet.deletedAt || actor.deletedAt || undefined,
+        deletedBy: sheet.deletedBy || actor.deletedBy || undefined,
+    });
 }
 
 function selectLegacyCampaignTarget(campaignEntries, report, field) {

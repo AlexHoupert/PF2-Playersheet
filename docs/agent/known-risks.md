@@ -1,6 +1,6 @@
 # Known Risks And Modernization Notes
 
-Last updated: 2026-06-19.
+Last updated: 2026-06-20.
 
 ## Highest-Impact Risks
 
@@ -17,9 +17,9 @@ The residual risk moved to the new hooks and controller/layout files. Continue e
 
 2. Legacy projection as hidden contract
 
-Most screens still expect the legacy `db` shape. Firestore v2 mode projects normalized documents back to that shape. New v2 collections or fields must be added to both normalization and composition if they should survive runtime writes.
+The `v2-convergence` branch starts Firestore V2 directly, but most screens still expect the legacy `db` shape. Firestore V2 projects normalized documents back to that shape. New V2 collections or fields must be added to both normalization and composition if they should survive runtime writes.
 
-Global-facing reads for shop, pacts, abilities, lore, and bestiary are now centralized in selectors, but they still consume the legacy-shaped projection until a dedicated v2 read model replaces it.
+Global-facing reads for shop, pacts, abilities, lore, and bestiary are now centralized in selectors, and a native V2 view model exists in `dbStatus.v2ViewModel`, but most UI still consumes the legacy-shaped projection until the dedicated V2 read model replaces it.
 
 3. Mixed item identity
 
@@ -41,8 +41,12 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 - Character runtime defaults and old skill names are normalized in `src/shared/db/domain/characterShape.js` during load, V2 migration, create, and update paths.
 - Player basis edits for gold, attributes, current/temp/max HP, speed, Class DC, and Formula Book daily batch limits use targeted `dataActions.character` methods. Keep direct nested writes for these fields out of Player modals.
 - Remaining Player UI-local edit paths include saves/skills, weapon/armor proficiencies, magic slots, armor/shield state, companion state, and inventory-driven gold/HP changes. They rely on `applyCharacterUpdate` plus `normalizeCharacterRuntimeShape` for shape safety and are candidates for later focused actions.
+- PC character lifecycle is mirrored into campaign-scoped `actors(kind="pc")`; companion snapshots are backfilled as owned actors. Until the actor cutover is complete, character and actor documents can be redundant transition data.
+- Conditions can now be stored as campaign-scoped `actorEffects`, and the legacy projection overlays character conditions from those effects. Runtime code must avoid deepening the old `character.conditions` contract.
+- Catalog overrides are the production-safe write target for deployed spell/action/item/ability/creature editing. Static resource file APIs should stay local-dev only.
 - Wands are reusable inventory items with `system.wand = { charges, max }`, not consumable stacks. Inventory double-tap and spell detail casting should reduce charges only; Daily Preparation recharges them. Keep wand detection centralized in `src/shared/utils/wandUtils.js`.
 - Scaly Skin is currently implemented as a specific AC rule in the shared AC calculation: while unarmored or wearing Explorer's Clothing, it adds item AC and applies Dex cap +3. This should eventually move into a general effects/rules engine.
+- The shared effect resolver now handles typed bonus/penalty stacking, caps, persistent damage, and resistance/weakness offsets for the first actor-effect foundation. It is not yet a full PF2e rules engine.
 - Root `quests` and `lootBags` still exist for compatibility. Some code paths may read them when campaign data is absent.
 - Player-created custom item catalog registration uses `dataActions.globalContent.saveCustomItem`. The immediate inventory add still uses `onUpdateCharacter`.
 - Campaign, character, quest/subquest, encounter, and map deletion is soft delete. Do not hard-delete these documents unless a future purge flow is explicitly designed and approved.
@@ -53,7 +57,7 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 - `ItemsView` trader, availability/formula, custom-item, loot-bag, and character assignment paths have been moved to `dataActions`.
 - User assignment is keyed by email in legacy DB and by member documents in v2. Email casing is normalized in v2 member docs.
 - `src/data/new_db.json` includes real-looking user email assignments. Avoid exposing or expanding this data unnecessarily.
-- Firestore rules document v2 access but do not visibly permit legacy `data/master`. Verify deployed rules before relying on legacy cloud writes.
+- Firestore rules now cover campaign `actors`, `actorEffects`, `effectTemplates`, and top-level `catalogOverrides`. They do not visibly permit legacy `data/master`; verify deployed rules before relying on legacy cloud writes.
 
 ## UI Risks
 
@@ -93,7 +97,7 @@ Medium-term:
 
 - Keep shrinking large controller hooks, especially `usePlayerInventoryActions`, into smaller pure reducers/helpers as workflows are touched.
 - Make player catalog modals async-data driven so `PlayerApp` does not synchronously import shop/spell/feat/action/impulse indexes.
-- Continue shrinking compatibility reads and the legacy projection before making v2 the default.
+- Continue shrinking compatibility reads and the legacy projection before treating the convergence branch as production-ready.
 - Add smoke tests for catalog decoders and `parseFoundry`.
 - Add a minimal lint/format check to catch import and JSX issues.
 
@@ -101,5 +105,5 @@ Long-term:
 
 - Split `PlayerApp.jsx` into route shell, modal orchestration, and domain hooks.
 - Split `ItemsView.jsx` into catalog table, side panels, context menu, and item actions.
-- Treat Firestore v2 as the primary store and remove legacy root compatibility after migration is proven.
+- Treat Firestore V2 as the only runtime store and isolate legacy as import/backup code after migration is proven.
 - Replace browser prompts with shared modal primitives.

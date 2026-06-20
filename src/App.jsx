@@ -1,5 +1,4 @@
 import React, { Suspense, lazy } from 'react';
-import { usePersistedDb } from './shared/db/usePersistedDb';
 import { useFirestoreV2Db } from './shared/db/v2/useFirestoreV2Db';
 import dbData from './data/new_db.json';
 import { CampaignProvider } from './shared/context/CampaignContext';
@@ -11,19 +10,7 @@ const PartyScreen = lazy(() => import('./player/PartyScreen'));
 const CampScreen = lazy(() => import('./camping/CampScreen'));
 
 export default function App() {
-    const queryParams = new URLSearchParams(window.location.search);
-    const dbMode = queryParams.get('db') || import.meta.env.VITE_DB_MODE || 'legacy';
-
-    if (dbMode === 'v2') {
-        return <FirestoreV2App />;
-    }
-
-    return <LegacyApp />;
-}
-
-function LegacyApp() {
-    const [db, setDb] = usePersistedDb(dbData);
-    return <AppRoutes db={db} setDb={setDb} dbMode="legacy" />;
+    return <FirestoreV2App />;
 }
 
 function FirestoreV2App() {

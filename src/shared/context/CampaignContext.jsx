@@ -3,15 +3,31 @@ import { useAuth } from '../auth/AuthProvider';
 import { db as firestoreDb } from '../db/firebase-config';
 import { createDataActions } from '../db/domain/createDataActions';
 import { isSoftDeleted, normalizeEmail } from '../db/domain/campaignReducers';
+import { selectActorBuckets, selectMyActor } from '../db/selectors/actorSelectors';
 import { selectActiveCampaign, selectCampaignBuckets, selectTargetCampaignId } from '../db/selectors/campaignSelectors';
 import { selectMyCharacter } from '../db/selectors/characterSelectors';
-import { campaignRepo, characterRepo, encounterRepo, globalRepo, lootRepo, mapRepo, memberRepo, questRepo } from '../db/v2/repositories';
+import {
+    actorRepo,
+    campaignRepo,
+    catalogOverrideRepo,
+    characterRepo,
+    effectRepo,
+    encounterRepo,
+    globalRepo,
+    lootRepo,
+    mapRepo,
+    memberRepo,
+    questRepo,
+} from '../db/v2/repositories';
 
 const CampaignContext = createContext();
 
 const defaultRepositories = {
+    actorRepo,
     campaignRepo,
+    catalogOverrideRepo,
     characterRepo,
+    effectRepo,
     encounterRepo,
     globalRepo,
     lootRepo,
@@ -76,9 +92,11 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false, dbMode 
     const targetCampaignId = selectTargetCampaignId({ campaigns, isGM, selectedCampaignId, userInfo });
 
     const activeCampaign = selectActiveCampaign(campaigns, targetCampaignId);
+    const { actors, archivedActors } = useMemo(() => selectActorBuckets(activeCampaign), [activeCampaign]);
 
     // Active Character (User's specific character)
     const myCharacter = selectMyCharacter(activeCampaign, userInfo);
+    const myActor = selectMyActor(activeCampaign, userInfo);
 
     useEffect(() => {
         if (selectedCampaignId && !campaigns[selectedCampaignId]) {
@@ -147,7 +165,10 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false, dbMode 
         archivedCampaigns,
         activeCampaign,
         activeCampaignId: targetCampaignId,
+        actors,
+        archivedActors,
         myCharacter,
+        myActor,
         isGM,
         userInfo,
         dbMode,
@@ -166,7 +187,7 @@ export function CampaignProvider({ db, setDb, children, isAdmin = false, dbMode 
         importLegacyCharacter,
         setPartyXp,
         addPartyXp
-    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, myCharacter, isGM, userInfo, dbMode, dbStatus, dataActions, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setPartyXp, addPartyXp]);
+    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, actors, archivedActors, myCharacter, myActor, isGM, userInfo, dbMode, dbStatus, dataActions, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setPartyXp, addPartyXp]);
 
     return (
         <CampaignContext.Provider value={value}>

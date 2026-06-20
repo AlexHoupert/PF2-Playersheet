@@ -1,7 +1,9 @@
-export const V2_SCHEMA_VERSION = 2;
+export const V2_SCHEMA_VERSION = 3;
 
 export const V2_COLLECTIONS = {
     campaigns: 'campaigns',
+    actors: 'actors',
+    actorEffects: 'actorEffects',
     characters: 'characters',
     quests: 'quests',
     lootBags: 'lootBags',
@@ -12,6 +14,8 @@ export const V2_COLLECTIONS = {
     customCreatures: 'customCreatures',
     customActions: 'customActions',
     loreArticles: 'loreArticles',
+    effectTemplates: 'effectTemplates',
+    catalogOverrides: 'catalogOverrides',
     global: 'global',
     migrationBackups: 'migrationBackups',
 };

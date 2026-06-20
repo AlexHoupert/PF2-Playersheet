@@ -1,4 +1,11 @@
 import {
+  applyActorEffectUpdate,
+  applyActorUpdate,
+  createActorEffectRecord,
+  createActorRecord,
+  createCatalogOverrideRecord,
+} from "./actorReducers.js";
+import {
   addPartyXpInCampaign,
   applyCampaignUpdate,
   assignUserInDb,
@@ -197,6 +204,162 @@ export function createDataActions({
       );
     }
     return updateCharacterLegacy(campaignId, characterId, updater);
+  };
+
+  const updateActorLegacy = (campaignId, actorId, updater) =>
+    updateCampaignLegacy(campaignId, (campaign) => {
+      const next = cloneValue(campaign);
+      next.actors = Array.isArray(next.actors) ? next.actors.map((item) => cloneValue(item)) : [];
+      const index = next.actors.findIndex((item) => item.id === actorId);
+      if (index < 0) return next;
+      next.actors[index] = applyActorUpdate(next.actors[index], updater, {
+        createId: () => createDomainId("actor"),
+        campaignId,
+      });
+      return next;
+    });
+
+  const createActor = (campaignId, actorInput) => {
+    const actorRecord = createActorRecord(actorInput, {
+      createId: () => createDomainId("actor"),
+      campaignId,
+    });
+    if (useFirestoreV2) {
+      return repos.actorRepo.createActor(firestore, campaignId, actorRecord).then(() => actorRecord.id);
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => {
+      const next = cloneValue(campaign);
+      next.actors = Array.isArray(next.actors) ? [...next.actors, actorRecord] : [actorRecord];
+      return next;
+    }).then(() => actorRecord.id);
+  };
+
+  const updateActor = (campaignId, actorId, updater) => {
+    if (useFirestoreV2) {
+      return repos.actorRepo.updateActor(firestore, campaignId, actorId, (actorDoc) =>
+        applyActorUpdate({ ...actorDoc, id: actorDoc.id || actorId, campaignId }, updater, {
+          createId: () => createDomainId("actor"),
+          campaignId,
+        })
+      );
+    }
+    return updateActorLegacy(campaignId, actorId, updater);
+  };
+
+  const softDeleteActor = (campaignId, actorId) => {
+    const options = { now: nowIso(), actorEmail: actor };
+    return updateActor(campaignId, actorId, (actorDoc) => markDeleted(actorDoc, options));
+  };
+
+  const restoreActor = (campaignId, actorId) => {
+    const options = { now: nowIso(), actorEmail: actor };
+    return updateActor(campaignId, actorId, (actorDoc) => markRestored(actorDoc, options));
+  };
+
+  const createEffect = (campaignId, targetActorId, effectInput) => {
+    const effectRecord = createActorEffectRecord(effectInput, {
+      createId: () => createDomainId("effect"),
+      campaignId,
+      targetActorId,
+    });
+    if (useFirestoreV2) {
+      return repos.effectRepo.createEffect(firestore, campaignId, effectRecord).then(() => effectRecord.id);
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => {
+      const next = cloneValue(campaign);
+      next.actorEffects = Array.isArray(next.actorEffects) ? [...next.actorEffects, effectRecord] : [effectRecord];
+      return next;
+    }).then(() => effectRecord.id);
+  };
+
+  const updateEffect = (campaignId, effectId, updater) => {
+    if (useFirestoreV2) {
+      return repos.effectRepo.updateEffect(firestore, campaignId, effectId, (effectDoc) =>
+        applyActorEffectUpdate({ ...effectDoc, id: effectDoc.id || effectId, campaignId }, updater, {
+          createId: () => createDomainId("effect"),
+          campaignId,
+          targetActorId: effectDoc.targetActorId,
+        })
+      );
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => {
+      const next = cloneValue(campaign);
+      next.actorEffects = Array.isArray(next.actorEffects) ? next.actorEffects.map((item) => cloneValue(item)) : [];
+      const index = next.actorEffects.findIndex((item) => item.id === effectId);
+      if (index < 0) return next;
+      next.actorEffects[index] = applyActorEffectUpdate(next.actorEffects[index], updater, {
+        createId: () => createDomainId("effect"),
+        campaignId,
+        targetActorId: next.actorEffects[index].targetActorId,
+      });
+      return next;
+    });
+  };
+
+  const deleteEffect = (campaignId, effectId) => {
+    if (useFirestoreV2) {
+      return repos.effectRepo.deleteEffect(firestore, campaignId, effectId);
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => {
+      const next = cloneValue(campaign);
+      next.actorEffects = (next.actorEffects || []).filter((effectDoc) => effectDoc.id !== effectId);
+      return next;
+    });
+  };
+
+  const saveEffectTemplate = (campaignId, templateInput) => {
+    const template = {
+      ...cloneValue(templateInput || {}),
+      id: templateInput?.id || createDomainId("effect_template"),
+    };
+    if (useFirestoreV2) {
+      return repos.effectRepo.setEffectTemplate(firestore, campaignId, template).then(() => template.id);
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => {
+      const next = cloneValue(campaign);
+      next.effectTemplates = Array.isArray(next.effectTemplates) ? [...next.effectTemplates] : [];
+      const index = next.effectTemplates.findIndex((item) => item.id === template.id);
+      if (index >= 0) next.effectTemplates[index] = template;
+      else next.effectTemplates.push(template);
+      return next;
+    }).then(() => template.id);
+  };
+
+  const deleteEffectTemplate = (campaignId, templateId) => {
+    if (useFirestoreV2) {
+      return repos.effectRepo.deleteEffectTemplate(firestore, campaignId, templateId);
+    }
+    return updateCampaignLegacy(campaignId, (campaign) => {
+      const next = cloneValue(campaign);
+      next.effectTemplates = (next.effectTemplates || []).filter((template) => template.id !== templateId);
+      return next;
+    });
+  };
+
+  const saveCatalogOverride = (overrideInput) => {
+    const override = createCatalogOverrideRecord(overrideInput, {
+      createId: () => createDomainId("catalog_override"),
+    });
+    if (useFirestoreV2) {
+      return repos.catalogOverrideRepo.setCatalogOverride(firestore, override).then(() => override.id);
+    }
+    return updateDbLegacy((prev) => {
+      const next = cloneValue(prev) || {};
+      next.catalogOverrides = { ...(next.catalogOverrides || {}), [override.id]: override };
+      return next;
+    }).then(() => override.id);
+  };
+
+  const deleteCatalogOverride = (overrideId) => {
+    if (useFirestoreV2) {
+      return repos.catalogOverrideRepo.deleteCatalogOverride(firestore, overrideId);
+    }
+    return updateDbLegacy((prev) => {
+      const next = cloneValue(prev) || {};
+      next.catalogOverrides = { ...(next.catalogOverrides || {}) };
+      delete next.catalogOverrides[overrideId];
+      return next;
+    });
   };
 
   const updateLootBagLegacy = (campaignId, lootBagId, updater) =>
@@ -951,7 +1114,11 @@ export function createDataActions({
     const normalizedEmail = normalizeEmail(email);
     if (!normalizedEmail) return Promise.resolve();
     if (useFirestoreV2) {
-      return repos.memberRepo.assignUser(firestore, campaignId, normalizedEmail, { role, characterId });
+      return repos.memberRepo.assignUser(firestore, campaignId, normalizedEmail, {
+        role,
+        characterId,
+        assignedActorId: characterId || null,
+      });
     }
     return updateDbLegacy((prev) => assignUserInDb(prev, normalizedEmail, campaignId, characterId, role));
   };
@@ -970,7 +1137,13 @@ export function createDataActions({
   const createCharacter = (campaignId, character) => {
     const normalizedCharacter = createCharacterRecord(character, { createId });
     if (useFirestoreV2) {
-      return repos.characterRepo.createCharacter(firestore, campaignId, normalizedCharacter);
+      return Promise.all([
+        repos.characterRepo.createCharacter(firestore, campaignId, normalizedCharacter),
+        repos.actorRepo.createActor(firestore, campaignId, createActorRecord(normalizedCharacter, {
+          campaignId,
+          createId: () => normalizedCharacter.id,
+        })),
+      ]);
     }
     return updateCampaignLegacy(campaignId, (campaign) =>
       createCharacterInCampaign(campaign, normalizedCharacter, { createId })
@@ -984,14 +1157,17 @@ export function createDataActions({
       .map(([email]) => normalizeEmail(email));
 
     if (useFirestoreV2) {
-      return repos.characterRepo.updateCharacterAndMembers(
-        firestore,
-        campaignId,
-        characterId,
-        affectedEmails,
-        (character) => markDeleted(character, options),
-        (member) => ({ ...member, characterId: null })
-      );
+      return Promise.all([
+        repos.characterRepo.updateCharacterAndMembers(
+          firestore,
+          campaignId,
+          characterId,
+          affectedEmails,
+          (character) => markDeleted(character, options),
+          (member) => ({ ...member, characterId: null, assignedActorId: null })
+        ),
+        repos.actorRepo.updateActor(firestore, campaignId, characterId, (actorDoc) => markDeleted(actorDoc, options)),
+      ]);
     }
 
     return updateDbLegacy((prev) => softDeleteCharacterInDb(prev, campaignId, characterId, options));
@@ -1000,9 +1176,12 @@ export function createDataActions({
   const restoreCharacter = (campaignId, characterId) => {
     const options = { now: nowIso(), actorEmail: actor };
     if (useFirestoreV2) {
-      return repos.characterRepo.updateCharacter(firestore, campaignId, characterId, (character) =>
-        markRestored(character, options)
-      );
+      return Promise.all([
+        repos.characterRepo.updateCharacter(firestore, campaignId, characterId, (character) =>
+          markRestored(character, options)
+        ),
+        repos.actorRepo.updateActor(firestore, campaignId, characterId, (actorDoc) => markRestored(actorDoc, options)),
+      ]);
     }
     return updateCampaignLegacy(campaignId, (campaign) =>
       restoreCharacterInCampaign(campaign, characterId, options)
@@ -1012,7 +1191,13 @@ export function createDataActions({
   const importLegacyCharacter = (campaignId, character, legacyIndex) => {
     const normalizedCharacter = createCharacterRecord(character, { createId });
     if (useFirestoreV2) {
-      return repos.characterRepo.createCharacter(firestore, campaignId, normalizedCharacter);
+      return Promise.all([
+        repos.characterRepo.createCharacter(firestore, campaignId, normalizedCharacter),
+        repos.actorRepo.createActor(firestore, campaignId, createActorRecord(normalizedCharacter, {
+          campaignId,
+          createId: () => normalizedCharacter.id,
+        })),
+      ]);
     }
     return updateDbLegacy((prev) =>
       importLegacyCharacterInDb(prev, campaignId, normalizedCharacter, legacyIndex, { createId })
@@ -1028,36 +1213,79 @@ export function createDataActions({
 
   const saveCustomItem = (item) => {
     if (useFirestoreV2) {
-      return repos.globalRepo.setCustomItem(firestore, item);
+      return Promise.all([
+        repos.globalRepo.setCustomItem(firestore, item),
+        repos.catalogOverrideRepo.setCatalogOverride(firestore, createCatalogOverrideRecord({
+          id: buildCatalogOverrideId("item", item),
+          catalogType: "item",
+          mode: "custom",
+          label: item?.name,
+          payload: item,
+        })),
+      ]);
     }
     return updateDbLegacy((prev) => saveCustomItemInDb(prev, item));
   };
 
   const deleteCustomItem = (itemOrName) => {
     if (useFirestoreV2) {
-      return repos.globalRepo.deleteCustomItem(firestore, itemOrName);
+      return Promise.all([
+        repos.globalRepo.deleteCustomItem(firestore, itemOrName),
+        repos.catalogOverrideRepo.deleteCatalogOverride(firestore, buildCatalogOverrideId("item", itemOrName)),
+      ]);
     }
     return updateDbLegacy((prev) => deleteCustomItemInDb(prev, itemOrName));
   };
 
   const saveCustomAction = (action) => {
     if (useFirestoreV2) {
-      return repos.globalRepo.setCustomAction(firestore, action);
+      return Promise.all([
+        repos.globalRepo.setCustomAction(firestore, action),
+        repos.catalogOverrideRepo.setCatalogOverride(firestore, createCatalogOverrideRecord({
+          id: buildCatalogOverrideId("action", action),
+          catalogType: "action",
+          mode: "custom",
+          label: action?.name,
+          payload: action,
+        })),
+      ]);
     }
     return updateDbLegacy((prev) => saveCustomActionInDb(prev, action));
   };
 
   const deleteCustomAction = (actionOrName) => {
     if (useFirestoreV2) {
-      return repos.globalRepo.deleteCustomAction(firestore, actionOrName);
+      return Promise.all([
+        repos.globalRepo.deleteCustomAction(firestore, actionOrName),
+        repos.catalogOverrideRepo.deleteCatalogOverride(firestore, buildCatalogOverrideId("action", actionOrName)),
+      ]);
     }
     return updateDbLegacy((prev) => deleteCustomActionInDb(prev, actionOrName));
   };
 
-  const saveCustomAbility = (ability) => updateGlobalConfig((current) => saveCustomAbilityInDb(current, ability));
+  const saveCustomAbility = (ability) => {
+    const globalWrite = updateGlobalConfig((current) => saveCustomAbilityInDb(current, ability));
+    if (!useFirestoreV2) return globalWrite;
+    return Promise.all([
+      globalWrite,
+      repos.catalogOverrideRepo.setCatalogOverride(firestore, createCatalogOverrideRecord({
+        id: buildCatalogOverrideId("ability", ability),
+        catalogType: "ability",
+        mode: "custom",
+        label: ability?.name,
+        payload: ability,
+      })),
+    ]);
+  };
 
-  const deleteCustomAbility = (abilityOrId) =>
-    updateGlobalConfig((current) => deleteCustomAbilityInDb(current, abilityOrId));
+  const deleteCustomAbility = (abilityOrId) => {
+    const globalWrite = updateGlobalConfig((current) => deleteCustomAbilityInDb(current, abilityOrId));
+    if (!useFirestoreV2) return globalWrite;
+    return Promise.all([
+      globalWrite,
+      repos.catalogOverrideRepo.deleteCatalogOverride(firestore, buildCatalogOverrideId("ability", abilityOrId)),
+    ]);
+  };
 
   const savePact = (pact) => updateGlobalConfig((current) => savePactInDb(current, pact));
 
@@ -1118,7 +1346,16 @@ export function createDataActions({
 
   const saveCustomCreature = (creature) => {
     if (useFirestoreV2) {
-      return repos.globalRepo.setCustomCreature(firestore, creature);
+      return Promise.all([
+        repos.globalRepo.setCustomCreature(firestore, creature),
+        repos.catalogOverrideRepo.setCatalogOverride(firestore, createCatalogOverrideRecord({
+          id: buildCatalogOverrideId("creature", creature),
+          catalogType: "creature",
+          mode: "custom",
+          label: creature?.name,
+          payload: creature,
+        })),
+      ]);
     }
     return updateDbLegacy((prev) => saveCustomCreatureInDb(prev, creature));
   };
@@ -1135,6 +1372,7 @@ export function createDataActions({
       return Promise.all([
         repos.globalRepo.updateGlobalConfig(firestore, (current) => deleteCreatureInDb(current, creatureId)),
         repos.globalRepo.deleteCustomCreature(firestore, creatureId),
+        repos.catalogOverrideRepo.deleteCatalogOverride(firestore, buildCatalogOverrideId("creature", creatureId)),
       ]);
     }
     return updateDbLegacy((prev) => deleteCreatureInDb(prev, creatureId));
@@ -1310,6 +1548,23 @@ export function createDataActions({
         );
       },
     },
+    actor: {
+      createActor,
+      updateActor,
+      softDeleteActor,
+      restoreActor,
+    },
+    effect: {
+      createEffect,
+      updateEffect,
+      deleteEffect,
+      saveEffectTemplate,
+      deleteEffectTemplate,
+    },
+    catalogOverride: {
+      saveCatalogOverride,
+      deleteCatalogOverride,
+    },
     loot: {
       createLootBag,
       updateLootBag,
@@ -1437,4 +1692,14 @@ function stripChildCollections(campaign) {
   delete next.archivedEncounters;
   delete next.maps;
   return next;
+}
+
+function buildCatalogOverrideId(catalogType, value) {
+  const raw = value?.id || value?._id || value?.name || value;
+  const normalized = String(raw || catalogType || "override")
+    .trim()
+    .replace(/[^a-z0-9_-]+/gi, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+  return `${catalogType}_${normalized || "override"}`;
 }

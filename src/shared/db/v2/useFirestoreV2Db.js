@@ -5,6 +5,7 @@ import { useLocalStorageJson } from '../../hooks/useLocalStorageJson';
 import { deepClone } from '../../utils/deepClone';
 import { migrateDb } from '../migrateDb';
 import { composeLegacyDbFromV2Documents } from './normalizers.js';
+import { composeV2ViewModelFromDocuments } from './viewModel.js';
 import { writeLegacyDbDiffToV2 } from './firestoreMigration.js';
 import { V2_COLLECTIONS } from './schema.js';
 
@@ -12,7 +13,10 @@ export const V2_DB_STORAGE_KEY = 'pf2e-data-v2-projection';
 
 const IS_FIREBASE_CONFIGURED = firestore && firestore.app.options.apiKey !== 'YOUR_API_KEY';
 const CAMPAIGN_SUBCOLLECTIONS = [
+    V2_COLLECTIONS.actors,
+    V2_COLLECTIONS.actorEffects,
     V2_COLLECTIONS.characters,
+    V2_COLLECTIONS.effectTemplates,
     V2_COLLECTIONS.quests,
     V2_COLLECTIONS.lootBags,
     V2_COLLECTIONS.encounters,
@@ -24,6 +28,7 @@ const TOP_LEVEL_COLLECTIONS = [
     V2_COLLECTIONS.customItems,
     V2_COLLECTIONS.customCreatures,
     V2_COLLECTIONS.customActions,
+    V2_COLLECTIONS.catalogOverrides,
     V2_COLLECTIONS.loreArticles,
 ];
 
@@ -45,6 +50,7 @@ export function useFirestoreV2Db(defaultDb) {
 
     const projectDocsToDb = useCallback((docsMap) => {
         const documents = Array.from(docsMap.entries()).map(([path, data]) => ({ path, data }));
+        const v2ViewModel = composeV2ViewModelFromDocuments(documents);
         const projected = migrateDb(composeLegacyDbFromV2Documents(documents, defaultDb));
         dbStateRef.current = projected;
         setDbState(projected);
@@ -52,6 +58,7 @@ export function useFirestoreV2Db(defaultDb) {
             ...prev,
             ready: true,
             documentCount: documents.length,
+            v2ViewModel,
             error: null,
         }));
         try {

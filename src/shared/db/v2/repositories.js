@@ -58,7 +58,7 @@ export const campaignRepo = {
     },
 
     async updateSettings(firestore, campaignId, patch) {
-        await updateDoc(campaignDocRef(firestore, campaignId), stampRuntime(patch));
+        await updateDoc(campaignDocRef(firestore, campaignId), cleanForFirestore(stampRuntime(patch)));
     },
 };
 
@@ -151,6 +151,83 @@ export const characterRepo = {
     },
 };
 
+export const actorRepo = {
+    async createActor(firestore, campaignId, actor) {
+        const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actors, actor.id);
+        await setDoc(ref, cleanForFirestore(stampRuntime(actor)));
+    },
+
+    async updateActor(firestore, campaignId, actorId, updater) {
+        const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actors, actorId);
+        await runTransaction(firestore, async transaction => {
+            const snapshot = await transaction.get(ref);
+            if (!snapshot.exists()) throw new Error(`Actor not found: ${actorId}`);
+            const current = snapshot.data();
+            const next = typeof updater === 'function' ? updater(current) : { ...current, ...updater };
+            transaction.set(ref, cleanForFirestore(stampRuntime(next)));
+        });
+    },
+
+    async updateActors(firestore, campaignId, actorIds, updater) {
+        const uniqueIds = [...new Set(actorIds.filter(Boolean))];
+        const refsById = Object.fromEntries(
+            uniqueIds.map(actorId => [
+                actorId,
+                campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actors, actorId),
+            ])
+        );
+
+        await runTransaction(firestore, async transaction => {
+            const entries = await Promise.all(
+                uniqueIds.map(async actorId => {
+                    const snapshot = await transaction.get(refsById[actorId]);
+                    if (!snapshot.exists()) throw new Error(`Actor not found: ${actorId}`);
+                    return [actorId, snapshot.data()];
+                })
+            );
+            const currentById = Object.fromEntries(entries);
+            const nextById = typeof updater === 'function' ? updater(currentById) : updater;
+            Object.entries(nextById || currentById).forEach(([actorId, actor]) => {
+                if (!refsById[actorId]) return;
+                transaction.set(refsById[actorId], cleanForFirestore(stampRuntime(actor)));
+            });
+        });
+    },
+};
+
+export const effectRepo = {
+    async createEffect(firestore, campaignId, effect) {
+        const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actorEffects, effect.id);
+        await setDoc(ref, cleanForFirestore(stampRuntime(effect)));
+    },
+
+    async updateEffect(firestore, campaignId, effectId, updater) {
+        const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actorEffects, effectId);
+        await runTransaction(firestore, async transaction => {
+            const snapshot = await transaction.get(ref);
+            if (!snapshot.exists()) throw new Error(`Actor effect not found: ${effectId}`);
+            const current = snapshot.data();
+            const next = typeof updater === 'function' ? updater(current) : { ...current, ...updater };
+            transaction.set(ref, cleanForFirestore(stampRuntime(next)));
+        });
+    },
+
+    async deleteEffect(firestore, campaignId, effectId) {
+        await deleteDoc(campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actorEffects, effectId));
+    },
+
+    async setEffectTemplate(firestore, campaignId, template) {
+        const id = safeDocId(template?.id || template?.label || template?.name, 'effect_template');
+        const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.effectTemplates, id);
+        await setDoc(ref, cleanForFirestore(stampRuntime({ ...template, id })));
+    },
+
+    async deleteEffectTemplate(firestore, campaignId, templateId) {
+        const id = safeDocId(templateId?.id || templateId?.label || templateId?.name || templateId, 'effect_template');
+        await deleteDoc(campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.effectTemplates, id));
+    },
+};
+
 export const memberRepo = {
     async assignUser(firestore, campaignId, email, member) {
         const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.members, email);
@@ -159,6 +236,7 @@ export const memberRepo = {
             campaignId,
             role: member.role || 'player',
             characterId: member.characterId || null,
+            assignedActorId: member.assignedActorId || member.actorId || member.characterId || null,
         })));
     },
 
@@ -262,6 +340,19 @@ export const globalRepo = {
                 transaction.set(refsById[articleId], cleanForFirestore(stampRuntime({ ...article, id: article.id || articleId })));
             });
         });
+    },
+};
+
+export const catalogOverrideRepo = {
+    async setCatalogOverride(firestore, override) {
+        const id = safeDocId(override?.id || `${override?.catalogType || 'catalog'}_${override?.baseId || override?.label}`, 'catalog_override');
+        const ref = doc(firestore, V2_COLLECTIONS.catalogOverrides, id);
+        await setDoc(ref, cleanForFirestore(stampRuntime({ ...override, id, sourceFile: null })));
+    },
+
+    async deleteCatalogOverride(firestore, overrideOrId) {
+        const id = safeDocId(overrideOrId?.id || overrideOrId, 'catalog_override');
+        await deleteDoc(doc(firestore, V2_COLLECTIONS.catalogOverrides, id));
     },
 };
 

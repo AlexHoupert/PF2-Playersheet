@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Last updated: 2026-06-16.
+Last updated: 2026-06-20.
 
 ## Runtime Shape
 
@@ -28,10 +28,10 @@ Production build uses `vite build`, then `scripts/copy_ressources_to_dist.js` co
 
 `src/App.jsx`:
 
-- Selects data mode:
-  - legacy: `usePersistedDb(dbData)`.
-  - v2: `useFirestoreV2Db(dbData)` when `?db=v2` or `VITE_DB_MODE=v2` is set.
-- Legacy is still the default. See `docs/agent/v2-default-readiness.md` before changing the default.
+- Starts `useFirestoreV2Db(dbData)` directly on the `v2-convergence` branch.
+- Legacy `usePersistedDb` is no longer selected by the normal app entry; it remains import/backup/reference code until cleanup.
+- The UI still receives a legacy-shaped compatibility projection while the V2-native view model is being adopted.
+- See `docs/agent/v2-default-readiness.md` before deploying the convergence branch as the main production path.
 - Selects route through query params:
   - `?party=true` -> `PartyScreen`.
   - `?camp=true` -> `CampScreen`.
@@ -51,6 +51,9 @@ Production build uses `vite build`, then `scripts/copy_ressources_to_dist.js` co
   - `activeCampaign`
   - `activeCampaignId`
   - `myCharacter`
+  - `myActor`
+  - `actors`
+  - `archivedActors`
   - `isGM`
   - `userInfo`
 - Provides:

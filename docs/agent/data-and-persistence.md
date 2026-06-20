@@ -1,10 +1,12 @@
 # Data And Persistence
 
-Last updated: 2026-06-18.
+Last updated: 2026-06-20.
 
 ## Mental Model
 
-The app currently has two persistence modes but one dominant UI data shape. Existing screens expect a legacy-shaped `db` object. Firestore v2 mode normalizes storage but projects documents back into that same shape for UI compatibility.
+The `v2-convergence` branch has started the V2-only cutover. `src/App.jsx` now starts the Firestore V2 hook directly instead of selecting the legacy runtime.
+
+Existing screens still mostly expect a legacy-shaped `db` object. Firestore V2 currently normalizes storage and still projects documents back into that shape for UI compatibility, but this projection is now a temporary bridge rather than the long-term UI contract.
 
 This means a feature is not fully v2-ready just because it works through `setDb`; v2 may still need normalizer support so data is written into the intended collection and reconstructed correctly.
 
@@ -12,7 +14,7 @@ This means a feature is not fully v2-ready just because it works through `setDb`
 
 File: `src/shared/db/usePersistedDb.js`
 
-Default mode unless `?db=v2` or `VITE_DB_MODE=v2` is used.
+No longer selected by `src/App.jsx` on the V2 convergence branch. Legacy remains useful as an import/backup source and as implementation reference until its runtime code is isolated or removed.
 
 Storage:
 
@@ -59,12 +61,16 @@ Top-level collections:
 - `customItems`
 - `customCreatures`
 - `customActions`
+- `catalogOverrides`
 - `loreArticles`
 - `migrationBackups`
 
 Campaign subcollections:
 
+- `actors`
+- `actorEffects`
 - `characters`
+- `effectTemplates`
 - `quests`
 - `lootBags`
 - `encounters`
@@ -91,9 +97,10 @@ Read path:
 2. Subscribe to `campaigns`.
 3. For every campaign, subscribe to known subcollections.
 4. Store documents in a `Map` keyed by Firestore path.
-5. Call `composeLegacyDbFromV2Documents`.
-6. Run `migrateDb`.
-7. Cache projection to LocalStorage.
+5. Build a V2-native debug/read view with `composeV2ViewModelFromDocuments`.
+6. Call `composeLegacyDbFromV2Documents` for current UI compatibility.
+7. Run `migrateDb`.
+8. Cache projection to LocalStorage.
 
 Write path:
 
@@ -102,10 +109,12 @@ Write path:
 3. Compare previous and next by calling `normalizeMasterToV2` on both.
 4. Write changed docs and delete missing docs through `writeLegacyDbDiffToV2`.
 
-Important limitation:
+Important transitional limitation:
 
 - There are repository functions in `src/shared/db/v2/repositories.js`, but compatibility support for broad legacy diffs still exists for future non-migrated paths.
+- `setDb` and `writeLegacyDbDiffToV2` still exist inside the V2 hook for compatibility. They are not the target architecture and should be removed after UI reads/writes stop requiring the legacy-shaped projection.
 - Campaign/Session, Character, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, and Player runtime fallbacks now use targeted domain actions instead of broad runtime UI writes.
+- Actor, Actor Effect, Effect Template, and Catalog Override repositories/actions have been introduced as the foundation for the planned Effects/Conditions and Companion/Minion systems.
 
 ## Domain Action Layer
 
@@ -121,6 +130,7 @@ Files:
 - `src/shared/db/domain/progressReducers.js`
 - `src/shared/db/domain/campingReducers.js`
 - `src/shared/db/domain/globalContentReducers.js`
+- `src/shared/db/domain/actorReducers.js`
 - `src/shared/db/selectors/`
 - `src/shared/db/v2/repositories.js`
 
@@ -129,6 +139,9 @@ Files:
 Current migrated write paths:
 
 - Player character updates through `dataActions.character.updateCharacter`; player basis edits for gold, attributes, HP/temp/max HP, speed, Class DC, and daily crafting max use targeted character basis actions.
+- New character create/import/archive/restore mirrors PC documents into campaign-scoped `actors`.
+- Conditions in `ConditionsModal` use `dataActions.effect` when campaign/actor context is available; the legacy updater remains only as fallback.
+- Custom item/action/ability/creature saves also create `catalogOverrides`; deployed spell editing writes directly to `catalogOverrides`.
 - Player inventory transfer through `dataActions.inventory.transferItem`.
 - Player loot claim, gold claim, and gold split through `dataActions.loot`.
 - Campaign/session flows through `dataActions.campaign`, `dataActions.character`, and `dataActions.member`.
@@ -184,6 +197,10 @@ File: `src/shared/db/v2/normalizers.js`
 - Adds global config from `shop`, `bestiary.creatures`, `notificationQueue`, `rules`, `library`, `runes`, `feats`.
 - Adds `pacts` and `abilities.custom`/`abilities.deviant` into `global/config`.
 - Adds custom content collections for custom items, creatures, actions, and lore articles.
+- Adds PC actors from campaign characters.
+- Adds companion actors from legacy `character.companion`.
+- Adds actor effects from legacy `character.conditions` and companion conditions.
+- Adds catalog overrides for custom item/action/ability/creature/spell records.
 - Stamps documents with schema metadata and migration info.
 - Produces a report with counts, renamed fields, moved fields, invalid values, and assumptions.
 
@@ -191,6 +208,8 @@ File: `src/shared/db/v2/normalizers.js`
 
 - Builds the legacy projection used by existing screens.
 - Reassembles campaign subcollections into `db.campaigns[campaignId]`.
+- Reassembles `actors`, `actorEffects`, and `effectTemplates` into campaign view data.
+- Overlays character `conditions` from `actorEffects` when available.
 - Converts `members` docs back into `db.users`.
 - Rehydrates global config including shop, bestiary reveal-state/metadata, pacts, abilities, custom collections, and lore.
 - Sets root `quests` and `lootBags` from the first campaign for compatibility.
@@ -215,7 +234,7 @@ Do not run write migration without explicit user approval.
 
 ## V2 Default Readiness
 
-V2 remains opt-in through `?db=v2` or `VITE_DB_MODE=v2`. Do not switch the default until the manual smoke checklist and Firestore rules audit in `docs/agent/v2-default-readiness.md` are complete for the target Firebase project.
+V2 is the runtime entry point on the convergence branch. The checklist in `docs/agent/v2-default-readiness.md` is now a cutover/completion checklist for making this branch deployable, not a precondition for local branch work.
 
 ## Firestore Rules
 
@@ -227,14 +246,17 @@ Access model:
 - Global admins are documents under `admins/{email}`.
 - Campaign membership is stored under `campaigns/{campaignId}/members/{email}`.
 - Campaign GMs are member roles `gm` or `admin`.
-- Assigned players can update their own character doc in v2.
+- Assigned players can update their own character doc and assigned actor doc in V2.
+- Assigned players can create/update/delete actor effects that target their assigned actor.
 - Loot bag updates are allowed for any campaign member.
-- Top-level global/custom/lore collections are readable by signed-in users but writable only by global admins.
+- Campaign effect templates are readable by campaign members and writable by campaign GM/global admins.
+- Top-level global/custom/catalog-override/lore collections are readable by signed-in users but writable only by global admins.
 
 Mismatch to watch:
 
 - Legacy `data/master` is not explicitly allowed by these rules. Legacy mode may depend on older/deployed rules or admin privileges. Verify live rules before relying on legacy Firestore writes.
-- The currently targeted V2 global writes are covered by `global`, `customItems`, `customCreatures`, `customActions`, and `loreArticles`; all are signed-in readable and global-admin writable.
+- The currently targeted V2 global writes are covered by `global`, `customItems`, `customCreatures`, `customActions`, `catalogOverrides`, and `loreArticles`; all are signed-in readable and global-admin writable.
+- The actor/effects foundation is covered by `actors`, `actorEffects`, and `effectTemplates` campaign subcollection rules.
 
 ## Existing Tests
 

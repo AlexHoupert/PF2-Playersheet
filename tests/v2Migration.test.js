@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { composeLegacyDbFromV2Documents, normalizeMasterToV2 } from '../src/shared/db/v2/normalizers.js';
+import { composeV2ViewModelFromDocuments } from '../src/shared/db/v2/viewModel.js';
 
 test('normalizes legacy master data into campaign-scoped v2 documents', () => {
     const master = {
@@ -57,14 +58,20 @@ test('normalizes legacy master data into campaign-scoped v2 documents', () => {
     });
 
     const paths = new Set(result.documents.map(doc => doc.path));
-    assert.equal(result.schemaVersion, 2);
+    assert.equal(result.schemaVersion, 3);
     assert(paths.has('campaigns/camp1'));
     assert(paths.has('campaigns/camp1/characters/char1'));
+    assert(paths.has('campaigns/camp1/actors/char1'));
+    assert(paths.has('campaigns/camp1/actorEffects/char1_frightened_0'));
     assert(paths.has('campaigns/camp1/quests/quest1'));
     assert(paths.has('campaigns/camp1/lootBags/loot1'));
     assert(paths.has('campaigns/camp1/members/player@example.com'));
     assert(paths.has('customItems/Widget'));
     assert(paths.has('customActions/Shove'));
+    assert(paths.has('catalogOverrides/item_Widget'));
+    assert(paths.has('catalogOverrides/action_Shove'));
+    assert(paths.has('catalogOverrides/ability_customTrip'));
+    assert(paths.has('catalogOverrides/ability_spark'));
     assert(paths.has('loreArticles/article1'));
 
     const globalConfig = result.documents.find(doc => doc.path === 'global/config').data;
@@ -90,6 +97,16 @@ test('normalizes legacy master data into campaign-scoped v2 documents', () => {
     assert(characterDoc.inventory.every(item => item.instanceId));
     assert.deepEqual(characterDoc.inventory[1].traits.value, ['ranged', 'martial']);
     assert.deepEqual(characterDoc.proficiencies, { Unarmored: 2 });
+
+    const actorDoc = result.documents.find(doc => doc.path === 'campaigns/camp1/actors/char1').data;
+    assert.equal(actorDoc.kind, 'pc');
+    assert.equal(actorDoc.sheet.legacyCharacterId, 'char1');
+    assert.equal(actorDoc.stats.hp.current, 12);
+
+    const effectDoc = result.documents.find(doc => doc.path === 'campaigns/camp1/actorEffects/char1_frightened_0').data;
+    assert.equal(effectDoc.category, 'condition');
+    assert.equal(effectDoc.targetActorId, 'char1');
+    assert.equal(effectDoc.label, 'frightened');
 
     const lootDoc = result.documents.find(doc => doc.path === 'campaigns/camp1/lootBags/loot1').data;
     assert(lootDoc.items.every(item => item.instanceId));
@@ -130,7 +147,9 @@ test('composes v2 documents back into the legacy projection used by existing scr
     const db = composeLegacyDbFromV2Documents(result.documents);
 
     assert.equal(db.campaigns.camp1.name, 'Campaign One');
+    assert.equal(db.campaigns.camp1.actors[0].id, 'char1');
     assert.equal(db.campaigns.camp1.characters[0].id, 'char1');
+    assert.deepEqual(db.campaigns.camp1.characters[0].conditions, []);
     assert.equal(db.campaigns.camp1.quests[0].id, 'quest1');
     assert.deepEqual(db.campaigns.camp1.maps.map(map => map.id), ['map-first', 'map-last']);
     assert.equal(db.quests[0].id, 'quest1');
@@ -141,5 +160,45 @@ test('composes v2 documents back into the legacy projection used by existing scr
         role: 'player',
         campaignId: 'camp1',
         characterId: 'char1',
+        actorId: 'char1',
     });
+});
+
+test('composes normalized documents into a v2-native view model', () => {
+    const result = normalizeMasterToV2({
+        campaigns: {
+            camp1: {
+                id: 'camp1',
+                name: 'Campaign One',
+                characters: [{
+                    id: 'char1',
+                    name: 'Hero',
+                    conditions: [{ name: 'Frightened', level: 1 }],
+                    companion: { id: 'wolf1', name: 'Wolf', type: 'animal' },
+                }],
+                quests: [{ id: 'quest1', title: 'Find the Key' }],
+            },
+        },
+        shop: { customItems: { Widget: { name: 'Widget' } } },
+    }, {
+        now: 0,
+        migrationId: 'test_v2_view',
+    });
+
+    const view = composeV2ViewModelFromDocuments([
+        ...result.documents,
+        {
+            path: 'campaigns/camp1/effectTemplates/template1',
+            collection: 'effectTemplates',
+            data: { id: 'template1', label: 'Sickened' },
+        },
+    ]);
+
+    assert.equal(view.campaigns.camp1.name, 'Campaign One');
+    assert.deepEqual(view.campaigns.camp1.actorsList.map(actor => actor.id), ['char1', 'wolf1']);
+    assert.deepEqual(view.campaigns.camp1.actorEffectsList.map(effect => effect.targetActorId), ['char1']);
+    assert.deepEqual(view.campaigns.camp1.effectTemplatesList.map(template => template.id), ['template1']);
+    assert.deepEqual(view.campaigns.camp1.questsList.map(quest => quest.id), ['quest1']);
+    assert.equal(view.customItems.Widget.name, 'Widget');
+    assert.equal(view.catalogOverrides.item_Widget.catalogType, 'item');
 });

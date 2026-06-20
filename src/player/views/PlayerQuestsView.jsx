@@ -16,9 +16,8 @@ export default function PlayerQuestsView({ quests = [] }) {
     // Actually, looking at previous code, `QuestCard` had `onEdit` but not `onToggleObjective` explicitly wired for players in `PlayerQuestsView`.
     // The Codex style implies interactivity (checkboxes). 
     // Let's allow local optimistic toggling or dummy handler for now unless we have a `toggleQuestObjective` function available.
-    // Since `PlayerApp` passes `db.quests`, we can't easily write back without a setDb prop.
-    // I'll leave `onToggleObjective` undefined for now so they render but aren't persisted, OR pass a dummy.
-    // Actually, the new `QuestCodexItem` effectively uses `li onClick`.
+    // Player quests are read through centralized campaign/root selectors in PlayerAppController.
+    // Objective persistence remains GM-side for now.
 
     return (
         <div className="player-quests-view" style={{ paddingBottom: 100 }}>

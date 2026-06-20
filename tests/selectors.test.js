@@ -9,7 +9,9 @@ import {
     selectRootFallbackList,
     selectTargetCampaignId,
 } from '../src/shared/db/selectors/campaignSelectors.js';
+import { selectActorBuckets, selectMyActor, selectOwnedActors, selectPcActors } from '../src/shared/db/selectors/actorSelectors.js';
 import { selectMyCharacter } from '../src/shared/db/selectors/characterSelectors.js';
+import { selectActorEffects, selectConditionEffects, selectVisibleEffectTemplates } from '../src/shared/db/selectors/effectSelectors.js';
 import {
     selectCustomAbility,
     selectCustomAbilityList,
@@ -167,4 +169,34 @@ test('selectors read v2 projection with campaign subcollections and global confi
     assert.equal(selectPactList(db)[0].name, 'Ember Pact');
     assert.equal(selectLoreArticle(db, 'article1').title, 'Lore');
     assert.equal(selectLoreArticlesByCategory(db, 'history')[0].id, 'article1');
+});
+
+test('actor and effect selectors expose v2 actor viewmodels', () => {
+    const campaign = {
+        id: 'camp1',
+        actors: [
+            { id: 'pc1', kind: 'pc', name: 'Hero' },
+            { id: 'companion1', kind: 'animal_companion', name: 'Wolf', ownerActorId: 'pc1' },
+            { id: 'old', kind: 'pc', name: 'Old Hero', deletedAt: '2026-01-01' },
+        ],
+        actorEffects: [
+            { id: 'frightened', targetActorId: 'pc1', category: 'condition', label: 'Frightened', value: 1 },
+            { id: 'disabled', targetActorId: 'pc1', category: 'condition', label: 'Hidden', disabled: true },
+            { id: 'item', targetActorId: 'pc1', category: 'item', label: 'Scales' },
+        ],
+        effectTemplates: [
+            { id: 'slippery', label: 'Slippery' },
+            { id: 'internal', label: 'Internal', hiddenFromPicker: true },
+        ],
+    };
+
+    const buckets = selectActorBuckets(campaign);
+    assert.deepEqual(buckets.actors.map(actor => actor.id), ['pc1', 'companion1']);
+    assert.deepEqual(buckets.archivedActors.map(actor => actor.id), ['old']);
+    assert.equal(selectMyActor(campaign, { actorId: 'pc1' }).name, 'Hero');
+    assert.deepEqual(selectOwnedActors(campaign, 'pc1').map(actor => actor.id), ['companion1']);
+    assert.deepEqual(selectPcActors(campaign).map(actor => actor.id), ['pc1']);
+    assert.deepEqual(selectActorEffects(campaign, 'pc1').map(effect => effect.id), ['frightened', 'item']);
+    assert.deepEqual(selectConditionEffects(campaign, 'pc1').map(effect => effect.id), ['frightened']);
+    assert.deepEqual(selectVisibleEffectTemplates(campaign).map(template => template.id), ['slippery']);
 });

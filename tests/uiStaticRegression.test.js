@@ -44,6 +44,20 @@ test('admin actions use database fallback instead of deployed file writes', () =
     assert.match(editorSource, /readJsonApiResponse\(res, 'Save action'\)/);
 });
 
+test('admin spells use catalog override fallback instead of deployed-only file writes', () => {
+    const viewSource = readSource('src/admin/SpellsView.jsx');
+    const editorSource = readSource('src/admin/editors/SpellEditor.jsx');
+
+    assert.match(viewSource, /catalogOverride\.saveCatalogOverride/);
+    assert.match(viewSource, /spellJsonToEditorFormData/);
+    assert.equal(viewSource.includes('Static spell files can only be edited'), false);
+    assert.match(editorSource, /onSaveToDb/);
+    assert.match(editorSource, /buildSpellOverride/);
+    assert.match(editorSource, /catalogType: 'spell'/);
+    assert.match(editorSource, /import\.meta\.env\.PROD/);
+    assert.match(editorSource, /readJsonApiResponse\(res, 'Save spell'\)/);
+});
+
 test('quest fallback reads stay centralized in selectors', () => {
     const playerSource = readSource('src/player/PlayerAppController.jsx');
     const gmSource = readSource('src/admin/QuestsView.jsx');

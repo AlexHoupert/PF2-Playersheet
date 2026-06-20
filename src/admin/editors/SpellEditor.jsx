@@ -4,7 +4,7 @@ import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import { SPELL_INDEX_FILTER_OPTIONS, fetchSpellDetailBySourceFile, normalizeSpellSourceFile } from '../../shared/catalog/spellIndex';
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 
-export default function SpellEditor({ initialItem, onSave, onCancel }) {
+export default function SpellEditor({ initialItem, onSave, onCancel, onSaveToDb }) {
     const [formData, setFormData] = useState({
         name: '',
         level: 1,
@@ -111,8 +111,16 @@ export default function SpellEditor({ initialItem, onSave, onCancel }) {
                 ? { directory: `ressources/spells`, filename: `${formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`, content: spellJson }
                 : { filePath: `ressources/${normalizeSpellSourceFile(filePath)}`, content: spellJson };
 
+            const spellOverride = buildSpellOverride(spellJson, formData, initialItem);
+
+            if (import.meta.env.PROD && onSaveToDb) {
+                await onSaveToDb(spellOverride);
+                onSave({ success: true, message: 'Saved spell override to database', data: spellOverride });
+                return;
+            }
+
             if (import.meta.env.PROD) {
-                throw new Error('Static spell files can only be edited in the local dev server. Deployed Vercel builds cannot write resource JSON files yet.');
+                throw new Error('No database save handler is configured for deployed spell editing.');
             }
 
             const res = await fetch(endpoint, {
@@ -129,6 +137,37 @@ export default function SpellEditor({ initialItem, onSave, onCancel }) {
 
             onSave(data);
         } catch (err) {
+            if (onSaveToDb) {
+                try {
+                    const fallbackJson = {
+                        name: formData.name,
+                        type: 'spell',
+                        img: initialItem?.img || "systems/pf2e/icons/default-icons/spell.svg",
+                        system: {
+                            description: { value: formData.description },
+                            level: { value: parseInt(formData.level) },
+                            traits: {
+                                value: formData.traits,
+                                rarity: formData.rarity,
+                                traditions: formData.traditions
+                            },
+                            time: { value: formData.time },
+                            range: { value: formData.range },
+                            target: { value: formData.target },
+                            area: { value: formData.area },
+                            duration: { value: formData.duration },
+                            defense: { save: { statistic: formData.defense } }
+                        }
+                    };
+                    const fallbackOverride = buildSpellOverride(fallbackJson, formData, initialItem);
+                    await onSaveToDb(fallbackOverride);
+                    onSave({ success: true, message: 'Saved spell override to database', data: fallbackOverride });
+                    return;
+                } catch (dbErr) {
+                    setError(`Failed to save spell. Server: ${err.message}. DB: ${dbErr.message}`);
+                    return;
+                }
+            }
             setError(err.message);
         } finally {
             setIsSaving(false);
@@ -226,4 +265,32 @@ export default function SpellEditor({ initialItem, onSave, onCancel }) {
             `}</style>
         </div>
     );
+}
+
+export function buildSpellOverride(spellJson, formData, initialItem) {
+    const safeId = (initialItem?.id || formData.name || 'spell')
+        .replace(/[^a-z0-9]/gi, '_')
+        .toLowerCase();
+    const sourceFile = formData.sourceFile || initialItem?.sourceFile || null;
+    return {
+        id: `spell_${safeId}`,
+        catalogType: 'spell',
+        baseId: initialItem?.id || sourceFile || null,
+        mode: sourceFile ? 'override' : 'custom',
+        label: formData.name,
+        payload: {
+            ...spellJson,
+            id: safeId,
+            _id: safeId,
+            sourceFile: null,
+            isCustom: !sourceFile,
+            overrideSourceFile: sourceFile,
+            level: parseInt(formData.level) || 0,
+            traditions: formData.traditions || [],
+            traits: formData.traits || [],
+            rarity: formData.rarity || 'common',
+            description: formData.description || '',
+        },
+        sourceFile: null,
+    };
 }

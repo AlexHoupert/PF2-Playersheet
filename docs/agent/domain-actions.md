@@ -1,6 +1,6 @@
 # Domain Actions
 
-Last updated: 2026-06-19.
+Last updated: 2026-06-20.
 
 ## Purpose
 
@@ -17,6 +17,7 @@ Location:
 - `src/shared/db/domain/progressReducers.js`
 - `src/shared/db/domain/campingReducers.js`
 - `src/shared/db/domain/globalContentReducers.js`
+- `src/shared/db/domain/actorReducers.js`
 - `src/shared/db/selectors/`
 - `src/shared/db/domain/createDataActions.js`
 - `src/shared/db/v2/repositories.js`
@@ -78,6 +79,26 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `s
 - `removeItem(campaignId, characterId, item)`
 - `setItemQuantity(campaignId, characterId, item, qty)`
 - `transferItem(campaignId, fromCharacterId, toCharacterId, item, qty)`
+
+`dataActions.actor`:
+
+- `createActor(campaignId, actor)`
+- `updateActor(campaignId, actorId, updater)`
+- `softDeleteActor(campaignId, actorId)`
+- `restoreActor(campaignId, actorId)`
+
+`dataActions.effect`:
+
+- `createEffect(campaignId, targetActorId, effect)`
+- `updateEffect(campaignId, effectId, updater)`
+- `deleteEffect(campaignId, effectId)`
+- `saveEffectTemplate(campaignId, template)`
+- `deleteEffectTemplate(campaignId, templateId)`
+
+`dataActions.catalogOverride`:
+
+- `saveCatalogOverride(override)`
+- `deleteCatalogOverride(overrideId)`
 
 `dataActions.loot`:
 
@@ -205,6 +226,8 @@ Firestore V2 mode:
 - Uses targeted campaign document updates for progress sections and top-level progress archives/restores.
 - Uses targeted campaign document updates for camping settings, custom activities, assignments, rolls, and reset/archive/restore behavior.
 - Uses targeted global config/custom document writes for shop/trader state, custom items/actions, custom abilities, pacts, deviant abilities, lore, bestiary reveal-state, bestiary metadata, custom creatures, and root-notification compatibility.
+- Uses targeted actor/effect/effect-template writes for the V2 actor/effects foundation.
+- Custom item/action/ability/creature saves also write `catalogOverrides`; deployed spell editing writes `catalogOverrides` directly.
 - Does not route migrated writes through `writeLegacyDbDiffToV2`.
 
 If Firestore config is missing, the adapter falls back to legacy mode.
@@ -215,6 +238,8 @@ If Firestore config is missing, the adapter falls back to legacy mode.
 
 - Inventory and loot items are normalized with `instanceId` on every domain write.
 - Character runtime shape is normalized on load, V2 migration, create, and update through `normalizeCharacterRuntimeShape`.
+- PC character create/import/archive/restore mirrors to campaign-scoped `actors` while the legacy `characters` collection still exists as transition data.
+- Actor effects are the target source for Conditions. The legacy projection overlays `character.conditions` from `actorEffects` when available.
 - Old skill keys `Intimidate`/`intimidate` and `Perform`/`perform` are migrated to `Intimidation` and `Performance`.
 - Missing player runtime fields such as `impulses`, caster flags, and spell/impulse proficiencies are defaulted before UI reads.
 - Mutations prefer `instanceId`.
