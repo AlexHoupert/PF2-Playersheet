@@ -4,7 +4,7 @@ import { calculateStat } from '../../utils/rules';
 import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
 import { LongPressable } from '../../shared/components/LongPressable';
 
-export function DefensesSection({ character, updateCharacter, onOpenModal, onLongPress }) {
+export function DefensesSection({ character, characterActions, onOpenModal, onLongPress }) {
     const { getArmorClassData } = useCharacterStats(character);
     const acData = getArmorClassData(character);
     const totalAC = acData.totalAC;
@@ -81,7 +81,7 @@ export function DefensesSection({ character, updateCharacter, onOpenModal, onLon
                                 e.stopPropagation();
                                 console.log("Shield Toggle Clicked. isBroken:", isBroken, "Raised:", acData.shieldRaised);
                                 if (isBroken && !acData.shieldRaised) return;
-                                updateCharacter(c => {
+                                characterActions?.setEquipmentState(c => {
                                     if (!c.stats.ac) c.stats.ac = {};
                                     c.stats.ac.shield_raised = !c.stats.ac.shield_raised;
                                 });

@@ -222,6 +222,36 @@ test('v2 adapter routes character basis edits through actor repository', async (
     assert.equal(calls[7][3].sheet.dailyCraftingMax, 4);
 });
 
+test('v2 adapter routes player sheet actor edits through actor repository', async () => {
+    const { actions, calls } = createActionHarness();
+
+    await actions.actor.setSkill('camp1', 'char1', 'Lore: Fire', 2);
+    await actions.actor.setSave('camp1', 'char1', 'reflex', 4);
+    await actions.actor.setArmorProficiency('camp1', 'char1', 'Light', 2);
+    await actions.actor.setProficiency('camp1', 'char1', 'Simple', 2);
+    await actions.actor.setSpellProficiency('camp1', 'char1', 4);
+    await actions.actor.setImpulseProficiency('camp1', 'char1', 6);
+    await actions.actor.setPerception('camp1', 'char1', 2);
+    await actions.actor.setMagicAttribute('camp1', 'char1', 'Wisdom');
+    await actions.actor.setMagicProficiency('camp1', 'char1', 4);
+    await actions.actor.setMagicSlot('camp1', 'char1', '3_curr', 2);
+    await actions.actor.setEquipmentState('camp1', 'char1', { shield_raised: true });
+
+    assert.deepEqual(calls.map(call => call[0]), Array.from({ length: 11 }, () => 'actor.updateActor'));
+    assert.equal(calls[0][3].stats.skills['Lore: Fire'], 2);
+    assert.equal(calls[0][3].sheet.skills['Lore: Fire'], 2);
+    assert.equal(calls[1][3].stats.saves.reflex, 4);
+    assert.equal(calls[2][3].stats.proficiencies.light, 2);
+    assert.equal(calls[3][3].sheet.proficiencies.Simple, 2);
+    assert.equal(calls[4][3].stats.spell_proficiency, 4);
+    assert.equal(calls[5][3].stats.impulse_proficiency, 6);
+    assert.equal(calls[6][3].stats.perception, 2);
+    assert.equal(calls[7][3].magic.attribute, 'Wisdom');
+    assert.equal(calls[8][3].magic.proficiency, 4);
+    assert.equal(calls[9][3].magic.slots['3_curr'], 2);
+    assert.equal(calls[10][3].stats.ac.shield_raised, true);
+});
+
 test('v2 adapter stores character lifecycle as pc actors', async () => {
     const { actions, calls } = createActionHarness({
         users: {

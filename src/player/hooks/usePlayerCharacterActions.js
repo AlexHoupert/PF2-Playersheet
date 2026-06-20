@@ -36,13 +36,20 @@ export function usePlayerCharacterActions({
         runDataAction(action(ids.campaignId, ids.characterId, ...args));
     }, [dataActions, getTargetIds, runDataAction]);
 
+    const runActorAction = React.useCallback((actionName, ...args) => {
+        const ids = getTargetIds();
+        const action = dataActions.actor?.[actionName] || dataActions.character?.[actionName];
+        if (!ids || typeof action !== 'function') return;
+        runDataAction(action(ids.campaignId, ids.characterId, ...args));
+    }, [dataActions, getTargetIds, runDataAction]);
+
     const characterActions = React.useMemo(() => ({
-        setGold: (amount) => runCharacterAction('setGold', amount),
-        adjustGold: (amount) => runCharacterAction('adjustGold', amount),
+        setGold: (amount) => runActorAction('setGold', amount),
+        adjustGold: (amount) => runActorAction('adjustGold', amount),
         setAttribute: (key, value) => runCharacterAction('setAttribute', key, value),
         adjustAttribute: (key, amount) => runCharacterAction('adjustAttribute', key, amount),
-        setHp: (value) => runCharacterAction('setHp', value),
-        adjustHp: (amount) => runCharacterAction('adjustHp', amount),
+        setHp: (value) => runActorAction('setHp', value),
+        adjustHp: (amount) => runActorAction('adjustHp', amount),
         setTempHp: (value) => runCharacterAction('setTempHp', value),
         adjustTempHp: (amount) => runCharacterAction('adjustTempHp', amount),
         setMaxHp: (value) => runCharacterAction('setMaxHp', value),
@@ -52,7 +59,19 @@ export function usePlayerCharacterActions({
         setClassDc: (value) => runCharacterAction('setClassDc', value),
         adjustClassDc: (amount) => runCharacterAction('adjustClassDc', amount),
         setDailyCraftingMax: (value) => runCharacterAction('setDailyCraftingMax', value),
-    }), [runCharacterAction]);
+        setSkill: (key, value) => runActorAction('setSkill', key, value),
+        deleteSkill: (key) => runActorAction('setSkill', key, null),
+        setSave: (key, value) => runActorAction('setSave', key, value),
+        setArmorProficiency: (key, value) => runActorAction('setArmorProficiency', key, value),
+        setWeaponProficiency: (key, value) => runActorAction('setProficiency', key, value),
+        setSpellProficiency: (value) => runActorAction('setSpellProficiency', value),
+        setImpulseProficiency: (value) => runActorAction('setImpulseProficiency', value),
+        setPerception: (value) => runActorAction('setPerception', value),
+        setMagicAttribute: (attribute) => runActorAction('setMagicAttribute', attribute),
+        setMagicProficiency: (value) => runActorAction('setMagicProficiency', value),
+        setMagicSlot: (slotKey, value) => runActorAction('setMagicSlot', slotKey, value),
+        setEquipmentState: (patch) => runActorAction('setEquipmentState', patch),
+    }), [runActorAction, runCharacterAction]);
 
     const handleClearNotification = React.useCallback((id) => {
         if (activeCampaign?.id && activeCampaign?.notificationQueue?.some(n => n.id === id)) {

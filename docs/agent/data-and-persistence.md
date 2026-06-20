@@ -111,7 +111,7 @@ Runtime write path:
 
 Compatibility projection updates:
 
-- `useFirestoreV2Db` keeps a local `legacyProjection` for old screens.
+- `useFirestoreV2Db` keeps a local `legacyProjection` for explicit import/backup compatibility and migration tests.
 - The hook no longer broad-diffs that projection back into Firestore.
 - `writeLegacyDbDiffToV2` remains only in legacy import/migration code.
 
@@ -144,8 +144,8 @@ Files:
 
 Current migrated write paths:
 
-- Player character compatibility updates through `dataActions.character.updateCharacter`; in V2 these delegate to PC Actor updates. Player basis edits for gold, attributes, HP/temp/max HP, speed, Class DC, and daily crafting max write PC Actor documents directly in V2.
-- New character create/import/archive/restore writes campaign-scoped PC Actors in V2. Old character documents remain import/transition data and are not the runtime write target.
+- Player character compatibility updates through `dataActions.character.updateCharacter`; in V2 these delegate to PC Actor updates. Player basis edits for gold, attributes, HP/temp/max HP, speed, Class DC, daily crafting max, saves/skills, proficiencies, magic slots, and armor/shield state write PC Actor documents directly in V2.
+- New character create/import/archive/restore writes campaign-scoped PC Actors in V2. Old character documents remain import/transition data and are not a runtime read or write target.
 - Conditions in `ConditionsModal`, Player Stats, Admin CharacterCard backlash, and item mutagen effects use `dataActions.effect` and campaign-scoped `actorEffects`.
 - Companion UI reads and writes owned Actor documents instead of `character.companion`; companion conditions also use `actorEffects`.
 - Custom item/action/ability/creature saves write `catalogOverrides` in V2. Deployed item, spell, action, feat, impulse, ability, and creature editors use catalog overrides instead of `/api/files/*`.
@@ -216,7 +216,7 @@ File: `src/shared/db/v2/normalizers.js`
 - Builds the legacy projection used by existing screens.
 - Reassembles campaign subcollections into `db.campaigns[campaignId]`.
 - Reassembles `actors`, `actorEffects`, and `effectTemplates` into campaign view data.
-- Prefers PC Actors over stale Character documents for `campaign.characters` compatibility rows.
+- Builds runtime `campaign.characters` compatibility rows from PC Actors only; stale Character documents are kept for legacy projection/import tests.
 - Overlays transitional character `conditions` from `actorEffects` when compatibility screens still need that shape.
 - Converts `members` docs back into `db.users`.
 - Rehydrates global config including shop, bestiary reveal-state/metadata, pacts, abilities, custom collections, and lore.

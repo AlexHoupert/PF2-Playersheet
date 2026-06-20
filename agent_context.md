@@ -50,7 +50,7 @@ The root repo is `PF2-Playersheet`; the parent directory is not the git repo.
 
 ## Persistence Summary
 
-The `v2-convergence` branch starts from Firestore V2. The UI still mostly consumes a legacy-shaped compatibility projection, but `useFirestoreV2Db` also builds a V2-native view model for the ongoing read-model cutover.
+The `v2-convergence` branch starts from Firestore V2. `CampaignContext` builds the normal runtime view from V2 documents and exposes V2-native viewmodels; some older screens still receive compatibility-shaped props while the read-model cutover continues.
 
 Legacy/import compatibility:
 
@@ -74,7 +74,7 @@ Firestore V2 runtime:
 - Campaign/Session, Character, Actor, Actor Effect, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, catalog overrides, and Player runtime fallbacks now go through `CampaignContext.dataActions` and targeted V2 repositories/transactions where migrated.
 - `CampaignContext` and global-facing views use pure selectors under `src/shared/db/selectors/` for campaign/character/actor/effect, shop, pact, ability, lore, and bestiary reads.
 
-Firestore V2 collections include `campaigns`, campaign subcollections `actors`, `actorEffects`, `effectTemplates`, `quests`, `lootBags`, `encounters`, `maps`, `members`, plus top-level `global`, `catalogOverrides`, `loreArticles`, and `migrationBackups`. Old `characters`, `customItems`, `customCreatures`, and `customActions` collections remain readable transition/import data, but new runtime writes should not target them.
+Firestore V2 collections include `campaigns`, campaign subcollections `actors`, `actorEffects`, `effectTemplates`, `quests`, `lootBags`, `encounters`, `maps`, `members`, plus top-level `global`, `catalogOverrides`, `loreArticles`, and `migrationBackups`. Old `characters`, `customItems`, `customCreatures`, and `customActions` collections remain transition/import data, but runtime reads and writes should not target `characters`.
 
 V2 is the convergence branch runtime, but the branch is not yet production-cutover ready. Before deploying it as the play branch, use `docs/agent/v2-default-readiness.md` for the required manual smoke checklist and Firestore rules audit.
 
@@ -105,13 +105,13 @@ Migrated paths:
 - Character create/archive/restore/import and SessionManager character restore UI.
 - User assign/revoke and Admin Player tab user revoke.
 - Admin Player tab character updates and party XP set/add.
-- PC character lifecycle writes campaign-scoped `actors(kind="pc")`; `CampaignContext` exposes `actors`, `archivedActors`, and `myActor` in addition to transitional character viewmodels derived from PC Actors.
+- PC character lifecycle writes campaign-scoped `actors(kind="pc")`; `CampaignContext` exposes `actors`, `archivedActors`, and `myActor` in addition to transitional character viewmodels derived only from PC Actors.
 - `ConditionsModal`, Player Stats, Admin CharacterCard backlash, and item mutagen effects use campaign-scoped `actorEffects`; runtime UI no longer writes `character.conditions`.
 - `CompanionTab` reads and writes owned companion Actors (`animal_companion`, `familiar`, `pet`) instead of `character.companion`; companion conditions use `actorEffects`.
 - Deployed item, spell, action, feat, impulse, ability, and creature editing writes Firestore `catalogOverrides`; static resource file APIs remain local-dev helpers.
 
 - Player local `updateCharacter` wrapper remains for not-yet-migrated PC sheet edits, but V2 character compatibility actions now write PC Actor documents through the actor repository rather than the old characters collection.
-- Player basis edits for gold, attributes, current/temp/max HP, speed, Class DC, and Formula Book daily batch max use targeted `dataActions.character` methods.
+- Player basis edits for gold, attributes, current/temp/max HP, speed, Class DC, Formula Book daily batch max, saves, skills, armor/weapon proficiencies, spell/impulse proficiencies, magic slots, and armor/shield state use targeted Actor-backed actions.
 - Player item transfer.
 - Player loot item claim, gold claim, and gold split.
 - GM ItemsView loot bag add/remove/quantity/create/lock/gold updates.

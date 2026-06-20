@@ -40,7 +40,7 @@ export function useCampaign() {
     return useContext(CampaignContext);
 }
 
-export function CampaignProvider({ legacyDb = null, v2Store = null, children, isAdmin = false, dbMode = 'legacy', dbStatus = null }) {
+export function CampaignProvider({ importDb = null, v2Store = null, children, isAdmin = false, dbMode = 'legacy', dbStatus = null }) {
     const { user } = useAuth();
     const db = useMemo(() => composeRuntimeDbFromV2Store(v2Store), [v2Store]);
     const userEmail = normalizeEmail(user?.email);
@@ -202,7 +202,7 @@ export function CampaignProvider({ legacyDb = null, v2Store = null, children, is
         dbStatus,
         dataActions,
         db,
-        legacyDb,
+        importDb,
         v2Store,
         // GM Actions
         setSelectedCampaignId,
@@ -217,7 +217,7 @@ export function CampaignProvider({ legacyDb = null, v2Store = null, children, is
         importLegacyCharacter,
         setPartyXp,
         addPartyXp
-    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, actors, archivedActors, pcActors, ownedActors, myCharacter, myActor, questLists, lootBagLists, shop, bestiary, isGM, userInfo, dbMode, dbStatus, dataActions, db, legacyDb, v2Store, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setPartyXp, addPartyXp]);
+    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, actors, archivedActors, pcActors, ownedActors, myCharacter, myActor, questLists, lootBagLists, shop, bestiary, isGM, userInfo, dbMode, dbStatus, dataActions, db, importDb, v2Store, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setPartyXp, addPartyXp]);
 
     return (
         <CampaignContext.Provider value={value}>

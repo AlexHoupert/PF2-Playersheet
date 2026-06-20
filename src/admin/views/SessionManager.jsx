@@ -10,7 +10,7 @@ export default function SessionManager({ db }) {
         archivedCampaigns,
         activeCampaign,
         activeCampaignId,
-        legacyDb,
+        importDb,
         createCampaign,
         deleteCampaign,
         restoreCampaign,
@@ -32,7 +32,7 @@ export default function SessionManager({ db }) {
     const [isSpellcaster, setIsSpellcaster] = useState(false);
     const activeCharacters = selectActiveCharacters(activeCampaign);
     const archivedCharacters = selectArchivedCharacters(activeCampaign);
-    const legacyCharacters = Array.isArray(legacyDb?.characters) ? legacyDb.characters : [];
+    const legacyCharacters = Array.isArray(importDb?.characters) ? importDb.characters : [];
 
     // Skeleton Character
     const handleCreateCharacter = () => {

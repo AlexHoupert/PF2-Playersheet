@@ -70,7 +70,6 @@ export function composeV2ViewModelFromDocuments(documents = []) {
         campaign.actorsList = sortByName(Object.values(campaign[V2_COLLECTIONS.actors] || {}));
         campaign.actorEffectsList = sortByName(Object.values(campaign[V2_COLLECTIONS.actorEffects] || {}));
         campaign.effectTemplatesList = sortByName(Object.values(campaign[V2_COLLECTIONS.effectTemplates] || {}));
-        campaign.charactersList = sortByName(Object.values(campaign[V2_COLLECTIONS.characters] || {}));
         campaign.questsList = sortByTitle(Object.values(campaign[V2_COLLECTIONS.quests] || {}));
         campaign.lootBagsList = sortByName(Object.values(campaign[V2_COLLECTIONS.lootBags] || {}));
         campaign.encountersList = sortByName(Object.values(campaign[V2_COLLECTIONS.encounters] || {}));
@@ -89,7 +88,6 @@ function ensureCampaign(view, campaignId) {
             id: campaignId,
             [V2_COLLECTIONS.actors]: {},
             [V2_COLLECTIONS.actorEffects]: {},
-            [V2_COLLECTIONS.characters]: {},
             [V2_COLLECTIONS.effectTemplates]: {},
             [V2_COLLECTIONS.quests]: {},
             [V2_COLLECTIONS.lootBags]: {},

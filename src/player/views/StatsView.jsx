@@ -6,7 +6,7 @@ import { DefensesSection } from '../sections/DefensesSection';
 import { AttributesSection } from '../sections/AttributesSection';
 import { SkillsSection } from '../sections/SkillsSection';
 
-export function StatsView({ character, conditions = [], updateCharacter, onOpenModal, onLongPress }) {
+export function StatsView({ character, conditions = [], characterActions, onOpenModal, onLongPress }) {
     if (!character) return null;
 
     const activeConditions = Array.isArray(conditions) ? conditions : [];
@@ -49,7 +49,7 @@ export function StatsView({ character, conditions = [], updateCharacter, onOpenM
 
             <DefensesSection
                 character={character}
-                updateCharacter={updateCharacter}
+                characterActions={characterActions}
                 onOpenModal={onOpenModal}
                 onLongPress={onLongPress}
             />

@@ -14,11 +14,11 @@ const ARMOR_RANKS = [
  * Modal to edit spell proficiency attribute and rank.
  * @param {Object} props
  * @param {Object} props.character - The character object.
- * @param {Function} props.updateCharacter - Function to update the character state.
+ * @param {Object} props.characterActions - Targeted character edit actions.
  * @param {Function} props.onClose - Function to close the modal.
  * @returns {JSX.Element}
  */
-export function EditSpellProficiencyModal({ character, updateCharacter, onClose }) {
+export function EditSpellProficiencyModal({ character, characterActions, onClose }) {
     const magic = character.magic || {};
     const currentAttr = magic.attribute || "Intelligence";
     const currentProf = magic.proficiency || 0;
@@ -40,10 +40,7 @@ export function EditSpellProficiencyModal({ character, updateCharacter, onClose 
                     <select
                         className="prof-select"
                         value={currentAttr}
-                        onChange={(e) => updateCharacter(c => {
-                            if (!c.magic) c.magic = {};
-                            c.magic.attribute = e.target.value;
-                        })}
+                        onChange={(e) => characterActions?.setMagicAttribute(e.target.value)}
                     >
                         {['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'].map(attr => (
                             <option key={attr} value={attr}>{attr}</option>
@@ -55,10 +52,7 @@ export function EditSpellProficiencyModal({ character, updateCharacter, onClose 
                     <select
                         className="prof-select"
                         value={currentProf}
-                        onChange={(e) => updateCharacter(c => {
-                            if (!c.magic) c.magic = {};
-                            c.magic.proficiency = parseInt(e.target.value);
-                        })}
+                        onChange={(e) => characterActions?.setMagicProficiency(parseInt(e.target.value))}
                     >
                         {ARMOR_RANKS.map(r => (
                             <option key={r.value} value={r.value}>{r.label}</option>
@@ -75,12 +69,12 @@ export function EditSpellProficiencyModal({ character, updateCharacter, onClose 
  * Modal to edit spell slots (max/current).
  * @param {Object} props
  * @param {Object} props.character - The character object.
- * @param {Function} props.updateCharacter - Function to update the character state.
+ * @param {Object} props.characterActions - Targeted character edit actions.
  * @param {Function} props.onClose - Function to close the modal.
  * @param {Object} props.modalData - Data containing the spell item or level.
  * @returns {JSX.Element}
  */
-export function EditSpellSlotsModal({ character, updateCharacter, onClose, modalData }) {
+export function EditSpellSlotsModal({ character, characterActions, onClose, modalData }) {
     const item = modalData?.item || {};
     const levelKey = item.level || '1';
     const setModalData = modalData.setModalData; // We need to handle this pattern or change it.
@@ -122,21 +116,17 @@ export function EditSpellSlotsModal({ character, updateCharacter, onClose, modal
                 </div>
 
                 <div className="qty-control-box">
-                    <button className="qty-btn" onClick={() => updateCharacter(c => {
-                        if (!c.magic) c.magic = { slots: {} };
-                        if (!c.magic.slots) c.magic.slots = {};
-                        const cur = c.magic.slots[slotKey] || 0;
-                        c.magic.slots[slotKey] = Math.max(0, cur - 1);
-                    })}>-</button>
+                    <button className="qty-btn" onClick={() => {
+                        const cur = character?.magic?.slots?.[slotKey] || 0;
+                        characterActions?.setMagicSlot(slotKey, Math.max(0, cur - 1));
+                    }}>-</button>
                     <span style={{ fontSize: '2em', width: 60, textAlign: 'center' }}>
                         {character?.magic?.slots?.[slotKey] || 0}
                     </span>
-                    <button className="qty-btn" onClick={() => updateCharacter(c => {
-                        if (!c.magic) c.magic = { slots: {} };
-                        if (!c.magic.slots) c.magic.slots = {};
-                        const cur = c.magic.slots[slotKey] || 0;
-                        c.magic.slots[slotKey] = cur + 1;
-                    })}>+</button>
+                    <button className="qty-btn" onClick={() => {
+                        const cur = character?.magic?.slots?.[slotKey] || 0;
+                        characterActions?.setMagicSlot(slotKey, cur + 1);
+                    }}>+</button>
                 </div>
                 <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
             </div>

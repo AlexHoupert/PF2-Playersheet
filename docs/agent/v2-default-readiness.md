@@ -43,6 +43,7 @@ Status meanings:
 | Flow | Status | Notes |
 | --- | --- | --- |
 | Character stats/runtime shape | Ready by tests/code | Old skill names and missing runtime defaults are normalized by `characterShape.js` on load/create/update. |
+| Player basis edits | Ready by tests/code | Gold, attributes, HP/temp/max HP, speed, Class DC, daily crafting max, saves/skills, proficiencies, magic slots, and armor/shield state route through Actor-backed actions. |
 | Inventory consume/qty/buy/formula/equip/rune/load/fire/transfer | Ready by tests/code | Routed through character/inventory compatibility actions and targeted V2 Actor writes. |
 | Loot claim/gold claim/split | Ready by tests/code | Uses loot actions and V2 Actor transactions. |
 | Quests/rewards | Ready by tests/code | Campaign-scoped quests and notifications; rewards are idempotent, not rolled back automatically, and write PC Actors. |
@@ -73,12 +74,13 @@ Status meanings:
 ## Firestore Rules Audit
 
 Rules file: `firestore.rules`.
+Index notes: `docs/agent/firestore-indexes.md`.
 
 Verified against current V2 repositories and action paths:
 
 - `campaigns/{campaignId}`: readable by campaign members or global admins; create requires global admin; update/delete requires campaign GM or global admin.
 - `campaigns/{campaignId}/members/{email}`: readable by campaign GM, assigned email, or global admin; writes require campaign GM or global admin.
-- `campaigns/{campaignId}/characters/{characterId}`: readable by campaign members/global admins; update allowed for campaign GM, assigned character owner, or global admin.
+- `campaigns/{campaignId}/characters/{characterId}`: legacy/transition rule only. Runtime writes target `actors`; keep this rule only while old character documents may need import/debug access.
 - `campaigns/{campaignId}/actors/{actorId}`: readable by campaign members/global admins; update allowed for campaign GM, assigned actor owner, or global admin.
 - `campaigns/{campaignId}/actorEffects/{effectId}`: readable by campaign members/global admins; create/update/delete allowed for campaign GM, global admin, or the assigned target actor owner.
 - `campaigns/{campaignId}/effectTemplates/{templateId}`: readable by campaign members/global admins; writes require campaign GM or global admin.
@@ -102,13 +104,14 @@ Run these in a Firebase-backed environment on the `v2-convergence` branch:
 1. Login as GM/global admin, create a campaign, select it, reload, and verify selection/data persist.
 2. Create/import a character, assign a user, reload as player, and verify the player sees only the assigned active character.
 3. Archive/restore campaign and character; verify archived records are hidden from normal lists and restored data is intact.
-4. Player inventory: buy, consume, quantity change, equip/unequip, rune apply/remove, weapon load/fire, transfer, formula purchase; reload after each group.
-5. Loot: claim item, claim gold, split gold; verify duplicate claim is prevented from a second client.
-6. Quests/rewards: toggle objective rewards and quest completion; reload and verify rewards are not duplicated.
-7. Encounters: create, activate, add all players, add creature, update initiative/HP/turns/conditions; reload and verify state.
-8. Maps/progress/camping: edit one representative item in each domain, archive/restore where supported, reload.
-9. Global admin content: custom item/action/ability, pact/deviant ability, trader, bestiary metadata/custom creature, lore article; reload and verify selectors show persisted data.
-10. Confirm `npm run check` is green on the commit intended for the switch.
+4. Player basis edits: gold set/adjust, attributes, saves, skills, armor/weapon proficiencies, spell/impulse proficiencies, magic slots, armor/shield state; reload after each group.
+5. Player inventory: buy, consume, quantity change, equip/unequip, rune apply/remove, weapon load/fire, transfer, formula purchase; reload after each group.
+6. Loot: claim item, claim gold, split gold; verify duplicate claim is prevented from a second client.
+7. Quests/rewards: toggle objective rewards and quest completion; reload and verify rewards are not duplicated.
+8. Encounters: create, activate, add all players, add creature, update initiative/HP/turns/conditions; reload and verify state.
+9. Maps/progress/camping: edit one representative item in each domain, archive/restore where supported, reload.
+10. Global admin content: custom item/action/ability, pact/deviant ability, trader, bestiary metadata/custom creature, lore article; reload and verify selectors show persisted data.
+11. Confirm `npm run check` is green on the commit intended for the switch.
 
 ## Deployment Gate
 

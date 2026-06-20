@@ -107,10 +107,7 @@ export default function QuickSheetModal({ character, updateCharacter, characterA
                 return (
                     <div key={save} className="qs-row">
                         <span className="qs-row-label">{save}</span>
-                        {renderProficiencyToggle(val, (v) => updateCharacter(c => {
-                            if (!c.stats.saves) c.stats.saves = {};
-                            c.stats.saves[key] = v;
-                        }))}
+                        {renderProficiencyToggle(val, (v) => characterActions?.setSave(key, v))}
                     </div>
                 );
             })}
@@ -203,17 +200,11 @@ export default function QuickSheetModal({ character, updateCharacter, characterA
                     <h3>Magic & Impulses</h3>
                     <div className="qs-row">
                         <span className="qs-row-label">Spell Prof</span>
-                        {renderProficiencyToggle(character.stats.spell_proficiency || 0, (v) => updateCharacter(c => {
-                            if (!c.stats) c.stats = {};
-                            c.stats.spell_proficiency = v;
-                        }))}
+                        {renderProficiencyToggle(character.stats.spell_proficiency || 0, (v) => characterActions?.setSpellProficiency(v))}
                     </div>
                     <div className="qs-row">
                         <span className="qs-row-label">Impulse Prof</span>
-                        {renderProficiencyToggle(character.stats.impulse_proficiency || 0, (v) => updateCharacter(c => {
-                            if (!c.stats) c.stats = {};
-                            c.stats.impulse_proficiency = v;
-                        }))}
+                        {renderProficiencyToggle(character.stats.impulse_proficiency || 0, (v) => characterActions?.setImpulseProficiency(v))}
                     </div>
                 </div>
 
@@ -224,10 +215,7 @@ export default function QuickSheetModal({ character, updateCharacter, characterA
                         return (
                             <div key={k} className="qs-row">
                                 <span className="qs-row-label">{k}</span>
-                                {renderProficiencyToggle(val, (v) => updateCharacter(c => {
-                                    if (!c.stats.proficiencies) c.stats.proficiencies = {};
-                                    c.stats.proficiencies[k.toLowerCase()] = v;
-                                }))}
+                                {renderProficiencyToggle(val, (v) => characterActions?.setArmorProficiency(k, v))}
                             </div>
                         );
                     })}
@@ -240,10 +228,7 @@ export default function QuickSheetModal({ character, updateCharacter, characterA
                         return (
                             <div key={k} className="qs-row">
                                 <span className="qs-row-label">{k}</span>
-                                {renderProficiencyToggle(val, (v) => updateCharacter(c => {
-                                    if (!c.proficiencies || Array.isArray(c.proficiencies)) c.proficiencies = { ...c.proficiencies };
-                                    c.proficiencies[k] = v;
-                                }))}
+                                {renderProficiencyToggle(val, (v) => characterActions?.setWeaponProficiency(k, v))}
                             </div>
                         );
                     })}

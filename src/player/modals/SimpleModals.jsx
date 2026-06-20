@@ -211,7 +211,7 @@ export function EditAttributeModal({ character, characterActions, onClose, modal
  * @param {Object} props.modalData - Data defining the type (skill, save, impulse) and key to edit.
  * @returns {JSX.Element}
  */
-export function EditProficiencyModal({ character, updateCharacter, characterActions, onClose, modalData }) {
+export function EditProficiencyModal({ character, characterActions, onClose, modalData }) {
     const isSkill = modalData.type === 'skill';
     const isSave = modalData.type === 'save';
     const isImpulse = modalData.type === 'impulse';
@@ -243,15 +243,9 @@ export function EditProficiencyModal({ character, updateCharacter, characterActi
                                 borderColor: currentVal === r.value ? 'var(--text-gold)' : '#555',
                                 color: currentVal === r.value ? 'var(--text-gold)' : '#ccc'
                             }} onClick={() => {
-                                updateCharacter(c => {
-                                    if (isSkill) c.skills[key] = r.value;
-                                    else if (isSave) {
-                                        if (!c.stats.saves) c.stats.saves = {};
-                                        c.stats.saves[key] = r.value;
-                                    } else if (isImpulse) {
-                                        c.stats.impulse_proficiency = r.value;
-                                    }
-                                });
+                                if (isSkill) characterActions?.setSkill(key, r.value);
+                                else if (isSave) characterActions?.setSave(key, r.value);
+                                else if (isImpulse) characterActions?.setImpulseProficiency(r.value);
                                 onClose();
                             }}>
                                 {r.label}
@@ -269,9 +263,7 @@ export function EditProficiencyModal({ character, updateCharacter, characterActi
 
                 {isCustomLore && (
                     <button className="set-btn" style={{ marginTop: 20, background: '#d32f2f', color: '#fff' }} onClick={() => {
-                        updateCharacter(c => {
-                            delete c.skills[key];
-                        });
+                        characterActions?.deleteSkill(key);
                         onClose();
                     }}>
                         Remove Skill
@@ -388,7 +380,7 @@ export function AddLoreModal({ updateCharacter, onClose }) {
  * @param {Function} props.onClose - Function to close the modal.
  * @returns {JSX.Element}
  */
-export function EditArmorProficiencyModal({ character, updateCharacter, onClose }) {
+export function EditArmorProficiencyModal({ character, characterActions, onClose }) {
     const ARMOR_PROF_KEYS = ['Unarmored', 'Light', 'Medium', 'Heavy'];
 
     return (
@@ -412,11 +404,7 @@ export function EditArmorProficiencyModal({ character, updateCharacter, onClose 
                                 <select
                                     className="prof-select"
                                     value={rawVal}
-                                    onChange={(e) => updateCharacter(c => {
-                                        if (!c.stats) c.stats = {};
-                                        if (!c.stats.proficiencies) c.stats.proficiencies = {};
-                                        c.stats.proficiencies[key.toLowerCase()] = parseInt(e.target.value);
-                                    })}
+                                    onChange={(e) => characterActions?.setArmorProficiency(key, parseInt(e.target.value))}
                                 >
                                     {ARMOR_RANKS.map(r => (
                                         <option key={r.value} value={r.value}>{r.label}</option>
@@ -483,7 +471,7 @@ export function EditLanguagesModal({ character, updateCharacter, onClose }) {
  * @param {Object} props.modalData - Should contain the item to derive categories from.
  * @returns {JSX.Element}
  */
-export function EditItemProficienciesModal({ character, updateCharacter, onClose, modalData }) {
+export function EditItemProficienciesModal({ character, characterActions, onClose, modalData }) {
     const item = modalData.item;
     const keys = [];
     if (item.category) keys.push(item.category.charAt(0).toUpperCase() + item.category.slice(1));
@@ -519,10 +507,7 @@ export function EditItemProficienciesModal({ character, updateCharacter, onClose
                                         color: currentVal === r.value ? 'var(--text-gold)' : '#ccc',
                                         flex: 1
                                     }} onClick={() => {
-                                        updateCharacter(c => {
-                                            if (!c.proficiencies) c.proficiencies = {};
-                                            c.proficiencies[key] = r.value;
-                                        });
+                                        characterActions?.setWeaponProficiency(key, r.value);
                                     }}>
                                         {r.label}
                                     </button>
@@ -548,7 +533,7 @@ export function EditItemProficienciesModal({ character, updateCharacter, onClose
  * @param {Function} props.onClose - Function to close the modal.
  * @returns {JSX.Element}
  */
-export function EditPerceptionModal({ character, updateCharacter, onClose }) {
+export function EditPerceptionModal({ character, characterActions, onClose }) {
     const currentVal = character.stats.perception || 0;
     return (
         <div style={{
@@ -568,10 +553,7 @@ export function EditPerceptionModal({ character, updateCharacter, onClose }) {
                             borderColor: currentVal === r.value ? 'var(--text-gold)' : '#555',
                             color: currentVal === r.value ? 'var(--text-gold)' : '#ccc'
                         }} onClick={() => {
-                            updateCharacter(c => {
-                                if (!c.stats) c.stats = {};
-                                c.stats.perception = r.value;
-                            });
+                            characterActions?.setPerception(r.value);
                             onClose();
                         }}>
                             {r.label}

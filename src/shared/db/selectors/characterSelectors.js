@@ -6,14 +6,12 @@ export function selectMyCharacter(activeCampaign, userInfo) {
 
 export function selectActiveCharacters(campaign) {
     const pcActors = selectPcActorDocs(campaign).filter(actor => !actor.deletedAt);
-    if (pcActors.length > 0) return pcActors.map(actorToCharacterView);
-    return campaign?.characters || [];
+    return pcActors.map(actorToCharacterView);
 }
 
 export function selectArchivedCharacters(campaign) {
     const pcActors = selectPcActorDocs(campaign).filter(actor => actor.deletedAt);
-    if (pcActors.length > 0) return pcActors.map(actorToCharacterView);
-    return campaign?.archivedCharacters || [];
+    return pcActors.map(actorToCharacterView);
 }
 
 export function actorToCharacterView(actor) {

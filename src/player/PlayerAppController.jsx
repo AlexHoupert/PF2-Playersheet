@@ -1,19 +1,9 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
 import ShopView from './ShopView';
-import { NEG_CONDS, POS_CONDS, VIS_CONDS, BINARY_CONDS, CONDITION_ICONS, getConditionIcon } from '../shared/constants/conditions';
-import { conditionsCatalog, getConditionImgSrc, isConditionValued } from '../shared/constants/conditionsCatalog';
-import { SPELL_INDEX_ITEMS, SPELL_INDEX_FILTER_OPTIONS } from '../shared/catalog/spellIndex';
-import { FEAT_INDEX_ITEMS, FEAT_INDEX_FILTER_OPTIONS } from '../shared/catalog/featIndex';
-import { getAllActionIndexItems } from '../shared/catalog/actionIndex';
-import { IMPULSE_INDEX_ITEMS, IMPULSE_INDEX_FILTER_OPTIONS } from '../shared/catalog/impulseIndex';
 
-import bloodMagicEffects from '../../ressources/classfeatures/bloodmagic-effects.json';
-import ItemCatalog from './ItemCatalog';
 import SpellScrollSelectorModal from './modals/SpellScrollSelectorModal';
 import ItemActionsModal from './ItemActionsModal';
-import QuickSheetModal from './QuickSheetModal';
-import { StatBreakdown } from './components/StatBreakdown';
 import { StatsView } from './views/StatsView';
 import { ActionsView } from './views/ActionsView';
 import { InventoryView } from './views/InventoryView';
@@ -33,29 +23,23 @@ import { usePlayerCharacterActions } from './hooks/usePlayerCharacterActions';
 import { usePlayerInventoryActions } from './hooks/usePlayerInventoryActions';
 import { usePlayerModalState } from './hooks/usePlayerModalState';
 import { usePlayerNavigation } from './hooks/usePlayerNavigation';
-import { selectLootBagLists, selectQuestLists } from '../shared/db/selectors/campaignSelectors';
-import { selectOwnedActors } from '../shared/db/selectors/actorSelectors';
 import { selectConditionViewModels } from '../shared/db/selectors/effectSelectors';
 // Top of file
 import NotificationOverlay from './components/NotificationOverlay';
 import XpOverlay from './components/XpOverlay';
-
-
-
-
-
-const ARMOR_RANKS = [
-    { value: 0, label: 'Untrained (+0)' },
-    { value: 2, label: 'Trained (+2)' },
-    { value: 4, label: 'Expert (+4)' },
-    { value: 6, label: 'Master (+6)' },
-    { value: 8, label: 'Legendary (+8)' }
-];
-
-
-
+import LazyCatalogOverlay from './components/LazyCatalogOverlay';
 export default function PlayerAppController() {
-    const { activeCampaign, myActor, myCharacter, isGM, dataActions, db } = useCampaign();
+    const {
+        activeCampaign,
+        myActor,
+        myCharacter,
+        isGM,
+        dataActions,
+        db,
+        quests: playerQuests,
+        lootBags: playerLootBags,
+        ownedActors,
+    } = useCampaign();
 
     const {
         actionModal,
@@ -74,9 +58,7 @@ export default function PlayerAppController() {
     } = usePlayerModalState();
 
     const [dailyPrepQueue, setDailyPrepQueue] = useState([]);
-    const { quests: playerQuests } = selectQuestLists(db, activeCampaign);
-    const { lootBags: playerLootBags } = selectLootBagLists(db, activeCampaign);
-    const ownedCompanionActors = selectOwnedActors(activeCampaign, myActor?.id)
+    const ownedCompanionActors = (ownedActors || [])
         .filter(actor => ['animal_companion', 'familiar', 'pet'].includes(actor.kind));
 
     const {
@@ -334,7 +316,7 @@ export default function PlayerAppController() {
                     <StatsView
                         character={character}
                         conditions={characterConditions}
-                        updateCharacter={updateCharacter}
+                        characterActions={characterActions}
                         onOpenModal={(mode, data) => {
                             setModalMode(mode);
                             if (data) setModalData(data);
@@ -365,7 +347,7 @@ export default function PlayerAppController() {
                 {activeTab === 'magic' && (
                     <MagicView
                         character={character}
-                        updateCharacter={updateCharacter}
+                        characterActions={characterActions}
                         setModalData={setModalData}
                         setModalMode={setModalMode}
                         setCatalogMode={setCatalogMode}
@@ -495,10 +477,8 @@ export default function PlayerAppController() {
             {/* Catalog Overlay */}
             {
                 catalogMode === 'feat' && (
-                    <ItemCatalog
-                        title="Add Feat"
-                        items={FEAT_INDEX_ITEMS}
-                        filterOptions={FEAT_INDEX_FILTER_OPTIONS}
+                    <LazyCatalogOverlay
+                        mode="feat"
                         onSelect={(item) => addToCharacter(item, 'feat')}
                         onClose={() => setCatalogMode(null)}
                     />
@@ -507,28 +487,18 @@ export default function PlayerAppController() {
 
             {
                 catalogMode === 'impulse' && (
-                    <ItemCatalog
-                        title="Add Impulse"
-                        items={IMPULSE_INDEX_ITEMS}
-                        filterOptions={IMPULSE_INDEX_FILTER_OPTIONS}
+                    <LazyCatalogOverlay
+                        mode="impulse"
                         onClose={() => setCatalogMode(null)}
-                        onSelect={(impulseData) => {
-                            updateCharacter(c => {
-                                if (!c.impulses) c.impulses = [];
-                                c.impulses.push(impulseData);
-                            });
-                            setCatalogMode(null);
-                        }}
+                        onSelect={(item) => addToCharacter(item, 'impulse')}
                     />
                 )
             }
 
             {
                 catalogMode === 'spell' && (
-                    <ItemCatalog
-                        title="Add Spell"
-                        items={SPELL_INDEX_ITEMS}
-                        filterOptions={SPELL_INDEX_FILTER_OPTIONS}
+                    <LazyCatalogOverlay
+                        mode="spell"
                         onSelect={(item) => addToCharacter(item, 'spell')}
                         onClose={() => setCatalogMode(null)}
                     />

@@ -4,7 +4,7 @@ import { getSpellIndexItemByName } from '../../shared/catalog/spellIndex';
 import { LongPressable } from '../../shared/components/LongPressable';
 import { getWandSpellCasts, getWandSpellKey } from '../../shared/utils/wandUtils';
 
-export const MagicView = ({ character, updateCharacter, setModalData, setModalMode, setCatalogMode, onLongPress }) => {
+export const MagicView = ({ character, characterActions, setModalData, setModalMode, setCatalogMode, onLongPress }) => {
     // Guard for missing magic data
     const magic = character.magic || { slots: {}, list: [] };
 
@@ -23,11 +23,7 @@ export const MagicView = ({ character, updateCharacter, setModalData, setModalMo
         if (Number(indexClicked) === Number(currentVal)) newVal = Number(currentVal) - 1; // Toggle off top
         else newVal = Number(indexClicked); // Set to this level
 
-        updateCharacter(c => {
-            if (!c.magic) c.magic = { slots: {} };
-            if (!c.magic.slots) c.magic.slots = {};
-            c.magic.slots[lvlKey + "_curr"] = newVal;
-        });
+        characterActions?.setMagicSlot(lvlKey + "_curr", newVal);
     };
 
     const renderSlots = () => slotKeys.map(k => {

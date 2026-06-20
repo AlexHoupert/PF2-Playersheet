@@ -129,35 +129,35 @@ export function ModalManager({
         return <EditProficiencyModal character={character} updateCharacter={updateCharacter} characterActions={characterActions} onClose={onClose} modalData={modalData} />;
     }
     if (modalMode === 'edit_armor_prof') {
-        return <EditArmorProficiencyModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
+        return <EditArmorProficiencyModal character={character} characterActions={characterActions} onClose={onClose} />;
     }
     if (modalMode === 'edit_languages') {
         return <EditLanguagesModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
     }
     if (modalMode === 'item_proficiencies') {
-        return <EditItemProficienciesModal character={character} updateCharacter={updateCharacter} onClose={onClose} modalData={modalData} />;
+        return <EditItemProficienciesModal character={character} characterActions={characterActions} onClose={onClose} modalData={modalData} />;
     }
 
     // --- AC & DEFENSE MODALS ---
 
     if (modalMode === 'ac') {
-        return <ACModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
+        return <ACModal character={character} characterActions={characterActions} onClose={onClose} />;
     }
     if (modalMode === 'shield') {
-        return <ShieldModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
+        return <ShieldModal character={character} characterActions={characterActions} onClose={onClose} />;
     }
     if (modalMode === 'edit_perception') {
-        return <EditPerceptionModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
+        return <EditPerceptionModal character={character} characterActions={characterActions} onClose={onClose} />;
     }
 
 
     // --- MAGIC MODALS ---
 
     if (modalMode === 'edit_spell_proficiency') {
-        return <EditSpellProficiencyModal character={character} updateCharacter={updateCharacter} onClose={onClose} />;
+        return <EditSpellProficiencyModal character={character} characterActions={characterActions} onClose={onClose} />;
     }
     if (modalMode === 'edit_spell_slots') {
-        return <EditSpellSlotsModal character={character} updateCharacter={updateCharacter} onClose={onClose} modalData={modalData} />;
+        return <EditSpellSlotsModal character={character} characterActions={characterActions} onClose={onClose} modalData={modalData} />;
     }
     if (modalMode === 'spell_stat_info') {
         return <SpellStatInfoModal character={character} modalData={modalData} onClose={onClose} />;

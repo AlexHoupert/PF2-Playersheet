@@ -1,6 +1,6 @@
 # Catalog Pipeline
 
-Last updated: 2026-06-18.
+Last updated: 2026-06-20.
 
 ## Purpose
 
@@ -111,12 +111,16 @@ High-impact lazy paths:
 - `ImpulseEditor` is lazy from `ImpulsesView`.
 - `RichTextEditor` loads Action/Item/Spell UUID dropdown data only when those dropdowns are opened.
 - Player `LoreView` and `PartyScreen` dynamically import the creature index only for bestiary/creature detail paths.
+- Player feat, spell, and impulse catalog overlays use `LazyCatalogOverlay`, so opening those optional modals imports the matching index module on demand instead of through `PlayerAppController`.
 
-Known remaining large chunks after the 2026-06-18 optimization:
+Known remaining large chunks after the 2026-06-20 build baseline:
 
-- `ability-index` is still very large because the ability list itself is large; it should stay behind admin ability/picker flows.
-- `shop-index`, `creature-index`, and `feat-index` remain large but are now visible data chunks.
-- Player route code still imports several catalog helpers synchronously for item/spell/feat/action/impulse modal flows. A deeper follow-up would make those player catalog modals async-data driven.
+- `ability-index`: about 4,469 kB minified / 1,152 kB gzip; this remains the largest known data chunk and should stay behind admin ability/picker flows.
+- `feat-index`: about 912 kB minified / 140 kB gzip.
+- `creature-index`: about 841 kB minified / 229 kB gzip.
+- `shop-index`: about 788 kB minified / 159 kB gzip.
+- `spell-index`: about 273 kB minified / 63 kB gzip.
+- Player route code still imports item/action helpers synchronously for inventory/detail flows. A deeper follow-up would make those remaining player catalog flows async-data driven.
 
 ## Shop Pipeline Details
 

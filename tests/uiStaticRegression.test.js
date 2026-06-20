@@ -97,16 +97,19 @@ test('quest fallback reads stay centralized in selectors', () => {
     assert.equal(playerSource.includes('db?.quests'), false);
     assert.equal(gmSource.includes('activeCampaign?.quests'), false);
     assert.equal(gmSource.includes('db?.quests'), false);
-    assert.match(playerSource, /selectQuestLists/);
+    assert.match(playerSource, /quests: playerQuests/);
     assert.match(gmSource, /selectQuestLists/);
 });
 
 test('player basis edit modals use targeted character actions', () => {
     const sources = [
         'src/player/modals/ACModals.jsx',
+        'src/player/modals/MagicModals.jsx',
         'src/player/modals/SimpleModals.jsx',
         'src/player/modals/FormulaBookModal.jsx',
         'src/player/QuickSheetModal.jsx',
+        'src/player/views/MagicView.jsx',
+        'src/player/sections/DefensesSection.jsx',
     ];
     const forbiddenPatterns = [
         /updateCharacter\(c\s*=>\s*c\./,
@@ -116,6 +119,14 @@ test('player basis edit modals use targeted character actions', () => {
         /updateCharacter\(c\s*=>\s*c\.stats\.speed/,
         /updateCharacter\(c\s*=>\s*c\.stats\.class_dc\s*=/,
         /updateCharacter\(c\s*=>\s*c\.dailyCraftingMax\s*=/,
+        /updateCharacter\(c\s*=>[\s\S]{0,180}c\.stats\.saves/,
+        /updateCharacter\(c\s*=>[\s\S]{0,180}c\.stats\.proficiencies/,
+        /updateCharacter\(c\s*=>[\s\S]{0,180}c\.stats\.spell_proficiency/,
+        /updateCharacter\(c\s*=>[\s\S]{0,180}c\.stats\.impulse_proficiency/,
+        /updateCharacter\(c\s*=>[\s\S]{0,180}c\.magic\.slots/,
+        /updateCharacter\(c\s*=>[\s\S]{0,180}c\.stats\.ac\.(shield_raised|armor_equipped|shield_hp)/,
+        /updateCharacter\(c\s*=>[\s\S]{0,180}c\.proficiencies\[/,
+        /updateCharacter\(c\s*=>[\s\S]{0,180}c\.skills\[/,
     ];
 
     sources.forEach((path) => {
@@ -126,8 +137,10 @@ test('player basis edit modals use targeted character actions', () => {
     });
 
     assert.match(readSource('src/player/modals/SimpleModals.jsx'), /characterActions/);
+    assert.match(readSource('src/player/modals/MagicModals.jsx'), /setMagicSlot/);
     assert.match(readSource('src/player/modals/FormulaBookModal.jsx'), /setDailyCraftingMax/);
     assert.match(readSource('src/player/QuickSheetModal.jsx'), /characterActions/);
+    assert.match(readSource('src/player/sections/DefensesSection.jsx'), /setEquipmentState/);
 });
 
 test('firestore v2 runtime no longer broad-diffs legacy projections', () => {
@@ -138,6 +151,8 @@ test('firestore v2 runtime no longer broad-diffs legacy projections', () => {
     assert.match(source, /legacyProjection/);
     assert.match(source, /v2Store/);
     assert.match(appSource, /legacyProjection/);
+    assert.match(appSource, /importDb/);
+    assert.equal(appSource.includes('legacyDb'), false);
     assert.match(appSource, /v2Store/);
     assert.equal(appSource.includes('setDb='), false);
 });
@@ -169,8 +184,14 @@ test('v2 runtime actions do not inject or call characterRepo', () => {
     const actionSource = readSource('src/shared/db/domain/createDataActions.js');
     const contextSource = readSource('src/shared/context/CampaignContext.jsx');
     const hookSource = readSource('src/shared/db/v2/useFirestoreV2Db.js');
+    const runtimeDbSource = readSource('src/shared/db/v2/runtimeDb.js');
+    const viewModelSource = readSource('src/shared/db/v2/viewModel.js');
+    const characterSelectorsSource = readSource('src/shared/db/selectors/characterSelectors.js');
 
     assert.equal(actionSource.includes('repos.characterRepo'), false);
     assert.equal(contextSource.includes('characterRepo'), false);
     assert.equal(hookSource.includes('V2_COLLECTIONS.characters'), false);
+    assert.equal(runtimeDbSource.includes('V2_COLLECTIONS.characters'), false);
+    assert.equal(viewModelSource.includes('V2_COLLECTIONS.characters'), false);
+    assert.equal(characterSelectorsSource.includes('campaign?.characters'), false);
 });

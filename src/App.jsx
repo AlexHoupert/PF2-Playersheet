@@ -15,10 +15,10 @@ export default function App() {
 
 function FirestoreV2App() {
     const { legacyProjection, v2Store, status } = useFirestoreV2Db(dbData);
-    return <AppRoutes legacyDb={legacyProjection} v2Store={v2Store} dbMode="firestore-v2" dbStatus={status} />;
+    return <AppRoutes importDb={legacyProjection} v2Store={v2Store} dbMode="firestore-v2" dbStatus={status} />;
 }
 
-function AppRoutes({ legacyDb, v2Store, dbMode, dbStatus }) {
+function AppRoutes({ importDb, v2Store, dbMode, dbStatus }) {
     const queryParams = new URLSearchParams(window.location.search);
 
     if (!v2Store) return <div style={{ color: '#fff' }}>Loading...</div>;
@@ -28,7 +28,7 @@ function AppRoutes({ legacyDb, v2Store, dbMode, dbStatus }) {
     const isCamp  = queryParams.get('camp')  === 'true';
 
     return (
-        <CampaignProvider legacyDb={legacyDb} v2Store={v2Store} isAdmin={isAdmin || isParty || isCamp} dbMode={dbMode} dbStatus={dbStatus}>
+        <CampaignProvider importDb={importDb} v2Store={v2Store} isAdmin={isAdmin || isParty || isCamp} dbMode={dbMode} dbStatus={dbStatus}>
             <ErrorBoundary>
                 <Suspense fallback={<RouteFallback />}>
                     {isParty

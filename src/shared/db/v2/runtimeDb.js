@@ -89,9 +89,7 @@ export function campaignFromV2StoreCampaign(rawCampaign = {}, campaignId = rawCa
     const actorEffects = valuesOrList(rawCampaign, V2_COLLECTIONS.actorEffects, "actorEffectsList");
     const effectTemplates = valuesOrList(rawCampaign, V2_COLLECTIONS.effectTemplates, "effectTemplatesList");
     const pcActors = actors.filter(actor => actor?.kind === "pc");
-    const characterRows = pcActors.length > 0
-        ? pcActors.map(actorToCharacterView)
-        : valuesOrList(rawCampaign, V2_COLLECTIONS.characters, "charactersList");
+    const characterRows = pcActors.map(actorToCharacterView);
 
     const campaign = {
         ...rawCampaign,

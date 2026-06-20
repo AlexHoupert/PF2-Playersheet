@@ -14,11 +14,11 @@ const ARMOR_RANKS = [
  * Modal to view Armor Class breakdown and toggle equipped armor/shields.
  * @param {Object} props
  * @param {Object} props.character - The character object.
- * @param {Function} props.updateCharacter - Function to update the character state.
+ * @param {Object} props.characterActions - Targeted character edit actions.
  * @param {Function} props.onClose - Function to close the modal.
  * @returns {JSX.Element}
  */
-export function ACModal({ character, updateCharacter, onClose }) {
+export function ACModal({ character, characterActions, onClose }) {
     // Safety check: if no character is provided, show a message
     if (!character) {
         return (
@@ -60,7 +60,7 @@ export function ACModal({ character, updateCharacter, onClose }) {
             e.preventDefault();
             e.stopPropagation();
         }
-        updateCharacter(c => {
+        characterActions?.setEquipmentState(c => {
             if (!Array.isArray(c.inventory)) c.inventory = [];
             if (!c.stats) c.stats = {};
             if (!c.stats.ac) c.stats.ac = {};
@@ -119,7 +119,7 @@ export function ACModal({ character, updateCharacter, onClose }) {
             e.preventDefault();
             e.stopPropagation();
         }
-        updateCharacter(c => {
+        characterActions?.setEquipmentState(c => {
             if (!Array.isArray(c.inventory)) c.inventory = [];
 
             const isShield = (invItem) => {
@@ -275,11 +275,11 @@ export function ACModal({ character, updateCharacter, onClose }) {
  * Modal to manage Shield HP, Hardness, and Status.
  * @param {Object} props
  * @param {Object} props.character - The character object.
- * @param {Function} props.updateCharacter - Function to update the character state.
+ * @param {Object} props.characterActions - Targeted character edit actions.
  * @param {Function} props.onClose - Function to close the modal.
  * @returns {JSX.Element}
  */
-export function ShieldModal({ character, updateCharacter, onClose }) {
+export function ShieldModal({ character, characterActions, onClose }) {
     const [editVal, setEditVal] = useState("");
 
     // Safety check: if no character is provided, show a message
@@ -345,7 +345,7 @@ export function ShieldModal({ character, updateCharacter, onClose }) {
                     <label>Current Shield HP: <span style={{ color: shieldHp < shieldMax / 2 ? '#ff5252' : '#fff' }}>{shieldHp}</span></label>
 
                     <div className="qty-control-box">
-                        <button className="qty-btn" onClick={() => updateCharacter(c => {
+                        <button className="qty-btn" onClick={() => characterActions?.setEquipmentState(c => {
                             const oldHp = parseInt(c.stats.ac.shield_hp || 0);
                             const max = parseInt(shieldMax || 20);
                             const newHp = Math.max(0, oldHp - (parseInt(editVal) || 0));
@@ -355,7 +355,7 @@ export function ShieldModal({ character, updateCharacter, onClose }) {
                             }
                         })}>-</button>
                         <input type="number" className="modal-input" style={{ width: 80, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="Amount" />
-                        <button className="qty-btn" onClick={() => updateCharacter(c => {
+                        <button className="qty-btn" onClick={() => characterActions?.setEquipmentState(c => {
                             c.stats.ac.shield_hp = Math.min(shieldMax, (c.stats.ac.shield_hp || 0) + (parseInt(editVal) || 0));
                         })}>+</button>
                     </div>
@@ -365,7 +365,7 @@ export function ShieldModal({ character, updateCharacter, onClose }) {
                             className="set-btn"
                             style={{ width: 'auto', padding: '5px 15px', fontSize: '0.9em' }}
                             onClick={() => {
-                                updateCharacter(c => {
+                                characterActions?.setEquipmentState(c => {
                                     c.stats.ac.shield_hp = shieldMax;
                                 });
                                 setEditVal("");
@@ -375,7 +375,7 @@ export function ShieldModal({ character, updateCharacter, onClose }) {
                             className="set-btn"
                             style={{ width: 'auto', padding: '5px 15px', fontSize: '0.9em', marginLeft: 10, background: '#444' }}
                             onClick={() => {
-                                updateCharacter(c => {
+                                characterActions?.setEquipmentState(c => {
                                     const max = parseInt(shieldMax || 20);
                                     const newHp = parseInt(editVal) || 0;
                                     c.stats.ac.shield_hp = newHp;

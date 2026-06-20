@@ -69,20 +69,35 @@ test('campaign selectors separate active and archived campaigns and characters',
     assert.equal(childLists.archivedCharacters[0].id, 'char2');
 });
 
-test('character and root fallback selectors keep legacy reads centralized', () => {
+test('character selectors derive compatibility characters from pc actors', () => {
     const db = {
         quests: [{ id: 'legacyQuest' }],
         campaigns: {
             camp1: {
                 id: 'camp1',
                 quests: [],
-                characters: [{ id: 'char1', name: 'Hero' }],
+                characters: [{ id: 'char1', name: 'Stale Hero' }],
+                actors: [{
+                    id: 'char1',
+                    kind: 'pc',
+                    name: 'Actor Hero',
+                    sheet: { id: 'char1', name: 'Hero' },
+                }],
             },
         },
     };
 
     assert.equal(selectMyCharacter(db.campaigns.camp1, { characterId: 'char1' }).name, 'Hero');
     assert.equal(selectMyCharacter(db.campaigns.camp1, { assignedActorId: 'char1' }).name, 'Hero');
+    assert.equal(selectMyCharacter({ id: 'legacyOnly', characters: [{ id: 'char1', name: 'Legacy Hero' }] }, { characterId: 'char1' }), null);
+});
+
+test('root fallback selectors keep legacy quest reads centralized', () => {
+    const db = {
+        quests: [{ id: 'legacyQuest' }],
+        campaigns: { camp1: { id: 'camp1', quests: [] } },
+    };
+
     assert.equal(selectRootFallbackList(db, 'quests', 'camp1')[0].id, 'legacyQuest');
 });
 

@@ -1602,7 +1602,14 @@ export function createDataActions({
           const next = cloneValue(character);
           next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
           next.stats.skills = next.stats.skills && typeof next.stats.skills === "object" ? cloneValue(next.stats.skills) : {};
-          next.stats.skills[skillKey] = value;
+          next.skills = next.skills && typeof next.skills === "object" ? cloneValue(next.skills) : {};
+          if (value === null || value === undefined) {
+            delete next.stats.skills[skillKey];
+            delete next.skills[skillKey];
+          } else {
+            next.stats.skills[skillKey] = value;
+            next.skills[skillKey] = value;
+          }
           return next;
         });
       },
@@ -1611,7 +1618,19 @@ export function createDataActions({
           const next = cloneValue(character);
           next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
           next.stats.saves = next.stats.saves && typeof next.stats.saves === "object" ? cloneValue(next.stats.saves) : {};
-          next.stats.saves[saveKey] = value;
+          if (value === null || value === undefined) delete next.stats.saves[saveKey];
+          else next.stats.saves[saveKey] = value;
+          return next;
+        });
+      },
+      setArmorProficiency(campaignId, actorId, armorKey, value) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
+          const next = cloneValue(character);
+          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
+          next.stats.proficiencies = next.stats.proficiencies && typeof next.stats.proficiencies === "object"
+            ? cloneValue(next.stats.proficiencies)
+            : {};
+          next.stats.proficiencies[String(armorKey || "").toLowerCase()] = value;
           return next;
         });
       },
@@ -1622,6 +1641,46 @@ export function createDataActions({
             ? cloneValue(next.proficiencies)
             : {};
           next.proficiencies[proficiencyKey] = value;
+          return next;
+        });
+      },
+      setSpellProficiency(campaignId, actorId, value) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
+          const next = cloneValue(character);
+          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
+          next.stats.spell_proficiency = Number(value) || 0;
+          return next;
+        });
+      },
+      setImpulseProficiency(campaignId, actorId, value) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
+          const next = cloneValue(character);
+          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
+          next.stats.impulse_proficiency = Number(value) || 0;
+          return next;
+        });
+      },
+      setPerception(campaignId, actorId, value) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
+          const next = cloneValue(character);
+          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
+          next.stats.perception = Number(value) || 0;
+          return next;
+        });
+      },
+      setMagicAttribute(campaignId, actorId, attribute) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
+          const next = cloneValue(character);
+          next.magic = next.magic && typeof next.magic === "object" ? cloneValue(next.magic) : { slots: {}, list: [] };
+          next.magic.attribute = attribute;
+          return next;
+        });
+      },
+      setMagicProficiency(campaignId, actorId, value) {
+        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
+          const next = cloneValue(character);
+          next.magic = next.magic && typeof next.magic === "object" ? cloneValue(next.magic) : { slots: {}, list: [] };
+          next.magic.proficiency = Number(value) || 0;
           return next;
         });
       },
@@ -1636,6 +1695,7 @@ export function createDataActions({
       },
       setEquipmentState(campaignId, actorId, patch) {
         return updatePcActorAsCharacter(campaignId, actorId, (character) => {
+          if (typeof patch === "function") return patch(character);
           const next = cloneValue(character);
           next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
           next.stats.ac = next.stats.ac && typeof next.stats.ac === "object" ? cloneValue(next.stats.ac) : {};

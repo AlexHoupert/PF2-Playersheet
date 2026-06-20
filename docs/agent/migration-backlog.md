@@ -56,11 +56,12 @@ Any new broad write outside those files should be treated as a regression.
 - Player Gold, Attribute, HP, Temp HP, Max HP, Speed, Class DC, and Formula Book daily batch edits use targeted `dataActions.character` basis actions.
 - `normalizeCharacterRuntimeShape` initializes missing Player-edit subtrees: `stats.hp`, `stats.speed`, `stats.attributes`, `stats.saves`, `stats.ac`, `stats.proficiencies`, `magic`, `formulaBook`, `languages`, `senses`, and root `proficiencies`.
 - Static UI regression tests guard the migrated Player modal fields against expression-bodied direct nested writes.
+- Saves/skills, armor/weapon proficiencies, spell/impulse proficiencies, magic slots, and armor/shield state now route through Actor-backed actions from Player modals, QuickSheet, MagicView, and DefensesSection.
 
 Remaining Player-local edit paths:
 
-- Saves/skills, armor/weapon proficiencies, spell/impulse proficiencies, magic slots, armor/shield state, and inventory-driven gold/HP changes still use focused local updaters through `updateCharacter`.
-- These are shape-hardened by the character normalizer, but should move to targeted actions when their workflows are next touched.
+- Inventory-driven compound edits still use focused local updaters through `updateCharacter` where they combine inventory, gold, HP, prepared items, staff/wand recharge, formulas, and item state in one workflow.
+- These write PC Actor documents in V2 through the character compatibility facade, but they should be split into narrower inventory/actor actions when those workflows are next touched.
 
 ## Completed In V2 Convergence Foundation Wave
 
@@ -78,7 +79,7 @@ Remaining Player-local edit paths:
 - `useFirestoreV2Db` returns `{ legacyProjection, v2Store, status }` and no longer writes broad legacy diffs back to Firestore.
 - `writeLegacyDbDiffToV2` is isolated to migration/import code.
 - Player/Admin runtime trees no longer carry `setDb` props.
-- PC Actor documents are preferred over stale Character documents when building `campaign.characters` compatibility rows.
+- `campaign.characters` compatibility rows in the runtime compatibility DB are built from PC Actor documents only; old Character documents are import/projection-test material.
 - Player basis-value actions keep the `dataActions.character.*` facade but write PC Actor documents in V2.
 - Inventory transfer, loot claim/gold split, quest rewards, and party XP write PC Actor documents in V2 instead of character documents.
 - `CampaignContext` no longer injects `characterRepo` into runtime `dataActions`.
@@ -110,4 +111,4 @@ Remaining:
 - `useFirestoreV2Db` still builds a legacy-shaped projection for transitional reads, but it is no longer a write contract.
 - `writeLegacyDbDiffToV2` must remain confined to legacy import/migration code.
 - `composeLegacyDbFromV2Documents` still exists for import/backup compatibility and tests, but `CampaignContext` builds the normal runtime compatibility DB from `v2Store`.
-- Legacy `characters` docs may still exist as transition data. Runtime writes now target Actors; remaining work is to isolate/remove legacy character collection readers and migration helpers.
+- Legacy `characters` docs may still exist as transition data. Runtime reads and writes now target Actors; remaining work is to isolate/remove legacy character collection migration helpers.
