@@ -89,6 +89,16 @@ test('admin item production editing skips file writes and uses database fallback
     assert.match(editorSource, /readJsonApiResponse\(res, 'Save item'\)/);
 });
 
+test('item icon previews use deployed static ressources path', () => {
+    const pickerSource = readSource('src/shared/components/ImagePicker.jsx');
+    const editorSource = readSource('src/admin/editors/ItemEditor.jsx');
+
+    assert.match(pickerSource, /import\.meta\.env\.PROD \? '\/ressources' : '\/api\/static'/);
+    assert.match(editorSource, /import\.meta\.env\.PROD \? '\/ressources' : '\/api\/static'/);
+    assert.equal(pickerSource.includes('return `/api/static/${basePath}`'), false);
+    assert.equal(editorSource.includes("import.meta.env.PROD ? '' : '/api/static'"), false);
+});
+
 test('quest fallback reads stay centralized in selectors', () => {
     const playerSource = readSource('src/player/PlayerAppController.jsx');
     const gmSource = readSource('src/admin/QuestsView.jsx');

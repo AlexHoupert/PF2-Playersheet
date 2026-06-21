@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 // Common image extensions
 const IMAGE_EXTENSIONS = ['.webp', '.png', '.jpg', '.jpeg', '.gif', '.svg'];
 const ICON_CATALOG_URL = new URL('../../data/icon_catalog.json', import.meta.url).href;
+const STATIC_RESOURCE_BASE_URL = import.meta.env.PROD ? '/ressources' : '/api/static';
 
 export default function ImagePicker({ isOpen, onClose, onSelect, initialPath = 'ressources' }) {
     const [currentPath, setCurrentPath] = useState(initialPath);
@@ -144,7 +145,7 @@ export default function ImagePicker({ isOpen, onClose, onSelect, initialPath = '
     // Get image URL for preview
     const getImageUrl = (itemPath) => {
         const basePath = itemPath.replace(/^ressources\//, '');
-        return `/api/static/${basePath}`;
+        return `${STATIC_RESOURCE_BASE_URL}/${basePath}`;
     };
 
     if (!isOpen) return null;

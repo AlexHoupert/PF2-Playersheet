@@ -7,6 +7,8 @@ import { useWindowSize } from '../../shared/hooks/useWindowSize';
 import { SHOP_INDEX_FILTER_OPTIONS } from '../../shared/catalog/shopIndex';
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 
+const STATIC_RESOURCE_BASE_URL = import.meta.env.PROD ? '/ressources' : '/api/static';
+
 export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, dbOnly = false }) {
     const [formData, setFormData] = useState({
         name: '',
@@ -302,9 +304,8 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, 
                         {formData.img && (
                             <img
                                 src={(() => {
-                                    const baseUrl = import.meta.env.PROD ? '' : '/api/static';
                                     const cleanPath = (formData.img || '').replace('systems/pf2e/', '').replace(/^\//, '');
-                                    return `${baseUrl}/${cleanPath}`;
+                                    return `${STATIC_RESOURCE_BASE_URL}/${cleanPath}`;
                                 })()}
                                 alt="Preview"
                                 style={{
