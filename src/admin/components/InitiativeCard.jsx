@@ -8,6 +8,7 @@ import React, { useState, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { calculateStat } from '../../utils/rules';
 import { getArmorClassData } from '../../shared/hooks/useCharacterStats';
+import { resolveEffectModifiersForSelectors } from '../../shared/rules/effectResolver';
 import './InitiativeCard.css';
 
 const InitiativeCard = forwardRef(function InitiativeCard({
@@ -21,6 +22,8 @@ const InitiativeCard = forwardRef(function InitiativeCard({
     onHpChange,
     creatureData,        // full creature stats from catalog (for creatures)
     characterData,       // character object from campaign (for players)
+    combatantEffects = [],
+    effectBadges = [],
     revealState,         // { hp: 'precise'|'estimate'|'hidden' } — only relevant for creatures on player screen
 }, ref) {
     const [editingInit, setEditingInit] = useState(false);
@@ -46,12 +49,18 @@ const InitiativeCard = forwardRef(function InitiativeCard({
     const hpColor = hpReveal === 'hidden' ? '#555' : (rawHpPct > 60 ? '#4caf50' : rawHpPct > 30 ? '#ff9800' : '#f44336');
     const hpText = hpReveal === 'precise' ? `${liveCurrentHp}/${liveMaxHp}` : '?/?';
 
+    const applyEffectTotal = (baseValue, selectors) => {
+        const numericBase = Number(baseValue);
+        if (!Number.isFinite(numericBase)) return baseValue;
+        return numericBase + resolveEffectModifiersForSelectors(combatantEffects, selectors).total;
+    };
+
     // Gather stat values
     let ac;
     if (isPlayer && characterData) {
         try { ac = getArmorClassData(characterData).totalAC; } catch { ac = '?'; }
     } else {
-        ac = creatureData?.system?.attributes?.ac?.value ?? creatureData?.ac ?? '?';
+        ac = applyEffectTotal(creatureData?.system?.attributes?.ac?.value ?? creatureData?.ac ?? '?', ['ac', 'all.dcs']);
     }
 
     const computePlayerSave = (saveKey) => {
@@ -63,13 +72,13 @@ const InitiativeCard = forwardRef(function InitiativeCard({
 
     const fort = isPlayer
         ? computePlayerSave('fortitude')
-        : (creatureData?.system?.saves?.fortitude?.value ?? creatureData?.saves?.fortitude ?? '?');
+        : applyEffectTotal(creatureData?.system?.saves?.fortitude?.value ?? creatureData?.saves?.fortitude ?? '?', ['save.fortitude', 'all.checks']);
     const ref_ = isPlayer
         ? computePlayerSave('reflex')
-        : (creatureData?.system?.saves?.reflex?.value ?? creatureData?.saves?.reflex ?? '?');
+        : applyEffectTotal(creatureData?.system?.saves?.reflex?.value ?? creatureData?.saves?.reflex ?? '?', ['save.reflex', 'all.checks']);
     const will = isPlayer
         ? computePlayerSave('will')
-        : (creatureData?.system?.saves?.will?.value ?? creatureData?.saves?.will ?? '?');
+        : applyEffectTotal(creatureData?.system?.saves?.will?.value ?? creatureData?.saves?.will ?? '?', ['save.will', 'all.checks']);
 
     const handleInitiativeClick = (e) => {
         if (!isGM) return;
@@ -102,6 +111,15 @@ const InitiativeCard = forwardRef(function InitiativeCard({
         if (isNaN(n)) return '?';
         return n >= 0 ? `+${n}` : `${n}`;
     };
+
+    const conditionBadges = [
+        ...(Array.isArray(combatant.conditions) ? combatant.conditions.map((label, index) => ({
+            id: `legacy-${index}`,
+            label,
+            category: 'legacy',
+        })) : []),
+        ...effectBadges,
+    ];
 
     return (
         <motion.div
@@ -194,10 +212,19 @@ const InitiativeCard = forwardRef(function InitiativeCard({
                 </div>
 
                 {/* Row 4: Conditions */}
-                {combatant.conditions?.length > 0 && (
+                {conditionBadges.length > 0 && (
                     <div className="init-card__conditions">
-                        {combatant.conditions.map((c, i) => (
-                            <span key={i} className="init-card__condition-pill">{c}</span>
+                        {conditionBadges.map((badge) => (
+                            <span
+                                key={badge.id || badge.label}
+                                className={[
+                                    'init-card__condition-pill',
+                                    badge.category === 'damage_effect' && 'init-card__condition-pill--damage',
+                                    badge.category === 'custom' && 'init-card__condition-pill--custom',
+                                ].filter(Boolean).join(' ')}
+                            >
+                                {badge.label}
+                            </span>
                         ))}
                     </div>
                 )}

@@ -11,7 +11,15 @@ import {
 } from '../src/shared/db/selectors/campaignSelectors.js';
 import { selectActorBuckets, selectMyActor, selectOwnedActors, selectPcActors } from '../src/shared/db/selectors/actorSelectors.js';
 import { selectActiveCharacters, selectMyCharacter } from '../src/shared/db/selectors/characterSelectors.js';
-import { selectActorEffects, selectConditionEffects, selectConditionViewModels, selectVisibleEffectTemplates } from '../src/shared/db/selectors/effectSelectors.js';
+import {
+    getCombatantEffectTargetId,
+    selectActorEffects,
+    selectCombatantEffectBadges,
+    selectCombatantEffects,
+    selectConditionEffects,
+    selectConditionViewModels,
+    selectVisibleEffectTemplates,
+} from '../src/shared/db/selectors/effectSelectors.js';
 import {
     selectCustomAbility,
     selectCustomAbilityList,
@@ -244,6 +252,32 @@ test('actor and effect selectors expose v2 actor viewmodels', () => {
         disabled: undefined,
     }]);
     assert.deepEqual(selectVisibleEffectTemplates(campaign).map(template => template.id), ['slippery']);
+});
+
+test('combatant effect selectors resolve player and creature effect targets', () => {
+    const creatureCombatant = {
+        id: 'goblin1',
+        type: 'creature',
+        effectTargetId: 'encounter:enc1:combatant:goblin1',
+    };
+    const playerCombatant = {
+        id: 'pc-card',
+        type: 'player',
+        playerId: 'pc1',
+    };
+    const campaign = {
+        actorEffects: [
+            { id: 'offguard', targetActorId: creatureCombatant.effectTargetId, category: 'condition', label: 'Off-Guard', value: 1 },
+            { id: 'fire', targetActorId: creatureCombatant.effectTargetId, category: 'damage_effect', label: '1d6 fire persistent', value: { formula: '1d6 fire persistent', damageType: 'fire' } },
+            { id: 'frightened', targetActorId: 'pc1', category: 'condition', label: 'Frightened', value: 1 },
+        ],
+    };
+
+    assert.equal(getCombatantEffectTargetId('enc1', playerCombatant), 'pc1');
+    assert.equal(getCombatantEffectTargetId('enc1', creatureCombatant), creatureCombatant.effectTargetId);
+    assert.deepEqual(selectCombatantEffects(campaign, 'enc1', creatureCombatant).map(effect => effect.id), ['offguard', 'fire']);
+    assert.deepEqual(selectCombatantEffects(campaign, 'enc1', playerCombatant).map(effect => effect.id), ['frightened']);
+    assert.deepEqual(selectCombatantEffectBadges(campaign, 'enc1', creatureCombatant).map(badge => badge.label), ['Off-Guard', '1d6 fire persistent']);
 });
 
 test('catalog override selector merges custom override and hide records', () => {

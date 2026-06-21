@@ -9,9 +9,15 @@ import { deepClone } from '../shared/utils/deepClone';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
 import { selectBestiaryRevealState, selectCustomCreatureData, selectCustomCreatureList } from '../shared/db/selectors/bestiarySelectors';
 import { selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
+import {
+    getCombatantEffectTargetId,
+    selectCombatantEffectBadges,
+    selectCombatantEffects
+} from '../shared/db/selectors/effectSelectors';
 import BottomSheet from '../shared/components/BottomSheet';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import InitiativeCard from './components/InitiativeCard';
+import EncounterEffectDialogs from './encounter/EncounterEffectDialogs';
 import { EncounterInfoPanel, EncounterSidebar } from './encounter/EncounterPanels';
 import './EncounterView.css';
 
@@ -23,6 +29,7 @@ export default function EncounterView({ db }) {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
     const [contextMenu, setContextMenu] = useState(null);
+    const [effectDialog, setEffectDialog] = useState(null);
     const [creatureSearch, setCreatureSearch] = useState('');
     const [creatureDataCache, setCreatureDataCache] = useState({});
 
@@ -241,6 +248,51 @@ export default function EncounterView({ db }) {
 
     const closeContextMenu = () => setContextMenu(null);
 
+    const openEffectDialog = (mode) => {
+        if (!contextMenu?.combatant) return;
+        setEffectDialog({ mode, combatant: contextMenu.combatant });
+        closeContextMenu();
+    };
+
+    const getEffectTargetId = (combatant) => getCombatantEffectTargetId(activeEncounter?.id, combatant);
+
+    const addEffectToCombatant = (factory) => {
+        const campaignId = requireCampaignId();
+        const targetActorId = getEffectTargetId(effectDialog?.combatant);
+        if (!campaignId || !targetActorId) return;
+        runEncounterAction(factory(campaignId, targetActorId));
+    };
+
+    const addStandardConditionToCombatant = (conditionName, value) => {
+        addEffectToCombatant((campaignId, targetActorId) =>
+            dataActions.effect.createStandardCondition(campaignId, targetActorId, conditionName, value, {
+                sourceType: 'encounter',
+                sourceId: activeEncounter?.id,
+                sourceName: conditionName,
+            })
+        );
+    };
+
+    const addPersistentDamageToCombatant = (payload) => {
+        addEffectToCombatant((campaignId, targetActorId) =>
+            dataActions.effect.createPersistentDamage(campaignId, targetActorId, payload, {
+                sourceType: 'encounter',
+                sourceId: activeEncounter?.id,
+                sourceName: 'Persistent Damage',
+            })
+        );
+    };
+
+    const addCustomBadgeToCombatant = (label) => {
+        addEffectToCombatant((campaignId, targetActorId) =>
+            dataActions.effect.createCustomBadge(campaignId, targetActorId, label, {
+                sourceType: 'encounter',
+                sourceId: activeEncounter?.id,
+                sourceName: label,
+            })
+        );
+    };
+
     // ── Info panel data ──
     const selectedCombatant = activeEncounter?.combatants?.find(c => c.id === selectedEntityId);
     const infoCreatureData = selectedCombatant?.type === 'creature' ? creatureDataCache[selectedCombatant.creatureId] : null;
@@ -344,6 +396,8 @@ export default function EncounterView({ db }) {
                                     onHpChange={setHp}
                                     creatureData={combatant.type === 'creature' ? creatureDataCache[combatant.creatureId] : null}
                                     characterData={combatant.type === 'player' ? characters.find(c => c.id === combatant.playerId) : null}
+                                    combatantEffects={selectCombatantEffects(activeCampaign, activeEncounter.id, combatant)}
+                                    effectBadges={selectCombatantEffectBadges(activeCampaign, activeEncounter.id, combatant)}
                                 />
                             ))}
                         </AnimatePresence>
@@ -397,27 +451,20 @@ export default function EncounterView({ db }) {
                     }}>
                         🎲 Set Initiative
                     </button>
-                    {contextMenu.combatant.type === 'creature' && (
-                        <button onClick={() => {
-                            const cond = prompt('Add condition (e.g. Poisoned, Off-Guard):');
-                            if (cond) {
-                                const campaignId = requireCampaignId();
-                                if (campaignId) {
-                                    runEncounterAction(dataActions.encounter.addCondition(
-                                        campaignId,
-                                        activeEncounter.id,
-                                        contextMenu.combatant.id,
-                                        cond
-                                    ));
-                                }
-                            }
-                            closeContextMenu();
-                        }}>
-                            🏷️ Add Condition
-                        </button>
-                    )}
+                    <button onClick={() => openEffectDialog('condition')}>🏷️ Add Condition</button>
+                    <button onClick={() => openEffectDialog('persistent')}>🔥 Add Persistent Damage</button>
+                    <button onClick={() => openEffectDialog('affliction')}>☣️ Add Affliction</button>
+                    <button onClick={() => openEffectDialog('custom')}>✏️ Set Custom Condition</button>
                 </div>
             )}
+            <EncounterEffectDialogs
+                mode={effectDialog?.mode || null}
+                combatant={effectDialog?.combatant || null}
+                onClose={() => setEffectDialog(null)}
+                onAddCondition={addStandardConditionToCombatant}
+                onAddPersistentDamage={addPersistentDamageToCombatant}
+                onAddCustomBadge={addCustomBadgeToCombatant}
+            />
         </div>
     );
 }

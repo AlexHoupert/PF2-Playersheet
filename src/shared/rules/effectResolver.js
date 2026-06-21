@@ -1,5 +1,9 @@
 export function resolveEffectModifiers(effects = [], selector) {
-    const matching = collectMatchingModifiers(effects, selector);
+    return resolveEffectModifiersForSelectors(effects, [selector]);
+}
+
+export function resolveEffectModifiersForSelectors(effects = [], selectors = []) {
+    const matching = collectMatchingModifiers(effects, selectors);
     const breakdown = {};
     const applied = [];
     let total = 0;
@@ -91,9 +95,13 @@ export function resolveResistanceWeakness(effects = []) {
 }
 
 function collectMatchingModifiers(effects, selector) {
-    const normalizedSelector = String(selector || "").toLowerCase();
+    const normalizedSelectors = new Set(
+        (Array.isArray(selector) ? selector : [selector])
+            .map(item => String(item || "").toLowerCase())
+            .filter(Boolean)
+    );
     return collectAllModifiers(effects).filter(modifier =>
-        String(modifier.selector || "").toLowerCase() === normalizedSelector
+        normalizedSelectors.has(String(modifier.selector || "").toLowerCase())
     );
 }
 

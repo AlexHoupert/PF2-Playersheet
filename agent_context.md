@@ -39,6 +39,7 @@ The root repo is `PF2-Playersheet`; the parent directory is not the git repo.
 - `src/player/`: player shell, tabs, inventory/shop workflows, modals, party screen, view components.
 - `src/admin/`: GM shell, resource/admin views, editors, encounter manager, Firestore tools.
 - `src/shared/`: auth, db hooks, v2 persistence, catalog adapters, components, constants, hooks, utilities.
+- `src/components/ui/` and `src/lib/utils.js`: local shadcn/ui components and helpers for new focused UI surfaces. The app remains a single Vite root; there is no frontend/backend split.
 - `src/utils/`: PF2e rules calculations and bestiary helpers.
 - `src/camping/`: camping data, player/admin camping UI, public camp screen.
 - `src/pacts/`: elemental pact/deviant ability data and views.
@@ -91,7 +92,7 @@ Current domain action files:
 - `src/shared/db/domain/actorReducers.js`: pure actor, actor effect, effect template, and catalog override record helpers.
 - `src/shared/db/domain/lootReducers.js`: pure loot-bag, claim, and gold reducers.
 - `src/shared/db/domain/questReducers.js`: pure quest, objective, reward, notification, and quest soft-delete reducers.
-- `src/shared/db/domain/encounterReducers.js`: pure encounter, combatant, initiative, turn, condition, and encounter soft-delete reducers.
+- `src/shared/db/domain/encounterReducers.js`: pure encounter, combatant, initiative, turn, compatibility condition, effect-target, and encounter soft-delete reducers.
 - `src/shared/db/domain/mapReducers.js`: pure map, pin, scale, order, and map soft-delete reducers.
 - `src/shared/db/domain/progressReducers.js`: pure progress normalization, active-only filtering, section updates, and top-level progress soft-delete reducers.
 - `src/shared/db/domain/campingReducers.js`: pure camping settings, activity, assignment, roll, and custom activity soft-delete reducers.
@@ -106,7 +107,7 @@ Migrated paths:
 - User assign/revoke and Admin Player tab user revoke.
 - Admin Player tab character updates and party XP set/add.
 - PC character lifecycle writes campaign-scoped `actors(kind="pc")`; `CampaignContext` exposes `actors`, `archivedActors`, and `myActor` in addition to transitional character viewmodels derived only from PC Actors.
-- `ConditionsModal`, Player Stats, Admin CharacterCard backlash, and item mutagen effects use campaign-scoped `actorEffects`; runtime UI no longer writes `character.conditions`.
+- `ConditionsModal`, Player Stats, Admin CharacterCard backlash, item mutagen effects, and Encounter condition/persistent-damage assignment use campaign-scoped `actorEffects`; runtime UI no longer writes `character.conditions`.
 - `CompanionTab` reads and writes owned companion Actors (`animal_companion`, `familiar`, `pet`) instead of `character.companion`; companion conditions use `actorEffects`.
 - Deployed item, spell, action, feat, impulse, ability, and creature editing writes Firestore `catalogOverrides`; static resource file APIs remain local-dev helpers.
 
@@ -117,7 +118,7 @@ Migrated paths:
 - GM ItemsView loot bag add/remove/quantity/create/lock/gold updates.
 - GM ItemsView item/formula assignment to characters.
 - GM QuestsView quest create/update/archive/restore, objective toggles, secret reveal, and reward distribution.
-- GM EncounterView encounter create/archive/restore/activate, combatants, HP, initiative, turn state, selected entity, visibility, conditions, and CharacterCard edits.
+- GM EncounterView encounter create/archive/restore/activate, combatants, HP, initiative, turn state, selected entity, visibility, ActorEffect-based conditions/persistent damage/custom badges, and CharacterCard edits.
 - GM MapAdminView map create/update/archive/restore, order changes, image URL persistence, pin edits, and scale calibration.
 - GM ProgressAdminView progress section updates and top-level archive/restore for factions, topics, stages, and elements.
 - Player ProgressView reads active-only Progress data.
@@ -183,7 +184,9 @@ Bundle model:
 
 ## Core Rule Helpers
 
-- `src/utils/rules.js`: stats, conditions, spell attack/DC, impulse attack/class DC.
+- `src/utils/rules.js`: stats, Effect-backed conditions, spell attack/DC, impulse attack/class DC.
+- `src/shared/rules/conditionEffectRules.js`: standard condition-to-modifier mapping, persistent-damage effect payloads, and custom badge payloads.
+- `src/shared/rules/effectResolver.js`: typed bonus/penalty stacking, caps, persistent damage, and resistance/weakness helpers.
 - `src/shared/utils/combatUtils.js`: weapon capacity, weapon attack bonus, inventory buckets, equipability.
 - `src/utils/rules/damage.js`: weapon damage and crit profile.
 - `src/utils/rules/runes.js`: rune parse/apply/remove.

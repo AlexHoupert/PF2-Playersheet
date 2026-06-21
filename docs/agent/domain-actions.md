@@ -150,7 +150,18 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `s
 - `endTurn(campaignId, encounterId)`
 - `resetRound(campaignId, encounterId)`
 - `rollInitiativeAll(campaignId, encounterId, creatureDataById)`
-- `addCondition(campaignId, encounterId, combatantId, condition)`
+- `addCondition(campaignId, encounterId, combatantId, condition)` is legacy compatibility only; new encounter condition UI writes ActorEffects through `dataActions.effect`.
+
+`dataActions.effect`:
+
+- `createEffect(campaignId, targetActorId, effectInput)`
+- `createStandardCondition(campaignId, targetActorId, conditionName, value)`
+- `createPersistentDamage(campaignId, targetActorId, payload)`
+- `createCustomBadge(campaignId, targetActorId, label)`
+- `updateEffect(campaignId, effectId, updater)`
+- `deleteEffect(campaignId, effectId)`
+- `saveEffectTemplate(campaignId, templateInput)`
+- `deleteEffectTemplate(campaignId, templateId)`
 
 `dataActions.map`:
 
@@ -236,6 +247,7 @@ Firestore V2 mode:
 - Uses targeted loot-bag document updates for loot bag create/update/add/remove/quantity.
 - Uses targeted quest, campaign, and actor transactions for quest rewards.
 - Uses targeted encounter document updates for encounter CRUD, combatants, initiative, and turn state.
+- Uses targeted effect document writes for Player/Encounter standard conditions, persistent damage, and custom condition badges.
 - Uses targeted map document updates for map CRUD/archive/restore, ordering, pins, scale, and image URL writes.
 - Uses targeted campaign document updates for progress sections and top-level progress archives/restores.
 - Uses targeted campaign document updates for camping settings, custom activities, assignments, rolls, and reset/archive/restore behavior.
@@ -253,7 +265,7 @@ If Firestore config is missing, the adapter falls back to legacy mode.
 - Inventory and loot items are normalized with `instanceId` on every domain write.
 - Character runtime shape is normalized on load, V2 migration, create, and update through `normalizeCharacterRuntimeShape`.
 - PC character create/import/archive/restore writes campaign-scoped `actors` in V2. The legacy `characters` collection still exists as transition/import data, but it is no longer the runtime write target.
-- Actor effects are the target source for Conditions. The legacy projection overlays `character.conditions` from `actorEffects` when available.
+- Actor effects are the target source for Conditions. The legacy projection overlays `character.conditions` from `actorEffects` when available. Encounter creature combatants use `effectTargetId` strings until NPCs become full Actors.
 - Old skill keys `Intimidate`/`intimidate` and `Perform`/`perform` are migrated to `Intimidation` and `Performance`.
 - Missing player runtime fields such as `impulses`, caster flags, and spell/impulse proficiencies are defaulted before UI reads.
 - Mutations prefer `instanceId`.
@@ -317,7 +329,7 @@ GM Encounters:
 - Encounter create/archive/restore/activate.
 - Add/remove/update combatants.
 - Add all active players without duplicating existing combatants.
-- Initiative, HP, visibility, selected entity, turn end/reset, creature initiative rolls, and conditions.
+- Initiative, HP, visibility, selected entity, turn end/reset, creature initiative rolls, ActorEffect conditions, persistent damage, and custom condition badges.
 - CharacterCard edits inside the encounter detail panel use `dataActions.character.updateCharacter`.
 
 GM Maps:

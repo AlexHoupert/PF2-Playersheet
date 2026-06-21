@@ -315,6 +315,48 @@
     color: #fff;
 }
 
+.enc-effect-dialog {
+    background: #202026;
+    border: 1px solid #c5a059;
+    color: #e8e8e8;
+    max-width: 560px;
+}
+
+.enc-effect-dialog__value-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.enc-effect-dialog__value-row input {
+    width: 90px;
+}
+
+.enc-effect-dialog__command {
+    border: 1px solid #333;
+    max-height: 360px;
+}
+
+.enc-effect-dialog__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.enc-effect-dialog__grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #bbb;
+    font-size: 0.85em;
+}
+
+.enc-effect-dialog__note {
+    margin: 0;
+    color: #aaa;
+    line-height: 1.5;
+}
+
 /* ── Shared buttons ── */
 .enc-btn {
     padding: 6px 14px;

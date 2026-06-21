@@ -4,8 +4,14 @@ import { getScalySkinAcAdjustment } from '../src/shared/utils/acRules.js';
 import {
     resolveDamageEffects,
     resolveEffectModifiers,
+    resolveEffectModifiersForSelectors,
     resolveResistanceWeakness,
 } from '../src/shared/rules/effectResolver.js';
+import {
+    createCustomBadgeEffectInput,
+    createPersistentDamageEffectInput,
+    createStandardConditionEffectInput,
+} from '../src/shared/rules/conditionEffectRules.js';
 import {
     consumeWandCharge,
     getWandCharges,
@@ -98,6 +104,30 @@ test('effect resolver keeps highest persistent damage and offsets resistance wea
         netResistance: 1,
         netWeakness: 0,
     });
+});
+
+test('standard condition mapping creates value modifiers for core PF2e conditions', () => {
+    const frightened = createStandardConditionEffectInput('Frightened', 1);
+    const sickened = createStandardConditionEffectInput('Sickened', 2);
+    const clumsy = createStandardConditionEffectInput('Clumsy', 1);
+    const offGuard = createStandardConditionEffectInput('Off-Guard', 1);
+    const quickened = createStandardConditionEffectInput('Quickened', 1);
+
+    assert.equal(resolveEffectModifiersForSelectors([frightened, sickened], ['save.will', 'all.checks']).total, -2);
+    assert.equal(resolveEffectModifiersForSelectors([clumsy], ['ac', 'attribute.dexterity']).total, -1);
+    assert.equal(resolveEffectModifiersForSelectors([offGuard], ['ac']).total, -2);
+    assert.equal(quickened.modifiers.length, 0);
+});
+
+test('persistent damage and custom badges produce actor effects without false stacking', () => {
+    const fireDice = createPersistentDamageEffectInput({ damageType: 'fire', mode: 'dice', diceCount: 1, dieSize: 6 });
+    const fireStatic = createPersistentDamageEffectInput({ damageType: 'fire', mode: 'static', staticValue: 5 });
+    const custom = createCustomBadgeEffectInput('Covered in Glue');
+
+    assert.equal(fireDice.category, 'damage_effect');
+    assert.equal(resolveDamageEffects([fireDice, fireStatic]).persistentByType.fire.formula, '5 fire persistent');
+    assert.equal(custom.category, 'custom');
+    assert.deepEqual(custom.modifiers, []);
 });
 
 test('wands consume and recharge charges without becoming consumable stacks', () => {

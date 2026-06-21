@@ -5,6 +5,10 @@ import {
 import { getConditionImgSrc, isConditionValued, getConditionCatalogEntry } from '../../shared/constants/conditionsCatalog';
 import { parseFoundry } from '../../shared/utils/foundryParser';
 import { useCampaign } from '../../shared/context/CampaignContext';
+import {
+    createStandardConditionEffectInput,
+    normalizeConditionValue
+} from '../../shared/rules/conditionEffectRules';
 
 /**
  * @typedef {Object} Condition
@@ -154,23 +158,28 @@ export function ConditionsModal({
             return;
         }
 
-        const currentLevel = typeof active === 'string' ? 1 : (Number(active?.level) || 0);
+        const currentLevel = typeof active === 'string' ? 1 : (Number(active?.level ?? active?.value) || 0);
         const nextLevel = valued ? currentLevel + delta : (delta > 0 ? 1 : 0);
         const effectId = typeof active === 'object' ? active.sourceEffectId || active.id : null;
+        const normalizedNextLevel = normalizeConditionValue(canonicalName, nextLevel);
+        const nextEffectInput = createStandardConditionEffectInput(canonicalName, normalizedNextLevel, {
+            sourceType: 'manual',
+            sourceName: canonicalName,
+            actorId,
+        });
         const effectAction = nextLevel <= 0
             ? (effectId ? dataActions.effect.deleteEffect(activeCampaignId, effectId) : Promise.resolve())
             : effectId
                 ? dataActions.effect.updateEffect(activeCampaignId, effectId, effect => ({
                     ...effect,
-                    label: canonicalName,
-                    value: Math.max(1, nextLevel),
+                    label: nextEffectInput.label,
+                    category: nextEffectInput.category,
+                    value: nextEffectInput.value,
+                    templateId: effect.templateId || nextEffectInput.templateId,
+                    source: effect.source || nextEffectInput.source,
+                    modifiers: nextEffectInput.modifiers,
                 }))
-                : dataActions.effect.createEffect(activeCampaignId, actorId, {
-                    label: canonicalName,
-                    category: 'condition',
-                    value: Math.max(1, nextLevel),
-                    source: { type: 'manual', name: canonicalName, actorId },
-                });
+                : dataActions.effect.createStandardCondition(activeCampaignId, actorId, canonicalName, normalizedNextLevel);
 
         Promise.resolve(effectAction)
             .then(() => {

@@ -190,6 +190,20 @@ test('runtime views do not carry legacy setDb or character condition contracts',
     });
 });
 
+test('encounter effect UI uses actor effects instead of prompt condition writes', () => {
+    const encounterSource = readSource('src/admin/EncounterView.jsx');
+    const dialogSource = readSource('src/admin/encounter/EncounterEffectDialogs.jsx');
+
+    assert.equal(encounterSource.includes("prompt('Add condition"), false);
+    assert.equal(encounterSource.includes('dataActions.encounter.addCondition'), false);
+    assert.match(encounterSource, /effect\.createStandardCondition/);
+    assert.match(encounterSource, /effect\.createPersistentDamage/);
+    assert.match(encounterSource, /effect\.createCustomBadge/);
+    assert.match(dialogSource, /@\/components\/ui\/dialog/);
+    assert.match(dialogSource, /@\/components\/ui\/command/);
+    assert.match(dialogSource, /Add Affliction/);
+});
+
 test('v2 runtime actions do not inject or call characterRepo', () => {
     const actionSource = readSource('src/shared/db/domain/createDataActions.js');
     const contextSource = readSource('src/shared/context/CampaignContext.jsx');

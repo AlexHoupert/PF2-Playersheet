@@ -33,7 +33,7 @@ function createActionHarness(db = {}) {
         },
         effectRepo: {
             async createEffect(_firestore, campaignId, effect) {
-                calls.push(['effect.createEffect', campaignId, effect.id, effect.targetActorId]);
+                calls.push(['effect.createEffect', campaignId, effect.id, effect.targetActorId, effect]);
             },
             async updateEffect(_firestore, campaignId, effectId, updater) {
                 const result = updater({ id: effectId, campaignId, targetActorId: 'actor1', label: 'Frightened', category: 'condition' });
@@ -302,6 +302,33 @@ test('v2 adapter exposes actor, effect, and catalog override repositories', asyn
         'catalogOverride.setCatalogOverride',
         'catalogOverride.deleteCatalogOverride',
     ]);
+});
+
+test('v2 adapter creates standard condition, persistent damage, and custom badge effects', async () => {
+    const { actions, calls } = createActionHarness();
+
+    await actions.effect.createStandardCondition('camp1', 'actor1', 'Frightened', 2);
+    await actions.effect.createPersistentDamage('camp1', 'encounter:enc1:combatant:goblin1', {
+        damageType: 'fire',
+        mode: 'dice',
+        diceCount: 1,
+        dieSize: 6,
+    });
+    await actions.effect.createCustomBadge('camp1', 'actor1', 'Covered in Glue');
+
+    assert.deepEqual(calls.map(call => call[0]), [
+        'effect.createEffect',
+        'effect.createEffect',
+        'effect.createEffect',
+    ]);
+    assert.equal(calls[0][4].category, 'condition');
+    assert.equal(calls[0][4].value, 2);
+    assert(calls[0][4].modifiers.some(modifier => modifier.selector === 'all.checks'));
+    assert.equal(calls[1][4].category, 'damage_effect');
+    assert.equal(calls[1][4].targetActorId, 'encounter:enc1:combatant:goblin1');
+    assert.equal(calls[1][4].modifiers[0].mode, 'persistent_damage');
+    assert.equal(calls[2][4].category, 'custom');
+    assert.deepEqual(calls[2][4].modifiers, []);
 });
 
 test('v2 adapter uses catalog overrides for custom content and global repositories for shop metadata', async () => {

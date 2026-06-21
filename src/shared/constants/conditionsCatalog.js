@@ -1,4 +1,4 @@
-import conditionsCatalog from '../../data/conditions_catalog.json';
+import conditionsCatalog from '../../data/conditions_catalog.json' with { type: 'json' };
 
 const CONDITIONS_CATALOG_BY_LOWER = new Map(
     Object.entries(conditionsCatalog).map(([name, entry]) => [name.toLowerCase(), entry])

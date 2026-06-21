@@ -498,8 +498,13 @@ test('encounter reducer creates, activates, updates, archives, and restores enco
     assert.equal(encounter.isActive, true);
     assert.equal(encounter.combatants.length, 2);
     assert.equal(encounter.combatants.filter(c => c.type === 'player').length, 1);
+    assert.equal(encounter.combatants.find(c => c.type === 'player').effectTargetId, 'char1');
 
     const creatureId = encounter.combatants.find(c => c.type === 'creature').id;
+    assert.equal(
+        encounter.combatants.find(c => c.id === creatureId).effectTargetId,
+        `encounter:${encounter.id}:combatant:${creatureId}`
+    );
     const damaged = updateCombatantInEncounterInCampaign(active, encounter.id, creatureId, { currentHp: 3 });
     assert.equal(damaged.encounters[0].combatants.find(c => c.id === creatureId).currentHp, 3);
 

@@ -221,3 +221,13 @@
     white-space: nowrap;
     font-weight: 500;
 }
+
+.init-card__condition-pill--damage {
+    background: #3d1f1e;
+    color: #ff9d7a;
+}
+
+.init-card__condition-pill--custom {
+    background: #263448;
+    color: #9fc4ff;
+}

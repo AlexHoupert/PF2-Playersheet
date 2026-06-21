@@ -146,7 +146,9 @@ Current migrated write paths:
 
 - Player character compatibility updates through `dataActions.character.updateCharacter`; in V2 these delegate to PC Actor updates. Player basis edits for gold, attributes, HP/temp/max HP, speed, Class DC, daily crafting max, saves/skills, proficiencies, magic slots, and armor/shield state write PC Actor documents directly in V2.
 - New character create/import/archive/restore writes campaign-scoped PC Actors in V2. Old character documents remain import/transition data and are not a runtime read or write target.
-- Conditions in `ConditionsModal`, Player Stats, Admin CharacterCard backlash, and item mutagen effects use `dataActions.effect` and campaign-scoped `actorEffects`.
+- Conditions in `ConditionsModal`, Player Stats, Encounter right-click assignment, Admin CharacterCard backlash, and item mutagen effects use `dataActions.effect` and campaign-scoped `actorEffects`.
+- Encounter creature combatants are not full NPC Actors yet. They receive stable `effectTargetId` strings and write `actorEffects` against those targets; player combatants write effects against the PC Actor ID.
+- Persistent damage uses `actorEffects(category="damage_effect")` with a stored formula and damage type. The resolver selects the strongest same-type persistent damage for display/evaluation; turn-end rolling remains future work.
 - Companion UI reads and writes owned Actor documents instead of `character.companion`; companion conditions also use `actorEffects`.
 - Custom item/action/ability/creature saves write `catalogOverrides` in V2. Deployed item, spell, action, feat, impulse, ability, and creature editors use catalog overrides instead of `/api/files/*`.
 - Player inventory transfer through `dataActions.inventory.transferItem`.
@@ -154,7 +156,8 @@ Current migrated write paths:
 - Campaign/session flows through `dataActions.campaign`, `dataActions.character`, and `dataActions.member`.
 - GM item assignment to loot/characters and loot-bag edits through `dataActions`.
 - GM quest create/update/archive/restore, objective toggles, secret reveal, and reward distribution through `dataActions.quest`.
-- GM encounter create/archive/restore/activate, combatant updates, initiative, HP, turn state, and conditions through `dataActions.encounter`.
+- GM encounter create/archive/restore/activate, combatant updates, initiative, HP, and turn state through `dataActions.encounter`.
+- GM Encounter condition, persistent damage, and custom badge assignment through `dataActions.effect`.
 - GM map create/update/archive/restore, ordering, pins, scale, and image URL persistence through `dataActions.map`.
 - GM progress section edits and top-level Progress archive/restore through `dataActions.progress`.
 - Player progress views read active-only Progress data through the domain reducer.
@@ -296,7 +299,7 @@ Tests cover:
 - Selector behavior for active/archived campaign data, legacy root fallbacks, shop reads, bestiary reveal-state/custom creatures, pacts, abilities, and lore.
 - Broad-write guard coverage for migrated UI files.
 - Quest objective and quest reward idempotency.
-- Encounter activation, combatants, initiative, turn state, and conditions.
+- Encounter activation, combatants, effect target IDs, initiative, turn state, compatibility conditions, and ActorEffect condition assignment.
 
 Add tests here when changing:
 

@@ -150,6 +150,11 @@ import {
   updateCustomCreatureInDb,
   updateTraderInDb,
 } from "./globalContentReducers.js";
+import {
+  createCustomBadgeEffectInput,
+  createPersistentDamageEffectInput,
+  createStandardConditionEffectInput,
+} from "../../rules/conditionEffectRules.js";
 
 export function createDataActions({
   db,
@@ -348,6 +353,24 @@ export function createDataActions({
       return next;
     });
   };
+
+  const createStandardCondition = (campaignId, targetActorId, conditionName, value = 1, options = {}) =>
+    createEffect(campaignId, targetActorId, createStandardConditionEffectInput(conditionName, value, {
+      ...options,
+      actorId: options.actorId || targetActorId,
+    }));
+
+  const createPersistentDamage = (campaignId, targetActorId, payload = {}, options = {}) =>
+    createEffect(campaignId, targetActorId, createPersistentDamageEffectInput(payload, {
+      ...options,
+      actorId: options.actorId || targetActorId,
+    }));
+
+  const createCustomBadge = (campaignId, targetActorId, label, options = {}) =>
+    createEffect(campaignId, targetActorId, createCustomBadgeEffectInput(label, {
+      ...options,
+      actorId: options.actorId || targetActorId,
+    }));
 
   const saveEffectTemplate = (campaignId, templateInput) => {
     const template = {
@@ -1762,6 +1785,9 @@ export function createDataActions({
     },
     effect: {
       createEffect,
+      createStandardCondition,
+      createPersistentDamage,
+      createCustomBadge,
       updateEffect,
       deleteEffect,
       saveEffectTemplate,

@@ -28,10 +28,12 @@ export function createCombatantRecord(type, data, options = {}) {
   if (type === "player") {
     const maxHp = data?.stats?.hp?.max ?? data?.hp?.max ?? 0;
     const currentHp = data?.stats?.hp?.current ?? data?.hp?.current ?? maxHp;
+    const id = createId(data);
     return normalizeCombatant({
-      id: createId(data),
+      id,
       type: "player",
       playerId: data?.id,
+      effectTargetId: data?.id || id,
       creatureId: null,
       name: data?.name || "Player",
       instanceLabel: 1,
@@ -44,9 +46,11 @@ export function createCombatantRecord(type, data, options = {}) {
   }
 
   const hp = data?.system?.attributes?.hp?.max ?? data?.hp?.max ?? 0;
+  const id = createId(data);
   return normalizeCombatant({
-    id: createId(data),
+    id,
     type: "creature",
+    effectTargetId: data?.effectTargetId || buildEncounterCombatantEffectTargetId(options.encounterId, id),
     creatureId: data?._catalogId || data?.id || data?.name,
     name: data?.name || "Creature",
     unknownName: data?.unknownName || "???",
@@ -105,7 +109,7 @@ export function activateEncounterInCampaign(campaign, encounterId) {
 export function addCombatantToEncounterInCampaign(campaign, encounterId, type, data, options = {}) {
   return updateEncounterInCampaign(campaign, encounterId, (encounter) => {
     const combatants = Array.isArray(encounter.combatants) ? [...encounter.combatants] : [];
-    const combatant = createCombatantRecord(type, data, options);
+    const combatant = createCombatantRecord(type, data, { ...options, encounterId });
 
     if (type === "player" && combatant.playerId && combatants.some((entry) => entry.playerId === combatant.playerId)) {
       return encounter;
@@ -230,11 +234,13 @@ function normalizeEncounter(encounter = {}) {
   next.isActive = Boolean(next.isActive);
   next.currentTurnIndex = Number.isFinite(Number(next.currentTurnIndex)) ? Number(next.currentTurnIndex) : 0;
   next.selectedEntityId = next.selectedEntityId || null;
-  next.combatants = Array.isArray(next.combatants) ? next.combatants.map(normalizeCombatant) : [];
+  next.combatants = Array.isArray(next.combatants)
+    ? next.combatants.map((combatant) => normalizeCombatant(combatant, next.id))
+    : [];
   return next;
 }
 
-function normalizeCombatant(combatant = {}) {
+function normalizeCombatant(combatant = {}, encounterId = null) {
   const next = cloneValue(combatant) || {};
   next.id = next.id || createInstanceId("combatant");
   next.type = next.type || "creature";
@@ -245,9 +251,20 @@ function normalizeCombatant(combatant = {}) {
   next.currentHp = clamp(Number(next.currentHp) || 0, 0, next.maxHp);
   next.conditions = Array.isArray(next.conditions) ? next.conditions : [];
   next.visible = next.visible !== false;
-  if (next.type === "player") next.creatureId = null;
-  if (next.type === "creature") next.playerId = null;
+  if (next.type === "player") {
+    next.creatureId = null;
+    next.effectTargetId = next.effectTargetId || next.playerId || next.id;
+  }
+  if (next.type === "creature") {
+    next.playerId = null;
+    next.effectTargetId = next.effectTargetId || buildEncounterCombatantEffectTargetId(encounterId, next.id);
+  }
   return next;
+}
+
+export function buildEncounterCombatantEffectTargetId(encounterId, combatantId) {
+  if (!encounterId || !combatantId) return null;
+  return `encounter:${encounterId}:combatant:${combatantId}`;
 }
 
 function clampTurnIndex(index, total) {
