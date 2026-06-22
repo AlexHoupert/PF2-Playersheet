@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import CreatureCard from '../../shared/components/CreatureCard';
-import { CharacterCard } from '../components/CharacterCard';
+import CreatureAbilityModal from '../../shared/components/CreatureAbilityModal';
+import CreatureSkillDetailDialog from '../../shared/components/CreatureSkillDetailDialog';
+import { ActorSheetCard } from '../../shared/components/ActorSheetCard';
 
 export function EncounterInfoPanel({
     db,
@@ -11,6 +13,9 @@ export function EncounterInfoPanel({
     selectedCombatant,
     getRevealState,
 }) {
+    const [selectedAbility, setSelectedAbility] = useState(null);
+    const [selectedSkill, setSelectedSkill] = useState(null);
+
     if (!selectedCombatant) return null;
     return (
         <div className="enc-info-panel__body">
@@ -20,22 +25,44 @@ export function EncounterInfoPanel({
                     isGM={true}
                     revealState={getRevealState(selectedCombatant.creatureId)}
                     onRevealChange={onRevealChange}
+                    onAbilityClick={(ability) => setSelectedAbility(ability)}
+                    onSkillClick={(skill) => setSelectedSkill(skill)}
                 />
             )}
             {selectedCombatant.type === 'creature' && !infoCreatureData && (
                 <div className="enc-info-panel__loading">Loading creature data...</div>
             )}
             {selectedCombatant.type === 'player' && infoCharData && (
-                <CharacterCard
+                <ActorSheetCard
                     character={infoCharData}
                     db={db}
                     updateCharacter={onUpdateCharacter}
-                    setModalMode={() => { }}
-                    setModalData={() => { }}
+                    mode="encounter"
+                    capabilities={{
+                        editable: true,
+                        showInventory: true,
+                        showMagic: true,
+                        showPacts: true,
+                        allowShop: false,
+                        allowLoot: false,
+                        localModals: true,
+                    }}
                 />
             )}
             {selectedCombatant.type === 'player' && !infoCharData && (
                 <div className="enc-info-panel__loading">Player data not found.</div>
+            )}
+            {selectedAbility && (
+                <CreatureAbilityModal
+                    ability={selectedAbility}
+                    onClose={() => setSelectedAbility(null)}
+                />
+            )}
+            {selectedSkill && (
+                <CreatureSkillDetailDialog
+                    skill={selectedSkill}
+                    onClose={() => setSelectedSkill(null)}
+                />
             )}
         </div>
     );

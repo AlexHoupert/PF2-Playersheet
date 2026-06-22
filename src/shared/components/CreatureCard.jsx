@@ -20,27 +20,7 @@ import {
     getRarityColor,
 } from '../../utils/bestiaryUtils';
 import { parseFoundry, ACTION_ICONS } from '../utils/foundryParser';
-
-// Reveal states: 'hidden' | 'precise' | 'estimate' | 'false'
-const DEFAULT_REVEAL_STATE = {
-    name: 'hidden',
-    level: 'hidden',
-    traits: 'hidden',
-    ac: 'hidden',
-    hp: 'hidden',
-    saves: 'hidden',
-    immunities: 'hidden',
-    resistances: 'hidden',
-    weaknesses: 'hidden',
-    speed: 'hidden',
-    attacks: 'hidden',
-    abilities: 'hidden',
-    perception: 'hidden',
-    senses: 'hidden',
-    skills: 'hidden',
-    attributes: 'hidden',
-    size: 'precise' // Always visible
-};
+import { buildCreatureSkillViewModel, normalizeCreatureRevealState } from '../bestiary/creaturePresentation';
 
 export default function CreatureCard({
     creature,
@@ -48,12 +28,15 @@ export default function CreatureCard({
     revealState = {},
     falseData = {},
     onRevealChange,
-    onAbilityClick
+    onAbilityClick,
+    onSkillClick,
+    viewerMode
 }) {
     const [contextMenu, setContextMenu] = useState(null);
+    const gmView = viewerMode ? viewerMode === 'gm' : isGM;
 
     // Merge default reveal state with provided
-    const reveal = { ...DEFAULT_REVEAL_STATE, ...revealState };
+    const reveal = normalizeCreatureRevealState(revealState);
 
     const data = creature?.data || creature;
     const isHazard = creature?.type === 'hazard' || data?.type === 'hazard';
@@ -116,7 +99,7 @@ export default function CreatureCard({
 
     // Context menu handlers
     const handleContextMenu = (e, field) => {
-        if (!isGM || !onRevealChange) return;
+        if (!gmView || !onRevealChange) return;
         e.preventDefault();
         setContextMenu({ x: e.clientX, y: e.clientY, field });
     };
@@ -135,7 +118,7 @@ export default function CreatureCard({
 
     const renderField = (field, preciseContent, estimateContent, falseContent) => {
         const state = reveal[field];
-        if (isGM || state === 'precise') return preciseContent;
+        if (gmView || state === 'precise') return preciseContent;
         if (state === 'estimate') return estimateContent || preciseContent;
         if (state === 'false') return falseContent || estimateContent || preciseContent;
         return renderRedacted();
@@ -166,7 +149,7 @@ export default function CreatureCard({
 
     // Render saves with ranking
     const renderSaves = () => {
-        if (!isGM && reveal.saves === 'hidden') return renderRedacted();
+        if (!gmView && reveal.saves === 'hidden') return renderRedacted();
 
         // Use false rankings when reveal.saves === 'false'
         const displayRankings = reveal.saves === 'false' && falseData?.saves
@@ -175,12 +158,12 @@ export default function CreatureCard({
 
         return (
             <span>
-                Fort {isGM || reveal.saves === 'precise' ? formatBonus(saves.fortitude) : ''}
-                {(isGM || reveal.saves !== 'hidden') && <span className="save-ranking">({displayRankings.fortitude})</span>},
-                Ref {isGM || reveal.saves === 'precise' ? formatBonus(saves.reflex) : ''}
-                {(isGM || reveal.saves !== 'hidden') && <span className="save-ranking">({displayRankings.reflex})</span>},
-                Will {isGM || reveal.saves === 'precise' ? formatBonus(saves.will) : ''}
-                {(isGM || reveal.saves !== 'hidden') && <span className="save-ranking">({displayRankings.will})</span>}
+                Fort {gmView || reveal.saves === 'precise' ? formatBonus(saves.fortitude) : ''}
+                {(gmView || reveal.saves !== 'hidden') && <span className="save-ranking">({displayRankings.fortitude})</span>},
+                Ref {gmView || reveal.saves === 'precise' ? formatBonus(saves.reflex) : ''}
+                {(gmView || reveal.saves !== 'hidden') && <span className="save-ranking">({displayRankings.reflex})</span>},
+                Will {gmView || reveal.saves === 'precise' ? formatBonus(saves.will) : ''}
+                {(gmView || reveal.saves !== 'hidden') && <span className="save-ranking">({displayRankings.will})</span>}
             </span>
         );
     };
@@ -206,9 +189,9 @@ export default function CreatureCard({
         const mapStr = calculateMAP(bonus, attackTraits);
         const icon = getActionIcon(item);
 
-        if (!isGM && reveal.attacks === 'hidden') return null;
+        if (!gmView && reveal.attacks === 'hidden') return null;
 
-        const showPrecise = isGM || reveal.attacks === 'precise';
+        const showPrecise = gmView || reveal.attacks === 'precise';
 
         return (
             <div key={item._id} className="creature-attack">
@@ -237,7 +220,7 @@ export default function CreatureCard({
     // Render abilities
     const renderAbility = (item) => {
         if (item.type === 'melee' || item.type === 'ranged') return null;
-        if (!isGM && reveal.abilities === 'hidden') return null;
+        if (!gmView && reveal.abilities === 'hidden') return null;
 
         const icon = getActionIcon(item);
         const actionType = item.system?.actionType?.value;
@@ -260,7 +243,7 @@ export default function CreatureCard({
 
     // Render speed
     const renderSpeed = () => {
-        if (!isGM && reveal.speed === 'hidden') return renderRedacted();
+        if (!gmView && reveal.speed === 'hidden') return renderRedacted();
 
         const baseSpeed = speed.value || 25;
         const otherSpeeds = speed.otherSpeeds || [];
@@ -277,26 +260,43 @@ export default function CreatureCard({
 
     // Render skills
     const renderSkills = () => {
-        if (!isGM && reveal.skills === 'hidden') return renderRedacted();
+        if (!gmView && reveal.skills === 'hidden') return renderRedacted();
 
         const skillEntries = Object.entries(skills);
         if (skillEntries.length === 0) return <span className="muted">—</span>;
 
-        const showPrecise = isGM || reveal.skills === 'precise';
+        const showPrecise = gmView || reveal.skills === 'precise';
 
-        return skillEntries.map(([name, data], i) => {
-            const bonus = data.base || data.value || 0;
+        return skillEntries.map(([skillName, skillData], i) => {
+            const bonus = skillData.base || skillData.value || 0;
             const rating = getSkillRating(bonus, level);
-            const specials = data.special || [];
+            const specials = skillData.special || [];
 
-            const label = name.charAt(0).toUpperCase() + name.slice(1);
+            const skillViewModel = buildCreatureSkillViewModel(skillName, skillData, { creatureName: name, creatureLevel: level });
+            const label = skillViewModel.label;
+            const clickable = typeof onSkillClick === 'function';
+            const handleSkillClick = (e) => {
+                if (!clickable) return;
+                e.stopPropagation();
+                onSkillClick(skillViewModel);
+            };
+            const handleSkillKeyDown = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') handleSkillClick(e);
+            };
 
             return (
-                <span key={name}>
+                <span key={skillName}>
                     {i > 0 && ', '}
                     {showPrecise ? (
                         <>
-                            <span className="skill-name">{label}</span>
+                            <span
+                                className="skill-name"
+                                onClick={handleSkillClick}
+                                onKeyDown={handleSkillKeyDown}
+                                role={clickable ? 'button' : undefined}
+                                tabIndex={clickable ? 0 : undefined}
+                                style={{ cursor: clickable ? 'pointer' : 'default', textDecoration: clickable ? 'underline' : 'none' }}
+                            >{label}</span>
                             {' '}{formatBonus(bonus)}
                             {specials.map((s, j) => (
                                 <span key={j} className="skill-special"> ({formatBonus(s.base)} {s.label})</span>
@@ -304,7 +304,14 @@ export default function CreatureCard({
                         </>
                     ) : (
                         <>
-                            <span className="skill-name">{label}</span>
+                            <span
+                                className="skill-name"
+                                onClick={handleSkillClick}
+                                onKeyDown={handleSkillKeyDown}
+                                role={clickable ? 'button' : undefined}
+                                tabIndex={clickable ? 0 : undefined}
+                                style={{ cursor: clickable ? 'pointer' : 'default', textDecoration: clickable ? 'underline' : 'none' }}
+                            >{label}</span>
                             {' '}<span style={{ color: getRatingColor(rating) }}>({rating})</span>
                         </>
                     )}
@@ -315,10 +322,10 @@ export default function CreatureCard({
 
     // Render attributes
     const renderAttributes = () => {
-        if (!isGM && reveal.attributes === 'hidden') return renderRedacted();
+        if (!gmView && reveal.attributes === 'hidden') return renderRedacted();
 
         const attrs = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-        const showPrecise = isGM || reveal.attributes === 'precise';
+        const showPrecise = gmView || reveal.attributes === 'precise';
 
         return attrs.map((attr, i) => {
             const mod = abilities[attr]?.mod ?? 0;
@@ -343,19 +350,19 @@ export default function CreatureCard({
                 onContextMenu={(e) => handleContextMenu(e, 'name')}
             >
                 <h3 className="creature-name">
-                    {isGM || reveal.name !== 'hidden' ? name : renderRedacted('name-redacted')}
+                    {gmView || reveal.name !== 'hidden' ? name : renderRedacted('name-redacted')}
                 </h3>
                 <span
                     className="creature-level"
                     onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e, 'level'); }}
                 >
-                    {isHazard ? 'Hazard' : 'Creature'} {isGM || reveal.level !== 'hidden' ? level : '?'}
+                    {isHazard ? 'Hazard' : 'Creature'} {gmView || reveal.level !== 'hidden' ? level : '?'}
                 </span>
             </div>
 
             {/* Traits */}
             <div onContextMenu={(e) => handleContextMenu(e, 'traits')}>
-                {isGM || reveal.traits !== 'hidden' ? renderTraits() : renderRedacted()}
+                {gmView || reveal.traits !== 'hidden' ? renderTraits() : renderRedacted()}
             </div>
 
             {/* Hazard-specific: Stealth & Description */}
@@ -381,7 +388,7 @@ export default function CreatureCard({
             <div className="creature-section combat-stats">
                 <div onContextMenu={(e) => handleContextMenu(e, 'ac')}>
                     <strong>AC</strong>{' '}
-                    {isGM || reveal.ac === 'precise' ? (
+                    {gmView || reveal.ac === 'precise' ? (
                         ac
                     ) : reveal.ac === 'estimate' || reveal.ac === 'false' ? (
                         <span style={{ color: getRatingColor(reveal.ac === 'false' ? falseData.ac : getACRating(ac, level)) }}>
@@ -397,7 +404,7 @@ export default function CreatureCard({
                 </div>
                 <div onContextMenu={(e) => handleContextMenu(e, 'hp')}>
                     <strong>HP</strong> {' '}
-                    {isGM || reveal.hp === 'precise' ? (
+                    {gmView || reveal.hp === 'precise' ? (
                         <>{hp} {hpDetails && `(${hpDetails})`}</>
                     ) : reveal.hp === 'estimate' || reveal.hp === 'false' ? (
                         <span style={{ color: getRatingColor(reveal.hp === 'false' ? falseData.hp : getHPRating(hp, level)) }}>
@@ -413,7 +420,7 @@ export default function CreatureCard({
                     {immunities.length > 0 && (
                         <div onContextMenu={(e) => handleContextMenu(e, 'immunities')}>
                             <strong>Immunities</strong> {' '}
-                            {isGM || reveal.immunities !== 'hidden'
+                            {gmView || reveal.immunities !== 'hidden'
                                 ? immunities.map(i => i.type).join(', ')
                                 : renderRedacted()}
                         </div>
@@ -421,15 +428,15 @@ export default function CreatureCard({
                     {resistances.length > 0 && (
                         <div onContextMenu={(e) => handleContextMenu(e, 'resistances')}>
                             <strong>Resistances</strong> {' '}
-                            {isGM || reveal.resistances !== 'hidden'
-                                ? resistances.map(r => `${r.type}${reveal.resistances === 'precise' || isGM ? ` ${r.value}` : ''}`).join(', ')
+                            {gmView || reveal.resistances !== 'hidden'
+                                ? resistances.map(r => `${r.type}${reveal.resistances === 'precise' || gmView ? ` ${r.value}` : ''}`).join(', ')
                                 : renderRedacted()}
                         </div>
                     )}
                     {(weaknesses.length > 0 || (reveal.weaknesses === 'false' && falseData?.weaknesses?.length > 0)) && (
                         <div onContextMenu={(e) => handleContextMenu(e, 'weaknesses')}>
                             <strong>Weaknesses</strong> {' '}
-                            {isGM ? (
+                            {gmView ? (
                                 weaknesses.map(w => `${w.type} ${w.value}`).join(', ')
                             ) : reveal.weaknesses === 'hidden' ? (
                                 renderRedacted()
@@ -481,7 +488,7 @@ export default function CreatureCard({
             <div className="creature-section info">
                 <div onContextMenu={(e) => handleContextMenu(e, 'perception')}>
                     <strong>Perception</strong>{' '}
-                    {isGM || reveal.perception === 'precise' ? (
+                    {gmView || reveal.perception === 'precise' ? (
                         <>
                             {formatBonus(perception)}
                             {senses.length > 0 && (
@@ -499,7 +506,7 @@ export default function CreatureCard({
                             <span style={{ color: getRatingColor(reveal.perception === 'false' ? falseData.perception : getPerceptionRating(perception, level)) }}>
                                 ({reveal.perception === 'false' ? falseData.perception : getPerceptionRating(perception, level)})
                             </span>
-                            {senses.length > 0 && (isGM || reveal.senses !== 'hidden') && (
+                            {senses.length > 0 && (gmView || reveal.senses !== 'hidden') && (
                                 <>; {senses.map(s => {
                                     if (typeof s === 'string') return s;
                                     let label = s.type.replace(/-/g, ' ');
@@ -520,7 +527,7 @@ export default function CreatureCard({
             </div>
 
             {/* GM Only section */}
-            {isGM && (
+            {gmView && (
                 <>
                     <div className="creature-divider gm-divider" />
                     <div className="creature-section gm-only">

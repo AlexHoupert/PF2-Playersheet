@@ -190,6 +190,31 @@ test('runtime views do not carry legacy setDb or character condition contracts',
     });
 });
 
+test('creature presentation uses shared reveal constants and encounter actor sheets use real callbacks', () => {
+    const creatureCardSource = readSource('src/shared/components/CreatureCard.jsx');
+    const bestiarySource = readSource('src/admin/BestiaryView.jsx');
+    const loreSource = readSource('src/player/views/LoreView.jsx');
+    const encounterPanelsSource = readSource('src/admin/encounter/EncounterPanels.jsx');
+    const partySource = readSource('src/player/PartyScreen.jsx');
+    const characterCardSource = readSource('src/admin/components/CharacterCard.jsx');
+
+    assert.match(creatureCardSource, /normalizeCreatureRevealState/);
+    assert.match(creatureCardSource, /onSkillClick/);
+    assert.match(creatureCardSource, /buildCreatureSkillViewModel/);
+    assert.match(bestiarySource, /buildBestiaryCreatureEntries/);
+    assert.match(loreSource, /buildBestiaryCreatureEntries/);
+    assert.equal(bestiarySource.includes('const DEFAULT_REVEAL_STATE'), false);
+    assert.equal(creatureCardSource.includes('const DEFAULT_REVEAL_STATE'), false);
+    assert.match(encounterPanelsSource, /ActorSheetCard/);
+    assert.match(partySource, /ActorSheetCard/);
+    assert.equal(encounterPanelsSource.includes('setModalMode={() =>'), false);
+    assert.equal(encounterPanelsSource.includes('setModalData={() =>'), false);
+    assert.match(characterCardSource, /ActorSheetCard/);
+    assert.equal(characterCardSource.includes('StatsView'), false);
+    assert.equal(characterCardSource.includes('InventoryView'), false);
+    assert.equal(characterCardSource.includes('MagicView'), false);
+});
+
 test('encounter effect UI uses actor effects instead of prompt condition writes', () => {
     const encounterSource = readSource('src/admin/EncounterView.jsx');
     const dialogSource = readSource('src/admin/encounter/EncounterEffectDialogs.jsx');

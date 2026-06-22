@@ -87,6 +87,21 @@ Remaining Player-local edit paths:
 - `CompanionTab` reads and writes owned companion Actors and stores companion conditions as `actorEffects`.
 - Static guards now fail runtime reintroduction of `character.conditions`, `character.companion`, root `db.characters`, broad `setDb`, broad V2 diffs, or unguarded production `/api/files/save`.
 
+## Completed In Shared Presentation Wave
+
+- Creature reveal defaults and creature list view models are centralized in `src/shared/bestiary/creaturePresentation.js`.
+- GM Bestiary and Player Lore Bestiary now share the same creature metadata/custom/static merge path.
+- `CreatureCard` supports clickable creature skills and abilities through explicit callbacks while preserving player reveal restrictions.
+- Encounter creature details reuse the shared creature card interactions for GM skill/ability inspection.
+- `ActorSheetCard` is the shared composition surface for Stats, Inventory, Magic, Feats, Impulses, and Pact display.
+- Admin `CharacterCard` is now a thin compatibility wrapper around `ActorSheetCard`.
+- Encounter and Party selected-player details no longer depend on empty modal callback stubs.
+
+Remaining presentation cleanup:
+
+- Player Inventory, Shop, Loot, and GM Items still have similar item-row rendering. Extract a shared `ItemRow`/`CatalogItemRow` in a future UI cleanup wave.
+- Admin catalog previews for Spells, Actions, Feats, and Impulses already share `ContentPreviewCard`; harden editor/list reuse in a future catalog UI wave.
+
 ## Remaining By Domain
 
 ### Campaign Compatibility

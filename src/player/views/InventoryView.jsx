@@ -26,7 +26,10 @@ export function InventoryView({
     onClaimLoot,
     onConsumeItem,
     onClaimGold,
-    onSplitGold
+    onSplitGold,
+    readOnly = false,
+    allowLoot = true,
+    showUtilityActions = true
 }) {
     const [itemSubTab, setItemSubTab] = useState('Equipment');
     const [vialActivation, setVialActivation] = useState(null); // item being converted via Versatile Vial
@@ -121,7 +124,7 @@ export function InventoryView({
     };
 
     const consumeWandFromInventory = (wandItem) => {
-        if (!onUpdateCharacter) {
+        if (readOnly || !onUpdateCharacter) {
             onInspectItem(wandItem);
             return;
         }
@@ -151,6 +154,10 @@ export function InventoryView({
         let clickHandler;
         if (enableEquipTap && isEquipableInventoryItem(item)) {
             clickHandler = () => {
+                if (readOnly) {
+                    onInspectItem(merged);
+                    return;
+                }
                 const tapKey = String(item?.name || '');
                 const now = Date.now();
                 const last = equipTapRef.current;
@@ -188,6 +195,10 @@ export function InventoryView({
 
             // Let's implement local double tap awareness for generic items too
             clickHandler = () => {
+                if (readOnly) {
+                    onInspectItem(merged);
+                    return;
+                }
                 // Reuse local tap ref?
                 const tapKey = String(item?.name || '');
                 const now = Date.now();
@@ -451,6 +462,7 @@ export function InventoryView({
         <div className="sub-tabs">
             {['Equipment', 'Consumables', 'Misc', /*hasLoot ? 'Loot' : null*/ 'Loot'].map(t => {
                 const isLoot = t === 'Loot';
+                if (isLoot && !allowLoot) return null;
                 const visibleBags = lootBags.filter(b => !b.isLocked);
                 // Check items AND gold for visibility
                 const bagsWithLoot = visibleBags.filter(b => (b.items && b.items.some(i => !i.claimedBy)) || (b.goldValue || 0) > 0);
@@ -485,7 +497,7 @@ export function InventoryView({
             )}
             {itemSubTab === 'Consumables' && consumableItems.map(({ item, index }) => renderRow(item, index))}
             {itemSubTab === 'Misc' && miscItems.map(({ item, index }) => renderRow(item, index))}
-            {itemSubTab === 'Loot' && lootItems.map(({ item, index }) => (
+            {allowLoot && itemSubTab === 'Loot' && lootItems.map(({ item, index }) => (
                 <div key={`${item.name}-${index}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', borderBottom: '1px solid #444' }}>
                     <div>
                         <div style={{ fontWeight: 'bold', color: '#ffb74d' }}>{item.name}</div>
@@ -501,6 +513,7 @@ export function InventoryView({
                             cursor: 'pointer'
                         }}
                         onClick={() => {
+                            if (readOnly) return;
                             // Claim Loot Logic for items ALREADY in inventory but marked as loot
                             onUpdateCharacter(c => {
                                 const invItem = c.inventory[index];
@@ -521,7 +534,7 @@ export function InventoryView({
                 onUpdateCharacter={onUpdateCharacter}
             />
 
-            {itemSubTab === 'Loot' && (
+            {allowLoot && itemSubTab === 'Loot' && (
                 (() => {
                     const visibleBags = lootBags.filter(b => !b.isLocked);
                     const bagsWithLoot = visibleBags.filter(b => (b.items && b.items.some(i => !i.claimedBy)) || b.goldValue > 0);
@@ -553,7 +566,7 @@ export function InventoryView({
                                                     const val = parseFloat(amount);
                                                     if (isNaN(val) || val <= 0 || val > bag.goldValue) return;
 
-                                                    if (onClaimGold) onClaimGold(bag.id, val);
+                                                    if (!readOnly && onClaimGold) onClaimGold(bag.id, val);
                                                 }}
                                             >
                                                 Take
@@ -563,7 +576,7 @@ export function InventoryView({
                                                 style={{ fontSize: '0.8em', padding: '4px 8px', background: '#e65100' }}
                                                 onClick={() => {
                                                     if (!confirm(`Split ${bag.goldValue} GP evenly among all party members?`)) return;
-                                                    if (onSplitGold) onSplitGold(bag.id);
+                                                    if (!readOnly && onSplitGold) onSplitGold(bag.id);
                                                 }}
                                             >
                                                 Split Party
@@ -596,7 +609,7 @@ export function InventoryView({
                                                 style={{ margin: '0 0 0 10px', padding: '6px 14px', fontSize: '0.9em', width: 'auto', flexShrink: 0, height: 'auto' }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (onClaimLoot) {
+                                                    if (!readOnly && onClaimLoot) {
                                                         // QTY Prompt only if stack > 1
                                                         if ((item.qty || 1) > 1) {
                                                             const res = prompt(`Claim how many ${item.name}? (Max: ${item.qty})`, item.qty);
@@ -621,6 +634,7 @@ export function InventoryView({
                     });
                 })()
             )}
+            {showUtilityActions && !readOnly && (
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
                 <button className="btn-add-condition" style={{ flex: 1, margin: 0 }} onClick={onOpenShop}>
                     + Open Shop
@@ -632,6 +646,7 @@ export function InventoryView({
                     ✏️ Create Item
                 </button>
             </div>
+            )}
 
             {/* Custom item creator overlay */}
             {showItemCreator && (

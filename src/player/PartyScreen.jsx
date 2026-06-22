@@ -7,10 +7,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useCampaign } from '../shared/context/CampaignContext';
 import CreatureCard from '../shared/components/CreatureCard';
-import { CharacterCard } from '../admin/components/CharacterCard';
+import { ActorSheetCard } from '../shared/components/ActorSheetCard';
 import InitiativeCard from '../admin/components/InitiativeCard';
 import { selectBestiaryRevealState, selectCustomCreatureData } from '../shared/db/selectors/bestiarySelectors';
 import { selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
+import { selectVisibleCreatureFields } from '../shared/bestiary/creaturePresentation';
 import './PartyScreen.css';
 
 export default function PartyScreen() {
@@ -141,8 +142,13 @@ export default function PartyScreen() {
                 <div className="party-info">
                     <div className="party-info__header">
                         <h2>
-                            {selectedCombatant.type === 'creature' && getRevealState(selectedCombatant.creatureId)?.name !== 'precise'
-                                ? (selectedCombatant.unknownName || '???')
+                            {selectedCombatant.type === 'creature'
+                                ? selectVisibleCreatureFields({
+                                    name: selectedCombatant.name,
+                                    unknownName: selectedCombatant.unknownName,
+                                    level: selectedCombatant.level,
+                                    revealState: getRevealState(selectedCombatant.creatureId),
+                                }, 'player').name
                                 : selectedCombatant.name}
                         </h2>
                     </div>
@@ -158,12 +164,20 @@ export default function PartyScreen() {
                             <div className="party-info__loading">Loading...</div>
                         )}
                         {selectedCombatant.type === 'player' && infoCharData && (
-                            <CharacterCard
+                            <ActorSheetCard
                                 character={infoCharData}
                                 db={db}
-                                updateCharacter={() => { }}
-                                setModalMode={() => { }}
-                                setModalData={() => { }}
+                                updateCharacter={() => {}}
+                                mode="party"
+                                capabilities={{
+                                    editable: false,
+                                    showInventory: true,
+                                    showMagic: true,
+                                    showPacts: false,
+                                    allowShop: false,
+                                    allowLoot: false,
+                                    localModals: true,
+                                }}
                             />
                         )}
                     </div>

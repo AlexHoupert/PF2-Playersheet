@@ -2,12 +2,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import CreatureCard from '../../shared/components/CreatureCard';
 import CreatureAbilityModal from '../../shared/components/CreatureAbilityModal';
+import CreatureSkillDetailDialog from '../../shared/components/CreatureSkillDetailDialog';
 import {
     selectBestiaryCreatureMetadata,
     selectCustomCreatures,
     selectCustomCreatureData,
 } from '../../shared/db/selectors/bestiarySelectors';
 import { selectLoreArticles } from '../../shared/db/selectors/loreSelectors';
+import { buildBestiaryCreatureEntries, selectVisibleCreatureFields } from '../../shared/bestiary/creaturePresentation';
 
 const LORE_CATEGORIES = ['History', 'Locations', 'NPCs', 'Bestiary'];
 
@@ -172,47 +174,12 @@ export default function LoreView({ db, lore, bestiary }) {
 
     // Merge INDEX data + custom creatures with db metadata - show only creatures with bestiary=true
     const bestiaryCreatures = useMemo(() => {
-        const dbMetadata = selectBestiaryCreatureMetadata(selectorDb);
-
-        const catalogEntries = catalogCreatures
-            .filter(item => dbMetadata[item.id]?.bestiary)
-            .map(item => {
-                const meta = dbMetadata[item.id] || {};
-                return {
-                    id: item.id,
-                    sourceFile: item.sourceFile,
-                    type: item.type || 'npc',
-                    name: item.name || 'Unknown',
-                    level: item.level ?? 0,
-                    group: meta.group || 'Uncategorized',
-                    bestiary: meta.bestiary,
-                    revealState: meta.revealState,
-                    falseData: meta.falseData,
-                    isCustom: false,
-                };
-            });
-
-        const customEntries = Object.values(selectCustomCreatures(selectorDb))
-            .filter(cc => dbMetadata[cc.id]?.bestiary)
-            .map(cc => {
-                const meta = dbMetadata[cc.id] || {};
-                const sys = cc.data?.system || {};
-                return {
-                    id: cc.id,
-                    sourceFile: null,
-                    type: cc.type || 'npc',
-                    name: cc.name || 'Unknown',
-                    unknownName: cc.data?.unknownName || '???',
-                    level: sys.details?.level?.value ?? 0,
-                    group: meta.group || 'Uncategorized',
-                    bestiary: meta.bestiary,
-                    revealState: meta.revealState,
-                    falseData: meta.falseData,
-                    isCustom: true,
-                };
-            });
-
-        return [...customEntries, ...catalogEntries].sort((a, b) => a.name.localeCompare(b.name));
+        return buildBestiaryCreatureEntries({
+            indexItems: catalogCreatures,
+            customCreatures: selectCustomCreatures(selectorDb),
+            metadata: selectBestiaryCreatureMetadata(selectorDb),
+            includeUnpublished: false,
+        });
     }, [selectorDb, catalogCreatures]);
 
     // Group creatures by their group field
@@ -263,6 +230,7 @@ export default function LoreView({ db, lore, bestiary }) {
 
     // Ability modal state
     const [selectedAbility, setSelectedAbility] = useState(null);
+    const [selectedSkill, setSelectedSkill] = useState(null);
 
     // Collapsible groups state for bestiary (default all expanded)
     const [expandedGroups, setExpandedGroups] = useState({});
@@ -489,8 +457,8 @@ export default function LoreView({ db, lore, bestiary }) {
                                         {isExpanded && (
                                             <div style={{ marginLeft: 12, borderLeft: '1px solid #333', paddingLeft: 5 }}>
                                                 {creatures.map(creature => {
-                                                    const nameVisible = creature.revealState?.name === 'precise';
-                                                    const listName = nameVisible ? creature.name : (creature.unknownName || '???');
+                                                    const visible = selectVisibleCreatureFields(creature, 'player');
+                                                    const listName = visible.name;
                                                     return (
                                                     <div
                                                         key={creature.id}
@@ -512,9 +480,9 @@ export default function LoreView({ db, lore, bestiary }) {
                                                         }}
                                                     >
                                                         <span>{listName}</span>
-                                                        {nameVisible && (
+                                                        {visible.levelVisible && (
                                                             <span style={{ fontSize: '0.8em', color: '#666' }}>
-                                                                Lv. {creature.level}
+                                                                Lv. {visible.level}
                                                             </span>
                                                         )}
                                                     </div>
@@ -556,6 +524,7 @@ export default function LoreView({ db, lore, bestiary }) {
                                         revealState={selectedCreature.revealState}
                                         falseData={selectedCreature.falseData}
                                         onAbilityClick={(ability) => setSelectedAbility(ability)}
+                                        onSkillClick={(skill) => setSelectedSkill(skill)}
                                     />
                                 ) : (
                                     <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>
@@ -575,6 +544,12 @@ export default function LoreView({ db, lore, bestiary }) {
                         <CreatureAbilityModal
                             ability={selectedAbility}
                             onClose={() => setSelectedAbility(null)}
+                        />
+                    )}
+                    {selectedSkill && (
+                        <CreatureSkillDetailDialog
+                            skill={selectedSkill}
+                            onClose={() => setSelectedSkill(null)}
                         />
                     )}
                 </div>

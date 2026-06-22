@@ -11,21 +11,14 @@ import FilterBar from './components/FilterBar';
 import BottomSheet from '../shared/components/BottomSheet';
 import CreatureCard from '../shared/components/CreatureCard';
 import CreatureAbilityModal from '../shared/components/CreatureAbilityModal';
+import CreatureSkillDetailDialog from '../shared/components/CreatureSkillDetailDialog';
 import CreatureEditor from './editors/CreatureEditor';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { getRecallKnowledgeDC, generateFalseData } from '../utils/bestiaryUtils';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
 import { selectCustomAbilityList } from '../shared/db/selectors/abilitySelectors';
 import { selectBestiaryCreatureMetadata, selectCustomCreatures } from '../shared/db/selectors/bestiarySelectors';
-
-// Default reveal state for new creatures
-const DEFAULT_REVEAL_STATE = {
-    name: 'hidden', level: 'hidden', traits: 'hidden', ac: 'hidden',
-    hp: 'hidden', saves: 'hidden', immunities: 'hidden', resistances: 'hidden',
-    weaknesses: 'hidden', speed: 'hidden', attacks: 'hidden', abilities: 'hidden',
-    perception: 'hidden', senses: 'hidden', skills: 'hidden', attributes: 'hidden',
-    size: 'precise'
-};
+import { DEFAULT_CREATURE_REVEAL_STATE, buildBestiaryCreatureEntries } from '../shared/bestiary/creaturePresentation';
 
 // Column priority map for responsive hiding
 const COL_PRIORITY = {
@@ -117,6 +110,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     const [jsonImportText, setJsonImportText] = useState('');
     const [importError, setImportError] = useState('');
     const [selectedAbility, setSelectedAbility] = useState(null);
+    const [selectedSkill, setSelectedSkill] = useState(null);
 
     // Fetch full creature data when preview creature changes
     useEffect(() => {
@@ -142,41 +136,12 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
 
     // ── Data: merge index + custom creatures ─────────────────────────────────
     const creatures = useMemo(() => {
-        const indexItems = getAllCreatures();
-        const customCreatures = Object.values(selectCustomCreatures(db)).map(cData => {
-            const sys = cData.data?.system || {};
-            return {
-                id: cData.id,
-                sourceFile: null,
-                type: cData.type || 'npc',
-                name: cData.name || 'Unnamed',
-                level: sys.details?.level?.value ?? 0,
-                rarity: sys.traits?.rarity || 'common',
-                traits: sys.traits?.value || [],
-                isCustom: true
-            };
+        return buildBestiaryCreatureEntries({
+            indexItems: getAllCreatures(),
+            customCreatures: selectCustomCreatures(db),
+            metadata: selectBestiaryCreatureMetadata(db),
+            includeUnpublished: true,
         });
-        const distinctItems = [...customCreatures, ...indexItems];
-        const dbMetadata = selectBestiaryCreatureMetadata(db);
-        const seenIds = new Set();
-        return distinctItems
-            .filter(item => { if (seenIds.has(item.id)) return false; seenIds.add(item.id); return true; })
-            .map(item => {
-                const meta = dbMetadata[item.id] || {};
-                return {
-                    id: item.id, sourceFile: item.sourceFile,
-                    type: item.type || 'npc',
-                    name: item.name || 'Unknown',
-                    level: item.level ?? 0,
-                    rarity: item.rarity || 'common',
-                    traits: item.traits || [],
-                    isCustom: item.isCustom || false,
-                    group: meta.group || 'Uncategorized',
-                    bestiary: meta.bestiary || false,
-                    revealState: meta.revealState || { ...DEFAULT_REVEAL_STATE },
-                    falseData: meta.falseData
-                };
-            });
     }, [db]);
 
     // ── Filter options ────────────────────────────────────────────────────────
@@ -269,7 +234,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
             id,
             group: creatureData.group || 'Uncategorized',
             bestiary: creatureData.bestiary || false,
-            revealState: creatureData.revealState || { ...DEFAULT_REVEAL_STATE },
+            revealState: creatureData.revealState || { ...DEFAULT_CREATURE_REVEAL_STATE },
             falseData: creatureData.falseData || generateFalseData({
                 hp: creatureData.data?.system?.attributes?.hp?.max ?? 0,
                 fortitude: creatureData.data?.system?.saves?.fortitude?.value ?? 0,
@@ -336,7 +301,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                     id,
                     group: creature.group || 'Uncategorized',
                     bestiary: true,
-                    revealState: { ...DEFAULT_REVEAL_STATE },
+                    revealState: { ...DEFAULT_CREATURE_REVEAL_STATE },
                     falseData: generateFalseData({ hp: 0, fortitude: 0, reflex: 0, will: 0, ac: 10, perception: 0 }, creature.level ?? 0)
                 };
             return newEntry;
@@ -356,7 +321,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
             );
             const newEntry = hasMetadata
                 ? { ...existing, group: newGroup.trim() || 'Uncategorized' }
-                : { id, group: newGroup.trim() || 'Uncategorized', bestiary: false, revealState: { ...DEFAULT_REVEAL_STATE } };
+                : { id, group: newGroup.trim() || 'Uncategorized', bestiary: false, revealState: { ...DEFAULT_CREATURE_REVEAL_STATE } };
             return newEntry;
         }));
         setContextMenu(null);
@@ -370,7 +335,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         try {
             const parsed = JSON.parse(jsonImportText);
             if (!parsed.name) throw new Error('JSON must have a name field');
-            setEditingCreature({ id: null, type: parsed.type === 'hazard' ? 'hazard' : 'npc', data: parsed, bestiary: false, revealState: { ...DEFAULT_REVEAL_STATE } });
+            setEditingCreature({ id: null, type: parsed.type === 'hazard' ? 'hazard' : 'npc', data: parsed, bestiary: false, revealState: { ...DEFAULT_CREATURE_REVEAL_STATE } });
             setImportError('');
         } catch (err) { setImportError('Invalid JSON: ' + err.message); }
     };
@@ -385,7 +350,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
             const level = creature.data?.system?.details?.level?.value ?? 0;
             return [{
                 id: creature.id, group: 'Uncategorized', bestiary: false,
-                revealState: { ...DEFAULT_REVEAL_STATE },
+                revealState: { ...DEFAULT_CREATURE_REVEAL_STATE },
                 falseData: generateFalseData({ hp: 0, fortitude: 0, reflex: 0, will: 0, ac: 10, perception: 0 }, level)
             }];
         });
@@ -457,6 +422,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                         falseData={previewCreature.falseData}
                         onRevealChange={(field, state) => updateRevealState(previewCreature.id, field, state)}
                         onAbilityClick={(ability) => setSelectedAbility(ability)}
+                        onSkillClick={(skill) => setSelectedSkill(skill)}
                     />
                 ) : (
                     <div style={{ padding: 20, textAlign: 'center', color: '#888' }}>Loading creature data...</div>
@@ -484,7 +450,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                             <button
                                 className="btn-add-condition"
                                 style={{ margin: 0, width: 'auto', background: '#4caf50' }}
-                                onClick={() => setEditingCreature({ type: 'npc', data: {}, bestiary: false, revealState: { ...DEFAULT_REVEAL_STATE } })}
+                                onClick={() => setEditingCreature({ type: 'npc', data: {}, bestiary: false, revealState: { ...DEFAULT_CREATURE_REVEAL_STATE } })}
                             >
                                 + New
                             </button>
@@ -675,6 +641,13 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                     ability={selectedAbility}
                     onClose={() => setSelectedAbility(null)}
                     onContentLinkClick={onContentLinkClick}
+                />
+            )}
+
+            {selectedSkill && (
+                <CreatureSkillDetailDialog
+                    skill={selectedSkill}
+                    onClose={() => setSelectedSkill(null)}
                 />
             )}
 
