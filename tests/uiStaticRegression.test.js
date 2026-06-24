@@ -60,6 +60,24 @@ test('admin spells use catalog override fallback instead of deployed-only file w
     assert.match(editorSource, /readJsonApiResponse\(res, 'Save spell'\)/);
 });
 
+test('player spell catalog uses catalog overrides and preserves rank zero spells', () => {
+    const overlaySource = readSource('src/player/components/LazyCatalogOverlay.jsx');
+    const playerSource = readSource('src/player/PlayerAppController.jsx');
+    const inventoryActionsSource = readSource('src/player/hooks/usePlayerInventoryActions.js');
+    const spellSelectorSource = readSource('src/player/modals/SpellScrollSelectorModal.jsx');
+    const itemCatalogSource = readSource('src/player/ItemCatalog.jsx');
+    const itemsLayoutSource = readSource('src/admin/items/ItemsViewLayout.jsx');
+
+    assert.match(overlaySource, /mergeCatalogIndexWithOverrides/);
+    assert.match(overlaySource, /items=\{mergeCatalogIndexWithOverrides\(state\.config\.items, db, mode\)\}/);
+    assert.match(playerSource, /<LazyCatalogOverlay[\s\S]*mode="spell"[\s\S]*db=\{db\}/);
+    assert.match(inventoryActionsSource, /Number\(item\.level\)/);
+    assert.equal(inventoryActionsSource.includes('item.level && typeof item.level'), false);
+    assert.match(spellSelectorSource, /mergeCatalogIndexWithOverrides\(SPELL_INDEX_ITEMS, db, 'spell'\)/);
+    assert.match(itemsLayoutSource, /<SpellScrollSelectorModal[\s\S]*db=\{db\}/);
+    assert.match(itemCatalogSource, /const hasLevel = item\.level !== undefined/);
+});
+
 test('admin feats and impulses use catalog override production editing', () => {
     const featViewSource = readSource('src/admin/FeatsView.jsx');
     const featEditorSource = readSource('src/admin/editors/FeatEditor.jsx');

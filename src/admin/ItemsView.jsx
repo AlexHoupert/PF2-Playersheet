@@ -472,6 +472,7 @@ export default function ItemsView({ db, onInspectItem }) {
             contextSubMenu={contextSubMenu}
             COLUMNS_CONFIG={COLUMNS_CONFIG}
             dataActions={dataActions}
+            db={db}
             editingItem={editingItem}
             executeItemAction={executeItemAction}
             filterOptions={FILTER_OPTIONS}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ItemCatalog from '../ItemCatalog';
+import { mergeCatalogIndexWithOverrides } from '../../shared/db/selectors/catalogOverrideSelectors';
 
 const LOADERS = {
     feat: async () => {
@@ -28,7 +29,7 @@ const LOADERS = {
     },
 };
 
-export default function LazyCatalogOverlay({ mode, onSelect, onClose }) {
+export default function LazyCatalogOverlay({ mode, db, onSelect, onClose }) {
     const [state, setState] = useState({ loading: true, error: null, config: null });
 
     useEffect(() => {
@@ -95,7 +96,7 @@ export default function LazyCatalogOverlay({ mode, onSelect, onClose }) {
     return (
         <ItemCatalog
             title={state.config.title}
-            items={state.config.items}
+            items={mergeCatalogIndexWithOverrides(state.config.items, db, mode)}
             filterOptions={state.config.filterOptions}
             onSelect={onSelect}
             onClose={onClose}

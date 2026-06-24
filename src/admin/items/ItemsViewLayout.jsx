@@ -32,6 +32,7 @@ export default function ItemsViewLayout({
     contextSubMenu,
     COLUMNS_CONFIG,
     dataActions,
+    db,
     editingItem,
     executeItemAction,
     filterOptions,
@@ -582,6 +583,7 @@ export default function ItemsViewLayout({
                 <SpellScrollSelectorModal
                     rank={pendingSpellAction.rank}
                     type={pendingSpellAction.type}
+                    db={db}
                     ignoreAvailability={true}
                     onCancel={() => setPendingSpellAction(null)}
                     onSelect={(spell) => {

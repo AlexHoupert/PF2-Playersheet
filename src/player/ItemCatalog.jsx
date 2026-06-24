@@ -132,19 +132,22 @@ export default function ItemCatalog({ title, items, filterOptions, onSelect, onC
 
             {/* List */}
             <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.3)', borderRadius: 5, padding: 5 }}>
-                {paginatedItems.map((item, idx) => (
+                {paginatedItems.map((item, idx) => {
+                    const hasLevel = item.level !== undefined && item.level !== null && item.level !== '';
+                    return (
                     <div key={idx} className="item-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ flex: 1 }}>
                             <div className="item-name">{item.name}</div>
                             <div style={{ fontSize: '0.8em', color: '#888' }}>
-                                {item.type} {item.level ? `Lv${item.level}` : ''} {item.traits?.slice(0, 3).join(', ')}
+                                {item.type} {hasLevel ? `Lv${item.level}` : ''} {item.traits?.slice(0, 3).join(', ')}
                             </div>
                         </div>
                         <button className="btn-add-condition" style={{ width: 'auto', margin: 0, padding: '5px 15px' }} onClick={() => onSelect(item)}>
                             Add
                         </button>
                     </div>
-                ))}
+                    );
+                })}
                 {paginatedItems.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: '#666' }}>No items found.</div>}
             </div>
 

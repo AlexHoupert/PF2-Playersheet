@@ -423,7 +423,8 @@ export function usePlayerInventoryActions({
             } else if (type === 'spell') {
                 if (!c.magic) c.magic = { list: [] };
                 if (!c.magic.list) c.magic.list = [];
-                const level = item.level && typeof item.level === 'number' ? String(item.level) : "1";
+                const numericLevel = Number(item.level);
+                const level = Number.isFinite(numericLevel) ? String(numericLevel) : "1";
                 newItem.level = level;
                 c.magic.list.push(newItem);
             } else if (type === 'impulse') {

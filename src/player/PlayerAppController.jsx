@@ -479,6 +479,7 @@ export default function PlayerAppController() {
                 catalogMode === 'feat' && (
                     <LazyCatalogOverlay
                         mode="feat"
+                        db={db}
                         onSelect={(item) => addToCharacter(item, 'feat')}
                         onClose={() => setCatalogMode(null)}
                     />
@@ -489,6 +490,7 @@ export default function PlayerAppController() {
                 catalogMode === 'impulse' && (
                     <LazyCatalogOverlay
                         mode="impulse"
+                        db={db}
                         onClose={() => setCatalogMode(null)}
                         onSelect={(item) => addToCharacter(item, 'impulse')}
                     />
@@ -499,6 +501,7 @@ export default function PlayerAppController() {
                 catalogMode === 'spell' && (
                     <LazyCatalogOverlay
                         mode="spell"
+                        db={db}
                         onSelect={(item) => addToCharacter(item, 'spell')}
                         onClose={() => setCatalogMode(null)}
                     />
@@ -511,6 +514,7 @@ export default function PlayerAppController() {
                     <SpellScrollSelectorModal
                         rank={actionModal.rank}
                         type={actionModal.type}
+                        db={db}
                         onCancel={() => setActionModal({ mode: null, item: null })}
                         onSelect={(spell) => {
                             const { baseItem, type, rank } = actionModal;

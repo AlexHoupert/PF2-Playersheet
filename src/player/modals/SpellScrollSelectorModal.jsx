@@ -1,12 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { SPELL_INDEX_ITEMS } from '../../shared/catalog/spellIndex';
+import { mergeCatalogIndexWithOverrides } from '../../shared/db/selectors/catalogOverrideSelectors';
 
-export default function SpellScrollSelectorModal({ rank, type, onSelect, onCancel, ignoreAvailability = false }) {
+export default function SpellScrollSelectorModal({ rank, type, db, onSelect, onCancel, ignoreAvailability = false }) {
     const [search, setSearch] = useState('');
+    const spellItems = useMemo(
+        () => mergeCatalogIndexWithOverrides(SPELL_INDEX_ITEMS, db, 'spell'),
+        [db]
+    );
 
     const availableSpells = useMemo(() => {
         const lowerSearch = search.toLowerCase();
-        return SPELL_INDEX_ITEMS.filter(spell => {
+        return spellItems.filter(spell => {
             if (spell.level !== rank) return false;
 
             // Availability Check
@@ -17,7 +22,7 @@ export default function SpellScrollSelectorModal({ rank, type, onSelect, onCance
 
             return spell.name.toLowerCase().includes(lowerSearch);
         });
-    }, [rank, type, search, ignoreAvailability]);
+    }, [rank, type, search, ignoreAvailability, spellItems]);
 
     return (
         <div style={{
