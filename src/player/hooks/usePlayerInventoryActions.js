@@ -511,14 +511,6 @@ export function usePlayerInventoryActions({
         const itemName = targetItem?.name || targetItem;
         if (!itemName) return;
 
-        console.log("ToggleInventory Target:", {
-            name: itemName,
-            index: targetItem._index,
-            equipped: targetItem.equipped,
-            prepared: targetItem.prepared,
-            added: targetItem.addedAt
-        });
-
         let shieldFetchData = null;
         const char = character;
         if (!char) return;

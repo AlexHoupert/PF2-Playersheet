@@ -3,6 +3,7 @@ import { useCampaign } from '../shared/context/CampaignContext';
 import ShopView from './ShopView';
 
 import SpellScrollSelectorModal from './modals/SpellScrollSelectorModal';
+import { deepClone } from '../shared/utils/deepClone';
 import ItemActionsModal from './ItemActionsModal';
 import { StatsView } from './views/StatsView';
 import { ActionsView } from './views/ActionsView';
@@ -520,7 +521,7 @@ export default function PlayerAppController() {
                             const { baseItem, type, rank } = actionModal;
                             const newItem = { ...baseItem };
                             // Clone system to avoid mutation
-                            newItem.system = baseItem.system ? JSON.parse(JSON.stringify(baseItem.system)) : {};
+                            newItem.system = baseItem.system ? deepClone(baseItem.system) : {};
 
                             // Preserve linkage to Shop Index for properties lookup
                             newItem.system.originalName = baseItem.name;

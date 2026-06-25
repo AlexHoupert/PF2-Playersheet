@@ -151,21 +151,22 @@ export default function AdminApp() {
         }
     };
 
+    const [rebuildStatus, setRebuildStatus] = useState(null);
+
     const handleRebuild = async (type) => {
-        // ... (Keep existing rebuild logic? It relies on fetch to local server API check line 127 in orig)
-        // I'll just keep the simplified console log or the real fetch if I had it.
-        // Original code:
-        /*
-        setRebuildStatus({ type, status: 'running', message: `Rebuilding ${type} index...` });
+        setRebuildStatus({ type, status: 'running' });
         try {
             const res = await fetch(`/api/admin/rebuild-index/${type}`, { method: 'POST' });
-             ... 
+            const data = await res.json();
+            if (!res.ok) {
+                setRebuildStatus({ type, status: 'error', message: data.error || 'Rebuild failed' });
+            } else {
+                setRebuildStatus({ type, status: 'done', message: data.message || 'Done' });
+            }
+        } catch (err) {
+            setRebuildStatus({ type, status: 'error', message: String(err) });
         }
-        */
-        // I'll preserve it roughly.
-        console.log("Rebuild requested", type);
     };
-    const [rebuildStatus, setRebuildStatus] = useState(null); // Re-add state
 
     // --- RENDER ---
     const characters = selectActiveCharacters(activeCampaign);

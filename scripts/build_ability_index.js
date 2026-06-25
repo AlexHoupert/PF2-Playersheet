@@ -11,6 +11,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getFilesRecursively, writeJsonOutput } from './buildUtils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,16 +21,6 @@ const GLOSSARY_DIR   = path.join(__dirname, '../ressources/bestiary-ability-glos
 const OUTPUT_FILE    = path.join(__dirname, '../src/data/ability_index.json');
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-
-function getFilesRecursively(dir) {
-    if (!fs.existsSync(dir)) return [];
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    return entries.flatMap(e =>
-        e.isDirectory()
-            ? getFilesRecursively(path.join(dir, e.name))
-            : [path.join(dir, e.name)]
-    );
-}
 
 function toTypeCode(actionType, actionCost) {
     if (actionType === 'passive')  return 'P';
@@ -125,8 +116,5 @@ const output = {
     items: rows,
 };
 
-const dir = path.dirname(OUTPUT_FILE);
-if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-fs.writeFileSync(OUTPUT_FILE, JSON.stringify(output));
+writeJsonOutput(OUTPUT_FILE, output);
 console.log(`Built ability index: ${rows.length} unique abilities.`);

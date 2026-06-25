@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { getProgress as getProgressState, splitProgressEntries } from '../shared/db/domain/progressReducers';
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function uid() {
-    return Math.random().toString(36).slice(2, 9);
-}
+import { createInstanceId } from '../shared/db/domain/inventoryReducers';
 
 function getProgress(campaign) {
     return {
@@ -189,7 +184,7 @@ function ReputationAdmin({ progress, save, archiveEntry, restoreEntry }) {
 
     const addFaction = () => {
         updateFactions(f => f.push({
-            id: uid(), name: 'New Faction', icon: '🤝',
+            id: createInstanceId('pid'), name: 'New Faction', icon: '🤝',
             currentPoints: 0, maxPoints: 10, ranks: [],
         }));
     };
@@ -212,7 +207,7 @@ function ReputationAdmin({ progress, save, archiveEntry, restoreEntry }) {
             const faction = f.find(x => x.id === factionId);
             if (faction) {
                 if (!faction.ranks) faction.ranks = [];
-                faction.ranks.push({ id: uid(), threshold: 0, title: 'New Rank', perks: [] });
+                faction.ranks.push({ id: createInstanceId('pid'), threshold: 0, title: 'New Rank', perks: [] });
             }
         });
     };
@@ -241,7 +236,7 @@ function ReputationAdmin({ progress, save, archiveEntry, restoreEntry }) {
                 const rank = faction.ranks.find(r => r.id === rankId);
                 if (rank) {
                     if (!rank.perks) rank.perks = [];
-                    rank.perks.push({ id: uid(), name: 'New Perk', description: '' });
+                    rank.perks.push({ id: createInstanceId('pid'), name: 'New Perk', description: '' });
                 }
             }
         });
@@ -389,7 +384,7 @@ function ResearchAdmin({ progress, save, archiveEntry, restoreEntry }) {
 
     const addTopic = () => {
         updateTopics(t => t.push({
-            id: uid(), name: 'New Topic', currentPoints: 0, maxPoints: 10,
+            id: createInstanceId('pid'), name: 'New Topic', currentPoints: 0, maxPoints: 10,
             dc: null, dcModified: null, dcRevealed: false, infoPoints: [],
         }));
     };
@@ -412,7 +407,7 @@ function ResearchAdmin({ progress, save, archiveEntry, restoreEntry }) {
             const topic = t.find(x => x.id === topicId);
             if (topic) {
                 if (!topic.infoPoints) topic.infoPoints = [];
-                topic.infoPoints.push({ id: uid(), text: '', revealed: false });
+                topic.infoPoints.push({ id: createInstanceId('pid'), text: '', revealed: false });
             }
         });
     };
@@ -553,7 +548,7 @@ function CalciferAdmin({ progress, save, archiveEntry, restoreEntry }) {
 
     const addStage = () => {
         updateStages(s => s.push({
-            id: uid(), threshold: 0, name: 'New Stage', icon: '🔥',
+            id: createInstanceId('pid'), threshold: 0, name: 'New Stage', icon: '🔥',
             creature: null, boons: [],
         }));
     };
@@ -576,7 +571,7 @@ function CalciferAdmin({ progress, save, archiveEntry, restoreEntry }) {
             const stage = s.find(x => x.id === stageId);
             if (stage) {
                 if (!stage.boons) stage.boons = [];
-                stage.boons.push({ id: uid(), name: 'New Boon', description: '' });
+                stage.boons.push({ id: createInstanceId('pid'), name: 'New Boon', description: '' });
             }
         });
     };
@@ -771,7 +766,7 @@ function MaterialsAdmin({ progress, save, archiveEntry, restoreEntry }) {
     const addElement = () => {
         const def = DEFAULT_ELEMENTS[elements.length % DEFAULT_ELEMENTS.length];
         updateElements(e => e.push({
-            id: uid(), name: def.name, icon: def.icon, color: def.color,
+            id: createInstanceId('pid'), name: def.name, icon: def.icon, color: def.color,
             currentProgress: 0, maxProgress: 100, tiers: [],
         }));
     };
@@ -794,7 +789,7 @@ function MaterialsAdmin({ progress, save, archiveEntry, restoreEntry }) {
             const el = e.find(x => x.id === elId);
             if (el) {
                 if (!el.tiers) el.tiers = [];
-                el.tiers.push({ id: uid(), threshold: 0, name: 'Tier 1', items: [] });
+                el.tiers.push({ id: createInstanceId('pid'), threshold: 0, name: 'Tier 1', items: [] });
             }
         });
     };
@@ -823,7 +818,7 @@ function MaterialsAdmin({ progress, save, archiveEntry, restoreEntry }) {
                 const tier = el.tiers.find(t => t.id === tierId);
                 if (tier) {
                     if (!tier.items) tier.items = [];
-                    tier.items.push({ id: uid(), name: 'New Item', link: '', revealed: false });
+                    tier.items.push({ id: createInstanceId('pid'), name: 'New Item', link: '', revealed: false });
                 }
             }
         });

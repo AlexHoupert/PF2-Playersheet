@@ -1,3 +1,4 @@
+import { deepClone } from '../../shared/utils/deepClone.js';
 
 // Logic for inspecting and applying Rune effects
 
@@ -134,7 +135,7 @@ export function applyRune(item, rune, options = {}) {
         else return { newItem: item, consumed: false, error: "Rune not compatible with this item text." };
     }
 
-    const newItem = JSON.parse(JSON.stringify(item));
+    const newItem = deepClone(item);
     if (!newItem.system) newItem.system = {};
     if (!newItem.system.runes) newItem.system.runes = { potency: 0, striking: "", property: [] };
 
@@ -257,7 +258,7 @@ export function applyRune(item, rune, options = {}) {
 export function removeRune(item, runeType, propertyName = null) {
     if (!item || !item.system?.runes) return { newItem: item, runeRecovered: null };
 
-    const newItem = JSON.parse(JSON.stringify(item));
+    const newItem = deepClone(item);
     let recoveredName = null;
 
     const typeLower = (item.type || "").toLowerCase();

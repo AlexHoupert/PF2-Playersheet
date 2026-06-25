@@ -7,6 +7,7 @@ import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import CreatureCard from '../../shared/components/CreatureCard';
 import { useWindowSize } from '../../shared/hooks/useWindowSize';
+import { deepClone } from '../../shared/utils/deepClone';
 import { CREATURE_INDEX_FILTER_OPTIONS } from '../../shared/catalog/creatureIndex';
 
 const AbilityPicker = React.lazy(() => import('../../shared/components/AbilityPicker'));
@@ -133,7 +134,7 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
             setWeaknesses(sys.attributes?.weaknesses || []);
 
             setSkills(sys.skills || {});
-            const itemsCopy = JSON.parse(JSON.stringify(data.items || []));
+            const itemsCopy = deepClone(data.items || []);
             setItems(itemsCopy);
             setRawItemsJson(JSON.stringify(itemsCopy, null, 2));
 
@@ -299,7 +300,7 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
         setItems(prev => prev.map(item => {
             if (item._id !== itemId) return item;
             // Deep-clone system so nested shared references (from cloned creatures) are not mutated
-            const newItem = { ...item, system: JSON.parse(JSON.stringify(item.system || {})) };
+            const newItem = { ...item, system: deepClone(item.system || {}) };
             // Handle nested path like 'bonus.value' or 'damageRolls.roll0.damage'
             const parts = path.split('.');
             let obj = newItem.system;

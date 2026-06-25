@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const ACTIONS_DIR = path.join(__dirname, '../../ressources/actions');
+const ACTIONS_DIR = path.join(__dirname, '../ressources/actions');
 
 // Format: Name | Type | Subtype | Skill
 // Using a more structured array to avoid parsing ambiguity
@@ -179,9 +179,6 @@ function parseLine(line) {
     // parts[1] = Subtype
     // parts[2] = Skill
 
-    // Clean up "lorem" to "General" if I hadn't already fixed it in rawData
-    // I fixed rawData to use General instead of lorem
-
     return {
         name,
         type: parts[0] || "Other",
@@ -212,15 +209,6 @@ files.forEach(file => {
     // Match by name
     let entry = updates.get(json.name);
 
-    // Fuzzy match try (e.g. Strike [one-action] vs Strike)
-    if (!entry) {
-        // Try stripping actions from json name
-        // json.name might be "Strike" or "Strike [one-action]"?
-        // Actually usually "Strike" in json.name field, checking previous file views
-        // Ah, new_db.json had "[one-action]", individual files usually just "Strike"
-        // Let's check updates keys
-    }
-
     if (!entry) {
         // Fallback: Check if we have a partial match in our updates map
         for (const [key, val] of updates.entries()) {
@@ -241,7 +229,6 @@ files.forEach(file => {
             skill: entry.skill
         };
     } else {
-        // "All others get Other, Other for now"
         newClassification = {
             type: "Other",
             subtype: "Other",

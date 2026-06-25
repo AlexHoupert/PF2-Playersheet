@@ -15,6 +15,7 @@ import CreatureSkillDetailDialog from '../shared/components/CreatureSkillDetailD
 import CreatureEditor from './editors/CreatureEditor';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { getRecallKnowledgeDC, generateFalseData } from '../utils/bestiaryUtils';
+import { deepClone } from '../shared/utils/deepClone';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
 import { selectCustomAbilityList } from '../shared/db/selectors/abilitySelectors';
 import { selectBestiaryCreatureMetadata, selectCustomCreatures } from '../shared/db/selectors/bestiarySelectors';
@@ -277,7 +278,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
             : await fetchCreatureData(creature.id);
         if (!rawData) { alert('Failed to load creature data'); setContextMenu(null); return; }
         // Deep-copy so the clone shares no nested object references with the original
-        const data = JSON.parse(JSON.stringify(rawData));
+        const data = deepClone(rawData);
         setEditingCreature({
             ...creature, id: null, sourceFile: null,
             data: { ...data, _id: null, name: (data.name || creature.name) + ' (Copy)' }

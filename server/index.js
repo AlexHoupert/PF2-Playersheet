@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = 5173;
+const PORT = process.env.PORT ? Number(process.env.PORT) : 5173;
 
 async function createServer() {
     const app = express();

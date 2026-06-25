@@ -5,6 +5,7 @@ import BottomSheet from '../../shared/components/BottomSheet';
 import { SHOP_CATEGORIES } from '../../shared/constants/shop';
 import { selectActiveCharacters } from '../../shared/db/selectors/characterSelectors';
 import SpellScrollSelectorModal from '../../player/modals/SpellScrollSelectorModal';
+import { deepClone } from '../../shared/utils/deepClone';
 
 const Card = ({ children, style, className, ...rest }) => (
     <div className={className} style={{
@@ -589,7 +590,7 @@ export default function ItemsViewLayout({
                     onSelect={(spell) => {
                         const { action, arg, baseItem, type, rank } = pendingSpellAction;
                         const newItem = { ...baseItem };
-                        newItem.system = baseItem.system ? JSON.parse(JSON.stringify(baseItem.system)) : {};
+                        newItem.system = baseItem.system ? deepClone(baseItem.system) : {};
                         newItem.system.originalName = baseItem.name;
                         newItem.name = `${type === 'scroll' ? 'Scroll' : 'Wand'} of ${spell.name} (Rank ${rank})`;
                         newItem.system.spell = spell;

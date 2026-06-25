@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { buildDictionary, getFilesRecursively, writeJsonOutput } from './buildUtils.js';
 
 const SOURCE_DIR = './ressources/feats';
 const OUTPUT_FILE = './src/data/feat_catalog.json';
@@ -7,28 +8,6 @@ const OUTPUT_INDEX_FILE = './src/data/feat_index.json';
 
 const catalog = [];
 const indexEntries = [];
-
-const buildDictionary = (values) => {
-    const unique = new Set(values.map(v => (v == null ? '' : String(v))));
-    unique.delete('');
-    const list = [''].concat(Array.from(unique).sort((a, b) => a.localeCompare(b)));
-    const map = new Map(list.map((value, i) => [value, i]));
-    return { list, map };
-};
-
-function getFilesRecursively(dir) {
-    let files = [];
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-            files = files.concat(getFilesRecursively(fullPath));
-        } else {
-            files.push(fullPath);
-        }
-    }
-    return files;
-}
 
 if (fs.existsSync(SOURCE_DIR)) {
     const files = getFilesRecursively(SOURCE_DIR);
@@ -75,12 +54,7 @@ if (fs.existsSync(SOURCE_DIR)) {
     });
 }
 
-const dir = path.dirname(OUTPUT_FILE);
-if (!fs.existsSync(dir)){
-    fs.mkdirSync(dir, { recursive: true });
-}
-
-fs.writeFileSync(OUTPUT_FILE, JSON.stringify(catalog, null, 2));
+writeJsonOutput(OUTPUT_FILE, catalog, true);
 
 const typeDict = buildDictionary(indexEntries.map(e => e.type));
 const rarityDict = buildDictionary(indexEntries.map(e => e.rarity));
@@ -115,5 +89,5 @@ const compactIndex = {
     items,
 };
 
-fs.writeFileSync(OUTPUT_INDEX_FILE, JSON.stringify(compactIndex));
+writeJsonOutput(OUTPUT_INDEX_FILE, compactIndex);
 console.log(`Generated feat catalog with ${catalog.length} items and index with ${items.length} entries.`);

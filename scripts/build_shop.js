@@ -1,36 +1,13 @@
 import fs from 'fs';
 import path from 'path';
+import { buildDictionary, getFilesRecursively, writeJsonOutput } from './buildUtils.js';
 
-// Updated path to your resources folder
 const SOURCE_DIR = './ressources/equipment';
 const OUTPUT_FILE = './src/data/shop_catalog.json';
 const OUTPUT_INDEX_FILE = './src/data/shop_index.json';
 
 const catalog = [];
 const indexEntries = [];
-
-const buildDictionary = (values) => {
-    const unique = new Set(values.map(v => (v == null ? '' : String(v))));
-    unique.delete('');
-    const list = [''].concat(Array.from(unique).sort((a, b) => a.localeCompare(b)));
-    const map = new Map(list.map((value, i) => [value, i]));
-    return { list, map };
-};
-
-
-function getFilesRecursively(dir) {
-    let files = [];
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-            files = files.concat(getFilesRecursively(fullPath));
-        } else {
-            files.push(fullPath);
-        }
-    }
-    return files;
-}
 
 if (fs.existsSync(SOURCE_DIR)) {
     const files = getFilesRecursively(SOURCE_DIR);
@@ -230,13 +207,7 @@ wandPrices.forEach((price, i) => {
 });
 
 
-// Ensure directory exists
-const dir = path.dirname(OUTPUT_FILE);
-if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-}
-
-fs.writeFileSync(OUTPUT_FILE, JSON.stringify(catalog, null, 2));
+writeJsonOutput(OUTPUT_FILE, catalog, true);
 
 const typeDict = buildDictionary(indexEntries.map(e => e.type));
 const categoryDict = buildDictionary(indexEntries.map(e => e.category));
@@ -336,5 +307,5 @@ const compactIndex = {
     a: armors
 };
 
-fs.writeFileSync(OUTPUT_INDEX_FILE, JSON.stringify(compactIndex));
+writeJsonOutput(OUTPUT_INDEX_FILE, compactIndex);
 console.log(`Generated catalog with ${catalog.length} items and index with ${items.length} entries.`);

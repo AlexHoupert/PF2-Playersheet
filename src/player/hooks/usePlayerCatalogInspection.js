@@ -86,8 +86,6 @@ export function usePlayerCatalogInspection({
         const type = link.dataset.type;
         const name = link.dataset.name;
 
-        console.log(`Link clicked: ${type} - ${name}`);
-
         try {
             if (type === 'action') {
                 const idx = getActionIndexItemByName(name);

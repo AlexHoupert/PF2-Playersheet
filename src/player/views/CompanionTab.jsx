@@ -6,6 +6,7 @@ import {
     FAMILIAR_ABILITIES, MASTER_ABILITIES, COMPANION_DEFAULTS, ACTION_COST_SYMBOLS
 } from '../../data/companionData';
 import './CompanionTab.css';
+import { deepClone } from '../../shared/utils/deepClone';
 
 // ── Condition constants (simple list for companions) ─────────────────────────
 const CONDITIONS = [
@@ -111,8 +112,8 @@ function CompanionEditPanel({ companion, onSave, onCancel }) {
         perception: companion?.perception ?? 5,
         speeds: { land: 25, fly: 0, swim: 0, climb: 0, burrow: 0, ...(companion?.speeds || {}) },
         saves: { fortitude: 5, reflex: 5, will: 3, ...(companion?.saves || {}) },
-        attacks: JSON.parse(JSON.stringify(companion?.attacks || [])),
-        abilities: JSON.parse(JSON.stringify(companion?.abilities || [])),
+        attacks: deepClone(companion?.attacks || []),
+        abilities: deepClone(companion?.abilities || []),
         familiarAbilities: [...(companion?.familiarAbilities || [])],
         masterAbilities: [...(companion?.masterAbilities || [])],
         notes: companion?.notes || '',
@@ -138,8 +139,8 @@ function CompanionEditPanel({ companion, onSave, onCancel }) {
             perception: defaults.perception,
             speeds: { land: 25, fly: 0, swim: 0, climb: 0, burrow: 0, ...defaults.speeds },
             saves: { ...defaults.saves },
-            attacks: JSON.parse(JSON.stringify(defaults.attacks || [])),
-            abilities: JSON.parse(JSON.stringify(defaults.abilities || [])),
+            attacks: deepClone(defaults.attacks || []),
+            abilities: deepClone(defaults.abilities || []),
         }));
     };
 
