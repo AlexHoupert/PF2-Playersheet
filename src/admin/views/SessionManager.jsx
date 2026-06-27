@@ -10,7 +10,6 @@ export default function SessionManager({ db }) {
         archivedCampaigns,
         activeCampaign,
         activeCampaignId,
-        importDb,
         createCampaign,
         deleteCampaign,
         restoreCampaign,
@@ -18,8 +17,7 @@ export default function SessionManager({ db }) {
         assignUser,
         createCharacter,
         deleteCharacter,
-        restoreCharacter,
-        importLegacyCharacter
+        restoreCharacter
     } = useCampaign();
 
     const [newCampName, setNewCampName] = useState('');
@@ -32,7 +30,6 @@ export default function SessionManager({ db }) {
     const [isSpellcaster, setIsSpellcaster] = useState(false);
     const activeCharacters = selectActiveCharacters(activeCampaign);
     const archivedCharacters = selectArchivedCharacters(activeCampaign);
-    const legacyCharacters = Array.isArray(importDb?.characters) ? importDb.characters : [];
 
     // Skeleton Character
     const handleCreateCharacter = () => {
@@ -279,26 +276,6 @@ export default function SessionManager({ db }) {
                             </div>
                         )}
 
-                        {/* LEGACY / UNASSIGNED CHARACTERS IMPORT */}
-                        {legacyCharacters.length > 0 && (
-                            <div style={{ borderTop: '1px solid #444', paddingTop: 15 }}>
-                                <h4 style={{ color: '#aaa', marginTop: 0 }}>Import Legacy Characters</h4>
-                                <p style={{ fontSize: '0.8em', color: '#666', marginBottom: 10 }}>Characters from before the update are here. Move them to this campaign:</p>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                    {legacyCharacters.map((char, originalIndex) => (
-                                        <div key={char.id || originalIndex} style={{ display: 'flex', justifyContent: 'space-between', background: '#2b2b2e', padding: '8px', borderRadius: 4, alignItems: 'center', border: '1px dashed #555' }}>
-                                            <span style={{ color: '#aaa' }}>{char.name} (Lvl {char.level})</span>
-                                            <button
-                                                onClick={() => importLegacyCharacter(activeCampaignId, { ...char, id: char.id || crypto.randomUUID() }, originalIndex)}
-                                                style={{ fontSize: '0.8em', background: '#333', color: '#c5a059', border: '1px solid #c5a059', padding: '3px 8px', borderRadius: 4, cursor: 'pointer' }}
-                                            >
-                                                Import 📥
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     {/* USERS / ASSIGNMENT COLUMN */}

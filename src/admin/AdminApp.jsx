@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
-import { V2_DB_STORAGE_KEY } from '../shared/db/v2/useFirestoreV2Db';
 
 // Backend / Services
 import { fetchShopItemDetailBySourceFile, getShopIndexItemByName } from '../shared/catalog/shopIndex';
@@ -98,13 +97,6 @@ export default function AdminApp() {
         runDataAction(dataActions.character.updateCharacter(activeCampaign.id, characterId, fn));
     };
 
-    const resetData = () => {
-        if (window.confirm("Reset all data to default? This cannot be undone.")) {
-            localStorage.removeItem(V2_DB_STORAGE_KEY);
-            window.location.reload();
-        }
-    };
-
     const handleContentLinkClick = async (e) => {
         const link = e.target.closest('.content-link');
         if (!link) return;
@@ -197,7 +189,6 @@ export default function AdminApp() {
                             onInspectSpell={(i) => { setModalData(i); setModalMode('spell'); }}
                             playerTabMode={playerTabMode}
                             rebuildStatus={rebuildStatus}
-                            resetData={resetData}
                             revokeUser={revokeUser}
                             setActiveCharIndex={setActiveCharIndex}
                             setModalData={setModalData}

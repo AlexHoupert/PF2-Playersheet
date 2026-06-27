@@ -40,7 +40,7 @@ export function useCampaign() {
     return useContext(CampaignContext);
 }
 
-export function CampaignProvider({ importDb = null, v2Store = null, children, isAdmin = false, dbMode = 'legacy', dbStatus = null }) {
+export function CampaignProvider({ v2Store = null, children, isAdmin = false, dbMode = 'legacy', dbStatus = null }) {
     const { user } = useAuth();
     const db = useMemo(() => composeRuntimeDbFromV2Store(v2Store), [v2Store]);
     const userEmail = normalizeEmail(user?.email);
@@ -61,8 +61,7 @@ export function CampaignProvider({ importDb = null, v2Store = null, children, is
     // 2. What is their assigned campaign?
     // 3. What is their assigned character?
 
-    const legacyUserInfo = user && db.users ? (db.users[userEmail] || db.users[user.email]) : null;
-    const userInfo = v2UserInfo || legacyUserInfo;
+    const userInfo = v2UserInfo;
     const isGM = (userInfo?.role === 'gm') || isAdmin; // Simple GM check or Admin View override
 
     // For Players: Resolve Campaign ID from assignment
@@ -206,7 +205,6 @@ export function CampaignProvider({ importDb = null, v2Store = null, children, is
         dbStatus,
         dataActions,
         db,
-        importDb,
         v2Store,
         // GM Actions
         setSelectedCampaignId,
@@ -222,7 +220,7 @@ export function CampaignProvider({ importDb = null, v2Store = null, children, is
         setXpThreshold,
         setPartyXp,
         addPartyXp
-    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, actors, archivedActors, pcActors, ownedActors, myCharacter, myActor, questLists, lootBagLists, shop, bestiary, isGM, userInfo, dbMode, dbStatus, dataActions, db, importDb, v2Store, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setXpThreshold, setPartyXp, addPartyXp]);
+    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, actors, archivedActors, pcActors, ownedActors, myCharacter, myActor, questLists, lootBagLists, shop, bestiary, isGM, userInfo, dbMode, dbStatus, dataActions, db, v2Store, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setXpThreshold, setPartyXp, addPartyXp]);
 
     return (
         <CampaignContext.Provider value={value}>

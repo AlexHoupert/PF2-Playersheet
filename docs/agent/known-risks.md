@@ -54,7 +54,7 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 - Scaly Skin is currently represented as a generated feat effect inside the shared AC calculation: while unarmored or wearing Explorer's Clothing, it adds item AC and applies Dex cap +3 through the effect resolver. It should eventually become a persisted template-driven feat effect.
 - AC item bonus combination now keeps the highest armor/effect item AC contribution instead of adding mutagen item AC on top of armor item AC.
 - The shared effect resolver now handles typed bonus/penalty stacking, caps, persistent damage, and resistance/weakness offsets for the first actor-effect foundation. Standard condition mapping covers the high-impact current values (`Frightened`, `Sickened`, `Clumsy`, `Enfeebled`, `Drained`, `Stupefied`, `Fatigued`, `Encumbered`, Off-Guard-like AC states); it is not yet a full PF2e rules engine.
-- Root `quests` and `lootBags` still exist for compatibility. Some code paths may read them when campaign data is absent.
+- Root `quests` and `lootBags` remain only in legacy projection/test fixtures. The normal V2 runtime DB no longer projects first-campaign quests or loot bags to root fields.
 - Player-created custom item catalog registration uses `dataActions.globalContent.saveCustomItem`. The immediate inventory add still uses `onUpdateCharacter`.
 - Campaign, character, quest/subquest, encounter, and map deletion is soft delete. Do not hard-delete these documents unless a future purge flow is explicitly designed and approved.
 - `CampaignContext.updateActiveCampaign` has been removed from the public context API.
@@ -109,7 +109,7 @@ Medium-term:
 
 - Keep shrinking large controller hooks, especially `usePlayerInventoryActions`, into smaller pure reducers/helpers as workflows are touched.
 - Make player catalog modals async-data driven so `PlayerApp` does not synchronously import shop/spell/feat/action/impulse indexes.
-- Continue shrinking compatibility reads and the legacy projection before treating the convergence branch as production-ready.
+- Continue shrinking compatibility-shaped props and remaining `db` consumers before treating the convergence branch as fully V2-only.
 - Add smoke tests for catalog decoders and `parseFoundry`.
 - Add a minimal lint/format check to catch import and JSX issues.
 

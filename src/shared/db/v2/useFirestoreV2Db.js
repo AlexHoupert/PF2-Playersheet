@@ -1,14 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db as firestore } from '../firebase-config';
-import { useLocalStorageJson } from '../../hooks/useLocalStorageJson';
-import { deepClone } from '../../utils/deepClone';
-import { migrateDb } from '../migrateDb';
-import { composeLegacyDbFromV2Documents } from './normalizers.js';
 import { composeV2ViewModelFromDocuments } from './viewModel.js';
 import { V2_COLLECTIONS } from './schema.js';
-
-export const V2_DB_STORAGE_KEY = 'pf2e-data-v2-projection';
 
 const IS_FIREBASE_CONFIGURED = firestore && firestore.app.options.apiKey !== 'YOUR_API_KEY';
 const CAMPAIGN_SUBCOLLECTIONS = [
@@ -30,9 +24,7 @@ const TOP_LEVEL_COLLECTIONS = [
     V2_COLLECTIONS.loreArticles,
 ];
 
-export function useFirestoreV2Db(defaultDb) {
-    const [localDb] = useLocalStorageJson(V2_DB_STORAGE_KEY, () => deepClone(defaultDb), { migrate: migrateDb });
-    const [legacyProjection, setLegacyProjectionState] = useState(localDb);
+export function useFirestoreV2Db() {
     const [v2Store, setV2Store] = useState(() => composeV2ViewModelFromDocuments([]));
     const [status, setStatus] = useState({
         mode: 'firestore-v2',
@@ -44,14 +36,11 @@ export function useFirestoreV2Db(defaultDb) {
 
     const docsRef = useRef(new Map());
     const campaignUnsubsRef = useRef(new Map());
-    const hasCampaignSnapshotRef = useRef(!IS_FIREBASE_CONFIGURED);
 
     const projectDocsToDb = useCallback((docsMap) => {
         const documents = Array.from(docsMap.entries()).map(([path, data]) => ({ path, data }));
         const nextV2Store = composeV2ViewModelFromDocuments(documents);
-        const projected = migrateDb(composeLegacyDbFromV2Documents(documents, defaultDb));
         setV2Store(nextV2Store);
-        setLegacyProjectionState(projected);
         setStatus(prev => ({
             ...prev,
             ready: true,
@@ -59,12 +48,7 @@ export function useFirestoreV2Db(defaultDb) {
             v2ViewModel: nextV2Store,
             error: null,
         }));
-        try {
-            localStorage.setItem(V2_DB_STORAGE_KEY, JSON.stringify(projected));
-        } catch (err) {
-            console.warn('[Firestore V2] Failed to cache projection', err);
-        }
-    }, [defaultDb]);
+    }, []);
 
     const replaceCollectionDocs = useCallback((collectionPath, docs) => {
         const prefix = `${collectionPath}/`;
@@ -110,7 +94,6 @@ export function useFirestoreV2Db(defaultDb) {
         const campaignsUnsub = onSnapshot(
             collection(firestore, V2_COLLECTIONS.campaigns),
             snapshot => {
-                hasCampaignSnapshotRef.current = true;
                 const campaignIds = new Set(snapshot.docs.map(docSnap => docSnap.id));
 
                 for (const [campaignId, unsubMap] of campaignUnsubsRef.current.entries()) {
@@ -174,33 +157,8 @@ export function useFirestoreV2Db(defaultDb) {
         };
     }, [replaceCollectionDocs]);
 
-    const updateLegacyProjection = useCallback((newValueOrFn) => {
-        setLegacyProjectionState(currentState => {
-            if (IS_FIREBASE_CONFIGURED && !hasCampaignSnapshotRef.current) {
-                console.warn('[Firestore V2] Ignoring legacy projection update before initial campaign snapshot');
-                return currentState;
-            }
-
-            const nextValue = typeof newValueOrFn === 'function'
-                ? newValueOrFn(currentState)
-                : newValueOrFn;
-            const migrated = migrateDb(nextValue);
-
-            try {
-                localStorage.setItem(V2_DB_STORAGE_KEY, JSON.stringify(migrated));
-            } catch (err) {
-                console.warn('[Firestore V2] Failed to cache compatibility projection', err);
-            }
-
-            console.warn('[Firestore V2] Compatibility projection update did not write to Firestore; use dataActions instead.');
-            return migrated;
-        });
-    }, []);
-
     return {
-        legacyProjection,
         v2Store,
         status,
-        updateLegacyProjection,
     };
 }

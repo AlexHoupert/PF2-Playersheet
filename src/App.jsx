@@ -1,6 +1,5 @@
 import React, { Suspense, lazy } from 'react';
 import { useFirestoreV2Db } from './shared/db/v2/useFirestoreV2Db';
-import dbData from './data/new_db.json';
 import { CampaignProvider } from './shared/context/CampaignContext';
 import ErrorBoundary from './shared/components/ErrorBoundary';
 
@@ -14,11 +13,11 @@ export default function App() {
 }
 
 function FirestoreV2App() {
-    const { legacyProjection, v2Store, status } = useFirestoreV2Db(dbData);
-    return <AppRoutes importDb={legacyProjection} v2Store={v2Store} dbMode="firestore-v2" dbStatus={status} />;
+    const { v2Store, status } = useFirestoreV2Db();
+    return <AppRoutes v2Store={v2Store} dbMode="firestore-v2" dbStatus={status} />;
 }
 
-function AppRoutes({ importDb, v2Store, dbMode, dbStatus }) {
+function AppRoutes({ v2Store, dbMode, dbStatus }) {
     const queryParams = new URLSearchParams(window.location.search);
 
     if (!v2Store) return <div style={{ color: '#fff' }}>Loading...</div>;
@@ -28,7 +27,7 @@ function AppRoutes({ importDb, v2Store, dbMode, dbStatus }) {
     const isCamp  = queryParams.get('camp')  === 'true';
 
     return (
-        <CampaignProvider importDb={importDb} v2Store={v2Store} isAdmin={isAdmin || isParty || isCamp} dbMode={dbMode} dbStatus={dbStatus}>
+        <CampaignProvider v2Store={v2Store} isAdmin={isAdmin || isParty || isCamp} dbMode={dbMode} dbStatus={dbStatus}>
             <ErrorBoundary>
                 <Suspense fallback={<RouteFallback />}>
                     {isParty

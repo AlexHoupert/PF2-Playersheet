@@ -35,7 +35,6 @@ export default function AdminTabContent({
     onInspectSpell,
     playerTabMode,
     rebuildStatus,
-    resetData,
     revokeUser,
     setActiveCharIndex,
     setModalData,
@@ -97,7 +96,6 @@ export default function AdminTabContent({
                     <button onClick={() => handleRebuild('all')}>Rebuild Indexes</button>
                     {rebuildStatus && <span>{rebuildStatus.status}</span>}
                 </div>
-                <button onClick={resetData} style={{ marginTop: 20, background: 'red' }}>Reset All Data</button>
             </div>
         );
     }

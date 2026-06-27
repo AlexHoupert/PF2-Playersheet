@@ -77,10 +77,6 @@ export function composeRuntimeDbFromV2Store(v2Store = {}) {
         db.actions[action.name || key] = action;
     }
     projectCatalogOverridesIntoCompatibilityDb(db);
-
-    const firstCampaign = Object.values(db.campaigns)[0];
-    db.quests = firstCampaign?.quests || [];
-    db.lootBags = firstCampaign?.lootBags || [];
     return db;
 }
 

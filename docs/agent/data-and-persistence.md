@@ -6,7 +6,7 @@ Last updated: 2026-06-26.
 
 The `v2-convergence` branch has started the V2-only cutover. `src/App.jsx` now starts the Firestore V2 hook directly instead of selecting the legacy runtime.
 
-Existing screens still expect some compatibility props, but `CampaignContext` now builds its normal runtime view from the V2 store. The hook-level `legacyProjection` is kept as an explicit import/backup bridge and for migration tests, not as the normal UI contract.
+Existing screens still expect some compatibility props, but `CampaignContext` now builds its normal runtime view from the V2 store. The hook-level `legacyProjection` has been removed from the normal app path; legacy projection code remains only in normalizer/migration tests and explicit import/backup helpers.
 
 This means a feature is not fully v2-ready just because it appears in the legacy-shaped projection; v2 still needs targeted repository/actions so data is written into the intended collection and reconstructed correctly.
 
@@ -97,9 +97,8 @@ Read path:
 3. For every campaign, subscribe to known subcollections.
 4. Store documents in a `Map` keyed by Firestore path.
 5. Build a V2-native debug/read view with `composeV2ViewModelFromDocuments`.
-6. Call `composeLegacyDbFromV2Documents` only for explicit compatibility/import use.
-7. Run `migrateDb` on that compatibility projection.
-8. Cache projection to LocalStorage.
+6. Legacy projection is not built by the normal runtime hook. Call `composeLegacyDbFromV2Documents` only for explicit compatibility/import use.
+7. Run `migrateDb` on that compatibility projection when using the import/backup helper.
 
 `CampaignContext` uses `composeRuntimeDbFromV2Store` for the normal runtime compatibility DB and exposes V2-native viewmodels such as `actors`, `pcActors`, `myActor`, quests, loot bags, maps, shop, lore, pacts, abilities, bestiary, and catalog overrides.
 
@@ -107,11 +106,11 @@ Runtime write path:
 
 1. UI calls `CampaignContext.dataActions`.
 2. `createDataActions` selects targeted V2 repositories/transactions.
-3. Firestore snapshots rebuild `v2Store` plus the temporary legacy projection.
+3. Firestore snapshots rebuild `v2Store`.
 
 Compatibility projection updates:
 
-- `useFirestoreV2Db` keeps a local `legacyProjection` for explicit import/backup compatibility and migration tests.
+- `useFirestoreV2Db` returns `{ v2Store, status }` and does not build or cache a legacy projection.
 - The hook no longer broad-diffs that projection back into Firestore.
 - `writeLegacyDbDiffToV2` remains only in legacy import/migration code.
 
@@ -232,14 +231,14 @@ File: `src/shared/db/v2/normalizers.js`
 
 `composeLegacyDbFromV2Documents(documents, baseDb)`:
 
-- Builds the legacy projection used by existing screens.
+- Builds the legacy projection used by migration/import compatibility tests and explicit backup/import helpers.
 - Reassembles campaign subcollections into `db.campaigns[campaignId]`.
 - Reassembles `actors`, `actorEffects`, and `effectTemplates` into campaign view data.
 - Builds runtime `campaign.characters` compatibility rows from PC Actors only; stale Character documents are kept for legacy projection/import tests.
 - Overlays transitional character `conditions` from `actorEffects` when compatibility screens still need that shape.
 - Converts `members` docs back into `db.users`.
 - Rehydrates global config including shop, bestiary reveal-state/metadata, pacts, abilities, custom collections, and lore.
-- Sets root `quests` and `lootBags` from the first campaign for compatibility.
+- Sets root `quests` and `lootBags` from the first campaign for legacy projection compatibility only; the normal runtime DB does not project those root fields.
 
 ## V2 Migration Scripts And UI
 

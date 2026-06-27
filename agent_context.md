@@ -51,7 +51,7 @@ The root repo is `PF2-Playersheet`; the parent directory is not the git repo.
 
 ## Persistence Summary
 
-The `v2-convergence` branch starts from Firestore V2. `CampaignContext` builds the normal runtime view from V2 documents and exposes V2-native viewmodels; some older screens still receive compatibility-shaped props while the read-model cutover continues.
+`main` starts from Firestore V2. `CampaignContext` builds the normal runtime view from V2 documents and exposes V2-native viewmodels; some older screens still receive compatibility-shaped props while the read-model cutover continues.
 
 Legacy/import compatibility:
 
@@ -65,12 +65,10 @@ Legacy/import compatibility:
 Firestore V2 runtime:
 
 - `src/shared/db/v2/useFirestoreV2Db.js`
-- LocalStorage key `pf2e-data-v2-projection`.
 - Subscribes to normalized collections from `src/shared/db/v2/schema.js`.
 - Uses `composeRuntimeDbFromV2Store` in `CampaignContext` as the normal runtime compatibility DB; this is derived from V2 documents, not from the legacy projection hook output.
-- Still creates `legacyProjection` for explicit import/backup compatibility and remaining migration tests.
 - Uses `composeV2ViewModelFromDocuments` to expose a native grouped V2 view model through `dbStatus.v2ViewModel`.
-- Returns `{ legacyProjection, v2Store, status }`; the projection is a temporary compatibility read model, not a write contract.
+- Returns `{ v2Store, status }`; legacy projection is no longer part of the normal hook contract.
 - Broad legacy DB diffs are no longer part of the V2 runtime write path. `writeLegacyDbDiffToV2` is isolated to migration/import code.
 - Campaign/Session, Character, Actor, Actor Effect, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, catalog overrides, and Player runtime fallbacks now go through `CampaignContext.dataActions` and targeted V2 repositories/transactions where migrated.
 - `CampaignContext` and global-facing views use pure selectors under `src/shared/db/selectors/` for campaign/character/actor/effect, shop, pact, ability, lore, and bestiary reads.
@@ -150,7 +148,7 @@ Broad UI and context writes have been removed from Player/Admin route trees and 
 
 `src/data/new_db.json` currently has top-level keys including `campaigns`, `users`, `shop`, `lore`, `bestiary`, `abilities`, `actions`, `feats`, `pacts`, `rules`, `runes`, `notificationQueue`, and legacy root arrays `characters`, `quests`, `lootBags`.
 
-Current seed includes one campaign named `War of the Elements` with characters, loot bags, maps, encounters, camping, progress, XP, and XP notification fields. Root `quests` and `lootBags` still exist for legacy compatibility.
+Current seed includes one campaign named `War of the Elements` with characters, loot bags, maps, encounters, camping, progress, XP, and XP notification fields. Root `quests` and `lootBags` are legacy projection/test compatibility only, not normal runtime fields.
 
 Character objects are heterogeneous. Common areas:
 

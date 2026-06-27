@@ -174,15 +174,27 @@ test('player basis edit modals use targeted character actions', () => {
 test('firestore v2 runtime no longer broad-diffs legacy projections', () => {
     const source = readSource('src/shared/db/v2/useFirestoreV2Db.js');
     const appSource = readSource('src/App.jsx');
+    const contextSource = readSource('src/shared/context/CampaignContext.jsx');
+    const runtimeDbSource = readSource('src/shared/db/v2/runtimeDb.js');
+    const sessionSource = readSource('src/admin/views/SessionManager.jsx');
 
     assert.equal(source.includes('writeLegacyDbDiffToV2'), false);
-    assert.match(source, /legacyProjection/);
+    assert.equal(source.includes('composeLegacyDbFromV2Documents'), false);
+    assert.equal(source.includes('composeLegacyProjectionForImport'), false);
+    assert.equal(source.includes('legacyProjection'), false);
+    assert.equal(source.includes('updateLegacyProjection'), false);
     assert.match(source, /v2Store/);
-    assert.match(appSource, /legacyProjection/);
-    assert.match(appSource, /importDb/);
+    assert.equal(appSource.includes('legacyProjection'), false);
+    assert.equal(appSource.includes('importDb'), false);
     assert.equal(appSource.includes('legacyDb'), false);
     assert.match(appSource, /v2Store/);
     assert.equal(appSource.includes('setDb='), false);
+    assert.equal(contextSource.includes('legacyUserInfo'), false);
+    assert.equal(contextSource.includes('importDb'), false);
+    assert.equal(sessionSource.includes('importDb'), false);
+    assert.equal(sessionSource.includes('legacyCharacters'), false);
+    assert.equal(runtimeDbSource.includes('db.quests ='), false);
+    assert.equal(runtimeDbSource.includes('db.lootBags ='), false);
 });
 
 test('runtime views do not carry legacy setDb or character condition contracts', () => {

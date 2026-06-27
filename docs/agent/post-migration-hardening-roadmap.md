@@ -15,9 +15,9 @@ Leitentscheidung:
 
 ## Aktueller Ausgangspunkt
 
-- `main` ist V2-first, aber noch nicht V2-only.
+- `main` ist V2-first und der normale App-Entry nutzt keine Legacy-Projektion mehr, aber einige Compatibility-Viewmodels existieren noch.
 - `npm run check` ist zuletzt gruen gelaufen: Tests, Broad-Write-Guard, Lint, Vite Build.
-- `legacyProjection` existiert noch im normalen App-Entry als Import-/Compatibility-Bruecke.
+- `legacyProjection` ist aus dem normalen App-Entry entfernt; Legacy-Projektion bleibt in Normalizer-/Migrationstests und explizitem Helper-Code.
 - `actorEffects` sind kanonische Runtime-Quelle fuer Conditions, Mutagene und stat-relevante Effekte.
 - `itemIdentity.js` existiert, aber einige UI-/Combat-Hotspots nutzen noch lokale Matching-Regeln.
 - `createDataActions.js` ist der groesste verbleibende Domain-Monolith.
@@ -86,31 +86,31 @@ Problem: `legacyProjection` und compatibility-shaped `db` sind noch Teil des nor
 
 Ziel: Normale Runtime liest aus V2-Viewmodels. Legacy-Projektion bleibt nur Import-/Backup-/Migrationstestmaterial.
 
-- [ ] `CampaignContext`-Public-Contract finalisieren:
-  - [ ] `activeCampaign`
-  - [ ] `campaigns`, `archivedCampaigns`
-  - [ ] `actors`, `pcActors`, `ownedActors`, `myActor`
-  - [ ] `quests`, `lootBags`, `encounters`, `maps`, `members`
-  - [ ] `shop`, `bestiary`, `lore`, `pacts`, `abilities`, `catalogOverrides`
-  - [ ] `dataActions`, `dbStatus`
+- [x] `CampaignContext`-Public-Contract finalisieren:
+  - [x] `activeCampaign`
+  - [x] `campaigns`, `archivedCampaigns`
+  - [x] `actors`, `pcActors`, `ownedActors`, `myActor`
+  - [x] `quests`, `lootBags`, `encounters`, `maps`, `members`
+  - [x] `shop`, `bestiary`, `lore`, `pacts`, `abilities`, `catalogOverrides`
+  - [x] `dataActions`, `dbStatus`
 - [ ] UI-Verbraucher von `db` auf gezielte Context-Viewmodels umstellen.
-- [ ] `App.jsx` soll im normalen Runtime-Pfad kein `legacyProjection` als `importDb` weiterreichen.
-- [ ] `useFirestoreV2Db` soll `composeLegacyDbFromV2Documents` nur noch fuer expliziten Import-/Backup-Pfad bauen, nicht bei jedem normalen Snapshot.
-- [ ] `runtimeDb.js` root-Fallbacks fuer `db.quests`/`db.lootBags` aus dem normalen UI-Vertrag entfernen oder klar als Import-Compatibility isolieren.
-- [ ] `legacyUserInfo`-Fallback im `CampaignContext` entfernen, sobald Members/assignedActorId fuer alle relevanten Flows V2-native gelesen werden.
-- [ ] Static Guards verschaerfen: Runtime-Views duerfen `legacyProjection`, root `db.quests`, root `db.lootBags`, root `db.characters` nicht neu verwenden.
+- [x] `App.jsx` soll im normalen Runtime-Pfad kein `legacyProjection` als `importDb` weiterreichen.
+- [x] `useFirestoreV2Db` soll `composeLegacyDbFromV2Documents` nur noch fuer expliziten Import-/Backup-Pfad bauen, nicht bei jedem normalen Snapshot.
+- [x] `runtimeDb.js` root-Fallbacks fuer `db.quests`/`db.lootBags` aus dem normalen UI-Vertrag entfernen oder klar als Import-Compatibility isolieren.
+- [x] `legacyUserInfo`-Fallback im `CampaignContext` entfernen, sobald Members/assignedActorId fuer alle relevanten Flows V2-native gelesen werden.
+- [x] Static Guards verschaerfen: Runtime-Views duerfen `legacyProjection`, root `db.quests`, root `db.lootBags`, root `db.characters` nicht neu verwenden.
 
 Tests:
 
 - [ ] Selector-Test: Player, GM, Party und Camp erhalten ihre Daten aus V2-Viewmodels ohne Legacy-Projektion.
-- [ ] Static Test: `App.jsx` enthaelt kein normales `importDb={legacyProjection}` mehr.
-- [ ] Static Test: `useFirestoreV2Db` importiert `composeLegacyDbFromV2Documents` nur noch in einem explizit benannten legacy/import helper oder gar nicht.
-- [ ] Regression: Catalog Overrides, Quests, LootBags, Shop und Bestiary bleiben sichtbar.
+- [x] Static Test: `App.jsx` enthaelt kein normales `importDb={legacyProjection}` mehr.
+- [x] Static Test: `useFirestoreV2Db` importiert `composeLegacyDbFromV2Documents` nur noch in einem explizit benannten legacy/import helper oder gar nicht.
+- [x] Regression: Catalog Overrides, Quests, LootBags, Shop und Bestiary bleiben sichtbar.
 
 Akzeptanz:
 
-- [ ] Normale App-Routen funktionieren ohne Legacy-Master als Runtime-Quelle.
-- [ ] Legacy-Code ist fuer Entwickler sichtbar als Import-/Backup-Schicht markiert.
+- [x] Normale App-Routen funktionieren ohne Legacy-Master als Runtime-Quelle.
+- [x] Legacy-Code ist fuer Entwickler sichtbar als Import-/Backup-Schicht markiert.
 
 ## Pass 3: Item Identity Hotspots Schliessen
 
