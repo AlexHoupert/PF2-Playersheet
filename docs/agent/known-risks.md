@@ -1,6 +1,6 @@
 # Known Risks And Modernization Notes
 
-Last updated: 2026-06-20.
+Last updated: 2026-06-26.
 
 ## Highest-Impact Risks
 
@@ -25,6 +25,8 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary are centraliz
 
 Inventory and loot code sometimes uses `name`, sometimes `_index`, sometimes `instanceId`, sometimes `addedAt` plus equipment/prepared flags. This can break stacked items, duplicate items, and transfer/claim flows.
 
+Mitigation in progress: `src/shared/utils/itemIdentity.js` is the canonical identity resolver. Domain reducers and the main Player inventory action hook use it. Remaining UI-local matchers in GM item selection, rune selection, and small utility hooks are cleanup debt, not approved patterns.
+
 4. Legacy write compatibility
 
 Normal UI write paths for Campaign/Session, Character/Inventory/Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary, actor effects, companion actors, and Player runtime fallbacks now use `dataActions` and targeted repositories. UI and context broad writes are guarded against regressions; broad writes remain only in the `createDataActions` legacy adapter used by legacy tests/import compatibility.
@@ -43,11 +45,14 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 - Remaining Player UI-local edit paths are compound inventory flows that may update inventory, gold, HP, prepared items, staff/wand recharge, formulas, or item state together. They write PC Actors in V2 through the character compatibility facade, but should be split into narrower inventory/actor actions when touched.
 - PC character lifecycle and migrated PC writes target campaign-scoped `actors(kind="pc")`; companion snapshots are backfilled as owned actors and `CompanionTab` now edits owned actors directly. Old character documents can remain as transition/import data but should not be runtime write targets.
 - Conditions are campaign-scoped `actorEffects` for Player Stats, ConditionsModal, Encounter right-click assignment, Admin CharacterCard backlash, mutagen effects, and companion conditions. Encounter creature combatants use stable `effectTargetId` values such as `encounter:{encounterId}:combatant:{combatantId}` until full NPC Actor migration.
+- Player and shared Actor sheets now use `src/shared/rules/actorRulesViewModel.js` to build the effective Actor+Effects rules input. Avoid reintroducing ad-hoc pseudo-character condition injection as a rules source.
 - Persistent damage is stored as `actorEffects(category="damage_effect")` and displayed as a badge. The resolver keeps the strongest persistent damage per damage type, but this wave does not roll persistent damage automatically at turn end.
 - Custom encounter badges use `actorEffects(category="custom")` and intentionally have no modifiers. Afflictions are only a placeholder UI entry for now.
 - Catalog overrides are the production-safe write target for deployed item/spell/action/feat/impulse/ability/creature editing. Static resource file APIs should stay local-dev only.
 - Wands are reusable inventory items with `system.wand = { charges, max }`, not consumable stacks. Inventory double-tap and spell detail casting should reduce charges only; Daily Preparation recharges them. Keep wand detection centralized in `src/shared/utils/wandUtils.js`.
+- Mutagens are represented as `actorEffects` with concrete modifiers. Modifier-less legacy mutagen effects are normalized during reads. `currentMutagen` must not become a runtime rules source again.
 - Scaly Skin is currently represented as a generated feat effect inside the shared AC calculation: while unarmored or wearing Explorer's Clothing, it adds item AC and applies Dex cap +3 through the effect resolver. It should eventually become a persisted template-driven feat effect.
+- AC item bonus combination now keeps the highest armor/effect item AC contribution instead of adding mutagen item AC on top of armor item AC.
 - The shared effect resolver now handles typed bonus/penalty stacking, caps, persistent damage, and resistance/weakness offsets for the first actor-effect foundation. Standard condition mapping covers the high-impact current values (`Frightened`, `Sickened`, `Clumsy`, `Enfeebled`, `Drained`, `Stupefied`, `Fatigued`, `Encumbered`, Off-Guard-like AC states); it is not yet a full PF2e rules engine.
 - Root `quests` and `lootBags` still exist for compatibility. Some code paths may read them when campaign data is absent.
 - Player-created custom item catalog registration uses `dataActions.globalContent.saveCustomItem`. The immediate inventory add still uses `onUpdateCharacter`.
@@ -56,6 +61,8 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 - Broad UI and context writes are guarded by `scripts/check_broad_writes.js`; see `docs/agent/migration-backlog.md`.
 - The broad-write guard also rejects runtime `character.conditions`, `character.companion`, root `db.characters`, broad V2 diff writes, and unguarded production `/api/files/save`.
 - Quest rewards are idempotent and not automatically rolled back when objectives are later marked incomplete.
+- Structured quest item rewards live at `rewards.itemRewards`. Legacy `rewards.items` remains a note and is not parsed/executed as free text.
+- Campaign XP threshold lives at `campaign.advancement.xpThreshold` and defaults to `1000`; use this rather than hardcoding `xp.max`.
 - Quest reward notifications are campaign-scoped; root `notificationQueue` remains only a legacy fallback.
 - `ItemsView` trader, availability/formula, custom-item, loot-bag, and character assignment paths have been moved to `dataActions`.
 - User assignment is keyed by email in legacy DB and by member documents in v2. Email casing is normalized in v2 member docs.
@@ -73,7 +80,8 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 
 ## Code Quality Risks
 
-- There is no lint script. `npm run check` currently covers tests, broad-write guard, and Vite app build.
+- `npm run lint` is a narrow first-pass ESLint gate for hardened areas. It currently catches `no-undef` and React hook violations without turning old style debt into blockers.
+- `npm run check` covers tests, broad-write guard, lint, and Vite app build.
 - Tests now cover v2 migration, domain reducers, global content reducers, data-action adapters, selectors, and the broad-write guard.
 - `handleRebuild` in `AdminApp.jsx` currently logs the request instead of fully using the server rebuild API.
 - Debug logging remains in several runtime paths.

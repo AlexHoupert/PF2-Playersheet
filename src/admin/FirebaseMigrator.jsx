@@ -107,7 +107,7 @@ export default function FirebaseMigrator({ db }) {
             setV2Report(normalized.report);
             setV2Status('success');
             downloadJson(`pf2e-v2-migration-report-${safeTimestamp()}.json`, normalized.report);
-            alert(`V2 migration complete. Wrote ${normalized.documents.length} documents. Open the app with ?db=v2 to test the normalized store.`);
+            alert(`V2 migration complete. Wrote ${normalized.documents.length} documents. Reload the V2 runtime to test the normalized store.`);
         } catch (err) {
             console.error('V2 migration failed:', err);
             setV2Status('error');
@@ -144,7 +144,7 @@ export default function FirebaseMigrator({ db }) {
                     </button>
                 </div>
                 {v2Status === 'dry-run-success' && <p style={{ color: '#8bc34a' }}>Dry run report downloaded.</p>}
-                {v2Status === 'success' && <p style={{ color: '#8bc34a' }}>V2 migration complete. Test with <code>?db=v2</code>.</p>}
+                {v2Status === 'success' && <p style={{ color: '#8bc34a' }}>V2 migration complete. Reload the app to test the normalized store.</p>}
                 {v2Status === 'error' && <p style={{ color: 'red' }}>V2 migration failed. Check console for details.</p>}
                 {v2Report && (
                     <p style={{ color: '#aaa', fontSize: '0.85em' }}>

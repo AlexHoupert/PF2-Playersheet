@@ -1,5 +1,6 @@
 import { normalizeCharacterRuntimeShape } from "./characterShape.js";
 import { applyRecordUpdater } from "./updateHelpers.js";
+import { findInventoryItemIndex as resolveInventoryItemIndex, normalizeItemInstance } from "../../utils/itemIdentity.js";
 
 export function cloneValue(value) {
   if (value === undefined || value === null) return value;
@@ -18,11 +19,7 @@ export function createInstanceId(prefix = "item") {
 
 export function ensureInventoryItemIdentity(item, options = {}) {
   const { createId = () => createInstanceId("item") } = options;
-  const next = cloneValue(item) || {};
-  if (!next.instanceId) {
-    next.instanceId = createId(next);
-  }
-  return next;
+  return normalizeItemInstance(cloneValue(item) || {}, { createId });
 }
 
 export function normalizeInventoryItems(items = [], options = {}) {
@@ -42,28 +39,7 @@ export function applyCharacterUpdate(character, updater, options = {}) {
 }
 
 export function findInventoryItemIndex(inventory = [], target = {}) {
-  if (!target) return -1;
-
-  if (Number.isInteger(target._index)) {
-    const candidate = inventory[target._index];
-    if (candidate && legacyInventoryMatch(candidate, target)) {
-      return target._index;
-    }
-  }
-
-  if (target.instanceId) {
-    const byInstanceId = inventory.findIndex((item) => item.instanceId === target.instanceId);
-    if (byInstanceId >= 0) return byInstanceId;
-  }
-
-  if (target.id) {
-    const byId = inventory.findIndex(
-      (item) => item.instanceId === target.id || item.id === target.id
-    );
-    if (byId >= 0) return byId;
-  }
-
-  return inventory.findIndex((item) => legacyInventoryMatch(item, target));
+  return resolveInventoryItemIndex(inventory, target);
 }
 
 export function addItemToCharacter(character, item, options = {}) {
@@ -156,15 +132,6 @@ export function transferInventoryItem(campaign, fromCharacterId, toCharacterId, 
     createId,
   });
   return next;
-}
-
-function legacyInventoryMatch(candidate = {}, target = {}) {
-  return (
-    candidate.name === target.name &&
-    (candidate.equipped || false) === (target.equipped || false) &&
-    (candidate.prepared || false) === (target.prepared || false) &&
-    (candidate.addedAt || null) === (target.addedAt || null)
-  );
 }
 
 function shouldStackItem(item = {}) {

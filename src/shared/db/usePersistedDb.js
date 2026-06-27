@@ -1,3 +1,6 @@
+// LEGACY IMPORT/BACKUP ONLY.
+// The normal runtime starts Firestore V2 through useFirestoreV2Db. Do not use
+// this hook for new UI or runtime writes.
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocalStorageJson } from '../hooks/useLocalStorageJson';
 import { deepClone } from '../utils/deepClone';

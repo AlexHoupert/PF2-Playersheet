@@ -1,6 +1,6 @@
-import { getConditionEffects } from '../../utils/rules';
-import { getShopIndexItemByName } from '../catalog/shopIndex';
-import { getScalySkinAcAdjustment } from '../utils/acRules';
+import { getConditionEffects } from '../../utils/rules.js';
+import { getShopIndexItemByName } from '../catalog/shopIndex.js';
+import { combineArmorAndEffectItemAc, getScalySkinAcAdjustment } from '../utils/acRules.js';
 
 export const getArmorClassData = (char) => {
     if (!char) return { totalAC: 10, totalConditionPenalty: 0, shieldRaised: false, shieldName: null };
@@ -87,7 +87,7 @@ export const getArmorClassData = (char) => {
     const shieldItemBonus = shieldBase + shieldPotency;
     const activeShieldBonus = shieldRaised ? shieldItemBonus : 0;
 
-    const baseAC = 10 + dexUsed + profBonus + armorItemBonus + activeShieldBonus;
+    const baseACWithoutArmorItem = 10 + dexUsed + profBonus + activeShieldBonus;
 
     // Calculate Condition Effects (Status/Circ/Item from Mutagens)
     // Note: Mutagen Item modifiers will separate here. Ideally separate Item vs Status.
@@ -97,7 +97,11 @@ export const getArmorClassData = (char) => {
     // The current rules engine doesn't know about `armorItemBonus`.
     // We accept `condEffects.total` as the condition-based modifier.
     const condEffects = getConditionEffects(char, "AC", "Dexterity");
-    const acPenalty = condEffects.total;
+    const effectItemBonus = Math.max(0, Number(condEffects.itemBonus) || 0);
+    const { effectiveArmorItemBonus, suppressedEffectItemBonus } = combineArmorAndEffectItemAc(armorItemBonus, effectItemBonus);
+    const acAdjustmentWithoutStackedItemBonus = condEffects.total - suppressedEffectItemBonus;
+    const baseAC = baseACWithoutArmorItem + effectiveArmorItemBonus;
+    const acPenalty = acAdjustmentWithoutStackedItemBonus;
     const totalAC = baseAC + acPenalty;
 
     return {
@@ -120,6 +124,8 @@ export const getArmorClassData = (char) => {
         armorName: equippedArmor?.name || null,
         armorCategory,
         armorItemBonus,
+        effectiveArmorItemBonus,
+        effectItemBonus,
         baseItemAC,
         potency,
         scalySkinActive,

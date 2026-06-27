@@ -1,6 +1,6 @@
 # Data And Persistence
 
-Last updated: 2026-06-20.
+Last updated: 2026-06-26.
 
 ## Mental Model
 
@@ -137,6 +137,8 @@ Files:
 - `src/shared/db/domain/campingReducers.js`
 - `src/shared/db/domain/globalContentReducers.js`
 - `src/shared/db/domain/actorReducers.js`
+- `src/shared/rules/actorRulesViewModel.js`
+- `src/shared/utils/itemIdentity.js`
 - `src/shared/db/selectors/`
 - `src/shared/db/v2/repositories.js`
 
@@ -145,6 +147,7 @@ Files:
 Current migrated write paths:
 
 - Player character compatibility updates through `dataActions.character.updateCharacter`; in V2 these delegate to PC Actor updates. Player basis edits for gold, attributes, HP/temp/max HP, speed, Class DC, daily crafting max, saves/skills, proficiencies, magic slots, and armor/shield state write PC Actor documents directly in V2.
+- Player, GM, and Encounter stat displays should consume the actor rules view model instead of manually injecting effects or legacy conditions. Mutagens, Scaly Skin, standard Conditions, and item/stat modifiers are represented as `actorEffects.modifiers` and resolved through the shared rules path.
 - New character create/import/archive/restore writes campaign-scoped PC Actors in V2. Old character documents remain import/transition data and are not a runtime read or write target.
 - Conditions in `ConditionsModal`, Player Stats, Encounter right-click assignment, Admin CharacterCard backlash, and item mutagen effects use `dataActions.effect` and campaign-scoped `actorEffects`.
 - Encounter creature combatants are not full NPC Actors yet. They receive stable `effectTargetId` strings and write `actorEffects` against those targets; player combatants write effects against the PC Actor ID.
@@ -156,6 +159,7 @@ Current migrated write paths:
 - Campaign/session flows through `dataActions.campaign`, `dataActions.character`, and `dataActions.member`.
 - GM item assignment to loot/characters and loot-bag edits through `dataActions`.
 - GM quest create/update/archive/restore, objective toggles, secret reveal, and reward distribution through `dataActions.quest`.
+- Quest item rewards use structured `rewards.itemRewards`; legacy `rewards.items` is display-only note text and must not be treated as executable reward data.
 - GM encounter create/archive/restore/activate, combatant updates, initiative, HP, and turn state through `dataActions.encounter`.
 - GM Encounter condition, persistent damage, and custom badge assignment through `dataActions.effect`.
 - GM map create/update/archive/restore, ordering, pins, scale, and image URL persistence through `dataActions.map`.
@@ -190,6 +194,17 @@ Adapter behavior:
 - Firestore v2 mode uses targeted repository updates and transactions.
 - Missing Firestore config no longer creates broad runtime V2 writes; local non-Firestore editing is not the convergence target.
 - Runtime Firestore repositories are injected by `CampaignContext`; tests can inject fake repositories without loading Firebase.
+
+Actor and inventory identity:
+
+- Inventory and loot item instances use `instanceId` as the runtime identity contract.
+- Fallback matching for old data is centralized in `src/shared/utils/itemIdentity.js`; new UI code should not add local name/index matching rules.
+
+Campaign advancement:
+
+- Campaign XP threshold is stored at `campaign.advancement.xpThreshold`.
+- Default threshold is `1000`.
+- Party XP writes and quest XP rewards synchronize active actor/character `xp.max` from the campaign setting.
 
 See `docs/agent/domain-actions.md` for the detailed API and migration status.
 

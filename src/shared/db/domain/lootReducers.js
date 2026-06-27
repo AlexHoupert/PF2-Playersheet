@@ -5,6 +5,7 @@ import {
   ensureInventoryItemIdentity,
 } from "./inventoryReducers.js";
 import { applyRecordUpdater } from "./updateHelpers.js";
+import { findLootItemIndex as resolveLootItemIndex } from "../../utils/itemIdentity.js";
 
 export function normalizeLootItems(items = [], options = {}) {
   const { createId = () => createInstanceId("loot") } = options;
@@ -119,10 +120,8 @@ export function claimLootItemState(lootBag, character, itemTarget, options = {})
       ...cloneValue(lootItem),
       qty: requestedQty,
       instanceId: createId(lootItem),
-      claimedAt: Date.now(),
     };
     delete claimedItem.claimedBy;
-    delete claimedItem.claimedAt;
     const updatedCharacter = addItemToCharacter(nextCharacter, claimedItem, {
       qty: claimedItem.qty,
       createId,
@@ -164,9 +163,11 @@ export function splitLootGoldState(lootBag, characters, options = {}) {
     return { lootBag: nextLootBag, characters: nextCharacters };
   }
 
-  const totalGold = Math.max(0, Number(nextLootBag.goldValue) || 0);
-  const share = Math.floor((totalGold / nextCharacters.length) * 100) / 100;
-  nextLootBag.goldValue = 0;
+  const totalCopper = Math.max(0, Math.round((Number(nextLootBag.goldValue) || 0) * 100));
+  const shareCopper = Math.floor(totalCopper / nextCharacters.length);
+  const remainderCopper = totalCopper - (shareCopper * nextCharacters.length);
+  const share = shareCopper / 100;
+  nextLootBag.goldValue = remainderCopper / 100;
   nextCharacters.forEach((character) => {
     character.gold = (Number(character.gold) || 0) + share;
   });
@@ -175,20 +176,5 @@ export function splitLootGoldState(lootBag, characters, options = {}) {
 }
 
 export function findLootItemIndex(items = [], target = {}) {
-  if (!target) return -1;
-
-  if (target.instanceId) {
-    const byInstanceId = items.findIndex((item) => item.instanceId === target.instanceId);
-    if (byInstanceId >= 0) return byInstanceId;
-  }
-
-  if (target.id) {
-    const byId = items.findIndex((item) => item.instanceId === target.id || item.id === target.id);
-    if (byId >= 0) return byId;
-  }
-
-  const unclaimedByName = items.findIndex((item) => item.name === target.name && !item.claimedBy);
-  if (unclaimedByName >= 0) return unclaimedByName;
-
-  return items.findIndex((item) => item.name === target.name);
+  return resolveLootItemIndex(items, target);
 }

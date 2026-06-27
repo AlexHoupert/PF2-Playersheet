@@ -296,6 +296,8 @@ Soft delete:
 - Top-level Progress entries are archived with the same metadata: reputation factions, research topics, calcifer stages, and material elements.
 - Custom Camping activities are archived with the same metadata; default activity reset removes only the override record.
 - Quest rewards use `rewardAppliedAt`/`rewardAppliedBy` markers so objective and quest rewards are idempotent. Rewards are not automatically rolled back if an objective is later marked incomplete.
+- Structured item rewards use `rewards.itemRewards` with explicit `name`, `qty`, and `target` (`lootBag`, `party`, `each`). Legacy `rewards.items` is a display note only.
+- Campaign XP threshold is stored as `campaign.advancement.xpThreshold` and must be used for `xp.max` synchronization.
 - Quest reward notifications are campaign-scoped in `campaign.notificationQueue`; root `db.notificationQueue` remains a legacy fallback.
 
 Player:

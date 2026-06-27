@@ -65,6 +65,11 @@ const forbiddenRuntimeContracts = [
     pattern: "repos.characterRepo",
     allowedFiles: new Set([]),
   },
+  {
+    name: "character.currentMutagen",
+    pattern: "currentMutagen",
+    allowedFiles: new Set([]),
+  },
 ];
 
 const failures = [];

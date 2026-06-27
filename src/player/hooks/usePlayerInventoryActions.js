@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react';
 import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
 import { shouldStack } from '../../shared/utils/inventoryUtils';
 import { getWeaponCapacity, isEquipableInventoryItem } from '../../shared/utils/combatUtils';
+import { findInventoryItemIndex } from '../../shared/utils/itemIdentity';
 import { consumeWandCharge, isWandItem, rechargeWand } from '../../shared/utils/wandUtils';
+import { createMutagenEffectInput } from '../../utils/rules/mutagens';
 
 export function usePlayerInventoryActions({
     activeCampaign,
@@ -26,18 +28,6 @@ export function usePlayerInventoryActions({
         if (tapTimeout.current) clearTimeout(tapTimeout.current);
         if (longPressTimer.current) clearTimeout(longPressTimer.current);
     }, []);
-
-    const findInventoryItemIndex = (inventory, item) => {
-        if (!Array.isArray(inventory) || !item) return -1;
-        if (Number.isInteger(item._index) && inventory[item._index]?.name === item.name) {
-            return item._index;
-        }
-        if (item.instanceId) {
-            const byInstance = inventory.findIndex(i => i.instanceId === item.instanceId);
-            if (byInstance > -1) return byInstance;
-        }
-        return inventory.findIndex(i => i.name === item.name);
-    };
 
     const handleConsumeItem = (item) => {
         const name = item.name;
@@ -88,12 +78,7 @@ export function usePlayerInventoryActions({
         });
 
         if (createsMutagenEffect && activeCampaign?.id && character?.id && dataActions?.effect?.createEffect) {
-            runDataAction(dataActions.effect.createEffect(activeCampaign.id, character.id, {
-                label: name,
-                category: 'item',
-                value: level,
-                source: { type: 'item', id: item.instanceId || item.id || name, name, actorId: character.id },
-            }));
+            runDataAction(dataActions.effect.createEffect(activeCampaign.id, character.id, createMutagenEffectInput(item, character.id)));
         }
     };
 

@@ -102,3 +102,71 @@ export function getMutagenEffects(name, level = 1) {
         penalties: data.penalties(level)
     };
 }
+
+export function createMutagenEffectInput(item = {}, actorId = null) {
+    const name = item.name || item.label || "Mutagen";
+    const level = parseInt(item.level ?? item.value) || 1;
+    return {
+        label: name,
+        category: "item",
+        value: level,
+        source: {
+            type: "item",
+            id: item.instanceId || item.id || name,
+            name,
+            actorId,
+        },
+        modifiers: buildMutagenModifiers(name, level),
+    };
+}
+
+export function buildMutagenModifiers(name, level = 1) {
+    const mutagen = getMutagenEffects(name, level);
+    if (!mutagen) return [];
+    const source = mutagen.key || name || "Mutagen";
+    return [...mutagen.bonuses, ...mutagen.penalties]
+        .flatMap(effect => statToSelectors(effect.stat).map(selector => ({
+            selector,
+            mode: Number(effect.value) < 0 ? "penalty" : "bonus",
+            bonusType: effect.type || "item",
+            value: Number(effect.value) || 0,
+            source,
+            stackingKey: `mutagen:${source}:${selector}`,
+        })))
+        .filter(modifier => modifier.value !== 0);
+}
+
+function statToSelectors(stat) {
+    const normalized = String(stat || "").trim().toLowerCase();
+    const direct = {
+        ac: ["ac"],
+        reflex: ["save.reflex"],
+        fortitude: ["save.fortitude"],
+        will: ["save.will"],
+        perception: ["perception"],
+        athletics: ["skill.athletics"],
+        acrobatics: ["skill.acrobatics"],
+        stealth: ["skill.stealth"],
+        thievery: ["skill.thievery"],
+        medicine: ["skill.medicine"],
+        nature: ["skill.nature"],
+        religion: ["skill.religion"],
+        survival: ["skill.survival"],
+        deception: ["skill.deception"],
+        diplomacy: ["skill.diplomacy"],
+        intimidation: ["skill.intimidation"],
+        performance: ["skill.performance"],
+        arcana: ["skill.arcana"],
+        crafting: ["skill.crafting"],
+        occultism: ["skill.occultism"],
+        society: ["skill.society"],
+        lore: ["skill.lore"],
+        attack: ["melee.attack", "ranged.attack"],
+        "unarmed attack": ["melee.attack"],
+        "ranged attack": ["ranged.attack"],
+        damage: ["damage"],
+        initiative: ["initiative"],
+        "dexterity actions": ["attribute.dexterity", "save.reflex", "skill.acrobatics", "skill.stealth", "skill.thievery", "ranged.attack"],
+    };
+    return direct[normalized] || [];
+}

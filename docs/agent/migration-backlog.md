@@ -104,6 +104,30 @@ Remaining presentation cleanup:
 
 ## Remaining By Domain
 
+## Post-Migration Hardening
+
+Status: in progress.
+
+Completed:
+
+- Baseline on this wave was green before changes: `npm run check` passed with 89 tests.
+- Actor rules now flow through `src/shared/rules/actorRulesViewModel.js`; Player Stats and shared Actor sheets use effective Actor+Effect view models instead of ad-hoc condition prop injection as the rules source.
+- Mutagen item use creates `actorEffects` with concrete modifiers; old modifier-less mutagen effects are normalized defensively during rules reads.
+- AC item bonuses from mutagens no longer add on top of armor item AC; the armor/effect item path keeps the highest item AC contribution.
+- Structured quest item rewards use `rewards.itemRewards`; legacy `rewards.items` remains a note and is not executed as free text.
+- Campaign XP threshold is stored at `campaign.advancement.xpThreshold`; Party XP writes synchronize active character `xp.max`.
+- Loot gold split uses copper arithmetic and leaves indivisible copper in the lootbag.
+- Loot item claims keep `claimedAt` on the lootbag item while keeping the copied inventory item free of claim metadata.
+- Shared item identity helpers live in `src/shared/utils/itemIdentity.js`; reducers and the Player inventory action hook use the same identity resolver.
+- `npm run lint` was added as a narrow first-pass quality gate for hardened areas; it focuses on `no-undef` and React hook rules.
+- The broad-write/static guard now rejects `currentMutagen` as a runtime rules source.
+
+Deferred follow-ups:
+
+- Full `createDataActions.js` domain split remains a dedicated refactor wave; this wave avoided mixing broad file moves with rules/data fixes.
+- Remaining UI-local item matching in GM item selection, rune selection, and a few utility hooks should be migrated to `itemIdentity` before the shared `ItemRow` cleanup.
+- Browser-native dialogs and large modal/view files remain UI-debt and should be handled after the rules/data hardening is fully stable.
+
 ### Campaign Compatibility
 
 - Campaign-scoped admin player writes now require an active campaign and use `dataActions.character.updateCharacter`.

@@ -5,28 +5,34 @@ import { ConditionList } from '../../shared/components/ConditionList';
 import { DefensesSection } from '../sections/DefensesSection';
 import { AttributesSection } from '../sections/AttributesSection';
 import { SkillsSection } from '../sections/SkillsSection';
+import { buildActorRulesContext, buildActorStatsViewModel } from '../../shared/rules/actorRulesViewModel';
 
-export function StatsView({ character, conditions = [], characterActions, onOpenModal, onLongPress }) {
+export function StatsView({ character, conditions = [], rulesViewModel = null, characterActions, onOpenModal, onLongPress }) {
     if (!character) return null;
 
-    const activeConditions = Array.isArray(conditions) ? conditions : [];
-    const condDrained = getCondLevel('drained', { conditions: activeConditions });
+    const actorRules = rulesViewModel || buildActorStatsViewModel(buildActorRulesContext({
+        actor: character,
+        effects: Array.isArray(conditions) ? conditions : [],
+    }));
+    const rulesCharacter = actorRules.character || character;
+    const activeConditions = Array.isArray(actorRules.conditions) ? actorRules.conditions : [];
+    const condDrained = getCondLevel('drained', rulesCharacter);
     // Drained reduces max HP by level * value
     const drainedPenalty = (condDrained || 0) * (character.level || 1);
 
     // Quicksilver Mutagen Penalty (2 * Level)
-    const hasQuicksilver = activeConditions.some(c => String(c?.name || '').toLowerCase().includes('quicksilver mutagen'));
+    const hasQuicksilver = (actorRules.effects || []).some(effect => String(effect?.label || effect?.name || '').toLowerCase().includes('quicksilver mutagen'));
     const quicksilverPenalty = hasQuicksilver ? ((character.level || 1) * 2) : 0;
 
     const totalPenalty = drainedPenalty + quicksilverPenalty;
 
     // Original Max
-    const baseMaxHP = character.stats.hp.max;
+    const baseMaxHP = rulesCharacter.stats.hp.max;
     // Effective Max for calculation (HealthBar will handle display)
     // const maxHP = Math.max(1, baseMaxHP - totalPenalty); // Refactored to pass base & penalty
 
-    const hp = character.stats.hp.current;
-    const tempHP = character.stats.hp.temp;
+    const hp = rulesCharacter.stats.hp.current;
+    const tempHP = rulesCharacter.stats.hp.temp;
 
     return (
         <div>
@@ -48,7 +54,8 @@ export function StatsView({ character, conditions = [], characterActions, onOpen
             />
 
             <DefensesSection
-                character={character}
+                character={rulesCharacter}
+                rulesViewModel={actorRules}
                 characterActions={characterActions}
                 onOpenModal={onOpenModal}
                 onLongPress={onLongPress}
@@ -59,7 +66,7 @@ export function StatsView({ character, conditions = [], characterActions, onOpen
             <div className="main-layout">
                 <div className="left-column">
                     <AttributesSection
-                        character={character}
+                        character={rulesCharacter}
                         onOpenModal={onOpenModal}
                         onLongPress={onLongPress}
                     />
@@ -68,7 +75,7 @@ export function StatsView({ character, conditions = [], characterActions, onOpen
                 <div className="right-column">
                     <div className="skills-container">
                         <SkillsSection
-                            character={character}
+                            character={rulesCharacter}
                             onOpenModal={onOpenModal}
                             onLongPress={onLongPress}
                         />

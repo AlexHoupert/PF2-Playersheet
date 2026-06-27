@@ -8,8 +8,8 @@ import { ModalManager } from '../../player/ModalManager';
 import { ELEMENTS, BACKLASH_TIERS, BACKLASH_LABELS, BACKLASH_COLORS, buildBacklashEffectInputs } from '../../pacts/pactsData';
 import { useCampaign } from '../context/CampaignContext';
 import { selectDeviantAbility } from '../db/selectors/abilitySelectors';
-import { selectConditionViewModels } from '../db/selectors/effectSelectors';
 import { selectPact, selectPactList } from '../db/selectors/pactSelectors';
+import { selectActorRulesViewModel } from '../rules/actorRulesViewModel';
 
 const DEFAULT_CAPABILITIES = {
     editable: true,
@@ -40,7 +40,9 @@ export function ActorSheetCard({
     const [localModalData, setLocalModalData] = useState(null);
     const resolvedCapabilities = { ...DEFAULT_CAPABILITIES, ...capabilities };
 
-    const conditions = useMemo(() => selectConditionViewModels(activeCampaign, character?.id), [activeCampaign, character?.id]);
+    const actorRules = useMemo(() => selectActorRulesViewModel(activeCampaign, character?.id), [activeCampaign, character?.id]);
+    const rulesCharacter = actorRules.character || character;
+    const conditions = actorRules.conditions || [];
     const assignedPact = useMemo(() => selectPact(db, character?.pact?.pactId), [character?.pact?.pactId, db]);
     const allPacts = useMemo(() => selectPactList(db), [db]);
     const hasPact = !!assignedPact;
@@ -170,7 +172,8 @@ export function ActorSheetCard({
                             </div>
                         )}
                         <StatsView
-                            character={character}
+                            character={rulesCharacter}
+                            rulesViewModel={actorRules}
                             conditions={conditions}
                             characterActions={characterActions}
                             onOpenModal={handleOpenModal}
@@ -180,7 +183,7 @@ export function ActorSheetCard({
                 )}
                 {activeTab === 'inv' && resolvedCapabilities.showInventory && (
                     <InventoryView
-                        character={character}
+                        character={rulesCharacter}
                         db={db}
                         onUpdateCharacter={resolvedCapabilities.editable ? updateCharacter : undefined}
                         onOpenModal={handleOpenModal}
@@ -198,7 +201,7 @@ export function ActorSheetCard({
                 )}
                 {activeTab === 'spells' && resolvedCapabilities.showMagic && (
                     <MagicView
-                        character={character}
+                        character={rulesCharacter}
                         characterActions={characterActions}
                         updateCharacter={updateCharacter}
                         setModalData={setModalData || setLocalModalData}
@@ -209,7 +212,7 @@ export function ActorSheetCard({
                 )}
                 {activeTab === 'impulses' && resolvedCapabilities.showMagic && (
                     <ImpulsesView
-                        character={character}
+                        character={rulesCharacter}
                         setModalData={setModalData || setLocalModalData}
                         setModalMode={setModalMode || setLocalModalMode}
                         onLongPress={onOpenModalLong}
@@ -217,7 +220,7 @@ export function ActorSheetCard({
                 )}
                 {activeTab === 'feats' && (
                     <FeatsView
-                        character={character}
+                        character={rulesCharacter}
                         setModalData={setModalData || setLocalModalData}
                         setModalMode={setModalMode || setLocalModalMode}
                         setCatalogMode={() => {}}
@@ -226,7 +229,7 @@ export function ActorSheetCard({
                 )}
                 {activeTab === 'pact' && resolvedCapabilities.showPacts && (
                     <PactTab
-                        character={character}
+                        character={rulesCharacter}
                         updateCharacter={updateCharacter}
                         db={db}
                         allPacts={allPacts}
@@ -240,7 +243,7 @@ export function ActorSheetCard({
                 <BacklashOverlay
                     assignedPact={assignedPact}
                     el={el}
-                    character={character}
+                    character={rulesCharacter}
                     onApply={handleApplyBacklash}
                     onClose={() => setBacklashOpen(false)}
                 />
@@ -252,7 +255,7 @@ export function ActorSheetCard({
                     setModalMode={setLocalModalMode}
                     modalData={modalData}
                     setModalData={setLocalModalData}
-                    character={character}
+                    character={rulesCharacter}
                     conditions={conditions}
                     updateCharacter={updateCharacter}
                     characterActions={characterActions}

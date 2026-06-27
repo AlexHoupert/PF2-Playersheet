@@ -187,6 +187,7 @@ export default function AdminApp() {
                             addPartyXp={addPartyXp}
                             assignUser={assignUser}
                             characters={characters}
+                            dataActions={dataActions}
                             db={db}
                             handleContentLinkClick={handleContentLinkClick}
                             handleRebuild={handleRebuild}
@@ -199,6 +200,7 @@ export default function AdminApp() {
                             rebuildStatus={rebuildStatus}
                             resetData={resetData}
                             revokeUser={revokeUser}
+                            runDataAction={runDataAction}
                             setActiveCharIndex={setActiveCharIndex}
                             setModalData={setModalData}
                             setModalMode={setModalMode}

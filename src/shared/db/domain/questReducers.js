@@ -1,5 +1,6 @@
 import { isSoftDeleted, markDeleted, markRestored } from "./campaignReducers.js";
-import { applyCharacterUpdate, cloneValue, createInstanceId } from "./inventoryReducers.js";
+import { addItemToCharacter, applyCharacterUpdate, cloneValue, createInstanceId } from "./inventoryReducers.js";
+import { addItemsToLootBag } from "./lootReducers.js";
 import { applyRecordUpdater } from "./updateHelpers.js";
 
 export function createQuestRecord(quest = {}, options = {}) {
@@ -204,6 +205,7 @@ function normalizeObjective(objective = {}) {
   next.xp = numberOr(next.xp, 0);
   next.gold = numberOr(next.gold, 0);
   next.reputation = Array.isArray(next.reputation) ? next.reputation.map(normalizeReputation) : [];
+  next.itemRewards = Array.isArray(next.itemRewards) ? next.itemRewards.map(normalizeItemReward).filter(Boolean) : [];
   if (!next.choiceGroup) delete next.choiceGroup;
   return next;
 }
@@ -214,7 +216,28 @@ function normalizeRewards(rewards = {}) {
     xp: numberOr(next.xp, 0),
     gold: numberOr(next.gold, 0),
     items: next.items || "",
+    itemRewards: Array.isArray(next.itemRewards) ? next.itemRewards.map(normalizeItemReward).filter(Boolean) : [],
     reputation: Array.isArray(next.reputation) ? next.reputation.map(normalizeReputation) : [],
+  };
+}
+
+function normalizeItemReward(reward = {}) {
+  const sourceItem = reward.item && typeof reward.item === "object" ? reward.item : reward;
+  const name = sourceItem.name || reward.name || "";
+  if (!name) return null;
+  const qty = Math.max(1, Math.floor(Number(reward.qty ?? sourceItem.qty) || 1));
+  const target = ["each", "party", "lootBag"].includes(reward.target) ? reward.target : "lootBag";
+  return {
+    itemId: reward.itemId || reward.baseId || sourceItem.id || sourceItem.baseId || null,
+    baseId: reward.baseId || sourceItem.baseId || sourceItem.id || null,
+    name,
+    qty,
+    target,
+    item: {
+      ...cloneValue(sourceItem),
+      name,
+      qty,
+    },
   };
 }
 
@@ -229,26 +252,58 @@ function applyRewards(campaign, rewards, options = {}) {
   const { createId = () => createInstanceId("notification") } = options;
   const xp = numberOr(rewards.xp, 0);
   const gold = numberOr(rewards.gold, 0);
+  const xpThreshold = getCampaignXpThreshold(campaign);
+  const itemRewards = Array.isArray(rewards.itemRewards) ? rewards.itemRewards.map(normalizeItemReward).filter(Boolean) : [];
   const reputation = Array.isArray(rewards.reputation) ? rewards.reputation : [];
 
   const activeCharacters = campaign.characters.filter((character) => !isSoftDeleted(character));
+  let partyItemRewardApplied = false;
   campaign.characters = campaign.characters.map((character) => {
     if (isSoftDeleted(character)) return character;
     return applyCharacterUpdate(character, (nextCharacter) => {
       if (xp > 0) {
         nextCharacter.xp = {
-          ...(nextCharacter.xp || { current: 0, max: 1000 }),
+          ...(nextCharacter.xp || { current: 0, max: xpThreshold }),
           current: (Number(nextCharacter.xp?.current) || 0) + xp,
+          max: xpThreshold,
         };
-        if (!nextCharacter.xp.max) nextCharacter.xp.max = 1000;
       }
       if (gold > 0) {
         const currentGold = Number.parseFloat(nextCharacter.gold || 0) || 0;
         nextCharacter.gold = (currentGold + gold).toFixed(2);
       }
+      itemRewards
+        .filter((reward) => reward.target === "each" || (reward.target === "party" && !partyItemRewardApplied))
+        .forEach((reward) => {
+          nextCharacter = addItemToCharacter(nextCharacter, reward.item, {
+            qty: reward.qty,
+            createId: () => createId({ type: "quest-item", item: reward.name }),
+          });
+          if (reward.target === "party") partyItemRewardApplied = true;
+        });
       return nextCharacter;
     });
   });
+
+  const lootBagRewards = itemRewards.filter((reward) => reward.target === "lootBag");
+  if (lootBagRewards.length > 0) {
+    campaign.lootBags = Array.isArray(campaign.lootBags) ? campaign.lootBags : [];
+    let targetBagIndex = campaign.lootBags.findIndex((bag) => bag.id === "quest_rewards" || bag.name === "Quest Rewards");
+    if (targetBagIndex < 0) {
+      campaign.lootBags.push({
+        id: "quest_rewards",
+        name: "Quest Rewards",
+        items: [],
+        goldValue: 0,
+      });
+      targetBagIndex = campaign.lootBags.length - 1;
+    }
+    campaign.lootBags[targetBagIndex] = addItemsToLootBag(
+      campaign.lootBags[targetBagIndex],
+      lootBagRewards.map((reward) => reward.item),
+      { createId: () => createId({ type: "quest-loot" }) }
+    );
+  }
 
   if (xp > 0) {
     campaign.xp = (Number(campaign.xp) || 0) + xp;
@@ -257,6 +312,15 @@ function applyRewards(campaign, rewards, options = {}) {
 
   if (gold > 0 && activeCharacters.length > 0) {
     appendNotification(campaign, { id: createId({ type: "gold" }), type: "gold", amount: gold });
+  }
+
+  if (itemRewards.length > 0) {
+    appendNotification(campaign, {
+      id: createId({ type: "items" }),
+      type: "items",
+      amount: itemRewards.reduce((sum, reward) => sum + reward.qty, 0),
+      items: itemRewards.map((reward) => ({ name: reward.name, qty: reward.qty, target: reward.target })),
+    });
   }
 
   reputation.forEach((entry) => {
@@ -277,8 +341,14 @@ function hasRewards(rewards = {}) {
   return (
     numberOr(rewards.xp, 0) > 0 ||
     numberOr(rewards.gold, 0) > 0 ||
+    (Array.isArray(rewards.itemRewards) && rewards.itemRewards.length > 0) ||
     (Array.isArray(rewards.reputation) && rewards.reputation.length > 0)
   );
+}
+
+function getCampaignXpThreshold(campaign) {
+  const configured = Number(campaign?.advancement?.xpThreshold ?? campaign?.xpThreshold);
+  return Number.isFinite(configured) && configured > 0 ? Math.floor(configured) : 1000;
 }
 
 function numberOr(value, fallback) {

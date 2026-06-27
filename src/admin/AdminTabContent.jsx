@@ -25,6 +25,7 @@ export default function AdminTabContent({
     addPartyXp,
     assignUser,
     characters,
+    dataActions,
     db,
     handleContentLinkClick,
     handleRebuild,
@@ -37,6 +38,7 @@ export default function AdminTabContent({
     rebuildStatus,
     resetData,
     revokeUser,
+    runDataAction,
     setActiveCharIndex,
     setModalData,
     setModalMode,
@@ -52,9 +54,11 @@ export default function AdminTabContent({
                 addPartyXp={addPartyXp}
                 assignUser={assignUser}
                 characters={characters}
+                dataActions={dataActions}
                 db={db}
                 playerTabMode={playerTabMode}
                 revokeUser={revokeUser}
+                runDataAction={runDataAction}
                 setActiveCharIndex={setActiveCharIndex}
                 setModalData={setModalData}
                 setModalMode={setModalMode}
@@ -112,9 +116,11 @@ function PlayersTab({
     addPartyXp,
     assignUser,
     characters,
+    dataActions,
     db,
     playerTabMode,
     revokeUser,
+    runDataAction,
     setActiveCharIndex,
     setModalData,
     setModalMode,
@@ -142,6 +148,27 @@ function PlayersTab({
                                 type="number"
                                 value={activeCampaign.xp || 0}
                                 onChange={(e) => setPartyXp(activeCampaign.id, parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span>Max: </span>
+                            <input
+                                className="modal-input"
+                                style={{ width: 80 }}
+                                type="number"
+                                min="1"
+                                value={activeCampaign.advancement?.xpThreshold || 1000}
+                                onChange={(e) => {
+                                    const xpThreshold = parseInt(e.target.value) || 1000;
+                                    if (!dataActions?.campaign?.updateCampaign) return;
+                                    runDataAction(dataActions.campaign.updateCampaign(activeCampaign.id, campaign => {
+                                        campaign.advancement = { ...(campaign.advancement || {}), xpThreshold };
+                                        campaign.characters = (campaign.characters || []).map(character => ({
+                                            ...character,
+                                            xp: { ...(character.xp || {}), max: xpThreshold },
+                                        }));
+                                    }));
+                                }}
                             />
                         </div>
                         <button

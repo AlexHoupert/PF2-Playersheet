@@ -359,9 +359,48 @@ export default function QuestsView({ db }) {
                                 <input className="modal-input" type="number" style={{ width: 80 }} value={editingQuest.rewards.gold} onChange={e => setEditingQuest({ ...editingQuest, rewards: { ...editingQuest.rewards, gold: parseFloat(e.target.value) || 0 } })} />
                             </div>
                             <div className="form-group" style={{ flex: 1 }}>
-                                <label>Items</label>
+                                <label>Legacy Item Note</label>
                                 <input className="modal-input" value={editingQuest.rewards.items} onChange={e => setEditingQuest({ ...editingQuest, rewards: { ...editingQuest.rewards, items: e.target.value } })} />
                             </div>
+                        </div>
+
+                        <div style={{ marginTop: 10 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
+                                <label>Structured Item Rewards</label>
+                                <button className="icon-btn" onClick={() => {
+                                    const itemRewards = [...(editingQuest.rewards.itemRewards || [])];
+                                    itemRewards.push({ name: '', qty: 1, target: 'lootBag' });
+                                    setEditingQuest({ ...editingQuest, rewards: { ...editingQuest.rewards, itemRewards } });
+                                }}>+ Add</button>
+                            </div>
+                            {(editingQuest.rewards.itemRewards || []).map((reward, idx) => (
+                                <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 5, alignItems: 'center' }}>
+                                    <input className="modal-input" placeholder="Item name" value={reward.name || reward.item?.name || ''} onChange={e => {
+                                        const itemRewards = [...(editingQuest.rewards.itemRewards || [])];
+                                        itemRewards[idx] = { ...itemRewards[idx], name: e.target.value, item: { ...(itemRewards[idx].item || {}), name: e.target.value } };
+                                        setEditingQuest({ ...editingQuest, rewards: { ...editingQuest.rewards, itemRewards } });
+                                    }} />
+                                    <input className="modal-input" type="number" min="1" style={{ width: 70 }} value={reward.qty || 1} onChange={e => {
+                                        const itemRewards = [...(editingQuest.rewards.itemRewards || [])];
+                                        itemRewards[idx] = { ...itemRewards[idx], qty: parseInt(e.target.value) || 1 };
+                                        setEditingQuest({ ...editingQuest, rewards: { ...editingQuest.rewards, itemRewards } });
+                                    }} />
+                                    <select className="modal-input" style={{ width: 120 }} value={reward.target || 'lootBag'} onChange={e => {
+                                        const itemRewards = [...(editingQuest.rewards.itemRewards || [])];
+                                        itemRewards[idx] = { ...itemRewards[idx], target: e.target.value };
+                                        setEditingQuest({ ...editingQuest, rewards: { ...editingQuest.rewards, itemRewards } });
+                                    }}>
+                                        <option value="lootBag">Lootbag</option>
+                                        <option value="party">Party once</option>
+                                        <option value="each">Each PC</option>
+                                    </select>
+                                    <button className="icon-btn" onClick={() => {
+                                        const itemRewards = [...(editingQuest.rewards.itemRewards || [])];
+                                        itemRewards.splice(idx, 1);
+                                        setEditingQuest({ ...editingQuest, rewards: { ...editingQuest.rewards, itemRewards } });
+                                    }}>x</button>
+                                </div>
+                            ))}
                         </div>
 
                         <div style={{ marginTop: 10 }}>

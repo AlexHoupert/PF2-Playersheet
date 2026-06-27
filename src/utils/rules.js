@@ -1,6 +1,6 @@
 // Game Rules and Calculation Logic
 
-import { getMutagenEffects } from './rules/mutagens';
+import { buildMutagenModifiers } from './rules/mutagens.js';
 import { buildStandardConditionModifiers } from '../shared/rules/conditionEffectRules.js';
 import { resolveEffectModifiersForSelectors } from '../shared/rules/effectResolver.js';
 
@@ -33,57 +33,16 @@ export function getCondLevel(condName, character) {
 }
 
 export function getConditionEffects(character, statName, attributeName) {
-    const conds = getConditionList(character);
     const selectors = getStatSelectors(statName, attributeName);
-    const effects = [];
-    const currentStatModifiers = [];
-
-    conds.forEach(c => {
-        if (!c) return;
-        const name = (typeof c === 'string') ? c : (c.name || c.label);
-        if (!name) return;
-
-        const rawLevel = (typeof c === 'string') ? 1 : (c.level ?? c.value);
-        const level = Number.isFinite(Number(rawLevel)) ? Number(rawLevel) : 1;
-        effects.push({
-            id: c.id || `condition:${name}`,
-            label: name,
-            disabled: c.disabled,
-            modifiers: Array.isArray(c.modifiers) ? c.modifiers : buildStandardConditionModifiers(name, level),
-        });
-
-        const mutagen = getMutagenEffects(name, level);
-        if (mutagen) {
-            mutagen.bonuses.forEach(eff => {
-                const match = eff.stat === statName || eff.stat === attributeName ||
-                    (eff.stat === "Attack" && statName.includes("Attack")) ||
-                    (eff.stat === "Damage" && statName.includes("Damage")) ||
-                    (eff.stat === "Dexterity Actions" && attributeName === "Dexterity" && statName !== "AC");
-
-                if (match) {
-                    currentStatModifiers.push(toCurrentStatModifier(eff, name));
-                }
-            });
-            mutagen.penalties.forEach(eff => {
-                const match = eff.stat === statName || eff.stat === attributeName ||
-                    (eff.stat === "Attack" && statName.includes("Attack"));
-                if (match) {
-                    currentStatModifiers.push(toCurrentStatModifier(eff, name));
-                }
-            });
-        }
-    });
-
-    if (currentStatModifiers.length) {
-        selectors.push("__current_stat");
-        effects.push({
-            id: "legacy-mutagen-current-stat",
-            label: "Mutagen",
-            modifiers: currentStatModifiers,
-        });
-    }
+    const effects = getRuntimeEffectList(character);
 
     const resolved = resolveEffectModifiersForSelectors(effects, selectors);
+    const itemBonus = Math.max(
+        0,
+        ...resolved.applied
+            .filter(modifier => (modifier.bonusType || "untyped") === "item")
+            .map(modifier => Number(modifier.value) || 0)
+    );
     const meta = buildModifierMeta(resolved.applied);
     const breakdown = {
         ...resolved.breakdown,
@@ -95,12 +54,80 @@ export function getConditionEffects(character, statName, attributeName) {
         total: resolved.total,
         breakdown,
         meta,
+        itemBonus,
+        applied: resolved.applied,
     };
 }
 
 function getConditionList(character) {
+    const effectConditions = getRuntimeEffectList(character)
+        .filter(effect => effect.category === "condition")
+        .map(effect => ({
+            id: effect.id,
+            name: effect.label || effect.name,
+            level: Number.isFinite(Number(effect.value)) ? Number(effect.value) : 1,
+            hidden: effect.hidden,
+            disabled: effect.disabled,
+            modifiers: effect.modifiers,
+        }));
+    if (effectConditions.length > 0) return effectConditions;
     const { conditions = [] } = character || {};
     return Array.isArray(conditions) ? conditions : [];
+}
+
+function getRuntimeEffectList(character) {
+    const effectSources = [
+        ...(Array.isArray(character?.actorEffects) ? character.actorEffects : []),
+        ...(Array.isArray(character?.effects) ? character.effects : []),
+    ];
+
+    if (effectSources.length > 0) {
+        return effectSources.map(normalizeRuntimeEffect).filter(Boolean);
+    }
+
+    const legacyConditions = Array.isArray(character?.["conditions"]) ? character["conditions"] : [];
+    return legacyConditions.map(conditionToRuntimeEffect).filter(Boolean);
+}
+
+function normalizeRuntimeEffect(effect) {
+    if (!effect) return null;
+    const label = effect.label || effect.name || "";
+    const value = Number.isFinite(Number(effect.value)) ? Number(effect.value) : 1;
+    let modifiers = Array.isArray(effect.modifiers) ? effect.modifiers : [];
+    if (modifiers.length === 0 && effect.category === "condition") {
+        modifiers = buildStandardConditionModifiers(label, value);
+    }
+    if (modifiers.length === 0 && isMutagenLabel(label)) {
+        modifiers = buildMutagenModifiers(label, value);
+    }
+    return {
+        ...effect,
+        id: effect.id || `effect:${label}`,
+        label,
+        value,
+        modifiers,
+    };
+}
+
+function conditionToRuntimeEffect(condition) {
+    if (!condition) return null;
+    const name = typeof condition === "string" ? condition : (condition.name || condition.label);
+    if (!name) return null;
+    const value = typeof condition === "string" ? 1 : (Number.isFinite(Number(condition.level ?? condition.value)) ? Number(condition.level ?? condition.value) : 1);
+    return {
+        id: condition.id || `condition:${name}`,
+        label: name,
+        category: "condition",
+        disabled: condition.disabled,
+        value,
+        modifiers: Array.isArray(condition.modifiers) && condition.modifiers.length > 0
+            ? condition.modifiers
+            : buildStandardConditionModifiers(name, value),
+    };
+}
+
+function isMutagenLabel(label) {
+    return String(label || "").toLowerCase().includes("mutagen");
 }
 
 function getStatSelectors(statName, attributeName) {
@@ -139,17 +166,6 @@ function getStatSelectors(statName, attributeName) {
     }
 
     return [...selectors];
-}
-
-function toCurrentStatModifier(effect, source) {
-    const value = Number(effect.value) || 0;
-    return {
-        selector: "__current_stat",
-        mode: value < 0 ? "penalty" : "bonus",
-        bonusType: effect.type || "item",
-        value,
-        source,
-    };
 }
 
 function buildModifierMeta(applied) {

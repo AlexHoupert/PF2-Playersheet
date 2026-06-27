@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getScalySkinAcAdjustment } from '../src/shared/utils/acRules.js';
+import { combineArmorAndEffectItemAc, getScalySkinAcAdjustment } from '../src/shared/utils/acRules.js';
+import { buildActorRulesContext, buildActorStatsViewModel } from '../src/shared/rules/actorRulesViewModel.js';
 import {
     resolveDamageEffects,
     resolveEffectModifiers,
@@ -12,6 +13,8 @@ import {
     createPersistentDamageEffectInput,
     createStandardConditionEffectInput,
 } from '../src/shared/rules/conditionEffectRules.js';
+import { createMutagenEffectInput } from '../src/utils/rules/mutagens.js';
+import { calculateStat } from '../src/utils/rules.js';
 import {
     consumeWandCharge,
     getWandCharges,
@@ -117,6 +120,42 @@ test('standard condition mapping creates value modifiers for core PF2e condition
     assert.equal(resolveEffectModifiersForSelectors([clumsy], ['ac', 'attribute.dexterity']).total, -1);
     assert.equal(resolveEffectModifiersForSelectors([offGuard], ['ac']).total, -2);
     assert.equal(quickened.modifiers.length, 0);
+});
+
+test('actor rules viewmodel applies actorEffects to skills and saves', () => {
+    const actor = {
+        id: 'actor1',
+        name: 'Hero',
+        level: 2,
+        stats: {
+            hp: { current: 10, max: 10, temp: 0 },
+            attributes: { dexterity: 3, wisdom: 2 },
+            proficiencies: { Unarmored: 2 },
+            ac: {},
+            speed: { land: 25 },
+        },
+        skills: { stealth: 2 },
+        inventory: [],
+    };
+    const frightened = createStandardConditionEffectInput('Frightened', 1);
+    const clumsy = createStandardConditionEffectInput('Clumsy', 1);
+    const viewModel = buildActorStatsViewModel(buildActorRulesContext({
+        actor,
+        effects: [frightened, clumsy],
+    }));
+
+    assert.equal(calculateStat(viewModel.character, 'Stealth', 2).total, 6);
+    assert.equal(calculateStat(viewModel.character, 'Reflex', 2).total, 6);
+});
+
+test('mutagen actorEffects provide modifiers and do not stack item AC with armor', () => {
+    const mutagen = createMutagenEffectInput({ name: 'Drakeheart Mutagen', level: 3 }, 'actor1');
+    mutagen.modifiers = [{ selector: 'ac', mode: 'bonus', bonusType: 'item', value: 2, source: 'Drakeheart Mutagen' }];
+    const resolved = resolveEffectModifiers([mutagen], 'ac');
+    const combined = combineArmorAndEffectItemAc(1, resolved.applied[0].value);
+    assert.equal(resolved.total, 2);
+    assert.equal(combined.effectiveArmorItemBonus, 2);
+    assert.equal(combined.suppressedEffectItemBonus, 2);
 });
 
 test('persistent damage and custom badges produce actor effects without false stacking', () => {

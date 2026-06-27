@@ -84,7 +84,12 @@ export default function QuestCodexItem({ quest, onToggleObjective }) {
                         <div className="quest-rewards">
                             {totalXp > 0 && <div className="quest-reward-pill">🏆 {totalXp} XP</div>}
                             {totalGold > 0 && <div className="quest-reward-pill">💰 {totalGold} gp</div>}
-                            {quest.rewards?.items && <div className="quest-reward-pill">🎁 {quest.rewards.items}</div>}
+                            {quest.rewards?.items && <div className="quest-reward-pill">Items note: {quest.rewards.items}</div>}
+                            {(quest.rewards?.itemRewards || []).map((reward, index) => (
+                                <div key={`${reward.name}-${index}`} className="quest-reward-pill">
+                                    Item: {reward.qty || 1}x {reward.name || reward.item?.name}
+                                </div>
+                            ))}
                             {allReputation.map((rep, i) => (
                                 <div key={i} className="quest-reward-pill" style={{ borderColor: rep.value >= 0 ? '#4caf50' : '#e57373', color: rep.value >= 0 ? '#4caf50' : '#e57373' }}>
                                     <span style={{ fontSize: '1.2em', marginRight: 4 }}>{rep.value >= 0 ? '⬆' : '⬇'}</span>

@@ -24,7 +24,7 @@ import { usePlayerCharacterActions } from './hooks/usePlayerCharacterActions';
 import { usePlayerInventoryActions } from './hooks/usePlayerInventoryActions';
 import { usePlayerModalState } from './hooks/usePlayerModalState';
 import { usePlayerNavigation } from './hooks/usePlayerNavigation';
-import { selectConditionViewModels } from '../shared/db/selectors/effectSelectors';
+import { selectActorRulesViewModel } from '../shared/rules/actorRulesViewModel';
 // Top of file
 import NotificationOverlay from './components/NotificationOverlay';
 import XpOverlay from './components/XpOverlay';
@@ -82,7 +82,9 @@ export default function PlayerAppController() {
         myCharacter,
     });
 
-    const characterConditions = selectConditionViewModels(activeCampaign, myActor?.id || character?.id);
+    const actorRules = selectActorRulesViewModel(activeCampaign, myActor?.id || character?.id);
+    const rulesCharacter = actorRules.character || character;
+    const characterConditions = actorRules.conditions || [];
 
     const {
         characterActions,
@@ -315,7 +317,8 @@ export default function PlayerAppController() {
             <div className="view-section">
                 {activeTab === 'stats' && (
                     <StatsView
-                        character={character}
+                        character={rulesCharacter}
+                        rulesViewModel={actorRules}
                         conditions={characterConditions}
                         characterActions={characterActions}
                         onOpenModal={(mode, data) => {
@@ -336,7 +339,7 @@ export default function PlayerAppController() {
 
                 {activeTab === 'actions' && (
                     <ActionsView
-                        character={character}
+                        character={rulesCharacter}
                         onOpenModal={(mode, data) => {
                             setModalMode(mode);
                             setModalData(data);
@@ -347,7 +350,7 @@ export default function PlayerAppController() {
 
                 {activeTab === 'magic' && (
                     <MagicView
-                        character={character}
+                        character={rulesCharacter}
                         characterActions={characterActions}
                         setModalData={setModalData}
                         setModalMode={setModalMode}
@@ -357,7 +360,7 @@ export default function PlayerAppController() {
                 )}
                 {activeTab === 'impulses' && (
                     <ImpulsesView
-                        character={character}
+                        character={rulesCharacter}
                         setModalData={setModalData}
                         setModalMode={setModalMode}
                         onLongPress={handleLongPress}
@@ -365,7 +368,7 @@ export default function PlayerAppController() {
                 )}
                 {activeTab === 'feats' && (
                     <FeatsView
-                        character={character}
+                        character={rulesCharacter}
                         setModalData={setModalData}
                         setModalMode={setModalMode}
                         setCatalogMode={setCatalogMode}
@@ -550,7 +553,7 @@ export default function PlayerAppController() {
                 setModalMode={setModalMode}
                 modalData={modalData}
                 setModalData={setModalData}
-                character={character}
+                character={rulesCharacter}
                 conditions={characterConditions}
                 updateCharacter={updateCharacter}
                 characterActions={characterActions}

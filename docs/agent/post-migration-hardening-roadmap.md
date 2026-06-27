@@ -1,0 +1,331 @@
+# Post-Migration Hardening Roadmap
+
+Last updated: 2026-06-27.
+
+## Zweck
+
+Diese Roadmap fasst die Massnahmen aus dem aktuellen Code-Review und dem Abgleich mit `docs/review nach migration.md` in umsetzbare Arbeitspakete zusammen. Sie ist bewusst als abhaktbare Checkliste geschrieben und kann ueber mehrere Paesse abgearbeitet werden.
+
+Leitentscheidung:
+
+- Erst robuste V2-/Actor-/Effect-Pfade stabilisieren.
+- Dann grosse Dateien schneiden.
+- Danach Reusable UI-Komponenten und Browser-Smokes ausbauen.
+- Keine Wegwerf-Fixes, wenn ein sauberer Domain-/Actor-/Selector-Pfad bereits klar ist.
+
+## Aktueller Ausgangspunkt
+
+- `main` ist V2-first, aber noch nicht V2-only.
+- `npm run check` ist zuletzt gruen gelaufen: Tests, Broad-Write-Guard, Lint, Vite Build.
+- `legacyProjection` existiert noch im normalen App-Entry als Import-/Compatibility-Bruecke.
+- `actorEffects` sind kanonische Runtime-Quelle fuer Conditions, Mutagene und stat-relevante Effekte.
+- `itemIdentity.js` existiert, aber einige UI-/Combat-Hotspots nutzen noch lokale Matching-Regeln.
+- `createDataActions.js` ist der groesste verbleibende Domain-Monolith.
+
+## Gemeinsame Gates Fuer Jeden Pass
+
+- [ ] `npm run check`
+- [ ] `git diff --check`
+- [ ] Keine neuen Treffer fuer verbotene Runtime-Muster:
+  - [ ] `setDb(`
+  - [ ] `writeLegacyDbDiffToV2`
+  - [ ] `character.conditions`
+  - [ ] `character.companion`
+  - [ ] `currentMutagen`
+  - [ ] runtime `db.characters`
+  - [ ] unguarded `/api/files/save`
+- [ ] Dokumentation aktualisiert, wenn ein Daten- oder Architekturvertrag geaendert wurde.
+- [ ] Keine Live-Firestore-Migration ohne separate explizite Freigabe.
+
+## Pass 0: Checkpoint Des Aktuellen Gruenen Stands
+
+Ziel: Die letzte Hardening-Welle sichern, bevor neue Refactors beginnen.
+
+- [x] `git status --short --branch` pruefen.
+- [x] Sicherstellen, dass `docs/review nach migration.md` bewusst behandelt wird: bleibt als separates untracked Review-Dokument erhalten.
+- [x] `npm run check` erneut ausfuehren.
+- [x] `git diff --check` ausfuehren.
+- [x] Commit erstellen, z. B. `harden actor rules rewards and identity`.
+- [x] Push auf `origin/main`, falls Deployment/Preview gewuenscht ist.
+
+Akzeptanz:
+
+- [x] Arbeitsstand ist nachvollziehbar gesichert.
+- [x] Neue Paesse starten nicht auf einem gemischten, uncommitted Review-/Hardening-Diff.
+
+## Pass 1: Campaign XP Threshold Actor-Sync
+
+Problem: `campaign.advancement.xpThreshold` existiert, aber die Admin-UI aendert den Wert derzeit ueber `campaign.updateCampaign` und mutiert dabei `campaign.characters`. In V2 persistiert das nicht zuverlaessig in PC-Actor-Dokumente.
+
+Ziel: XP-Maximum ist ein Campaign-Setting, wird aber bei Aenderung sauber auf aktive PC-Actors synchronisiert.
+
+- [ ] Neue Domain-Action einfuehren: `dataActions.campaign.setXpThreshold(campaignId, threshold)`.
+- [ ] V2-Adapter nutzt eine gezielte Campaign+Actors-Transaktion, analog zu `setPartyXp`.
+- [ ] Legacy-Adapter nutzt den bestehenden Campaign-Reducer und synchronisiert `characters[].xp.max`.
+- [ ] Campaign-Reducer um pure Funktion erweitern, z. B. `setCampaignXpThresholdInCampaign(campaign, threshold)`.
+- [ ] Admin-Players-XP-Max-Input auf `setXpThreshold` umstellen.
+- [ ] Keine UI-Komponente darf direkt `campaign.characters` mutieren, um Actor-Daten zu synchronisieren.
+
+Tests:
+
+- [ ] Reducer-Test: `setCampaignXpThresholdInCampaign(..., 1200)` setzt `campaign.advancement.xpThreshold = 1200`.
+- [ ] Reducer-Test: aktive Characters/Actors erhalten `xp.max = 1200`.
+- [ ] Reducer-Test: archivierte Characters/Actors werden nicht reaktiviert oder ungewollt veraendert.
+- [ ] V2-Adapter-Test: `campaign.setXpThreshold` ruft Campaign+Actor-Repo-Pfad auf, nicht nur `campaignRepo.updateCampaign`.
+- [ ] Static Regression Test: `AdminTabContent.jsx` enthaelt keine direkte `campaign.characters = ...` XP-Synchronisation mehr.
+
+Akzeptanz:
+
+- [ ] Aenderung von XP-Max im GM Players Tab ueberlebt Reload.
+- [ ] Spieler-Actor zeigt danach das neue XP-Maximum.
+- [ ] `setPartyXp` und Quest-XP-Rewards nutzen weiterhin denselben Campaign-Threshold.
+
+## Pass 2: V2-Only Runtime Cutover
+
+Problem: `legacyProjection` und compatibility-shaped `db` sind noch Teil des normalen App-/Context-Vertrags. Das macht Rueckfaelle auf Legacy-Felder leicht.
+
+Ziel: Normale Runtime liest aus V2-Viewmodels. Legacy-Projektion bleibt nur Import-/Backup-/Migrationstestmaterial.
+
+- [ ] `CampaignContext`-Public-Contract finalisieren:
+  - [ ] `activeCampaign`
+  - [ ] `campaigns`, `archivedCampaigns`
+  - [ ] `actors`, `pcActors`, `ownedActors`, `myActor`
+  - [ ] `quests`, `lootBags`, `encounters`, `maps`, `members`
+  - [ ] `shop`, `bestiary`, `lore`, `pacts`, `abilities`, `catalogOverrides`
+  - [ ] `dataActions`, `dbStatus`
+- [ ] UI-Verbraucher von `db` auf gezielte Context-Viewmodels umstellen.
+- [ ] `App.jsx` soll im normalen Runtime-Pfad kein `legacyProjection` als `importDb` weiterreichen.
+- [ ] `useFirestoreV2Db` soll `composeLegacyDbFromV2Documents` nur noch fuer expliziten Import-/Backup-Pfad bauen, nicht bei jedem normalen Snapshot.
+- [ ] `runtimeDb.js` root-Fallbacks fuer `db.quests`/`db.lootBags` aus dem normalen UI-Vertrag entfernen oder klar als Import-Compatibility isolieren.
+- [ ] `legacyUserInfo`-Fallback im `CampaignContext` entfernen, sobald Members/assignedActorId fuer alle relevanten Flows V2-native gelesen werden.
+- [ ] Static Guards verschaerfen: Runtime-Views duerfen `legacyProjection`, root `db.quests`, root `db.lootBags`, root `db.characters` nicht neu verwenden.
+
+Tests:
+
+- [ ] Selector-Test: Player, GM, Party und Camp erhalten ihre Daten aus V2-Viewmodels ohne Legacy-Projektion.
+- [ ] Static Test: `App.jsx` enthaelt kein normales `importDb={legacyProjection}` mehr.
+- [ ] Static Test: `useFirestoreV2Db` importiert `composeLegacyDbFromV2Documents` nur noch in einem explizit benannten legacy/import helper oder gar nicht.
+- [ ] Regression: Catalog Overrides, Quests, LootBags, Shop und Bestiary bleiben sichtbar.
+
+Akzeptanz:
+
+- [ ] Normale App-Routen funktionieren ohne Legacy-Master als Runtime-Quelle.
+- [ ] Legacy-Code ist fuer Entwickler sichtbar als Import-/Backup-Schicht markiert.
+
+## Pass 3: Item Identity Hotspots Schliessen
+
+Problem: `instanceId` ist kanonisch, aber wichtige UI-/Combat-Flows matchen Items weiter lokal per Name, `_index`, `addedAt` oder Equipped-Flag.
+
+Ziel: Inventory-, Loot-, Shop-, Combat- und ActorSheet-Flows verwenden dieselben zentralen Identity-Resolver.
+
+- [ ] `itemIdentity.js` bei Bedarf erweitern:
+  - [ ] `findInventoryItemIndex`
+  - [ ] `findLootItemIndex`
+  - [ ] `resolveInventoryItemIdentity`
+  - [ ] `resolveLootItemIdentity`
+  - [ ] optional `sameInventoryItem`
+- [ ] `usePlayerInventoryActions` komplett auf Resolver umstellen:
+  - [ ] consume
+  - [ ] equip/toggle
+  - [ ] rune apply/remove
+  - [ ] weapon load/fire
+  - [ ] ammo matching
+  - [ ] formula/prepared item flows
+- [ ] `ActorSheetCard` lokale Inventory-Suchen ersetzen.
+- [ ] Alte shared Hooks `useCombatLogic` und `useInventoryLogic` entweder entfernen oder auf Resolver umstellen, falls sie noch genutzt werden.
+- [ ] `InventoryView` lokale Wand-/Loot-Matcher auf shared Resolver umstellen.
+- [ ] GM `ItemsView` Selection Keys fuer side/global items pruefen und dort, wo echte Inventory/Loot-Instanzen betroffen sind, `instanceId` bevorzugen.
+
+Tests:
+
+- [ ] Doppelte gleichnamige Items koennen separat equipped/consumed/transferred werden.
+- [ ] Ammo mit gleichem Namen aber unterschiedlicher Instanz verhaelt sich deterministisch.
+- [ ] Rune apply/remove trifft das richtige Item.
+- [ ] Loot claim und partial claim bleiben stabil.
+- [ ] Static Test: keine neuen lokalen `findIndex(i => i.name === item.name...)` in migrierten Inventory-/Combat-Dateien.
+
+Akzeptanz:
+
+- [ ] `instanceId` ist in Runtime-Flows der primaere Schluessel.
+- [ ] Fallback-Matching ist auf zentrale Resolver beschraenkt.
+
+## Pass 4: `createDataActions.js` In Domain-Factories Schneiden
+
+Problem: Eine 1800+ Zeilen Factory erschwert Review, Tests und neue Features. Der Code mischt Infrastruktur, Legacy-Adapter, V2-Adapter und Domain-Logik.
+
+Ziel: `createDataActions.js` wird Aggregator; Domain-Actions sind einzeln testbar.
+
+- [ ] Gemeinsame Action-Infrastruktur extrahieren:
+  - [ ] `createDomainId`
+  - [ ] `nowIso`
+  - [ ] `updateDbLegacy`
+  - [ ] `updateCampaignLegacy`
+  - [ ] Actor/Character compatibility conversion helpers
+  - [ ] Repository/context object
+- [ ] Domain-Factories anlegen:
+  - [ ] `createActorActions`
+  - [ ] `createEffectActions`
+  - [ ] `createCampaignActions`
+  - [ ] `createMemberActions`
+  - [ ] `createInventoryActions`
+  - [ ] `createLootActions`
+  - [ ] `createQuestActions`
+  - [ ] `createEncounterActions`
+  - [ ] `createMapActions`
+  - [ ] `createProgressActions`
+  - [ ] `createCampingActions`
+  - [ ] `createCatalogActions`
+  - [ ] `createGlobalContentActions`
+- [ ] Public API stabil halten: `dataActions.actor.*`, `dataActions.quest.*`, usw. duerfen fuer UI-Code gleich bleiben.
+- [ ] Legacy-Adapter nur dort behalten, wo Tests/Import-Compatibility ihn noch brauchen.
+- [ ] Nach jedem 2-3 Domain-Factory-Extraktionen `npm run check` laufen lassen.
+
+Tests:
+
+- [ ] Bestehende `dataActionsLegacy.test.js` und `dataActionsV2Adapter.test.js` bleiben gruen.
+- [ ] Neue Domain-Factory-Tests nur dort ergaenzen, wo Verhalten nicht schon abgedeckt ist.
+- [ ] Static Test: `createDataActions.js` importiert Domain-Factories und enthaelt nicht mehr die grossen Domain-Funktionskoerper.
+
+Akzeptanz:
+
+- [ ] `createDataActions.js` ist ein Aggregator, kein God-Object.
+- [ ] Neue Domain-Actions koennen ohne Bearbeiten einer 1800-Zeilen-Datei ergaenzt werden.
+
+## Pass 5: Shared Reusables Fuer Catalog Details Und Item-Zeilen
+
+Problem: Player und GM implementieren Catalog-Detail-Fetch, Content-Link-Navigation und Item-Zeilen mehrfach.
+
+Ziel: Wiederkehrende Darstellung und Detail-Logik werden in gemeinsamen Komponenten/Hooks gebuendelt.
+
+### 5A: Shared Catalog Detail Controller
+
+- [ ] Shared Hook einfuehren, z. B. `useCatalogDetailController`.
+- [ ] Hook kapselt:
+  - [ ] SourceFile-Ermittlung fuer Item/Spell/Feat/Action/Impulse
+  - [ ] Detail-Fetcher-Auswahl
+  - [ ] Cache per SourceFile
+  - [ ] Loading/Error-State
+  - [ ] Content-Link-Click-Aufloesung
+  - [ ] Modal-History optional fuer Player
+- [ ] `AdminApp` und `usePlayerCatalogInspection` auf den Hook umstellen.
+- [ ] ActorSheet/GM Players duerfen denselben Controller nutzen, statt Stub- oder Sonderlogik.
+
+Tests:
+
+- [ ] Unit-Test fuer SourceFile-Ermittlung je Entity-Typ.
+- [ ] Unit-Test fuer Content-Link-Aufloesung.
+- [ ] Static Test: Detail-Fetch-Branches sind nicht mehr doppelt in Admin und Player implementiert.
+
+### 5B: Shared ItemRow / CatalogItemRow
+
+- [ ] Gemeinsames Row-ViewModel definieren:
+  - [ ] Icon
+  - [ ] Name
+  - [ ] Level/Rank
+  - [ ] Type/Category
+  - [ ] Traits
+  - [ ] Qty/Price/Equipped/Prepared/Wand-Charges optional
+  - [ ] Actions/ContextMenu capability flags
+- [ ] `InventoryView` nutzt Shared Row fuer Inventory und Loot-Items.
+- [ ] `ShopView` nutzt Shared Row fuer Kaufzeilen.
+- [ ] GM `ItemsViewLayout` nutzt Shared Row fuer Catalog, Trader und Lootbag-Seitenlisten.
+- [ ] Visuals nur angleichen, keine groessere UI-Neugestaltung in diesem Pass.
+
+Tests:
+
+- [ ] Snapshot- oder static test: relevante Views importieren Shared Row.
+- [ ] Manual Smoke: Inventory, Shop, Loot, GM Items zeigen weiterhin korrekte Icons/Metas/Aktionen.
+
+Akzeptanz:
+
+- [ ] Ein Item-Anzeigefeld wird an einer Stelle gefixt und wirkt in allen relevanten Screens.
+
+## Pass 6: Browser-Smokes Fuer Spielabend-Flows
+
+Problem: Unit-/Reducer-/Static-Tests sind stark, aber es fehlt E2E-Sicherheit fuer echte Benutzerfluesse.
+
+Ziel: Mindestens ein automatisierter Browser-Smoke deckt die wichtigsten Player-/GM-Flows ab.
+
+- [ ] Playwright oder vergleichbares Browser-Test-Setup einfuehren.
+- [ ] Testdatenstrategie festlegen:
+  - [ ] bevorzugt lokale/emulierte Daten oder deterministic V2 fixture
+  - [ ] keine Live-Produktionsdaten veraendern
+- [ ] Smoke 1: App startet, Login-/Auth-Gate wird sinnvoll behandelt.
+- [ ] Smoke 2: GM kann Campaign/Player View laden.
+- [ ] Smoke 3: Player kann HP, Gold, Condition anzeigen/aendern.
+- [ ] Smoke 4: GM gibt Custom Item an Player.
+- [ ] Smoke 5: Lootbag create, item claim, gold split.
+- [ ] Smoke 6: Quest Reward wird genau einmal angewendet.
+- [ ] Smoke 7: Encounter HP/Initiative/Condition auf Player und Creature.
+- [ ] Smoke 8: Spell/Item edit ueber Catalog Overrides sichtbar in Player Add-Flow.
+- [ ] `npm run smoke` Script ergaenzen.
+- [ ] Optional spaeter: `npm run check:e2e` getrennt von schnellem `npm run check`.
+
+Akzeptanz:
+
+- [ ] Kritische Spielabend-Flows koennen vor Deploy reproduzierbar geprueft werden.
+- [ ] Regressionen wie "GM Item Give geht nicht" oder "Spell Override im Player Add Spell unsichtbar" fallen automatisiert auf.
+
+## Pass 7: UI-Hardening Und Logging
+
+Problem: Browser-native Dialoge und ungefilterte Logs bleiben UX- und Wartungsschulden.
+
+Ziel: Kritische Dialoge sind kontrollierbar, stylbar und mobil robuster; Debug-Logs laufen nicht ungefiltert in Produktion.
+
+- [ ] Gemeinsamen Notification/Error-Service oder Hook einfuehren, z. B. `useAppFeedback`.
+- [ ] `runDataAction` Fehler nicht nur per `alert`, sondern ueber ein konsistentes UI anzeigen.
+- [ ] Native Dialoge schrittweise ersetzen:
+  - [ ] destructive GM-Aktionen
+  - [ ] Migration/FirebaseMigrator Aktionen
+  - [ ] Player Inventory/Loot prompts
+  - [ ] FormulaBook Daily Prep
+- [ ] `console.log` in Runtime durch `debugLog` hinter `import.meta.env.DEV` ersetzen.
+- [ ] `console.warn` fuer echte Warnungen behalten, aber noisy Debug-Warnungen reduzieren.
+
+Tests:
+
+- [ ] Static Test: keine neuen `prompt(` in migrierten Runtime-Dateien.
+- [ ] Static Test: keine neuen `console.log(` in Runtime-Dateien ausser explicit dev-guarded helper.
+
+Akzeptanz:
+
+- [ ] Kritische Nutzeraktionen koennen nicht mehr durch native Dialog-Eigenheiten kaputtgehen.
+- [ ] Production-Konsole ist deutlich sauberer.
+
+## Pass 8: Legacy-Isolation Finalisieren
+
+Problem: Legacy-Code ist noch im normalen Quellbaum sichtbar und teilweise im Runtime-Vertrag erreichbar.
+
+Ziel: Legacy existiert nur fuer Import, Backup, Migrationstests und historische Wiederherstellung.
+
+- [ ] Legacy-Dateien mit klarem Import-/Backup-Banner versehen oder in `src/shared/db/legacy-import/` verschieben.
+- [ ] `usePersistedDb` aus normalen Runtime-Imports entfernen.
+- [ ] `composeLegacyDbFromV2Documents` in Legacy-/Migrationstest-Kontext isolieren.
+- [ ] `V2_COLLECTIONS.characters` nur noch in Migration/Projection/Test erlauben.
+- [ ] `src/shared/db/v2/normalizers.js` nach Entity-Typ schneiden, falls es sonst weiter ueber 700 Zeilen bleibt.
+- [ ] Docs aktualisieren:
+  - [ ] `data-and-persistence.md`
+  - [ ] `architecture.md`
+  - [ ] `migration-backlog.md`
+  - [ ] `known-risks.md`
+  - [ ] `v2-default-readiness.md`
+
+Tests:
+
+- [ ] Static Guard verbietet Runtime-Importe von Legacy-Hooks/Projection.
+- [ ] Migrationstests beweisen weiter, dass alte Daten importierbar bleiben.
+
+Akzeptanz:
+
+- [ ] Ein neuer Entwickler kann klar erkennen: Runtime ist V2/Actor/Effect, Legacy ist nur Import/Backup.
+
+## Abschlusskriterien Der Roadmap
+
+- [ ] V2-only Runtime ohne normalen `legacyProjection`-Vertrag.
+- [ ] Campaign XP Threshold synchronisiert Campaign und PC-Actors atomar.
+- [ ] Inventory/Loot/Combat nutzen zentrale Item-Identity.
+- [ ] `createDataActions.js` ist modularisiert.
+- [ ] Catalog Detail und Item Row sind wiederverwendbare Shared-Bausteine.
+- [ ] Kritische Spielabend-Flows haben Browser-Smoke-Abdeckung.
+- [ ] Legacy-Code ist isoliert und durch Static Guards vom Runtime-Pfad getrennt.
+- [ ] `npm run check` und `git diff --check` sind gruen.

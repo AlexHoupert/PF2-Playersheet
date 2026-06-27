@@ -275,6 +275,8 @@ test('claims loot once and records the claimant without duplicating inventory', 
     });
 
     assert.equal(firstClaim.lootBag.items[0].claimedBy, 'char1');
+    assert.equal(typeof firstClaim.lootBag.items[0].claimedAt, 'number');
+    assert.equal(firstClaim.character.inventory[0].claimedAt, undefined);
     assert.equal(secondClaim.character.inventory.length, 1);
     assert.throws(() => claimLootItemState(firstClaim.lootBag, { id: 'char2', inventory: [] }, { name: 'Elixir' }, {
         createId,
@@ -317,6 +319,14 @@ test('claims and splits loot gold deterministically', () => {
 
     assert.equal(split.lootBag.goldValue, 0);
     assert.deepEqual(split.characters.map(char => char.gold), [2, 3, 4]);
+
+    const uneven = splitLootGoldState({ id: 'loot2', items: [], goldValue: 10 }, [
+        { id: 'char1', gold: 0 },
+        { id: 'char2', gold: 0 },
+        { id: 'char3', gold: 0 },
+    ]);
+    assert.equal(uneven.lootBag.goldValue, 0.01);
+    assert.deepEqual(uneven.characters.map(char => char.gold), [3.33, 3.33, 3.33]);
 });
 
 test('soft deletes and restores campaigns without removing campaign data', () => {
@@ -394,6 +404,7 @@ test('sets and adds party xp for active characters only', () => {
     const campaign = {
         id: 'camp1',
         xp: 10,
+        advancement: { xpThreshold: 1200 },
         characters: [
             { id: 'char1', xp: { current: 0, max: 1000 } },
             { id: 'char2', deletedAt: '2026-01-01T00:00:00.000Z', xp: { current: 5, max: 1000 } },
@@ -403,12 +414,50 @@ test('sets and adds party xp for active characters only', () => {
     const setResult = setPartyXpInCampaign(campaign, 200);
     assert.equal(setResult.xp, 200);
     assert.equal(setResult.characters[0].xp.current, 200);
+    assert.equal(setResult.characters[0].xp.max, 1200);
     assert.equal(setResult.characters[1].xp.current, 5);
 
     const addResult = addPartyXpInCampaign(setResult, 25, { notificationId: 123 });
     assert.equal(addResult.xp, 225);
     assert.equal(addResult.characters[0].xp.current, 225);
     assert.deepEqual(addResult.xpNotification, { id: 123, amount: 25 });
+});
+
+test('quest structured item rewards apply to actors or quest lootbag', () => {
+    const createId = idFactory();
+    const campaign = {
+        id: 'camp1',
+        xp: 0,
+        advancement: { xpThreshold: 1200 },
+        characters: [
+            { id: 'char1', gold: '0', xp: { current: 0, max: 1000 }, inventory: [] },
+            { id: 'char2', gold: '0', xp: { current: 0, max: 1000 }, inventory: [] },
+        ],
+        lootBags: [],
+        quests: [{
+            id: 'quest1',
+            title: 'Reward Test',
+            status: 'Active',
+            objectives: [{ text: 'Finish', completed: false }],
+            rewards: {
+                xp: 50,
+                itemRewards: [
+                    { name: 'Potion', qty: 2, target: 'each' },
+                    { name: 'Rune', qty: 1, target: 'party' },
+                    { name: 'Relic', qty: 1, target: 'lootBag' },
+                ],
+            },
+        }],
+    };
+
+    const completed = toggleQuestObjectiveInCampaign(campaign, 'quest1', 0, true, { createId });
+    assert.equal(completed.characters[0].xp.max, 1200);
+    assert.equal(completed.characters[0].inventory.find(item => item.name === 'Potion').qty, 2);
+    assert.equal(completed.characters[1].inventory.find(item => item.name === 'Potion').qty, 2);
+    assert.equal(completed.characters[0].inventory.some(item => item.name === 'Rune'), true);
+    assert.equal(completed.characters[1].inventory.some(item => item.name === 'Rune'), false);
+    assert.equal(completed.lootBags[0].name, 'Quest Rewards');
+    assert.equal(completed.lootBags[0].items[0].name, 'Relic');
 });
 
 test('soft deletes and restores quest trees', () => {

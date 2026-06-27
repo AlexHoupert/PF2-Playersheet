@@ -87,6 +87,8 @@ Current domain action files:
 
 - `src/shared/db/domain/createDataActions.js`: adapter selection and public action API.
 - `src/shared/db/domain/campaignReducers.js`: campaign/session reducers, soft delete, user assignment, party XP.
+- `src/shared/rules/actorRulesViewModel.js`: canonical Actor+Effects rules view model for Player/shared Actor sheets.
+- `src/shared/utils/itemIdentity.js`: canonical inventory/loot identity resolver; prefer this over local `_index`/name matching.
 - `src/shared/db/domain/inventoryReducers.js`: pure character/inventory reducers and identity normalization.
 - `src/shared/db/domain/characterEditReducers.js`: pure Player basis-value reducers for gold, attributes, HP, speed, Class DC, and daily crafting batches.
 - `src/shared/db/domain/actorReducers.js`: pure actor, actor effect, effect template, and catalog override record helpers.
@@ -108,6 +110,7 @@ Migrated paths:
 - Admin Player tab character updates and party XP set/add.
 - PC character lifecycle writes campaign-scoped `actors(kind="pc")`; `CampaignContext` exposes `actors`, `archivedActors`, and `myActor` in addition to transitional character viewmodels derived only from PC Actors.
 - `ConditionsModal`, Player Stats, Admin CharacterCard backlash, item mutagen effects, and Encounter condition/persistent-damage assignment use campaign-scoped `actorEffects`; runtime UI no longer writes `character.conditions`.
+- Mutagens must be represented as `actorEffects.modifiers`; `currentMutagen` is guarded against returning as a runtime rules source.
 - `CompanionTab` reads and writes owned companion Actors (`animal_companion`, `familiar`, `pet`) instead of `character.companion`; companion conditions use `actorEffects`.
 - Deployed item, spell, action, feat, impulse, ability, and creature editing writes Firestore `catalogOverrides`; static resource file APIs remain local-dev helpers.
 
@@ -137,7 +140,9 @@ Migrated paths:
 
 Soft delete uses `deletedAt`/`deletedBy`; restore removes those fields and sets `restoredAt`/`restoredBy`. `CampaignContext.campaigns`, actor-first character selectors, `activeCampaign.quests`, `activeCampaign.encounters`, and `activeCampaign.maps` expose active records; `archivedCampaigns`, actor-first archived character selectors, `activeCampaign.archivedQuests`, `activeCampaign.archivedEncounters`, and `activeCampaign.archivedMaps` expose archived records.
 
-Quest rewards are idempotent via applied markers and are not automatically rolled back if an objective is later marked incomplete. Quest reward notifications are campaign-scoped via `campaign.notificationQueue`; root `db.notificationQueue` remains a legacy fallback.
+Quest rewards are idempotent via applied markers and are not automatically rolled back if an objective is later marked incomplete. Structured item rewards live at `rewards.itemRewards`; legacy `rewards.items` is only a note. Quest reward notifications are campaign-scoped via `campaign.notificationQueue`; root `db.notificationQueue` remains a legacy fallback.
+
+Campaign XP threshold lives at `campaign.advancement.xpThreshold` with default `1000`; do not hardcode `xp.max` when writing party/character XP.
 
 Broad UI and context writes have been removed from Player/Admin route trees and `CampaignContext`. The only permitted broad write path is the legacy adapter implementation inside `createDataActions`; all runtime UI writes should go through `dataActions`. `scripts/check_broad_writes.js` also guards against reintroducing runtime `character.conditions`, `character.companion`, root `db.characters`, and unguarded production `/api/files/save` dependencies.
 

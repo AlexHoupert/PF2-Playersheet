@@ -34,6 +34,9 @@ export function createCampaignRecord(name, options = {}) {
     lootBags: [],
     maps: [],
     encounters: [],
+    advancement: {
+      xpThreshold: 1000,
+    },
     createdAt: now,
   };
 }
@@ -54,7 +57,7 @@ export function createCharacterRecord(character, options = {}) {
 
 export function applyCampaignUpdate(campaign, updater) {
   const current = cloneValue(campaign) || {};
-  return applyRecordUpdater(current, updater);
+  return normalizeCampaignAdvancement(applyRecordUpdater(current, updater));
 }
 
 export function buildCampaignViewModel(campaign) {
@@ -173,18 +176,33 @@ export function importLegacyCharacterInDb(db, campaignId, character, legacyIndex
 }
 
 export function setPartyXpInCampaign(campaign, xp) {
-  const next = cloneValue(campaign) || {};
+  const next = normalizeCampaignAdvancement(cloneValue(campaign) || {});
   const normalizedXp = Math.max(0, Number(xp) || 0);
+  const xpThreshold = getCampaignXpThreshold(next);
   next.xp = normalizedXp;
   next.characters = Array.isArray(next.characters) ? next.characters.map((character) => {
     if (isSoftDeleted(character)) return character;
     const updated = applyCharacterUpdate(character, (char) => {
-      char.xp = { ...(char.xp || { max: 1000 }), current: normalizedXp };
-      if (!char.xp.max) char.xp.max = 1000;
+      char.xp = { ...(char.xp || { max: xpThreshold }), current: normalizedXp, max: xpThreshold };
       return char;
     });
     return updated;
   }) : [];
+  return next;
+}
+
+export function getCampaignXpThreshold(campaign) {
+  const configured = Number(campaign?.advancement?.xpThreshold ?? campaign?.xpThreshold);
+  return Number.isFinite(configured) && configured > 0 ? Math.floor(configured) : 1000;
+}
+
+export function normalizeCampaignAdvancement(campaign = {}) {
+  const next = cloneValue(campaign) || {};
+  const xpThreshold = getCampaignXpThreshold(next);
+  next.advancement = {
+    ...(next.advancement || {}),
+    xpThreshold,
+  };
   return next;
 }
 
