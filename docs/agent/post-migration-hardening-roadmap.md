@@ -158,16 +158,16 @@ Problem: Eine 1800+ Zeilen Factory erschwert Review, Tests und neue Features. De
 
 Ziel: `createDataActions.js` wird Aggregator; Domain-Actions sind einzeln testbar.
 
-- [ ] Gemeinsame Action-Infrastruktur extrahieren:
-  - [ ] `createDomainId`
-  - [ ] `nowIso`
-  - [ ] `updateDbLegacy`
-  - [ ] `updateCampaignLegacy`
-  - [ ] Actor/Character compatibility conversion helpers
-  - [ ] Repository/context object
+- [x] Gemeinsame Action-Infrastruktur extrahieren:
+  - [x] `createDomainId`
+  - [x] `nowIso`
+  - [x] `updateDbLegacy`
+  - [x] `updateCampaignLegacy`
+  - [x] Actor/Character compatibility conversion helpers
+  - [x] Repository/context object
 - [ ] Domain-Factories anlegen:
-  - [ ] `createActorActions`
-  - [ ] `createEffectActions`
+  - [x] `createActorActions`
+  - [x] `createEffectActions`
   - [ ] `createCampaignActions`
   - [ ] `createMemberActions`
   - [ ] `createInventoryActions`
@@ -177,15 +177,15 @@ Ziel: `createDataActions.js` wird Aggregator; Domain-Actions sind einzeln testba
   - [ ] `createMapActions`
   - [ ] `createProgressActions`
   - [ ] `createCampingActions`
-  - [ ] `createCatalogActions`
+  - [x] `createCatalogActions`
   - [ ] `createGlobalContentActions`
 - [ ] Public API stabil halten: `dataActions.actor.*`, `dataActions.quest.*`, usw. duerfen fuer UI-Code gleich bleiben.
 - [ ] Legacy-Adapter nur dort behalten, wo Tests/Import-Compatibility ihn noch brauchen.
-- [ ] Nach jedem 2-3 Domain-Factory-Extraktionen `npm run check` laufen lassen.
+- [x] Nach jedem 2-3 Domain-Factory-Extraktionen `npm run check` laufen lassen.
 
 Tests:
 
-- [ ] Bestehende `dataActionsLegacy.test.js` und `dataActionsV2Adapter.test.js` bleiben gruen.
+- [x] Bestehende `dataActionsLegacy.test.js` und `dataActionsV2Adapter.test.js` bleiben gruen.
 - [ ] Neue Domain-Factory-Tests nur dort ergaenzen, wo Verhalten nicht schon abgedeckt ist.
 - [ ] Static Test: `createDataActions.js` importiert Domain-Factories und enthaelt nicht mehr die grossen Domain-Funktionskoerper.
 

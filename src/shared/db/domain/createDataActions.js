@@ -1,10 +1,8 @@
-import {
-  applyActorEffectUpdate,
-  applyActorUpdate,
-  createActorEffectRecord,
-  createActorRecord,
-  createCatalogOverrideRecord,
-} from "./actorReducers.js";
+import { createActionContext } from "./actionContext.js";
+import { createActorActions } from "./actorActions.js";
+import { createCatalogOverrideActions } from "./catalogOverrideActions.js";
+import { createEffectActions } from "./effectActions.js";
+import { createActorRecord, createCatalogOverrideRecord } from "./actorReducers.js";
 import {
   addPartyXpInCampaign,
   applyCampaignUpdate,
@@ -27,7 +25,6 @@ import {
 } from "./campaignReducers.js";
 import {
   addItemToCharacter,
-  applyCharacterUpdate,
   cloneValue,
   createInstanceId,
   findInventoryItemIndex,
@@ -151,12 +148,6 @@ import {
   updateCustomCreatureInDb,
   updateTraderInDb,
 } from "./globalContentReducers.js";
-import {
-  createCustomBadgeEffectInput,
-  createPersistentDamageEffectInput,
-  createStandardConditionEffectInput,
-} from "../../rules/conditionEffectRules.js";
-
 export function createDataActions({
   db,
   setDb,
@@ -166,267 +157,24 @@ export function createDataActions({
   actorEmail = null,
   repositories = {},
 } = {}) {
-  const useFirestoreV2 = mode === "firestore-v2" && hasFirestoreConfig(firestore);
-  const repos = repositories;
-  const actor = normalizeEmail(actorEmail);
-  const nowIso = () => new Date().toISOString();
-  const createDomainId = (prefix) => {
-    if (typeof createId === "function" && createId.length > 0) return createId(prefix);
-    return createInstanceId(prefix);
-  };
-
-  const updateDbLegacy = (updater) => {
-    if (!setDb) return Promise.resolve();
-    setDb((prev) => (typeof updater === "function" ? updater(prev) : { ...prev, ...updater }));
-    return Promise.resolve();
-  };
-
-  const updateCampaignLegacy = (campaignId, updater) => {
-    return updateDbLegacy((prev) => {
-      const next = cloneValue(prev);
-      const targetCampaignId = campaignId || next?.activeCampaignId;
-      const currentCampaign = next?.campaigns?.[targetCampaignId];
-      if (!currentCampaign) return prev;
-      next.campaigns[targetCampaignId] =
-        typeof updater === "function" ? updater(currentCampaign) : { ...currentCampaign, ...updater };
-      return next;
-    });
-  };
-
-  const updateCharacterLegacy = (campaignId, characterId, updater) =>
-    updateCampaignLegacy(campaignId, (campaign) => {
-      const next = cloneValue(campaign);
-      next.characters = Array.isArray(next.characters) ? next.characters.map((char) => cloneValue(char)) : [];
-      const index = next.characters.findIndex((char) => char.id === characterId);
-      if (index < 0) return next;
-      next.characters[index] = applyCharacterUpdate(next.characters[index], updater, { createId });
-      return next;
-    });
-
-  const actorDocToCharacter = (actorDoc, actorId) => ({
-    ...(actorDoc?.sheet || {}),
-    id: actorDoc?.sheet?.id || actorDoc?.id || actorId,
-    name: actorDoc?.sheet?.name || actorDoc?.name,
-    level: actorDoc?.sheet?.level ?? actorDoc?.level,
-    stats: actorDoc?.stats || actorDoc?.sheet?.stats,
-    inventory: actorDoc?.inventory || actorDoc?.sheet?.inventory,
-    magic: actorDoc?.magic || actorDoc?.sheet?.magic,
-  });
-
-  const characterToPcActorDoc = (actorDoc, character, campaignId, actorId) =>
-    applyActorUpdate({
-      ...actorDoc,
-      id: actorDoc?.id || actorId,
-      kind: actorDoc?.kind || "pc",
-      name: character.name || actorDoc?.name,
-      level: character.level ?? actorDoc?.level,
-      stats: character.stats,
-      inventory: character.inventory,
-      magic: character.magic,
-      sheet: {
-        ...(actorDoc?.sheet || {}),
-        ...character,
-        id: character.id || actorDoc?.sheet?.id || actorDoc?.id || actorId,
-        stats: character.stats,
-        inventory: character.inventory,
-        magic: character.magic,
-      },
-    }, {
-      createId: () => createDomainId("actor"),
-      campaignId,
-    });
-
-  const updateCharacter = (campaignId, characterId, updater) => {
-    if (useFirestoreV2) {
-      return updatePcActorAsCharacter(campaignId, characterId, updater);
-    }
-    return updateCharacterLegacy(campaignId, characterId, updater);
-  };
-
-  const updatePcActorAsCharacter = (campaignId, actorId, updater) => {
-    if (useFirestoreV2) {
-      return repos.actorRepo.updateActor(firestore, campaignId, actorId, (actorDoc) => {
-        const currentCharacter = actorDocToCharacter(actorDoc, actorId);
-        const nextCharacter = applyCharacterUpdate(currentCharacter, updater, { createId });
-        return characterToPcActorDoc(actorDoc, nextCharacter, campaignId, actorId);
-      });
-    }
-    return updateCharacterLegacy(campaignId, actorId, updater);
-  };
-
-  const updateActorLegacy = (campaignId, actorId, updater) =>
-    updateCampaignLegacy(campaignId, (campaign) => {
-      const next = cloneValue(campaign);
-      next.actors = Array.isArray(next.actors) ? next.actors.map((item) => cloneValue(item)) : [];
-      const index = next.actors.findIndex((item) => item.id === actorId);
-      if (index < 0) return next;
-      next.actors[index] = applyActorUpdate(next.actors[index], updater, {
-        createId: () => createDomainId("actor"),
-        campaignId,
-      });
-      return next;
-    });
-
-  const createActor = (campaignId, actorInput) => {
-    const actorRecord = createActorRecord(actorInput, {
-      createId: () => createDomainId("actor"),
-      campaignId,
-    });
-    if (useFirestoreV2) {
-      return repos.actorRepo.createActor(firestore, campaignId, actorRecord).then(() => actorRecord.id);
-    }
-    return updateCampaignLegacy(campaignId, (campaign) => {
-      const next = cloneValue(campaign);
-      next.actors = Array.isArray(next.actors) ? [...next.actors, actorRecord] : [actorRecord];
-      return next;
-    }).then(() => actorRecord.id);
-  };
-
-  const updateActor = (campaignId, actorId, updater) => {
-    if (useFirestoreV2) {
-      return repos.actorRepo.updateActor(firestore, campaignId, actorId, (actorDoc) =>
-        applyActorUpdate({ ...actorDoc, id: actorDoc.id || actorId, campaignId }, updater, {
-          createId: () => createDomainId("actor"),
-          campaignId,
-        })
-      );
-    }
-    return updateActorLegacy(campaignId, actorId, updater);
-  };
-
-  const softDeleteActor = (campaignId, actorId) => {
-    const options = { now: nowIso(), actorEmail: actor };
-    return updateActor(campaignId, actorId, (actorDoc) => markDeleted(actorDoc, options));
-  };
-
-  const restoreActor = (campaignId, actorId) => {
-    const options = { now: nowIso(), actorEmail: actor };
-    return updateActor(campaignId, actorId, (actorDoc) => markRestored(actorDoc, options));
-  };
-
-  const createEffect = (campaignId, targetActorId, effectInput) => {
-    const effectRecord = createActorEffectRecord(effectInput, {
-      createId: () => createDomainId("effect"),
-      campaignId,
-      targetActorId,
-    });
-    if (useFirestoreV2) {
-      return repos.effectRepo.createEffect(firestore, campaignId, effectRecord).then(() => effectRecord.id);
-    }
-    return updateCampaignLegacy(campaignId, (campaign) => {
-      const next = cloneValue(campaign);
-      next.actorEffects = Array.isArray(next.actorEffects) ? [...next.actorEffects, effectRecord] : [effectRecord];
-      return next;
-    }).then(() => effectRecord.id);
-  };
-
-  const updateEffect = (campaignId, effectId, updater) => {
-    if (useFirestoreV2) {
-      return repos.effectRepo.updateEffect(firestore, campaignId, effectId, (effectDoc) =>
-        applyActorEffectUpdate({ ...effectDoc, id: effectDoc.id || effectId, campaignId }, updater, {
-          createId: () => createDomainId("effect"),
-          campaignId,
-          targetActorId: effectDoc.targetActorId,
-        })
-      );
-    }
-    return updateCampaignLegacy(campaignId, (campaign) => {
-      const next = cloneValue(campaign);
-      next.actorEffects = Array.isArray(next.actorEffects) ? next.actorEffects.map((item) => cloneValue(item)) : [];
-      const index = next.actorEffects.findIndex((item) => item.id === effectId);
-      if (index < 0) return next;
-      next.actorEffects[index] = applyActorEffectUpdate(next.actorEffects[index], updater, {
-        createId: () => createDomainId("effect"),
-        campaignId,
-        targetActorId: next.actorEffects[index].targetActorId,
-      });
-      return next;
-    });
-  };
-
-  const deleteEffect = (campaignId, effectId) => {
-    if (useFirestoreV2) {
-      return repos.effectRepo.deleteEffect(firestore, campaignId, effectId);
-    }
-    return updateCampaignLegacy(campaignId, (campaign) => {
-      const next = cloneValue(campaign);
-      next.actorEffects = (next.actorEffects || []).filter((effectDoc) => effectDoc.id !== effectId);
-      return next;
-    });
-  };
-
-  const createStandardCondition = (campaignId, targetActorId, conditionName, value = 1, options = {}) =>
-    createEffect(campaignId, targetActorId, createStandardConditionEffectInput(conditionName, value, {
-      ...options,
-      actorId: options.actorId || targetActorId,
-    }));
-
-  const createPersistentDamage = (campaignId, targetActorId, payload = {}, options = {}) =>
-    createEffect(campaignId, targetActorId, createPersistentDamageEffectInput(payload, {
-      ...options,
-      actorId: options.actorId || targetActorId,
-    }));
-
-  const createCustomBadge = (campaignId, targetActorId, label, options = {}) =>
-    createEffect(campaignId, targetActorId, createCustomBadgeEffectInput(label, {
-      ...options,
-      actorId: options.actorId || targetActorId,
-    }));
-
-  const saveEffectTemplate = (campaignId, templateInput) => {
-    const template = {
-      ...cloneValue(templateInput || {}),
-      id: templateInput?.id || createDomainId("effect_template"),
-    };
-    if (useFirestoreV2) {
-      return repos.effectRepo.setEffectTemplate(firestore, campaignId, template).then(() => template.id);
-    }
-    return updateCampaignLegacy(campaignId, (campaign) => {
-      const next = cloneValue(campaign);
-      next.effectTemplates = Array.isArray(next.effectTemplates) ? [...next.effectTemplates] : [];
-      const index = next.effectTemplates.findIndex((item) => item.id === template.id);
-      if (index >= 0) next.effectTemplates[index] = template;
-      else next.effectTemplates.push(template);
-      return next;
-    }).then(() => template.id);
-  };
-
-  const deleteEffectTemplate = (campaignId, templateId) => {
-    if (useFirestoreV2) {
-      return repos.effectRepo.deleteEffectTemplate(firestore, campaignId, templateId);
-    }
-    return updateCampaignLegacy(campaignId, (campaign) => {
-      const next = cloneValue(campaign);
-      next.effectTemplates = (next.effectTemplates || []).filter((template) => template.id !== templateId);
-      return next;
-    });
-  };
-
-  const saveCatalogOverride = (overrideInput) => {
-    const override = createCatalogOverrideRecord(overrideInput, {
-      createId: () => createDomainId("catalog_override"),
-    });
-    if (useFirestoreV2) {
-      return repos.catalogOverrideRepo.setCatalogOverride(firestore, override).then(() => override.id);
-    }
-    return updateDbLegacy((prev) => {
-      const next = cloneValue(prev) || {};
-      next.catalogOverrides = { ...(next.catalogOverrides || {}), [override.id]: override };
-      return next;
-    }).then(() => override.id);
-  };
-
-  const deleteCatalogOverride = (overrideId) => {
-    if (useFirestoreV2) {
-      return repos.catalogOverrideRepo.deleteCatalogOverride(firestore, overrideId);
-    }
-    return updateDbLegacy((prev) => {
-      const next = cloneValue(prev) || {};
-      next.catalogOverrides = { ...(next.catalogOverrides || {}) };
-      delete next.catalogOverrides[overrideId];
-      return next;
-    });
-  };
+  const actionContext = createActionContext({ db, setDb, mode, firestore, createId, actorEmail, repositories });
+  const {
+    actor,
+    actorDocToCharacter,
+    characterToPcActorDoc,
+    createDomainId,
+    mode: resolvedMode,
+    nowIso,
+    repos,
+    updateCampaignLegacy,
+    updateCharacter,
+    updateDbLegacy,
+    updatePcActorAsCharacter,
+    useFirestoreV2,
+  } = actionContext;
+  const actorActions = createActorActions(actionContext);
+  const effectActions = createEffectActions(actionContext);
+  const catalogOverrideActions = createCatalogOverrideActions(actionContext);
 
   const updateLootBagLegacy = (campaignId, lootBagId, updater) =>
     updateCampaignLegacy(campaignId, (campaign) =>
@@ -1505,7 +1253,7 @@ export function createDataActions({
     updateGlobalConfig((current) => setShopFormulaAvailableInDb(current, itemName, available));
 
   return {
-    mode: useFirestoreV2 ? "firestore-v2" : "legacy",
+    mode: resolvedMode,
     campaign: {
       createCampaign,
       softDeleteCampaign,
@@ -1636,203 +1384,9 @@ export function createDataActions({
         );
       },
     },
-    actor: {
-      createActor,
-      updateActor,
-      softDeleteActor,
-      restoreActor,
-      setHp(campaignId, actorId, value) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => setCharacterHp(character, value));
-      },
-      adjustHp(campaignId, actorId, amount) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => adjustCharacterHp(character, amount));
-      },
-      setGold(campaignId, actorId, value) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => setCharacterGold(character, value));
-      },
-      adjustGold(campaignId, actorId, amount) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => adjustCharacterGold(character, amount));
-      },
-      setStat(campaignId, actorId, key, value) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => setCharacterAttribute(character, key, value));
-      },
-      setSkill(campaignId, actorId, skillKey, value) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
-          const next = cloneValue(character);
-          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
-          next.stats.skills = next.stats.skills && typeof next.stats.skills === "object" ? cloneValue(next.stats.skills) : {};
-          next.skills = next.skills && typeof next.skills === "object" ? cloneValue(next.skills) : {};
-          if (value === null || value === undefined) {
-            delete next.stats.skills[skillKey];
-            delete next.skills[skillKey];
-          } else {
-            next.stats.skills[skillKey] = value;
-            next.skills[skillKey] = value;
-          }
-          return next;
-        });
-      },
-      setSave(campaignId, actorId, saveKey, value) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
-          const next = cloneValue(character);
-          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
-          next.stats.saves = next.stats.saves && typeof next.stats.saves === "object" ? cloneValue(next.stats.saves) : {};
-          if (value === null || value === undefined) delete next.stats.saves[saveKey];
-          else next.stats.saves[saveKey] = value;
-          return next;
-        });
-      },
-      setArmorProficiency(campaignId, actorId, armorKey, value) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
-          const next = cloneValue(character);
-          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
-          next.stats.proficiencies = next.stats.proficiencies && typeof next.stats.proficiencies === "object"
-            ? cloneValue(next.stats.proficiencies)
-            : {};
-          next.stats.proficiencies[String(armorKey || "").toLowerCase()] = value;
-          return next;
-        });
-      },
-      setProficiency(campaignId, actorId, proficiencyKey, value) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
-          const next = cloneValue(character);
-          next.proficiencies = next.proficiencies && typeof next.proficiencies === "object"
-            ? cloneValue(next.proficiencies)
-            : {};
-          next.proficiencies[proficiencyKey] = value;
-          return next;
-        });
-      },
-      setSpellProficiency(campaignId, actorId, value) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
-          const next = cloneValue(character);
-          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
-          next.stats.spell_proficiency = Number(value) || 0;
-          return next;
-        });
-      },
-      setImpulseProficiency(campaignId, actorId, value) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
-          const next = cloneValue(character);
-          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
-          next.stats.impulse_proficiency = Number(value) || 0;
-          return next;
-        });
-      },
-      setPerception(campaignId, actorId, value) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
-          const next = cloneValue(character);
-          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
-          next.stats.perception = Number(value) || 0;
-          return next;
-        });
-      },
-      setMagicAttribute(campaignId, actorId, attribute) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
-          const next = cloneValue(character);
-          next.magic = next.magic && typeof next.magic === "object" ? cloneValue(next.magic) : { slots: {}, list: [] };
-          next.magic.attribute = attribute;
-          return next;
-        });
-      },
-      setMagicProficiency(campaignId, actorId, value) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
-          const next = cloneValue(character);
-          next.magic = next.magic && typeof next.magic === "object" ? cloneValue(next.magic) : { slots: {}, list: [] };
-          next.magic.proficiency = Number(value) || 0;
-          return next;
-        });
-      },
-      setMagicSlot(campaignId, actorId, slotKey, value) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
-          const next = cloneValue(character);
-          next.magic = next.magic && typeof next.magic === "object" ? cloneValue(next.magic) : { slots: {}, list: [] };
-          next.magic.slots = next.magic.slots && typeof next.magic.slots === "object" ? cloneValue(next.magic.slots) : {};
-          next.magic.slots[slotKey] = Number(value) || 0;
-          return next;
-        });
-      },
-      setEquipmentState(campaignId, actorId, patch) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
-          if (typeof patch === "function") return patch(character);
-          const next = cloneValue(character);
-          next.stats = next.stats && typeof next.stats === "object" ? cloneValue(next.stats) : {};
-          next.stats.ac = next.stats.ac && typeof next.stats.ac === "object" ? cloneValue(next.stats.ac) : {};
-          Object.assign(next.stats.ac, patch || {});
-          return next;
-        });
-      },
-      addItem(campaignId, actorId, item, options = {}) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) =>
-          addItemToCharacter(character, item, { ...options, createId })
-        );
-      },
-      updateItem(campaignId, actorId, item, updater) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) => {
-          const next = normalizeCharacterInventory(character, { createId });
-          const index = findInventoryItemIndex(next.inventory, item);
-          if (index < 0) return next;
-          next.inventory[index] =
-            typeof updater === "function"
-              ? updater(next.inventory[index])
-              : { ...next.inventory[index], ...updater };
-          return normalizeCharacterInventory(next, { createId });
-        });
-      },
-      removeItem(campaignId, actorId, item) {
-        return updatePcActorAsCharacter(campaignId, actorId, (character) =>
-          removeInventoryItem(character, item, { createId })
-        );
-      },
-      transferItem(campaignId, fromActorId, toActorId, item, qty) {
-        if (useFirestoreV2) {
-          return repos.actorRepo.updateActors(
-            firestore,
-            campaignId,
-            [fromActorId, toActorId],
-            (actorsById) => {
-              const nextCampaign = transferInventoryItem(
-                {
-                  id: campaignId,
-                  characters: [
-                    actorDocToCharacter(actorsById[fromActorId], fromActorId),
-                    actorDocToCharacter(actorsById[toActorId], toActorId),
-                  ],
-                },
-                fromActorId,
-                toActorId,
-                item,
-                qty,
-                { createId }
-              );
-              return Object.fromEntries(
-                nextCampaign.characters.map((character) => [
-                  character.id,
-                  characterToPcActorDoc(actorsById[character.id], character, campaignId, character.id),
-                ])
-              );
-            }
-          );
-        }
-        return updateCampaignLegacy(campaignId, (campaign) =>
-          transferInventoryItem(campaign, fromActorId, toActorId, item, qty, { createId })
-        );
-      },
-    },
-    effect: {
-      createEffect,
-      createStandardCondition,
-      createPersistentDamage,
-      createCustomBadge,
-      updateEffect,
-      deleteEffect,
-      saveEffectTemplate,
-      deleteEffectTemplate,
-    },
-    catalogOverride: {
-      saveCatalogOverride,
-      deleteCatalogOverride,
-    },
+    actor: actorActions,
+    effect: effectActions,
+    catalogOverride: catalogOverrideActions,
     loot: {
       createLootBag,
       updateLootBag,
@@ -1943,10 +1497,6 @@ export function createDataActions({
       setFormulaAvailable,
     },
   };
-}
-
-function hasFirestoreConfig(firestore) {
-  return Boolean(firestore?.app?.options?.projectId);
 }
 
 function stripChildCollections(campaign) {

@@ -37,7 +37,8 @@ These UI files must not introduce direct `setDb` or `updateActiveCampaign` write
 
 Only these broad-write files are currently allowed by `scripts/check_broad_writes.js`:
 
-- `src/shared/db/domain/createDataActions.js`: legacy adapter implementation that intentionally writes through `setDb`.
+- `src/shared/db/domain/createDataActions.js`: legacy adapter aggregator while the remaining domains are split out.
+- `src/shared/db/domain/actionContext.js`: shared legacy adapter infrastructure that intentionally owns `setDb`/legacy snapshot writes for compatibility tests and import-era fallback paths.
 
 Any new broad write outside those files should be treated as a regression.
 

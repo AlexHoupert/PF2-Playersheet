@@ -126,6 +126,10 @@ Important transitional limitation:
 Files:
 
 - `src/shared/db/domain/createDataActions.js`
+- `src/shared/db/domain/actionContext.js`
+- `src/shared/db/domain/actorActions.js`
+- `src/shared/db/domain/effectActions.js`
+- `src/shared/db/domain/catalogOverrideActions.js`
 - `src/shared/db/domain/campaignReducers.js`
 - `src/shared/db/domain/inventoryReducers.js`
 - `src/shared/db/domain/lootReducers.js`
@@ -142,6 +146,8 @@ Files:
 - `src/shared/db/v2/repositories.js`
 
 `CampaignContext` exposes `dataActions`, `dbMode`, and `dbStatus`.
+
+`createDataActions.js` is being reduced to an aggregator. Shared mode/repository/legacy-update infrastructure lives in `actionContext.js`; Actor, ActorEffect, and Catalog Override actions already live in dedicated factories.
 
 Current migrated write paths:
 

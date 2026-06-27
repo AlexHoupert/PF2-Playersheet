@@ -30,6 +30,7 @@ const protectedFiles = new Set([
 
 const allowedBroadWriteFiles = new Map([
   ["src/shared/db/domain/createDataActions.js", "legacy adapter implementation"],
+  ["src/shared/db/domain/actionContext.js", "shared legacy adapter infrastructure"],
 ]);
 
 const broadWritePatterns = [

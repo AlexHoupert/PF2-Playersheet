@@ -83,7 +83,11 @@ V2 is the convergence branch runtime, but the branch is not yet production-cutov
 
 Current domain action files:
 
-- `src/shared/db/domain/createDataActions.js`: adapter selection and public action API.
+- `src/shared/db/domain/createDataActions.js`: public action API aggregator for domains that have not yet been split out.
+- `src/shared/db/domain/actionContext.js`: shared action infrastructure, legacy update helpers, Actor/Character compatibility conversion, repository context, and runtime mode selection.
+- `src/shared/db/domain/actorActions.js`: Actor-backed Player/Actor edits and Actor inventory actions.
+- `src/shared/db/domain/effectActions.js`: ActorEffect and EffectTemplate actions.
+- `src/shared/db/domain/catalogOverrideActions.js`: direct Catalog Override save/delete actions.
 - `src/shared/db/domain/campaignReducers.js`: campaign/session reducers, soft delete, user assignment, party XP.
 - `src/shared/rules/actorRulesViewModel.js`: canonical Actor+Effects rules view model for Player/shared Actor sheets.
 - `src/shared/utils/itemIdentity.js`: canonical inventory/loot identity resolver; prefer this over local `_index`/name matching. It owns instance lookup, legacy fallback matching, stack grouping, and side-panel selection keys.

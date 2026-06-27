@@ -314,3 +314,18 @@ test('v2 runtime actions do not inject or call characterRepo', () => {
     assert.equal(viewModelSource.includes('V2_COLLECTIONS.characters'), false);
     assert.equal(characterSelectorsSource.includes('campaign?.characters'), false);
 });
+
+test('createDataActions delegates extracted actor effect and catalog override factories', () => {
+    const actionSource = readSource('src/shared/db/domain/createDataActions.js');
+
+    assert.match(actionSource, /createActionContext/);
+    assert.match(actionSource, /createActorActions/);
+    assert.match(actionSource, /createEffectActions/);
+    assert.match(actionSource, /createCatalogOverrideActions/);
+    assert.match(actionSource, /actor: actorActions/);
+    assert.match(actionSource, /effect: effectActions/);
+    assert.match(actionSource, /catalogOverride: catalogOverrideActions/);
+    assert.equal(actionSource.includes('const createEffect ='), false);
+    assert.equal(actionSource.includes('const createActor ='), false);
+    assert.equal(actionSource.includes('const saveCatalogOverride ='), false);
+});
