@@ -86,7 +86,10 @@ Current domain action files:
 - `src/shared/db/domain/createDataActions.js`: public action API aggregator for domains that have not yet been split out.
 - `src/shared/db/domain/actionContext.js`: shared action infrastructure, legacy update helpers, Actor/Character compatibility conversion, repository context, and runtime mode selection.
 - `src/shared/db/domain/actorActions.js`: Actor-backed Player/Actor edits and Actor inventory actions.
+- `src/shared/db/domain/campaignActions.js`: Campaign lifecycle, party XP, XP threshold sync, and campaign notification actions.
+- `src/shared/db/domain/characterActions.js`: Character compatibility facade backed by PC Actor documents plus character lifecycle actions.
 - `src/shared/db/domain/effectActions.js`: ActorEffect and EffectTemplate actions.
+- `src/shared/db/domain/memberActions.js`: Campaign member assign/revoke actions.
 - `src/shared/db/domain/catalogOverrideActions.js`: direct Catalog Override save/delete actions.
 - `src/shared/db/domain/campaignReducers.js`: campaign/session reducers, soft delete, user assignment, party XP.
 - `src/shared/rules/actorRulesViewModel.js`: canonical Actor+Effects rules view model for Player/shared Actor sheets.

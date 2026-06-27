@@ -315,17 +315,26 @@ test('v2 runtime actions do not inject or call characterRepo', () => {
     assert.equal(characterSelectorsSource.includes('campaign?.characters'), false);
 });
 
-test('createDataActions delegates extracted actor effect and catalog override factories', () => {
+test('createDataActions delegates extracted domain action factories', () => {
     const actionSource = readSource('src/shared/db/domain/createDataActions.js');
 
     assert.match(actionSource, /createActionContext/);
     assert.match(actionSource, /createActorActions/);
+    assert.match(actionSource, /createCampaignActions/);
+    assert.match(actionSource, /createCharacterActions/);
     assert.match(actionSource, /createEffectActions/);
+    assert.match(actionSource, /createMemberActions/);
     assert.match(actionSource, /createCatalogOverrideActions/);
     assert.match(actionSource, /actor: actorActions/);
+    assert.match(actionSource, /campaign: campaignActions/);
+    assert.match(actionSource, /character: characterActions/);
     assert.match(actionSource, /effect: effectActions/);
+    assert.match(actionSource, /member: memberActions/);
     assert.match(actionSource, /catalogOverride: catalogOverrideActions/);
     assert.equal(actionSource.includes('const createEffect ='), false);
     assert.equal(actionSource.includes('const createActor ='), false);
+    assert.equal(actionSource.includes('const createCampaign ='), false);
+    assert.equal(actionSource.includes('const createCharacter ='), false);
+    assert.equal(actionSource.includes('const assignUser ='), false);
     assert.equal(actionSource.includes('const saveCatalogOverride ='), false);
 });

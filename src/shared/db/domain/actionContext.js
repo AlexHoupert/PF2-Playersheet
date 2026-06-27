@@ -131,9 +131,38 @@ export function createActionContext({
     updateDbLegacy,
     updatePcActorAsCharacter,
     useFirestoreV2,
+    getActivePcActorIds,
+    stripChildCollections,
   };
 }
 
 export function hasFirestoreConfig(firestore) {
   return Boolean(firestore?.app?.options?.projectId);
+}
+
+export function stripChildCollections(campaign) {
+  const next = { ...campaign };
+  delete next.characters;
+  delete next.archivedCharacters;
+  delete next.quests;
+  delete next.archivedQuests;
+  delete next.lootBags;
+  delete next.encounters;
+  delete next.archivedEncounters;
+  delete next.maps;
+  return next;
+}
+
+export function getActivePcActorIds(campaign) {
+  const actors = Array.isArray(campaign?.actors) ? campaign.actors : [];
+  if (actors.length) {
+    return actors
+      .filter((actor) => actor?.kind === "pc" && !actor?.deletedAt)
+      .map((actor) => actor.id)
+      .filter(Boolean);
+  }
+  return (campaign?.characters || [])
+    .filter((character) => !character?.deletedAt)
+    .map((character) => character.id)
+    .filter(Boolean);
 }

@@ -1,28 +1,12 @@
 import { createActionContext } from "./actionContext.js";
 import { createActorActions } from "./actorActions.js";
+import { createCampaignActions } from "./campaignActions.js";
 import { createCatalogOverrideActions } from "./catalogOverrideActions.js";
+import { createCharacterActions } from "./characterActions.js";
 import { createEffectActions } from "./effectActions.js";
-import { createActorRecord, createCatalogOverrideRecord } from "./actorReducers.js";
-import {
-  addPartyXpInCampaign,
-  applyCampaignUpdate,
-  assignUserInDb,
-  createCampaignInDb,
-  createCampaignRecord,
-  createCharacterInCampaign,
-  createCharacterRecord,
-  importLegacyCharacterInDb,
-  normalizeEmail,
-  restoreCampaignInDb,
-  restoreCharacterInCampaign,
-  revokeUserInDb,
-  setCampaignXpThresholdInCampaign,
-  setPartyXpInCampaign,
-  softDeleteCampaignInDb,
-  softDeleteCharacterInDb,
-  markDeleted,
-  markRestored,
-} from "./campaignReducers.js";
+import { createMemberActions } from "./memberActions.js";
+import { createCatalogOverrideRecord } from "./actorReducers.js";
+import { markDeleted, markRestored } from "./campaignReducers.js";
 import {
   addItemToCharacter,
   cloneValue,
@@ -33,23 +17,6 @@ import {
   setInventoryItemQuantity,
   transferInventoryItem,
 } from "./inventoryReducers.js";
-import {
-  adjustCharacterAttribute,
-  adjustCharacterClassDc,
-  adjustCharacterGold,
-  adjustCharacterHp,
-  adjustCharacterMaxHp,
-  adjustCharacterSpeed,
-  adjustCharacterTempHp,
-  setCharacterAttribute,
-  setCharacterClassDc,
-  setCharacterDailyCraftingMax,
-  setCharacterGold,
-  setCharacterHp,
-  setCharacterMaxHp,
-  setCharacterSpeed,
-  setCharacterTempHp,
-} from "./characterEditReducers.js";
 import {
   addItemsToLootBag,
   applyLootBagUpdate,
@@ -80,7 +47,6 @@ import {
 } from "./encounterReducers.js";
 import {
   applyQuestUpdate,
-  clearCampaignNotificationInCampaign,
   collectQuestTreeIds,
   createQuestRecord,
   restoreQuestTreeInCampaign,
@@ -163,6 +129,7 @@ export function createDataActions({
     actorDocToCharacter,
     characterToPcActorDoc,
     createDomainId,
+    getActivePcActorIds,
     mode: resolvedMode,
     nowIso,
     repos,
@@ -170,10 +137,14 @@ export function createDataActions({
     updateCharacter,
     updateDbLegacy,
     updatePcActorAsCharacter,
+    stripChildCollections,
     useFirestoreV2,
   } = actionContext;
   const actorActions = createActorActions(actionContext);
+  const campaignActions = createCampaignActions(actionContext);
+  const characterActions = createCharacterActions(actionContext);
   const effectActions = createEffectActions(actionContext);
+  const memberActions = createMemberActions(actionContext);
   const catalogOverrideActions = createCatalogOverrideActions(actionContext);
 
   const updateLootBagLegacy = (campaignId, lootBagId, updater) =>
@@ -430,22 +401,6 @@ export function createDataActions({
       );
     }
     return updateCampaignLegacy(campaignId, (campaign) => revealQuestSecretInCampaign(campaign, questId, secretText));
-  };
-
-  const clearNotification = (campaignId, notificationId) => {
-    if (useFirestoreV2 && campaignId) {
-      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
-        clearCampaignNotificationInCampaign({ ...campaign, id: campaign.id || campaignId }, notificationId)
-      );
-    }
-    return updateDbLegacy((prev) => {
-      const next = cloneValue(prev) || {};
-      if (campaignId && next.campaigns?.[campaignId]) {
-        next.campaigns[campaignId] = clearCampaignNotificationInCampaign(next.campaigns[campaignId], notificationId);
-      }
-      next.notificationQueue = (next.notificationQueue || []).filter((notification) => notification.id !== notificationId);
-      return next;
-    });
   };
 
   const createEncounter = (campaignId, nameOrEncounter) => {
@@ -814,242 +769,6 @@ export function createDataActions({
     );
   };
 
-  const createCampaign = (name) => {
-    const campaignId = `campaign_${Date.now()}`;
-    const campaign = createCampaignRecord(name, { id: campaignId, now: Date.now() });
-
-    if (useFirestoreV2) {
-      const writes = [repos.campaignRepo.createCampaign(firestore, campaign)];
-      if (actor) {
-        writes.push(repos.memberRepo.assignUser(firestore, campaignId, actor, {
-          role: "gm",
-          characterId: null,
-        }));
-      }
-      return Promise.all(writes).then(() => campaignId);
-    }
-
-    return updateDbLegacy((prev) => {
-      let next = createCampaignInDb(prev, campaign, { campaignId });
-      if (actor) next = assignUserInDb(next, actor, campaignId, null, "gm");
-      return next;
-    }).then(() => campaignId);
-  };
-
-  const updateCampaign = (campaignId, updater) => {
-    if (useFirestoreV2) {
-      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) =>
-        applyCampaignUpdate({ ...campaign, id: campaign.id || campaignId }, updater)
-      );
-    }
-    return updateCampaignLegacy(campaignId, (campaign) => applyCampaignUpdate(campaign, updater));
-  };
-
-  const softDeleteCampaign = (campaignId) => {
-    const options = { now: nowIso(), actorEmail: actor };
-    if (useFirestoreV2) {
-      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) => markDeleted(campaign, options));
-    }
-    return updateDbLegacy((prev) => softDeleteCampaignInDb(prev, campaignId, options));
-  };
-
-  const restoreCampaign = (campaignId) => {
-    const options = { now: nowIso(), actorEmail: actor };
-    if (useFirestoreV2) {
-      return repos.campaignRepo.updateCampaign(firestore, campaignId, (campaign) => markRestored(campaign, options));
-    }
-    return updateDbLegacy((prev) => restoreCampaignInDb(prev, campaignId, options));
-  };
-
-  const setPartyXp = (campaignId, xp) => {
-    const campaign = db?.campaigns?.[campaignId];
-    const activeActorIds = getActivePcActorIds(campaign);
-
-    if (useFirestoreV2) {
-      return repos.campaignRepo.updateCampaignAndActors(
-        firestore,
-        campaignId,
-        activeActorIds,
-        (campaignDoc, actorsById) => {
-          const current = {
-            ...campaignDoc,
-            id: campaignDoc.id || campaignId,
-            characters: activeActorIds.map((actorId) => actorDocToCharacter(actorsById[actorId], actorId)),
-          };
-          const nextCampaign = setPartyXpInCampaign(current, xp);
-          return {
-            campaign: stripChildCollections(nextCampaign),
-            actorsById: Object.fromEntries(
-              nextCampaign.characters.map((character) => [
-                character.id,
-                characterToPcActorDoc(actorsById[character.id], character, campaignId, character.id),
-              ])
-            ),
-          };
-        }
-      );
-    }
-
-    return updateCampaignLegacy(campaignId, (campaignState) => setPartyXpInCampaign(campaignState, xp));
-  };
-
-  const setXpThreshold = (campaignId, threshold) => {
-    const campaign = db?.campaigns?.[campaignId];
-    const activeActorIds = getActivePcActorIds(campaign);
-
-    if (useFirestoreV2) {
-      return repos.campaignRepo.updateCampaignAndActors(
-        firestore,
-        campaignId,
-        activeActorIds,
-        (campaignDoc, actorsById) => {
-          const current = {
-            ...campaignDoc,
-            id: campaignDoc.id || campaignId,
-            characters: activeActorIds.map((actorId) => actorDocToCharacter(actorsById[actorId], actorId)),
-          };
-          const nextCampaign = setCampaignXpThresholdInCampaign(current, threshold);
-          return {
-            campaign: stripChildCollections(nextCampaign),
-            actorsById: Object.fromEntries(
-              nextCampaign.characters.map((character) => [
-                character.id,
-                characterToPcActorDoc(actorsById[character.id], character, campaignId, character.id),
-              ])
-            ),
-          };
-        }
-      );
-    }
-
-    return updateCampaignLegacy(campaignId, (campaignState) =>
-      setCampaignXpThresholdInCampaign(campaignState, threshold)
-    );
-  };
-
-  const addPartyXp = (campaignId, amount) => {
-    const campaign = db?.campaigns?.[campaignId];
-    const activeActorIds = getActivePcActorIds(campaign);
-    const notificationId = Date.now();
-
-    if (useFirestoreV2) {
-      return repos.campaignRepo.updateCampaignAndActors(
-        firestore,
-        campaignId,
-        activeActorIds,
-        (campaignDoc, actorsById) => {
-          const current = {
-            ...campaignDoc,
-            id: campaignDoc.id || campaignId,
-            characters: activeActorIds.map((actorId) => actorDocToCharacter(actorsById[actorId], actorId)),
-          };
-          const nextCampaign = addPartyXpInCampaign(current, amount, { notificationId });
-          return {
-            campaign: stripChildCollections(nextCampaign),
-            actorsById: Object.fromEntries(
-              nextCampaign.characters.map((character) => [
-                character.id,
-                characterToPcActorDoc(actorsById[character.id], character, campaignId, character.id),
-              ])
-            ),
-          };
-        }
-      );
-    }
-
-    return updateCampaignLegacy(campaignId, (campaignState) =>
-      addPartyXpInCampaign(campaignState, amount, { notificationId })
-    );
-  };
-
-  const assignUser = (email, campaignId, characterId, role = "player") => {
-    const normalizedEmail = normalizeEmail(email);
-    if (!normalizedEmail) return Promise.resolve();
-    if (useFirestoreV2) {
-      return repos.memberRepo.assignUser(firestore, campaignId, normalizedEmail, {
-        role,
-        characterId,
-        assignedActorId: characterId || null,
-      });
-    }
-    return updateDbLegacy((prev) => assignUserInDb(prev, normalizedEmail, campaignId, characterId, role));
-  };
-
-  const revokeUser = (email) => {
-    const normalizedEmail = normalizeEmail(email);
-    if (!normalizedEmail) return Promise.resolve();
-    const userInfo = db?.users?.[normalizedEmail] || db?.users?.[email];
-    if (useFirestoreV2) {
-      if (!userInfo?.campaignId) return Promise.resolve();
-      return repos.memberRepo.revokeUser(firestore, userInfo.campaignId, normalizedEmail);
-    }
-    return updateDbLegacy((prev) => revokeUserInDb(prev, normalizedEmail));
-  };
-
-  const createCharacter = (campaignId, character) => {
-    const normalizedCharacter = createCharacterRecord(character, { createId });
-    if (useFirestoreV2) {
-      return repos.actorRepo.createActor(firestore, campaignId, createActorRecord(normalizedCharacter, {
-        campaignId,
-        createId: () => normalizedCharacter.id,
-      }));
-    }
-    return updateCampaignLegacy(campaignId, (campaign) =>
-      createCharacterInCampaign(campaign, normalizedCharacter, { createId })
-    );
-  };
-
-  const softDeleteCharacter = (campaignId, characterId) => {
-    const options = { now: nowIso(), actorEmail: actor };
-    const affectedMembers = Object.entries(db?.users || {})
-      .filter(([, info]) =>
-        info?.campaignId === campaignId &&
-        [info?.assignedActorId, info?.actorId, info?.characterId].some((id) => id === characterId)
-      )
-      .map(([email, info]) => [normalizeEmail(email), info])
-      .filter(([email]) => email);
-
-    if (useFirestoreV2) {
-      return Promise.all([
-        repos.actorRepo.updateActor(firestore, campaignId, characterId, (actorDoc) => markDeleted(actorDoc, options)),
-        ...affectedMembers.map(([email, info]) =>
-          repos.memberRepo.assignUser(firestore, campaignId, email, {
-            ...info,
-            role: info?.role || "player",
-            characterId: null,
-            actorId: null,
-            assignedActorId: null,
-          })
-        ),
-      ]);
-    }
-
-    return updateDbLegacy((prev) => softDeleteCharacterInDb(prev, campaignId, characterId, options));
-  };
-
-  const restoreCharacter = (campaignId, characterId) => {
-    const options = { now: nowIso(), actorEmail: actor };
-    if (useFirestoreV2) {
-      return repos.actorRepo.updateActor(firestore, campaignId, characterId, (actorDoc) => markRestored(actorDoc, options));
-    }
-    return updateCampaignLegacy(campaignId, (campaign) =>
-      restoreCharacterInCampaign(campaign, characterId, options)
-    );
-  };
-
-  const importLegacyCharacter = (campaignId, character, legacyIndex) => {
-    const normalizedCharacter = createCharacterRecord(character, { createId });
-    if (useFirestoreV2) {
-      return repos.actorRepo.createActor(firestore, campaignId, createActorRecord(normalizedCharacter, {
-        campaignId,
-        createId: () => normalizedCharacter.id,
-      }));
-    }
-    return updateDbLegacy((prev) =>
-      importLegacyCharacterInDb(prev, campaignId, normalizedCharacter, legacyIndex, { createId })
-    );
-  };
-
   const updateGlobalConfig = (updater) => {
     if (useFirestoreV2) {
       return repos.globalRepo.updateGlobalConfig(firestore, updater);
@@ -1254,72 +973,9 @@ export function createDataActions({
 
   return {
     mode: resolvedMode,
-    campaign: {
-      createCampaign,
-      softDeleteCampaign,
-      restoreCampaign,
-      updateCampaign,
-      setXpThreshold,
-      setPartyXp,
-      addPartyXp,
-      clearNotification,
-    },
-    member: {
-      assignUser,
-      revokeUser,
-    },
-    character: {
-      updateCharacter,
-      createCharacter,
-      softDeleteCharacter,
-      restoreCharacter,
-      importLegacyCharacter,
-      setGold(campaignId, characterId, amount) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterGold(character, amount));
-      },
-      adjustGold(campaignId, characterId, amount) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterGold(character, amount));
-      },
-      setAttribute(campaignId, characterId, key, value) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterAttribute(character, key, value));
-      },
-      adjustAttribute(campaignId, characterId, key, amount) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterAttribute(character, key, amount));
-      },
-      setHp(campaignId, characterId, value) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterHp(character, value));
-      },
-      adjustHp(campaignId, characterId, amount) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterHp(character, amount));
-      },
-      setTempHp(campaignId, characterId, value) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterTempHp(character, value));
-      },
-      adjustTempHp(campaignId, characterId, amount) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterTempHp(character, amount));
-      },
-      setMaxHp(campaignId, characterId, value) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterMaxHp(character, value));
-      },
-      adjustMaxHp(campaignId, characterId, amount) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterMaxHp(character, amount));
-      },
-      setSpeed(campaignId, characterId, key, value) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterSpeed(character, key, value));
-      },
-      adjustSpeed(campaignId, characterId, key, amount) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterSpeed(character, key, amount));
-      },
-      setClassDc(campaignId, characterId, value) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterClassDc(character, value));
-      },
-      adjustClassDc(campaignId, characterId, amount) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => adjustCharacterClassDc(character, amount));
-      },
-      setDailyCraftingMax(campaignId, characterId, value) {
-        return updatePcActorAsCharacter(campaignId, characterId, (character) => setCharacterDailyCraftingMax(character, value));
-      },
-    },
+    campaign: campaignActions,
+    member: memberActions,
+    character: characterActions,
     inventory: {
       addItem(campaignId, characterId, item, options = {}) {
         return updateCharacter(campaignId, characterId, (character) =>
@@ -1499,38 +1155,11 @@ export function createDataActions({
   };
 }
 
-function stripChildCollections(campaign) {
-  const next = { ...campaign };
-  delete next.characters;
-  delete next.archivedCharacters;
-  delete next.quests;
-  delete next.archivedQuests;
-  delete next.lootBags;
-  delete next.encounters;
-  delete next.archivedEncounters;
-  delete next.maps;
-  return next;
-}
-
 function findCustomCreatureById(db, creatureId) {
   const entries = Object.values(db?.bestiary?.customCreatures || {});
   return entries.find((creature) =>
     String(creature?.id || creature?._id || creature?.name) === String(creatureId)
   ) || null;
-}
-
-function getActivePcActorIds(campaign) {
-  const actors = Array.isArray(campaign?.actors) ? campaign.actors : [];
-  if (actors.length) {
-    return actors
-      .filter((actor) => actor?.kind === "pc" && !actor?.deletedAt)
-      .map((actor) => actor.id)
-      .filter(Boolean);
-  }
-  return (campaign?.characters || [])
-    .filter((character) => !character?.deletedAt)
-    .map((character) => character.id)
-    .filter(Boolean);
 }
 
 function buildCatalogOverrideId(catalogType, value) {

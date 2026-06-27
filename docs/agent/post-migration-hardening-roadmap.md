@@ -168,8 +168,9 @@ Ziel: `createDataActions.js` wird Aggregator; Domain-Actions sind einzeln testba
 - [ ] Domain-Factories anlegen:
   - [x] `createActorActions`
   - [x] `createEffectActions`
-  - [ ] `createCampaignActions`
-  - [ ] `createMemberActions`
+  - [x] `createCampaignActions`
+  - [x] `createMemberActions`
+  - [x] `createCharacterActions`
   - [ ] `createInventoryActions`
   - [ ] `createLootActions`
   - [ ] `createQuestActions`
@@ -179,7 +180,7 @@ Ziel: `createDataActions.js` wird Aggregator; Domain-Actions sind einzeln testba
   - [ ] `createCampingActions`
   - [x] `createCatalogActions`
   - [ ] `createGlobalContentActions`
-- [ ] Public API stabil halten: `dataActions.actor.*`, `dataActions.quest.*`, usw. duerfen fuer UI-Code gleich bleiben.
+- [x] Public API stabil halten: `dataActions.actor.*`, `dataActions.quest.*`, usw. duerfen fuer UI-Code gleich bleiben.
 - [ ] Legacy-Adapter nur dort behalten, wo Tests/Import-Compatibility ihn noch brauchen.
 - [x] Nach jedem 2-3 Domain-Factory-Extraktionen `npm run check` laufen lassen.
 
@@ -187,7 +188,7 @@ Tests:
 
 - [x] Bestehende `dataActionsLegacy.test.js` und `dataActionsV2Adapter.test.js` bleiben gruen.
 - [ ] Neue Domain-Factory-Tests nur dort ergaenzen, wo Verhalten nicht schon abgedeckt ist.
-- [ ] Static Test: `createDataActions.js` importiert Domain-Factories und enthaelt nicht mehr die grossen Domain-Funktionskoerper.
+- [x] Static Test: `createDataActions.js` importiert Domain-Factories und enthaelt nicht mehr die extrahierten Actor/Effect/Catalog/Campaign/Member/Character-Funktionskoerper.
 
 Akzeptanz:
 
