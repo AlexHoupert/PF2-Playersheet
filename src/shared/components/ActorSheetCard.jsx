@@ -10,6 +10,7 @@ import { useCampaign } from '../context/CampaignContext';
 import { selectDeviantAbility } from '../db/selectors/abilitySelectors';
 import { selectPact, selectPactList } from '../db/selectors/pactSelectors';
 import { selectActorRulesViewModel } from '../rules/actorRulesViewModel';
+import { findInventoryItemIndex } from '../utils/itemIdentity';
 
 const DEFAULT_CAPABILITIES = {
     editable: true,
@@ -73,10 +74,7 @@ export function ActorSheetCard({
     const handleToggleEquip = (item) => {
         if (!resolvedCapabilities.editable) return;
         updateCharacter(c => {
-            const idx = c.inventory.findIndex(i =>
-                (item.instanceId && i.instanceId === item.instanceId) ||
-                (!item.instanceId && i.name === item.name && !!i.equipped === !!item.equipped)
-            );
+            const idx = findInventoryItemIndex(c.inventory, item);
             if (idx > -1) {
                 const isArmor = item.type?.toLowerCase() === 'armor' || (item.category === 'Armor');
                 if (isArmor && !c.inventory[idx].equipped) {
@@ -94,7 +92,7 @@ export function ActorSheetCard({
     const handleConsume = (item) => {
         if (!resolvedCapabilities.editable) return;
         updateCharacter(c => {
-            const idx = c.inventory.findIndex(i => i.name === item.name && i.qty > 0);
+            const idx = findInventoryItemIndex(c.inventory, item);
             if (idx > -1) {
                 c.inventory[idx].qty--;
                 if (c.inventory[idx].qty <= 0) c.inventory.splice(idx, 1);

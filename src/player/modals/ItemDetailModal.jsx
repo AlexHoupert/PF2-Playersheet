@@ -6,6 +6,7 @@ import { applyRune, removeRune, getRunes } from '../../utils/rules/runes';
 import bloodMagicEffects from '../../../ressources/classfeatures/bloodmagic-effects.json';
 import { useState } from 'react';
 import { consumeWandCharge, getWandCharges, getWandMaxCharges, getWandSpell, isWandItem, writeWandCharges } from '../../shared/utils/wandUtils';
+import { getItemIdentityKey, resolveInventoryItemIdentity } from '../../shared/utils/itemIdentity';
 
 export function ItemDetailModal({
     character,
@@ -51,22 +52,9 @@ export function ItemDetailModal({
     let inventoryMatch = null;
     let inventoryIndex = -1;
     if (isShopItem && modalData.name && character?.inventory) {
-        if (modalData._index !== undefined && character.inventory[modalData._index]) {
-            const match = character.inventory[modalData._index];
-            if (match.name === modalData.name) {
-                inventoryMatch = match;
-                inventoryIndex = modalData._index;
-            }
-        }
-        if (!inventoryMatch) {
-            inventoryIndex = character.inventory.findIndex(i => i.name === modalData.name && !!i.equipped === !!modalData.equipped);
-            if (inventoryIndex > -1) inventoryMatch = character.inventory[inventoryIndex];
-        }
-        // Fallback
-        if (!inventoryMatch) {
-            inventoryIndex = character.inventory.findIndex(i => i.name === modalData.name);
-            if (inventoryIndex > -1) inventoryMatch = character.inventory[inventoryIndex];
-        }
+        const resolved = resolveInventoryItemIdentity(character.inventory, modalData);
+        inventoryMatch = resolved.item;
+        inventoryIndex = resolved.index;
     }
 
     const canToggleEquip = Boolean(inventoryMatch && isEquipableInventoryItem(inventoryMatch));
@@ -240,9 +228,7 @@ export function ItemDetailModal({
 
             // 2. Consume rune
             if (consumed) {
-                const rIdx = c.inventory.findIndex(i => i === runeItem || (i.name === runeItem.name && i.qty > 0));
-                // Note: passing runeItem directly might be risky if ref changed, use index or name match
-                // Better: find by exact ref if possible or name.
+                const { index: rIdx } = resolveInventoryItemIdentity(c.inventory, runeItem);
                 if (rIdx > -1) {
                     if (c.inventory[rIdx].qty > 1) c.inventory[rIdx].qty--;
                     else c.inventory.splice(rIdx, 1);
@@ -655,7 +641,7 @@ export function ItemDetailModal({
                                 ) : (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                                         {availableRunes.map(r => (
-                                            <div key={r.instanceId || r.name}
+                                            <div key={getItemIdentityKey(r)}
                                                 onClick={() => handleApplyRune(r)}
                                                 style={{
                                                     padding: '5px 8px', background: '#333', borderRadius: 4, cursor: 'pointer',

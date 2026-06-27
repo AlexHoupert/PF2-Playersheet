@@ -37,6 +37,29 @@ export function findInventoryItemIndex(inventory = [], target = {}) {
   return inventory.findIndex(item => legacyInventoryMatch(item, target));
 }
 
+export function sameInventoryItem(candidate = {}, target = {}) {
+  if (!candidate || !target) return false;
+  if (target.instanceId && candidate.instanceId === target.instanceId) return true;
+  if (target.id && (candidate.instanceId === target.id || candidate.id === target.id)) return true;
+  return legacyInventoryMatch(candidate, target);
+}
+
+export function getItemIdentityKey(item = {}) {
+  return item?.instanceId || item?.id || item?.name || null;
+}
+
+export function findStackableInventoryItemIndex(inventory = [], target = {}, options = {}) {
+  if (!Array.isArray(inventory) || !target?.name) return -1;
+  const { excludeIndex = -1, equipped = null, prepared = null } = options;
+  return inventory.findIndex((item, index) => {
+    if (index === excludeIndex) return false;
+    if (item.name !== target.name) return false;
+    if (equipped !== null && Boolean(item.equipped) !== Boolean(equipped)) return false;
+    if (prepared !== null && Boolean(item.prepared) !== Boolean(prepared)) return false;
+    return true;
+  });
+}
+
 export function resolveLootItemIdentity(items = [], target = {}) {
   const index = findLootItemIndex(items, target);
   return {

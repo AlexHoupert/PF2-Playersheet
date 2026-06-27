@@ -10,6 +10,7 @@ import { calculateWeaponDamage } from '../../utils/rules/damage';
 import { selectCustomShopItem } from '../../shared/db/selectors/shopSelectors';
 import { selectLootBagLists } from '../../shared/db/selectors/campaignSelectors';
 import { consumeWandCharge, getWandCharges, getWandMaxCharges, getWandSpell, isWandItem } from '../../shared/utils/wandUtils';
+import { findInventoryItemIndex } from '../../shared/utils/itemIdentity';
 
 export function InventoryView({
     character,
@@ -106,22 +107,6 @@ export function InventoryView({
     const consumableItems = wrappedItems.filter(({ item }) => getInventoryBucket(item) === 'consumables' && !item.isLoot);
     const miscItems = wrappedItems.filter(({ item }) => getInventoryBucket(item) === 'misc' && !item.isLoot);
     const lootItems = wrappedItems.filter(({ item }) => item.isLoot);
-
-    const findInventoryItemIndex = (inventory, target) => {
-        if (!Array.isArray(inventory) || !target) return -1;
-        if (Number.isInteger(target._index) && inventory[target._index]?.name === target.name) {
-            return target._index;
-        }
-        if (target.instanceId) {
-            const byInstance = inventory.findIndex(i => i.instanceId === target.instanceId);
-            if (byInstance > -1) return byInstance;
-        }
-        return inventory.findIndex(i =>
-            i.name === target.name &&
-            !!i.equipped === !!target.equipped &&
-            (target.addedAt === undefined || i.addedAt === target.addedAt)
-        );
-    };
 
     const consumeWandFromInventory = (wandItem) => {
         if (readOnly || !onUpdateCharacter) {
@@ -706,7 +691,7 @@ function VersatileVialSheet({ activation, formulas, onClose, onUpdateCharacter }
 
         onUpdateCharacter(c => {
             // Remove 1 Versatile Vial
-            const vialIdx = c.inventory.findIndex(i => i.name === 'Versatile Vial');
+            const vialIdx = findInventoryItemIndex(c.inventory, { name: 'Versatile Vial' });
             if (vialIdx >= 0) {
                 const q = c.inventory[vialIdx].qty || 1;
                 if (q <= 1) c.inventory.splice(vialIdx, 1);

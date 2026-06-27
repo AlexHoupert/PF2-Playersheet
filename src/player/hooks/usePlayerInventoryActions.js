@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
 import { shouldStack } from '../../shared/utils/inventoryUtils';
 import { getWeaponCapacity, isEquipableInventoryItem } from '../../shared/utils/combatUtils';
-import { findInventoryItemIndex } from '../../shared/utils/itemIdentity';
+import { findInventoryItemIndex, findStackableInventoryItemIndex, resolveInventoryItemIdentity } from '../../shared/utils/itemIdentity';
 import { consumeWandCharge, isWandItem, rechargeWand } from '../../shared/utils/wandUtils';
 import { createMutagenEffectInput } from '../../utils/rules/mutagens';
 
@@ -43,15 +43,7 @@ export function usePlayerInventoryActions({
         }
 
         updateCharacter(c => {
-            let invIdx = -1;
-            if (item._index !== undefined) {
-                invIdx = item._index;
-                if (!c.inventory[invIdx] || c.inventory[invIdx].name !== name) invIdx = -1;
-            }
-
-            if (invIdx === -1) {
-                invIdx = c.inventory.findIndex(i => i.name === name);
-            }
+            const invIdx = findInventoryItemIndex(c.inventory, item);
 
             if (invIdx > -1) {
                 const invItem = c.inventory[invIdx];
@@ -204,7 +196,8 @@ export function usePlayerInventoryActions({
                 c.gold -= cost;
                 const receivedQty = isBasicAmmo(item) ? qty * 10 : qty;
                 const stackable = shouldStack(item);
-                const existing = stackable ? c.inventory.find(i => i.name === item.name) : null;
+                const existingIndex = stackable ? findStackableInventoryItemIndex(c.inventory, item) : -1;
+                const existing = existingIndex >= 0 ? c.inventory[existingIndex] : null;
                 if (existing) existing.qty = (existing.qty || 1) + receivedQty;
                 else c.inventory.push({ ...item, qty: receivedQty });
             } else {
@@ -216,16 +209,7 @@ export function usePlayerInventoryActions({
 
     const executeQty = (item, qty) => {
         updateCharacter(c => {
-            const idx = c.inventory.findIndex(i =>
-                (item.instanceId && i.instanceId === item.instanceId) ||
-                (
-                    !item.instanceId &&
-                    i.name === item.name &&
-                    !!i.equipped === !!item.equipped &&
-                    !!i.prepared === !!item.prepared &&
-                    i.addedAt === item.addedAt
-                )
-            );
+            const idx = findInventoryItemIndex(c.inventory, item);
 
             if (idx > -1) {
                 if (qty <= 0) c.inventory.splice(idx, 1);
@@ -237,13 +221,7 @@ export function usePlayerInventoryActions({
 
     const executeUnstack = (item) => {
         updateCharacter(c => {
-            const target = c.inventory.find(i =>
-                i.name === item.name &&
-                i.qty === item.qty &&
-                !!i.equipped === !!item.equipped &&
-                !!i.prepared === !!item.prepared &&
-                i.addedAt === item.addedAt
-            );
+            const { item: target } = resolveInventoryItemIdentity(c.inventory, item);
             if (target && (target.qty || 1) > 1) {
                 const qty = target.qty;
                 target.qty = 1;
@@ -296,7 +274,7 @@ export function usePlayerInventoryActions({
                 return;
             }
 
-            const ammoIdx = c.inventory.findIndex(i => (ammoToLoad.instanceId ? i.instanceId === ammoToLoad.instanceId : i.name === ammoToLoad.name) && i.qty > 0);
+            const ammoIdx = findInventoryItemIndex(c.inventory, ammoToLoad);
             if (ammoIdx > -1) {
                 const invAmmo = c.inventory[ammoIdx];
                 invAmmo.qty--;
@@ -329,10 +307,7 @@ export function usePlayerInventoryActions({
         if (!character) return;
         let weaponIndex = weaponOrIndex;
         if (typeof weaponOrIndex === 'object') {
-            weaponIndex = character.inventory.findIndex(i =>
-                (weaponOrIndex.instanceId && i.instanceId === weaponOrIndex.instanceId) ||
-                (i.name === weaponOrIndex.name && !!i.equipped === !!weaponOrIndex.equipped)
-            );
+            weaponIndex = findInventoryItemIndex(character.inventory, weaponOrIndex);
         }
 
         updateCharacter(c => {
@@ -341,7 +316,8 @@ export function usePlayerInventoryActions({
 
             w.loaded.forEach(ammoData => {
                 if (!ammoData) return;
-                const existingStack = c.inventory.find(i => i.name === ammoData.name);
+                const existingIndex = findStackableInventoryItemIndex(c.inventory, { instanceId: ammoData.id, name: ammoData.name });
+                const existingStack = existingIndex >= 0 ? c.inventory[existingIndex] : null;
                 if (existingStack) existingStack.qty = (existingStack.qty || 0) + 1;
                 else c.inventory.push({ name: ammoData.name, qty: 1, type: 'consumable', category: 'ammo' });
             });
@@ -356,14 +332,7 @@ export function usePlayerInventoryActions({
 
         let weaponIndex = weaponOrIndex;
         if (typeof weaponOrIndex === 'object') {
-            if (typeof weaponOrIndex._index === 'number') {
-                weaponIndex = weaponOrIndex._index;
-            } else {
-                weaponIndex = char.inventory.findIndex(i =>
-                    (weaponOrIndex.instanceId && i.instanceId === weaponOrIndex.instanceId) ||
-                    (i.name === weaponOrIndex.name && !!i.equipped === !!weaponOrIndex.equipped)
-                );
-            }
+            weaponIndex = findInventoryItemIndex(char.inventory, weaponOrIndex);
         }
 
         const weapon = char.inventory[weaponIndex];
@@ -471,7 +440,8 @@ export function usePlayerInventoryActions({
         updateCharacter(c => {
             c.gold = parseFloat((c.gold - item.price).toFixed(2));
             const stackable = shouldStack(item);
-            const existing = stackable ? c.inventory.find(i => i.name === item.name) : null;
+            const existingIndex = stackable ? findStackableInventoryItemIndex(c.inventory, item) : -1;
+            const existing = existingIndex >= 0 ? c.inventory[existingIndex] : null;
             if (existing) {
                 existing.qty = (existing.qty || 1) + 1;
                 Object.assign(existing, item, { qty: existing.qty });
@@ -500,16 +470,10 @@ export function usePlayerInventoryActions({
         const char = character;
         if (!char) return;
 
-        const itemToToggle = (typeof targetItem === 'object' && targetItem._index !== undefined)
-            ? char.inventory[targetItem._index]
-            : (typeof targetItem === 'object'
-                ? char.inventory.find(i =>
-                    i.name === itemName &&
-                    !!i.equipped === !!targetItem.equipped &&
-                    !!i.prepared === !!targetItem.prepared &&
-                    i.addedAt === targetItem.addedAt
-                )
-                : char.inventory.find(i => i.name === itemName));
+        const itemToToggle = resolveInventoryItemIdentity(
+            char.inventory,
+            typeof targetItem === 'object' ? targetItem : { name: itemName }
+        ).item;
 
         if (itemToToggle) {
             const fromIndex = itemToToggle?.name ? getShopIndexItemByName(itemToToggle.name) : null;
@@ -529,26 +493,10 @@ export function usePlayerInventoryActions({
         }
 
         updateCharacter(c => {
-            let idx = -1;
-            if (typeof targetItem === 'object' && targetItem._index !== undefined) {
-                idx = targetItem._index;
-                if (!c.inventory[idx] || c.inventory[idx].name !== itemName) {
-                    console.warn("Index mismatch in toggleInventoryEquipped, falling back to search");
-                    idx = -1;
-                }
-            }
-
-            if (idx === -1) {
-                idx = c.inventory.findIndex(i => {
-                    if (i.name !== itemName) return false;
-                    if (typeof targetItem === 'object') {
-                        return !!i.equipped === !!targetItem.equipped &&
-                            !!i.prepared === !!targetItem.prepared &&
-                            i.addedAt === targetItem.addedAt;
-                    }
-                    return true;
-                });
-            }
+            const idx = findInventoryItemIndex(
+                c.inventory,
+                typeof targetItem === 'object' ? targetItem : { name: itemName }
+            );
 
             if (idx === -1) return;
             const current = c.inventory[idx];
@@ -614,13 +562,12 @@ export function usePlayerInventoryActions({
                 }
 
                 if (current.equipped) {
-                    const stackTarget = c.inventory.find(i =>
-                        i.name === current.name &&
-                        !i.equipped &&
-                        i !== current &&
-                        !!i.prepared === !!current.prepared &&
-                        i.addedAt === current.addedAt
-                    );
+                    const stackTargetIndex = findStackableInventoryItemIndex(c.inventory, current, {
+                        excludeIndex: idx,
+                        equipped: false,
+                        prepared: Boolean(current.prepared),
+                    });
+                    const stackTarget = stackTargetIndex >= 0 ? c.inventory[stackTargetIndex] : null;
                     if (stackTarget) {
                         stackTarget.qty = (stackTarget.qty || 1) + (current.qty || 1);
                         c.inventory.splice(idx, 1);

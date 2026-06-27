@@ -118,36 +118,39 @@ Problem: `instanceId` ist kanonisch, aber wichtige UI-/Combat-Flows matchen Item
 
 Ziel: Inventory-, Loot-, Shop-, Combat- und ActorSheet-Flows verwenden dieselben zentralen Identity-Resolver.
 
-- [ ] `itemIdentity.js` bei Bedarf erweitern:
-  - [ ] `findInventoryItemIndex`
-  - [ ] `findLootItemIndex`
-  - [ ] `resolveInventoryItemIdentity`
-  - [ ] `resolveLootItemIdentity`
-  - [ ] optional `sameInventoryItem`
-- [ ] `usePlayerInventoryActions` komplett auf Resolver umstellen:
-  - [ ] consume
-  - [ ] equip/toggle
-  - [ ] rune apply/remove
-  - [ ] weapon load/fire
-  - [ ] ammo matching
-  - [ ] formula/prepared item flows
-- [ ] `ActorSheetCard` lokale Inventory-Suchen ersetzen.
-- [ ] Alte shared Hooks `useCombatLogic` und `useInventoryLogic` entweder entfernen oder auf Resolver umstellen, falls sie noch genutzt werden.
-- [ ] `InventoryView` lokale Wand-/Loot-Matcher auf shared Resolver umstellen.
-- [ ] GM `ItemsView` Selection Keys fuer side/global items pruefen und dort, wo echte Inventory/Loot-Instanzen betroffen sind, `instanceId` bevorzugen.
+- [x] `itemIdentity.js` bei Bedarf erweitern:
+  - [x] `findInventoryItemIndex`
+  - [x] `findLootItemIndex`
+  - [x] `resolveInventoryItemIdentity`
+  - [x] `resolveLootItemIdentity`
+  - [x] optional `sameInventoryItem`
+  - [x] `findStackableInventoryItemIndex`
+  - [x] `getItemIdentityKey`
+- [x] `usePlayerInventoryActions` komplett auf Resolver umstellen:
+  - [x] consume
+  - [x] equip/toggle
+  - [x] rune apply/remove
+  - [x] weapon load/fire
+  - [x] ammo matching
+  - [x] formula/prepared item flows
+- [x] `ActorSheetCard` lokale Inventory-Suchen ersetzen.
+- [x] `ItemDetailModal` lokale Inventory-/Rune-Suchen ersetzen.
+- [x] Alte shared Hooks `useCombatLogic` und `useInventoryLogic` entweder entfernen oder auf Resolver umstellen, falls sie noch genutzt werden.
+- [x] `InventoryView` lokale Wand-/Loot-Matcher auf shared Resolver umstellen.
+- [x] GM `ItemsView` Selection Keys fuer side/global items pruefen und dort, wo echte Inventory/Loot-Instanzen betroffen sind, `instanceId` bevorzugen.
 
 Tests:
 
-- [ ] Doppelte gleichnamige Items koennen separat equipped/consumed/transferred werden.
-- [ ] Ammo mit gleichem Namen aber unterschiedlicher Instanz verhaelt sich deterministisch.
-- [ ] Rune apply/remove trifft das richtige Item.
-- [ ] Loot claim und partial claim bleiben stabil.
-- [ ] Static Test: keine neuen lokalen `findIndex(i => i.name === item.name...)` in migrierten Inventory-/Combat-Dateien.
+- [x] Doppelte gleichnamige Items koennen separat equipped/consumed/transferred werden.
+- [x] Ammo mit gleichem Namen aber unterschiedlicher Instanz verhaelt sich deterministisch.
+- [x] Rune apply/remove trifft das richtige Item.
+- [x] Loot claim und partial claim bleiben stabil.
+- [x] Static Test: keine neuen lokalen `findIndex(i => i.name === item.name...)` in migrierten Inventory-/Combat-Dateien.
 
 Akzeptanz:
 
-- [ ] `instanceId` ist in Runtime-Flows der primaere Schluessel.
-- [ ] Fallback-Matching ist auf zentrale Resolver beschraenkt.
+- [x] `instanceId` ist in Runtime-Flows der primaere Schluessel.
+- [x] Fallback-Matching ist auf zentrale Resolver beschraenkt.
 
 ## Pass 4: `createDataActions.js` In Domain-Factories Schneiden
 

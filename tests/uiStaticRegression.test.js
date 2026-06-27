@@ -228,6 +228,38 @@ test('admin xp threshold writes use targeted campaign action', () => {
     assert.equal(adminSource.includes('campaign.updateCampaign(activeCampaign.id'), false);
 });
 
+test('migrated inventory screens use central item identity helpers', () => {
+    const sources = [
+        'src/shared/components/ActorSheetCard.jsx',
+        'src/player/views/InventoryView.jsx',
+        'src/player/hooks/usePlayerInventoryActions.js',
+        'src/player/modals/ItemDetailModal.jsx',
+        'src/admin/ItemsView.jsx',
+        'src/admin/items/ItemsViewLayout.jsx',
+    ];
+    const forbiddenPatterns = [
+        /inventory\.findIndex\(i\s*=>\s*i\.name\s*===/,
+        /inventory\.findIndex\(i\s*=>[\s\S]{0,120}i\.name\s*===/,
+        /inventory\.find\(i\s*=>\s*i\.name\s*===/,
+        /inventory\.find\(i\s*=>[\s\S]{0,120}i\.name\s*===/,
+        /c\.inventory\.findIndex\(i\s*=>[\s\S]{0,140}i\.name\s*===/,
+        /c\.inventory\.find\(i\s*=>[\s\S]{0,140}i\.name\s*===/,
+        /char\.inventory\.findIndex\(i\s*=>[\s\S]{0,140}i\.name\s*===/,
+        /char\.inventory\.find\(i\s*=>[\s\S]{0,140}i\.name\s*===/,
+    ];
+
+    sources.forEach((path) => {
+        const source = readSource(path);
+        assert.match(source, /findInventoryItemIndex|resolveInventoryItemIdentity|getItemIdentityKey/);
+        forbiddenPatterns.forEach((pattern) => {
+            assert.equal(pattern.test(source), false, `${path} contains local item identity matching: ${pattern}`);
+        });
+    });
+
+    assert.equal(readSource('src/admin/ItemsView.jsx').includes('i.instanceId || i.name'), false);
+    assert.equal(readSource('src/admin/items/ItemsViewLayout.jsx').includes('i.instanceId || i.name'), false);
+});
+
 test('creature presentation uses shared reveal constants and encounter actor sheets use real callbacks', () => {
     const creatureCardSource = readSource('src/shared/components/CreatureCard.jsx');
     const bestiarySource = readSource('src/admin/BestiaryView.jsx');

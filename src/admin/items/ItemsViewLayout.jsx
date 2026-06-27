@@ -6,6 +6,7 @@ import { SHOP_CATEGORIES } from '../../shared/constants/shop';
 import { selectActiveCharacters } from '../../shared/db/selectors/characterSelectors';
 import SpellScrollSelectorModal from '../../player/modals/SpellScrollSelectorModal';
 import { deepClone } from '../../shared/utils/deepClone';
+import { getItemIdentityKey } from '../../shared/utils/itemIdentity';
 
 const Card = ({ children, style, className, ...rest }) => (
     <div className={className} style={{
@@ -95,7 +96,7 @@ export default function ItemsViewLayout({
     const playerTargets = selectActiveCharacters(activeCampaign);
     const sameId = (a, b) => a != null && b != null && String(a) === String(b);
     const isSelected = (item) => selectedItems.some(i => i.name === item.name);
-    const isSideSelected = (item) => selectedSideItems.some(i => (i.instanceId || i.name) === (item.instanceId || item.name));
+    const isSideSelected = (item) => selectedSideItems.some(i => getItemIdentityKey(i) === getItemIdentityKey(item));
 
     // Context menu item component
     const CtxItem = ({ icon, label, onClick, danger, hasSubmenu, onMouseEnter }) => (

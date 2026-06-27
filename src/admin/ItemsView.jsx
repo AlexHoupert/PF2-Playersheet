@@ -5,6 +5,7 @@ import { SHOP_INDEX_FILTER_OPTIONS, SHOP_INDEX_ITEMS, fetchShopItemDetailBySourc
 import ItemsViewLayout from './items/ItemsViewLayout';
 import { selectShop } from '../shared/db/selectors/shopSelectors';
 import { selectLootBagLists } from '../shared/db/selectors/campaignSelectors';
+import { getItemIdentityKey } from '../shared/utils/itemIdentity';
 
 const uniqueTypes = SHOP_INDEX_FILTER_OPTIONS.types;
 const uniqueCategories = SHOP_INDEX_FILTER_OPTIONS.categories;
@@ -258,16 +259,16 @@ export default function ItemsView({ db, onInspectItem }) {
 
     // Side panel selection
     const handleSideSelect = (e, item, index) => {
-        const key = item.instanceId || item.name;
+        const key = getItemIdentityKey(item);
         if (e.ctrlKey || e.metaKey) {
-            setSelectedSideItems(prev => prev.some(i => (i.instanceId || i.name) === key) ? prev.filter(i => (i.instanceId || i.name) !== key) : [...prev, item]);
+            setSelectedSideItems(prev => prev.some(i => getItemIdentityKey(i) === key) ? prev.filter(i => getItemIdentityKey(i) !== key) : [...prev, item]);
             setLastSideSelectedIndex(index);
         } else if (e.shiftKey && lastSideSelectedIndex !== -1) {
             const start = Math.min(lastSideSelectedIndex, index);
             const end = Math.max(lastSideSelectedIndex, index);
             const range = filteredSideItems.slice(start, end + 1);
             const combined = [...selectedSideItems];
-            range.forEach(r => { if (!combined.some(c => (c.instanceId || c.name) === (r.instanceId || r.name))) combined.push(r); });
+            range.forEach(r => { if (!combined.some(c => getItemIdentityKey(c) === getItemIdentityKey(r))) combined.push(r); });
             setSelectedSideItems(combined);
         } else {
             setSelectedSideItems([item]);
@@ -280,8 +281,8 @@ export default function ItemsView({ db, onInspectItem }) {
         if (source === 'global') {
             dragging = selectedItems.some(i => i.name === item.name) ? [...selectedItems] : [item];
         } else {
-            const key = item.instanceId || item.name;
-            dragging = selectedSideItems.some(i => (i.instanceId || i.name) === key) ? [...selectedSideItems] : [item];
+            const key = getItemIdentityKey(item);
+            dragging = selectedSideItems.some(i => getItemIdentityKey(i) === key) ? [...selectedSideItems] : [item];
         }
         e.dataTransfer.setData('app/items', JSON.stringify({ items: dragging, source }));
     };
@@ -316,8 +317,8 @@ export default function ItemsView({ db, onInspectItem }) {
         if (source === 'global') {
             if (!selectedItems.some(i => i.name === item.name)) setSelectedItems([item]);
         } else {
-            const key = item.instanceId || item.name;
-            if (!selectedSideItems.some(i => (i.instanceId || i.name) === key)) setSelectedSideItems([item]);
+            const key = getItemIdentityKey(item);
+            if (!selectedSideItems.some(i => getItemIdentityKey(i) === key)) setSelectedSideItems([item]);
         }
         setContextMenu({ x: e.clientX, y: e.clientY, item, source });
         setContextSubMenu(null);

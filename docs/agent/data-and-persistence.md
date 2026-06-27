@@ -198,6 +198,8 @@ Actor and inventory identity:
 
 - Inventory and loot item instances use `instanceId` as the runtime identity contract.
 - Fallback matching for old data is centralized in `src/shared/utils/itemIdentity.js`; new UI code should not add local name/index matching rules.
+- `findInventoryItemIndex`, `resolveInventoryItemIdentity`, `findLootItemIndex`, `resolveLootItemIdentity`, `sameInventoryItem`, `findStackableInventoryItemIndex`, and `getItemIdentityKey` are the supported helpers for Inventory/Loot/Side-panel instance selection.
+- Player inventory actions, `InventoryView`, `ItemDetailModal`, shared `ActorSheetCard`, and GM Items side-panel selection are guarded to prefer `instanceId` and to keep legacy name/index matching inside those helpers.
 
 Campaign advancement:
 

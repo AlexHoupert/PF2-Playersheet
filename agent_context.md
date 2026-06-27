@@ -86,7 +86,7 @@ Current domain action files:
 - `src/shared/db/domain/createDataActions.js`: adapter selection and public action API.
 - `src/shared/db/domain/campaignReducers.js`: campaign/session reducers, soft delete, user assignment, party XP.
 - `src/shared/rules/actorRulesViewModel.js`: canonical Actor+Effects rules view model for Player/shared Actor sheets.
-- `src/shared/utils/itemIdentity.js`: canonical inventory/loot identity resolver; prefer this over local `_index`/name matching.
+- `src/shared/utils/itemIdentity.js`: canonical inventory/loot identity resolver; prefer this over local `_index`/name matching. It owns instance lookup, legacy fallback matching, stack grouping, and side-panel selection keys.
 - `src/shared/db/domain/inventoryReducers.js`: pure character/inventory reducers and identity normalization.
 - `src/shared/db/domain/characterEditReducers.js`: pure Player basis-value reducers for gold, attributes, HP, speed, Class DC, and daily crafting batches.
 - `src/shared/db/domain/actorReducers.js`: pure actor, actor effect, effect template, and catalog override record helpers.
@@ -157,6 +157,7 @@ Character objects are heterogeneous. Common areas:
 - stats: `stats.hp`, `stats.ac`, `stats.attributes`, `stats.saves`, `stats.perception`, `stats.speed`
 - skills and lore keys can use mixed casing or generated names.
 - inventory items may be full catalog-derived objects, short `{ name, qty }` records, or custom/augmented objects with `system`, `instanceId`, `equipped`, `prepared`, `loaded`, runes, wand/staff data, etc.
+- runtime Inventory/Loot code should treat `instanceId` as the primary identity. Use `src/shared/utils/itemIdentity.js` for old data fallback and stack grouping instead of local name/index searches.
 
 ## Catalog Pipeline
 

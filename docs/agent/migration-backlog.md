@@ -118,14 +118,15 @@ Completed:
 - Campaign XP threshold is stored at `campaign.advancement.xpThreshold`; Party XP writes synchronize active character `xp.max`.
 - Loot gold split uses copper arithmetic and leaves indivisible copper in the lootbag.
 - Loot item claims keep `claimedAt` on the lootbag item while keeping the copied inventory item free of claim metadata.
-- Shared item identity helpers live in `src/shared/utils/itemIdentity.js`; reducers and the Player inventory action hook use the same identity resolver.
+- Shared item identity helpers live in `src/shared/utils/itemIdentity.js`; reducers, Player inventory actions, `InventoryView`, `ItemDetailModal`, shared Actor sheets, and GM Items side-panel selection use the same identity resolver/key helpers.
+- Obsolete shared inventory/combat hooks that were no longer imported have been removed instead of keeping a second identity implementation alive.
 - `npm run lint` was added as a narrow first-pass quality gate for hardened areas; it focuses on `no-undef` and React hook rules.
 - The broad-write/static guard now rejects `currentMutagen` as a runtime rules source.
 
 Deferred follow-ups:
 
 - Full `createDataActions.js` domain split remains a dedicated refactor wave; this wave avoided mixing broad file moves with rules/data fixes.
-- Remaining UI-local item matching in GM item selection, rune selection, and a few utility hooks should be migrated to `itemIdentity` before the shared `ItemRow` cleanup.
+- Shared `ItemRow`/`CatalogItemRow` cleanup remains useful for presentation consistency, but the first-pass instance identity hotspots are now centralized.
 - Browser-native dialogs and large modal/view files remain UI-debt and should be handled after the rules/data hardening is fully stable.
 
 ### Campaign Compatibility
