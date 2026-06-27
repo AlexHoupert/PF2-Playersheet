@@ -360,3 +360,19 @@ test('createDataActions delegates extracted domain action factories', () => {
     assert.equal(actionSource.includes('const saveCatalogOverride ='), false);
     assert.ok(actionSource.split('\n').length < 120);
 });
+
+test('catalog details and item rows use shared reusable controllers', () => {
+    const adminSource = readSource('src/admin/AdminApp.jsx');
+    const playerCatalogSource = readSource('src/player/hooks/usePlayerCatalogInspection.js');
+    const inventorySource = readSource('src/player/views/InventoryView.jsx');
+    const shopSource = readSource('src/player/ShopView.jsx');
+    const itemsLayoutSource = readSource('src/admin/items/ItemsViewLayout.jsx');
+
+    assert.match(adminSource, /useCatalogDetailController/);
+    assert.match(playerCatalogSource, /useCatalogDetailController/);
+    assert.equal(adminSource.includes('fetchShopItemDetailBySourceFile'), false);
+    assert.equal(playerCatalogSource.includes('fetchShopItemDetailBySourceFile'), false);
+    assert.match(inventorySource, /ItemRow/);
+    assert.match(shopSource, /ItemRow/);
+    assert.match(itemsLayoutSource, /ItemRow/);
+});

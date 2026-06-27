@@ -2,6 +2,7 @@ import React from 'react';
 import ItemEditor from '../editors/ItemEditor';
 import FilterBar from '../components/FilterBar';
 import BottomSheet from '../../shared/components/BottomSheet';
+import ItemRow from '../../shared/components/ItemRow';
 import { SHOP_CATEGORIES } from '../../shared/constants/shop';
 import { selectActiveCharacters } from '../../shared/db/selectors/characterSelectors';
 import SpellScrollSelectorModal from '../../player/modals/SpellScrollSelectorModal';
@@ -52,6 +53,7 @@ export default function ItemsViewLayout({
     isMobile,
     itemsPerPage,
     mobileSideOpen,
+    onInspectItem,
     page,
     paginatedItems,
     pendingSpellAction,
@@ -414,7 +416,9 @@ export default function ItemsViewLayout({
                                             >
                                                 {sideMode === 'trader' && <td style={{ padding: 4 }}><input type="checkbox" checked={availableItems.includes(item.name)} onChange={e => { e.stopPropagation(); performAction(availableItems.includes(item.name) ? 'makeUnavailable' : 'makeAvailable'); }} onClick={e => e.stopPropagation()} /></td>}
                                                 {sideMode === 'trader' && <td style={{ padding: 4 }}><input type="checkbox" checked={availableFormulas.includes(item.name)} onChange={e => { e.stopPropagation(); performAction(availableFormulas.includes(item.name) ? 'removeFormula' : 'addFormula'); }} onClick={e => e.stopPropagation()} /></td>}
-                                                <td style={{ padding: 4 }}>{item.name}</td>
+                                                <td style={{ padding: 4 }}>
+                                                    <ItemRow item={item} className="items-view-inline-row" />
+                                                </td>
                                                 <td style={{ padding: 4 }}>{item.level || 0}</td>
                                                 <td style={{ padding: 4 }}>{item.type}</td>
                                                 {sideMode === 'loot' && <td style={{ padding: 4 }}>{item.qty || 1}</td>}
@@ -568,7 +572,9 @@ export default function ItemsViewLayout({
                                             onContextMenu={e => handleContextMenu(e, item, sideMode)}
                                             onClick={e => handleSideSelect(e, item, idx)}
                                             style={{ borderBottom: '1px solid #333', background: isSideSelected(item) ? 'rgba(197,160,89,0.25)' : 'transparent', cursor: 'pointer', minHeight: 44 }}>
-                                            <td style={{ padding: '10px 16px', color: '#ddd' }}>{item.name}</td>
+                                            <td style={{ padding: '10px 16px', color: '#ddd' }}>
+                                                <ItemRow item={item} className="items-view-inline-row" />
+                                            </td>
                                             <td style={{ padding: '10px 8px', color: '#888', fontSize: '0.85em' }}>Lv{item.level || 0}</td>
                                             {sideMode === 'loot' && <td style={{ padding: '10px 8px', color: '#888' }}>×{item.qty || 1}</td>}
                                         </tr>

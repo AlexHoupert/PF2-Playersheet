@@ -491,6 +491,7 @@ export default function ItemsView({ db, onInspectItem }) {
             isMobile={isMobile}
             itemsPerPage={itemsPerPage}
             mobileSideOpen={mobileSideOpen}
+            onInspectItem={onInspectItem}
             page={page}
             paginatedItems={paginatedItems}
             pendingSpellAction={pendingSpellAction}

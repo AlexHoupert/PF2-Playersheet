@@ -1,14 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
 
-// Backend / Services
-import { fetchShopItemDetailBySourceFile, getShopIndexItemByName } from '../shared/catalog/shopIndex';
-import { fetchSpellDetailBySourceFile, getSpellIndexItemByName } from '../shared/catalog/spellIndex';
-import { fetchImpulseDetailBySourceFile } from '../shared/catalog/impulseIndex';
-import { fetchFeatDetailBySourceFile, getFeatIndexItemByName } from '../shared/catalog/featIndex';
-import { fetchActionDetailBySourceFile, getActionIndexItemByName } from '../shared/catalog/actionIndex';
-import { getConditionCatalogEntry } from '../shared/constants/conditionsCatalog';
 import { selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
+import { useCatalogDetailController } from '../shared/hooks/useCatalogDetailController';
 
 import AdminTabContent from './AdminTabContent';
 import { ModalManager } from '../player/ModalManager';
@@ -30,10 +24,12 @@ export default function AdminApp() {
     const [activeCharIndex, setActiveCharIndex] = useState(null); // For context of modal
     const [modalData, setModalData] = useState(null);
 
-    // Shop Detail Loading (retained logic)
-    const shopItemDetailCacheRef = useRef(new Map());
-    const [shopItemDetailLoading, setShopItemDetailLoading] = useState(false);
-    const [shopItemDetailError, setShopItemDetailError] = useState(null);
+    const { handleContentLinkClick, shopItemDetailError, shopItemDetailLoading } = useCatalogDetailController({
+        modalData,
+        modalMode,
+        setModalData,
+        setModalMode,
+    });
     const runDataAction = (action) => {
         Promise.resolve(action).catch(err => {
             console.error(err);
@@ -41,106 +37,11 @@ export default function AdminApp() {
         });
     };
 
-    // --- EFFECT: Load Shop Details for Modal ---
-    useEffect(() => {
-        if (modalMode !== 'item' && modalMode !== 'spell' && modalMode !== 'feat' && modalMode !== 'impulse' || !modalData) {
-            setShopItemDetailLoading(false);
-            setShopItemDetailError(null);
-            return;
-        }
-
-        const sourceFile =
-            modalData.sourceFile ||
-            (modalData?.name ? getShopIndexItemByName(modalData.name)?.sourceFile : null);
-
-        if (!sourceFile) return;
-        // If we have description, no need to fetch (unless we want full details?)
-        if (modalData.description && modalMode !== 'spell' && modalMode !== 'feat') return;
-
-        const cached = shopItemDetailCacheRef.current.get(sourceFile);
-        if (cached) {
-            setModalData(prev => (prev && prev.name === modalData.name ? { ...cached, ...prev } : prev));
-            return;
-        }
-
-        let cancelled = false;
-        setShopItemDetailLoading(true);
-        setShopItemDetailError(null);
-
-        let fetcher = fetchShopItemDetailBySourceFile;
-        if (modalMode === 'spell') fetcher = fetchSpellDetailBySourceFile;
-        if (modalMode === 'impulse') fetcher = fetchImpulseDetailBySourceFile;
-        if (modalMode === 'feat') fetcher = fetchFeatDetailBySourceFile;
-
-        fetcher(sourceFile)
-            .then(detail => {
-                shopItemDetailCacheRef.current.set(sourceFile, detail);
-                if (cancelled) return;
-                setModalData(prev => (prev && prev.name === modalData.name ? { ...detail, ...prev } : prev));
-                setShopItemDetailLoading(false);
-            })
-            .catch(err => {
-                if (cancelled) return;
-                setShopItemDetailError(err?.message || String(err));
-                setShopItemDetailLoading(false);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [modalData, modalMode]);
-
     // --- HELPERS ---
     const updateCharacter = (index, fn) => {
         const characterId = characters[index]?.id;
         if (!activeCampaign?.id || !characterId) return;
         runDataAction(dataActions.character.updateCharacter(activeCampaign.id, characterId, fn));
-    };
-
-    const handleContentLinkClick = async (e) => {
-        const link = e.target.closest('.content-link');
-        if (!link) return;
-        e.preventDefault();
-        e.stopPropagation();
-
-        const type = link.dataset.type;
-        const name = link.dataset.name;
-        try {
-            if (type === 'condition') {
-                const entry = getConditionCatalogEntry(name);
-                if (entry) { setModalData(name); setModalMode('conditionInfo'); }
-            } else if (type === 'action') {
-                const idx = getActionIndexItemByName(name);
-                if (idx) {
-                    const data = await fetchActionDetailBySourceFile(idx.sourceFile);
-                    setModalData({ ...data, _entityType: 'action' });
-                    setModalMode('item');
-                }
-            } else if (type === 'item') {
-                const idx = getShopIndexItemByName(name);
-                if (idx) {
-                    const data = await fetchShopItemDetailBySourceFile(idx.sourceFile);
-                    setModalData({ ...data, _entityType: 'item' });
-                    setModalMode('item');
-                }
-            } else if (type === 'spell') {
-                const idx = getSpellIndexItemByName(name);
-                if (idx) {
-                    const data = await fetchSpellDetailBySourceFile(idx.sourceFile);
-                    setModalData({ ...data, _entityType: 'spell' });
-                    setModalMode('item');
-                }
-            } else if (type === 'feat') {
-                const idx = getFeatIndexItemByName(name);
-                if (idx) {
-                    const data = await fetchFeatDetailBySourceFile(idx.sourceFile);
-                    setModalData({ ...data, _entityType: 'feat' });
-                    setModalMode('item');
-                }
-            }
-        } catch (err) {
-            console.error('Content link navigation error', err);
-        }
     };
 
     const [rebuildStatus, setRebuildStatus] = useState(null);

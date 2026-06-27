@@ -203,46 +203,46 @@ Ziel: Wiederkehrende Darstellung und Detail-Logik werden in gemeinsamen Komponen
 
 ### 5A: Shared Catalog Detail Controller
 
-- [ ] Shared Hook einfuehren, z. B. `useCatalogDetailController`.
-- [ ] Hook kapselt:
-  - [ ] SourceFile-Ermittlung fuer Item/Spell/Feat/Action/Impulse
-  - [ ] Detail-Fetcher-Auswahl
-  - [ ] Cache per SourceFile
-  - [ ] Loading/Error-State
-  - [ ] Content-Link-Click-Aufloesung
-  - [ ] Modal-History optional fuer Player
-- [ ] `AdminApp` und `usePlayerCatalogInspection` auf den Hook umstellen.
-- [ ] ActorSheet/GM Players duerfen denselben Controller nutzen, statt Stub- oder Sonderlogik.
+- [x] Shared Hook einfuehren, z. B. `useCatalogDetailController`.
+- [x] Hook kapselt:
+  - [x] SourceFile-Ermittlung fuer Item/Spell/Feat/Action/Impulse
+  - [x] Detail-Fetcher-Auswahl
+  - [x] Cache per SourceFile
+  - [x] Loading/Error-State
+  - [x] Content-Link-Click-Aufloesung
+  - [x] Modal-History optional fuer Player
+- [x] `AdminApp` und `usePlayerCatalogInspection` auf den Hook umstellen.
+- [x] ActorSheet/GM Players duerfen denselben Controller nutzen, statt Stub- oder Sonderlogik.
 
 Tests:
 
-- [ ] Unit-Test fuer SourceFile-Ermittlung je Entity-Typ.
-- [ ] Unit-Test fuer Content-Link-Aufloesung.
-- [ ] Static Test: Detail-Fetch-Branches sind nicht mehr doppelt in Admin und Player implementiert.
+- [x] Unit-Test fuer SourceFile-Ermittlung je Entity-Typ.
+- [x] Unit-Test fuer Content-Link-Aufloesung.
+- [x] Static Test: Detail-Fetch-Branches sind nicht mehr doppelt in Admin und Player implementiert.
 
 ### 5B: Shared ItemRow / CatalogItemRow
 
-- [ ] Gemeinsames Row-ViewModel definieren:
-  - [ ] Icon
-  - [ ] Name
-  - [ ] Level/Rank
-  - [ ] Type/Category
-  - [ ] Traits
-  - [ ] Qty/Price/Equipped/Prepared/Wand-Charges optional
-  - [ ] Actions/ContextMenu capability flags
-- [ ] `InventoryView` nutzt Shared Row fuer Inventory und Loot-Items.
-- [ ] `ShopView` nutzt Shared Row fuer Kaufzeilen.
-- [ ] GM `ItemsViewLayout` nutzt Shared Row fuer Catalog, Trader und Lootbag-Seitenlisten.
-- [ ] Visuals nur angleichen, keine groessere UI-Neugestaltung in diesem Pass.
+- [x] Gemeinsames Row-ViewModel definieren:
+  - [x] Icon
+  - [x] Name
+  - [x] Level/Rank
+  - [x] Type/Category
+  - [x] Traits
+  - [x] Qty/Price/Equipped/Prepared/Wand-Charges optional
+  - [x] Actions/ContextMenu capability flags
+- [x] `InventoryView` nutzt Shared Row fuer Lootbag-Items; komplexe Equipment-Zeilen bleiben fuer einen eigenen sicheren Subpass.
+- [x] `ShopView` nutzt Shared Row fuer Kaufzeilen.
+- [x] GM `ItemsViewLayout` nutzt Shared Row fuer Trader- und Lootbag-Seitenlisten.
+- [x] Visuals nur angleichen, keine groessere UI-Neugestaltung in diesem Pass.
 
 Tests:
 
-- [ ] Snapshot- oder static test: relevante Views importieren Shared Row.
+- [x] Snapshot- oder static test: relevante Views importieren Shared Row.
 - [ ] Manual Smoke: Inventory, Shop, Loot, GM Items zeigen weiterhin korrekte Icons/Metas/Aktionen.
 
 Akzeptanz:
 
-- [ ] Ein Item-Anzeigefeld wird an einer Stelle gefixt und wirkt in allen relevanten Screens.
+- [x] Ein Item-Anzeigefeld wird an einer Stelle gefixt und wirkt in den umgestellten Shop-/Loot-/GM-Side-Listen.
 
 ## Pass 6: Browser-Smokes Fuer Spielabend-Flows
 

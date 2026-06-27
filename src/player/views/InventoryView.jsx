@@ -4,6 +4,7 @@ import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
 import ItemEditor from '../../admin/editors/ItemEditor';
 import BottomSheet from '../../shared/components/BottomSheet';
 import { getShopItemRowMeta } from '../../shared/catalog/shopRowMeta';
+import ItemRow from '../../shared/components/ItemRow';
 import { shouldStack } from '../../shared/utils/inventoryUtils';
 import { getWeaponCapacity, getWeaponAttackBonus, isEquipableInventoryItem, getInventoryBucket } from '../../shared/utils/combatUtils';
 import { calculateWeaponDamage } from '../../utils/rules/damage';
@@ -573,23 +574,16 @@ export function InventoryView({
                                 {unclaimedItems.map((item) => {
                                     const fromIndex = item?.name ? getShopIndexItemByName(item.name) : null;
                                     const merged = fromIndex ? { ...fromIndex, ...item } : item;
-                                    const { row1, row2 } = getShopItemRowMeta(merged);
 
                                     return (
-                                        <div key={item.instanceId} className="item-row inventory-item-row" style={{ marginTop: 5 }} onClick={() => onInspectItem(merged)}>
-                                            {merged?.img && (
-                                                <img className="item-icon" src={`ressources/${merged.img}`} alt="" />
-                                            )}
-                                            <div className="item-row-main">
-                                                <div className="item-name">
-                                                    {merged?.name || 'Unknown Item'}
-                                                    {(merged.qty > 1) && <span style={{ color: '#888', fontSize: '0.8em', marginLeft: 8 }}>x{merged.qty}</span>}
-                                                </div>
-                                                {row1 && <div className="item-row-meta item-row-meta-1">{row1}</div>}
-                                                {row2 && <div className="item-row-meta item-row-meta-2">{row2}</div>}
-                                            </div>
-
-                                            <button
+                                        <ItemRow
+                                            key={item.instanceId}
+                                            item={merged}
+                                            className="inventory-item-row"
+                                            style={{ marginTop: 5 }}
+                                            onClick={() => onInspectItem(merged)}
+                                            nameAddon={(merged.qty > 1) && <span style={{ color: '#888', fontSize: '0.8em', marginLeft: 8 }}>x{merged.qty}</span>}
+                                            right={<button
                                                 className="set-btn"
                                                 style={{ margin: '0 0 0 10px', padding: '6px 14px', fontSize: '0.9em', width: 'auto', flexShrink: 0, height: 'auto' }}
                                                 onClick={(e) => {
@@ -610,8 +604,8 @@ export function InventoryView({
                                                 }}
                                             >
                                                 Claim
-                                            </button>
-                                        </div>
+                                            </button>}
+                                        />
                                     );
                                 })}
                             </div>

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
 import { SHOP_ALL_AVAILABLE_KEY, SHOP_CATEGORIES } from '../shared/constants/shop';
 import { SHOP_INDEX_BY_NAME } from '../shared/catalog/shopIndex';
-import { getShopItemRowMeta } from '../shared/catalog/shopRowMeta';
+import ItemRow from '../shared/components/ItemRow';
 import { getFormulaPrice } from '../shared/constants/crafting';
 import { selectShop, selectVisibleTraders } from '../shared/db/selectors/shopSelectors';
 
@@ -398,22 +398,13 @@ export default function ShopView({ db, onInspectItem, onBuyItem, onBuyFormula, k
                 </button>
             </div>
 
-            {shopPagination.paginatedItems.map((item, idx) => {
-                const { row1, row2 } = getShopItemRowMeta(item);
-                return (
-                    <div className="item-row shop-item-row" key={idx} onClick={() => onInspectItem(item)}>
-                        {item.img && (
-                            <img
-                                className="item-icon"
-                                src={`ressources/${item.img}`}
-                                alt=""
-                            />
-                        )}
-                        <div className="item-row-main">
-                            <div className="item-name">{item.name}</div>
-                            {row1 && <div className="item-row-meta item-row-meta-1">{row1}</div>}
-                            {row2 && <div className="item-row-meta item-row-meta-2">{row2}</div>}
-                        </div>
+            {shopPagination.paginatedItems.map((item, idx) => (
+                    <ItemRow
+                        item={item}
+                        className="shop-item-row"
+                        key={idx}
+                        onClick={() => onInspectItem(item)}
+                        right={
                         <div className="shop-row-actions" style={{ display: 'flex', alignItems: 'flex-start' }}>
                             {/* Formula Icon */}
                             {shopState.availableFormulas.includes(item.name) && (
@@ -467,9 +458,9 @@ export default function ShopView({ db, onInspectItem, onBuyItem, onBuyFormula, k
                                 </span>
                             </div>
                         </div>
-                    </div>
-                );
-            })}
+                        }
+                    />
+            ))}
 
             {shopPagination.paginatedItems.length === 0 && (
                 <div style={{ color: '#666', fontStyle: 'italic' }}>No items found.</div>

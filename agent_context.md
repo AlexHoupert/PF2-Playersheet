@@ -108,6 +108,8 @@ Current domain action files:
 - `src/shared/db/domain/globalContentReducers.js`: pure shop/trader, global custom content, pact, ability, lore, bestiary metadata/custom creature, notification, and reveal-state reducers.
 - `src/shared/db/selectors/`: pure read selectors for campaign, character, actor, effect, inventory, shop, bestiary, progress, pact, ability, and lore data.
 - `src/shared/db/v2/repositories.js`: targeted Firestore v2 document updates and transactions.
+- `src/shared/hooks/useCatalogDetailController.js`: shared Player/Admin detail loader and content-link navigator for item, spell, feat, action, and impulse modals.
+- `src/shared/components/ItemRow.jsx`: shared item row shell and row view model for Shop, Loot, and GM item side-list presentation. Keep complex equipment-specific controls as children/local additions until a dedicated equipment-row pass.
 
 Migrated paths:
 

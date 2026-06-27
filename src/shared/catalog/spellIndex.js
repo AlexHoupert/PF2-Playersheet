@@ -1,6 +1,6 @@
 
 import spellIndexData from '../../data/spell_index.json';
-import { fetchJsonFromResourceCandidates, getResourceCandidateUrls, normalizeResourceSourceFile } from './resourceFetch';
+import { fetchJsonFromResourceCandidates, getResourceCandidateUrls, normalizeResourceSourceFile } from './resourceFetch.js';
 
 const dict = spellIndexData?.dict || {};
 const typeDict = Array.isArray(dict.t) ? dict.t : [''];
