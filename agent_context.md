@@ -83,11 +83,13 @@ V2 is the convergence branch runtime, but the branch is not yet production-cutov
 
 Current domain action files:
 
-- `src/shared/db/domain/createDataActions.js`: public action API aggregator for domains that have not yet been split out.
+- `src/shared/db/domain/createDataActions.js`: public action API aggregator; domain bodies live in dedicated factories.
 - `src/shared/db/domain/actionContext.js`: shared action infrastructure, legacy update helpers, Actor/Character compatibility conversion, repository context, and runtime mode selection.
 - `src/shared/db/domain/actorActions.js`: Actor-backed Player/Actor edits and Actor inventory actions.
 - `src/shared/db/domain/campaignActions.js`: Campaign lifecycle, party XP, XP threshold sync, and campaign notification actions.
 - `src/shared/db/domain/characterActions.js`: Character compatibility facade backed by PC Actor documents plus character lifecycle actions.
+- `src/shared/db/domain/inventoryActions.js`, `lootActions.js`, `questActions.js`, `encounterActions.js`, `mapActions.js`, `progressActions.js`, `campingActions.js`: campaign-scoped runtime write APIs.
+- `src/shared/db/domain/globalContentActions.js`: global content, bestiary, pact, lore, and shop actions.
 - `src/shared/db/domain/effectActions.js`: ActorEffect and EffectTemplate actions.
 - `src/shared/db/domain/memberActions.js`: Campaign member assign/revoke actions.
 - `src/shared/db/domain/catalogOverrideActions.js`: direct Catalog Override save/delete actions.
@@ -149,7 +151,7 @@ Quest rewards are idempotent via applied markers and are not automatically rolle
 
 Campaign XP threshold lives at `campaign.advancement.xpThreshold` with default `1000`; do not hardcode `xp.max` when writing party/character XP.
 
-Broad UI and context writes have been removed from Player/Admin route trees and `CampaignContext`. The only permitted broad write path is the legacy adapter implementation inside `createDataActions`; all runtime UI writes should go through `dataActions`. `scripts/check_broad_writes.js` also guards against reintroducing runtime `character.conditions`, `character.companion`, root `db.characters`, and unguarded production `/api/files/save` dependencies.
+Broad UI and context writes have been removed from Player/Admin route trees and `CampaignContext`. The only permitted broad write path is the legacy adapter implementation inside the domain action factories; all runtime UI writes should go through `dataActions`. `scripts/check_broad_writes.js` also guards against reintroducing runtime `character.conditions`, `character.companion`, root `db.characters`, and unguarded production `/api/files/save` dependencies.
 
 ## Data Model Snapshot
 

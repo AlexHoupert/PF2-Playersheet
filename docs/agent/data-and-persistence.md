@@ -130,6 +130,14 @@ Files:
 - `src/shared/db/domain/actorActions.js`
 - `src/shared/db/domain/campaignActions.js`
 - `src/shared/db/domain/characterActions.js`
+- `src/shared/db/domain/inventoryActions.js`
+- `src/shared/db/domain/lootActions.js`
+- `src/shared/db/domain/questActions.js`
+- `src/shared/db/domain/encounterActions.js`
+- `src/shared/db/domain/mapActions.js`
+- `src/shared/db/domain/progressActions.js`
+- `src/shared/db/domain/campingActions.js`
+- `src/shared/db/domain/globalContentActions.js`
 - `src/shared/db/domain/effectActions.js`
 - `src/shared/db/domain/memberActions.js`
 - `src/shared/db/domain/catalogOverrideActions.js`
@@ -150,7 +158,7 @@ Files:
 
 `CampaignContext` exposes `dataActions`, `dbMode`, and `dbStatus`.
 
-`createDataActions.js` is being reduced to an aggregator. Shared mode/repository/legacy-update infrastructure lives in `actionContext.js`; Actor, Campaign, Member, Character compatibility, ActorEffect, and Catalog Override actions already live in dedicated factories.
+`createDataActions.js` is a public API aggregator. Shared mode/repository/legacy-update infrastructure lives in `actionContext.js`; domain actions live in dedicated factories for Actor, Campaign, Member, Character compatibility, Inventory, Loot, Quest, Encounter, Map, Progress, Camping, Global Content, ActorEffect, and Catalog Override paths.
 
 Current migrated write paths:
 

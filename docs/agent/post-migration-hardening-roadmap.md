@@ -20,7 +20,7 @@ Leitentscheidung:
 - `legacyProjection` ist aus dem normalen App-Entry entfernt; Legacy-Projektion bleibt in Normalizer-/Migrationstests und explizitem Helper-Code.
 - `actorEffects` sind kanonische Runtime-Quelle fuer Conditions, Mutagene und stat-relevante Effekte.
 - `itemIdentity.js` existiert, aber einige UI-/Combat-Hotspots nutzen noch lokale Matching-Regeln.
-- `createDataActions.js` ist der groesste verbleibende Domain-Monolith.
+- `createDataActions.js` ist seit Pass 4 ein schmaler Aggregator; verbleibende Refactor-Arbeit liegt in einzelnen Domain-Factories.
 
 ## Gemeinsame Gates Fuer Jeden Pass
 
@@ -171,29 +171,29 @@ Ziel: `createDataActions.js` wird Aggregator; Domain-Actions sind einzeln testba
   - [x] `createCampaignActions`
   - [x] `createMemberActions`
   - [x] `createCharacterActions`
-  - [ ] `createInventoryActions`
-  - [ ] `createLootActions`
-  - [ ] `createQuestActions`
-  - [ ] `createEncounterActions`
-  - [ ] `createMapActions`
-  - [ ] `createProgressActions`
-  - [ ] `createCampingActions`
+  - [x] `createInventoryActions`
+  - [x] `createLootActions`
+  - [x] `createQuestActions`
+  - [x] `createEncounterActions`
+  - [x] `createMapActions`
+  - [x] `createProgressActions`
+  - [x] `createCampingActions`
   - [x] `createCatalogActions`
-  - [ ] `createGlobalContentActions`
+  - [x] `createGlobalContentActions`
 - [x] Public API stabil halten: `dataActions.actor.*`, `dataActions.quest.*`, usw. duerfen fuer UI-Code gleich bleiben.
-- [ ] Legacy-Adapter nur dort behalten, wo Tests/Import-Compatibility ihn noch brauchen.
+- [x] Legacy-Adapter nur dort behalten, wo Tests/Import-Compatibility ihn noch brauchen.
 - [x] Nach jedem 2-3 Domain-Factory-Extraktionen `npm run check` laufen lassen.
 
 Tests:
 
 - [x] Bestehende `dataActionsLegacy.test.js` und `dataActionsV2Adapter.test.js` bleiben gruen.
-- [ ] Neue Domain-Factory-Tests nur dort ergaenzen, wo Verhalten nicht schon abgedeckt ist.
-- [x] Static Test: `createDataActions.js` importiert Domain-Factories und enthaelt nicht mehr die extrahierten Actor/Effect/Catalog/Campaign/Member/Character-Funktionskoerper.
+- [x] Neue Domain-Factory-Tests nur dort ergaenzen, wo Verhalten nicht schon abgedeckt ist.
+- [x] Static Test: `createDataActions.js` importiert Domain-Factories und enthaelt nicht mehr die extrahierten Domain-Funktionskoerper.
 
 Akzeptanz:
 
-- [ ] `createDataActions.js` ist ein Aggregator, kein God-Object.
-- [ ] Neue Domain-Actions koennen ohne Bearbeiten einer 1800-Zeilen-Datei ergaenzt werden.
+- [x] `createDataActions.js` ist ein Aggregator, kein God-Object.
+- [x] Neue Domain-Actions koennen ohne Bearbeiten einer 1800-Zeilen-Datei ergaenzt werden.
 
 ## Pass 5: Shared Reusables Fuer Catalog Details Und Item-Zeilen
 
@@ -328,7 +328,7 @@ Akzeptanz:
 - [ ] V2-only Runtime ohne normalen `legacyProjection`-Vertrag.
 - [ ] Campaign XP Threshold synchronisiert Campaign und PC-Actors atomar.
 - [ ] Inventory/Loot/Combat nutzen zentrale Item-Identity.
-- [ ] `createDataActions.js` ist modularisiert.
+- [x] `createDataActions.js` ist modularisiert.
 - [ ] Catalog Detail und Item Row sind wiederverwendbare Shared-Bausteine.
 - [ ] Kritische Spielabend-Flows haben Browser-Smoke-Abdeckung.
 - [ ] Legacy-Code ist isoliert und durch Static Guards vom Runtime-Pfad getrennt.
