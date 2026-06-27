@@ -62,7 +62,7 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 - The broad-write guard also rejects runtime `character.conditions`, `character.companion`, root `db.characters`, broad V2 diff writes, and unguarded production `/api/files/save`.
 - Quest rewards are idempotent and not automatically rolled back when objectives are later marked incomplete.
 - Structured quest item rewards live at `rewards.itemRewards`. Legacy `rewards.items` remains a note and is not parsed/executed as free text.
-- Campaign XP threshold lives at `campaign.advancement.xpThreshold` and defaults to `1000`; use this rather than hardcoding `xp.max`.
+- Campaign XP threshold lives at `campaign.advancement.xpThreshold` and defaults to `1000`; use `dataActions.campaign.setXpThreshold` rather than hardcoding or locally mutating `xp.max`.
 - Quest reward notifications are campaign-scoped; root `notificationQueue` remains only a legacy fallback.
 - `ItemsView` trader, availability/formula, custom-item, loot-bag, and character assignment paths have been moved to `dataActions`.
 - User assignment is keyed by email in legacy DB and by member documents in v2. Email casing is normalized in v2 member docs.

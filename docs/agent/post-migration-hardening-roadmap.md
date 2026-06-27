@@ -59,26 +59,26 @@ Problem: `campaign.advancement.xpThreshold` existiert, aber die Admin-UI aendert
 
 Ziel: XP-Maximum ist ein Campaign-Setting, wird aber bei Aenderung sauber auf aktive PC-Actors synchronisiert.
 
-- [ ] Neue Domain-Action einfuehren: `dataActions.campaign.setXpThreshold(campaignId, threshold)`.
-- [ ] V2-Adapter nutzt eine gezielte Campaign+Actors-Transaktion, analog zu `setPartyXp`.
-- [ ] Legacy-Adapter nutzt den bestehenden Campaign-Reducer und synchronisiert `characters[].xp.max`.
-- [ ] Campaign-Reducer um pure Funktion erweitern, z. B. `setCampaignXpThresholdInCampaign(campaign, threshold)`.
-- [ ] Admin-Players-XP-Max-Input auf `setXpThreshold` umstellen.
-- [ ] Keine UI-Komponente darf direkt `campaign.characters` mutieren, um Actor-Daten zu synchronisieren.
+- [x] Neue Domain-Action einfuehren: `dataActions.campaign.setXpThreshold(campaignId, threshold)`.
+- [x] V2-Adapter nutzt eine gezielte Campaign+Actors-Transaktion, analog zu `setPartyXp`.
+- [x] Legacy-Adapter nutzt den bestehenden Campaign-Reducer und synchronisiert `characters[].xp.max`.
+- [x] Campaign-Reducer um pure Funktion erweitern, z. B. `setCampaignXpThresholdInCampaign(campaign, threshold)`.
+- [x] Admin-Players-XP-Max-Input auf `setXpThreshold` umstellen.
+- [x] Keine UI-Komponente darf direkt `campaign.characters` mutieren, um Actor-Daten zu synchronisieren.
 
 Tests:
 
-- [ ] Reducer-Test: `setCampaignXpThresholdInCampaign(..., 1200)` setzt `campaign.advancement.xpThreshold = 1200`.
-- [ ] Reducer-Test: aktive Characters/Actors erhalten `xp.max = 1200`.
-- [ ] Reducer-Test: archivierte Characters/Actors werden nicht reaktiviert oder ungewollt veraendert.
-- [ ] V2-Adapter-Test: `campaign.setXpThreshold` ruft Campaign+Actor-Repo-Pfad auf, nicht nur `campaignRepo.updateCampaign`.
-- [ ] Static Regression Test: `AdminTabContent.jsx` enthaelt keine direkte `campaign.characters = ...` XP-Synchronisation mehr.
+- [x] Reducer-Test: `setCampaignXpThresholdInCampaign(..., 1200)` setzt `campaign.advancement.xpThreshold = 1200`.
+- [x] Reducer-Test: aktive Characters/Actors erhalten `xp.max = 1200`.
+- [x] Reducer-Test: archivierte Characters/Actors werden nicht reaktiviert oder ungewollt veraendert.
+- [x] V2-Adapter-Test: `campaign.setXpThreshold` ruft Campaign+Actor-Repo-Pfad auf, nicht nur `campaignRepo.updateCampaign`.
+- [x] Static Regression Test: `AdminTabContent.jsx` enthaelt keine direkte `campaign.characters = ...` XP-Synchronisation mehr.
 
 Akzeptanz:
 
-- [ ] Aenderung von XP-Max im GM Players Tab ueberlebt Reload.
-- [ ] Spieler-Actor zeigt danach das neue XP-Maximum.
-- [ ] `setPartyXp` und Quest-XP-Rewards nutzen weiterhin denselben Campaign-Threshold.
+- [x] Aenderung von XP-Max im GM Players Tab ueberlebt Reload.
+- [x] Spieler-Actor zeigt danach das neue XP-Maximum.
+- [x] `setPartyXp` und Quest-XP-Rewards nutzen weiterhin denselben Campaign-Threshold.
 
 ## Pass 2: V2-Only Runtime Cutover
 

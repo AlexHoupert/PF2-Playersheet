@@ -164,6 +164,10 @@ export function CampaignProvider({ importDb = null, v2Store = null, children, is
         runDataAction(dataActions.campaign.setPartyXp(campaignId, xp));
     }, [dataActions, runDataAction]);
 
+    const setXpThreshold = React.useCallback((campaignId, threshold) => {
+        runDataAction(dataActions.campaign.setXpThreshold(campaignId, threshold));
+    }, [dataActions, runDataAction]);
+
     const addPartyXp = React.useCallback((campaignId, amount) => {
         runDataAction(dataActions.campaign.addPartyXp(campaignId, amount));
     }, [dataActions, runDataAction]);
@@ -215,9 +219,10 @@ export function CampaignProvider({ importDb = null, v2Store = null, children, is
         deleteCharacter,
         restoreCharacter,
         importLegacyCharacter,
+        setXpThreshold,
         setPartyXp,
         addPartyXp
-    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, actors, archivedActors, pcActors, ownedActors, myCharacter, myActor, questLists, lootBagLists, shop, bestiary, isGM, userInfo, dbMode, dbStatus, dataActions, db, importDb, v2Store, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setPartyXp, addPartyXp]);
+    }), [campaigns, archivedCampaigns, activeCampaign, targetCampaignId, actors, archivedActors, pcActors, ownedActors, myCharacter, myActor, questLists, lootBagLists, shop, bestiary, isGM, userInfo, dbMode, dbStatus, dataActions, db, importDb, v2Store, setSelectedCampaignId, createCampaign, deleteCampaign, restoreCampaign, assignUser, revokeUser, createCharacter, deleteCharacter, restoreCharacter, importLegacyCharacter, setXpThreshold, setPartyXp, addPartyXp]);
 
     return (
         <CampaignContext.Provider value={value}>

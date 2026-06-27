@@ -204,7 +204,8 @@ Campaign advancement:
 
 - Campaign XP threshold is stored at `campaign.advancement.xpThreshold`.
 - Default threshold is `1000`.
-- Party XP writes and quest XP rewards synchronize active actor/character `xp.max` from the campaign setting.
+- `dataActions.campaign.setXpThreshold` updates the campaign setting and synchronizes active PC actor `xp.max` values.
+- Party XP writes and quest XP rewards continue to derive active actor/character `xp.max` from the campaign setting.
 
 See `docs/agent/domain-actions.md` for the detailed API and migration status.
 

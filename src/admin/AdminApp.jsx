@@ -22,7 +22,7 @@ import '../App.css';
 import './AdminApp.css';
 
 export default function AdminApp() {
-    const { activeCampaign, assignUser, revokeUser, setPartyXp, addPartyXp, dataActions, db } = useCampaign();
+    const { activeCampaign, assignUser, revokeUser, setPartyXp, setXpThreshold, addPartyXp, dataActions, db } = useCampaign();
     const [activeTab, setActiveTab] = useState('sessions');
     const [playerTabMode, setPlayerTabMode] = useState('cards'); // 'cards' or 'users'
 
@@ -187,7 +187,6 @@ export default function AdminApp() {
                             addPartyXp={addPartyXp}
                             assignUser={assignUser}
                             characters={characters}
-                            dataActions={dataActions}
                             db={db}
                             handleContentLinkClick={handleContentLinkClick}
                             handleRebuild={handleRebuild}
@@ -200,11 +199,11 @@ export default function AdminApp() {
                             rebuildStatus={rebuildStatus}
                             resetData={resetData}
                             revokeUser={revokeUser}
-                            runDataAction={runDataAction}
                             setActiveCharIndex={setActiveCharIndex}
                             setModalData={setModalData}
                             setModalMode={setModalMode}
                             setPartyXp={setPartyXp}
+                            setXpThreshold={setXpThreshold}
                             setPlayerTabMode={setPlayerTabMode}
                             updateCharacter={updateCharacter}
                         />

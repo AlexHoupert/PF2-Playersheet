@@ -177,6 +177,7 @@ test('v2 adapter uses targeted repositories for migrated campaign domains', asyn
     await actions.map.upsertPin('camp1', 'map1', { id: 'pin1', label: 'Gate' });
     await actions.progress.updateProgress('camp1', { calcifer: { currentProgress: 2 } });
     await actions.camping.updateSettings('camp1', { zoneDC: 18 });
+    await actions.campaign.setXpThreshold('camp1', 1200);
 
     assert.deepEqual(calls.map(call => call[0]), [
         'actor.updateActor',
@@ -187,7 +188,9 @@ test('v2 adapter uses targeted repositories for migrated campaign domains', asyn
         'map.updateMap',
         'campaign.updateCampaign',
         'campaign.updateCampaign',
+        'campaign.updateCampaignAndActors',
     ]);
+    assert.deepEqual(calls.at(-1), ['campaign.updateCampaignAndActors', 'camp1', ['char1', 'char2']]);
 });
 
 test('v2 adapter routes character basis edits through actor repository', async () => {

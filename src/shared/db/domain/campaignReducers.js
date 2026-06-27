@@ -191,9 +191,30 @@ export function setPartyXpInCampaign(campaign, xp) {
   return next;
 }
 
+export function setCampaignXpThresholdInCampaign(campaign, threshold) {
+  const next = normalizeCampaignAdvancement(cloneValue(campaign) || {});
+  const xpThreshold = normalizeXpThreshold(threshold);
+  next.advancement = {
+    ...(next.advancement || {}),
+    xpThreshold,
+  };
+  next.characters = Array.isArray(next.characters) ? next.characters.map((character) => {
+    if (isSoftDeleted(character)) return character;
+    return applyCharacterUpdate(character, (char) => {
+      char.xp = {
+        ...(char.xp || {}),
+        current: Number(char.xp?.current) || 0,
+        max: xpThreshold,
+      };
+      return char;
+    });
+  }) : [];
+  return next;
+}
+
 export function getCampaignXpThreshold(campaign) {
   const configured = Number(campaign?.advancement?.xpThreshold ?? campaign?.xpThreshold);
-  return Number.isFinite(configured) && configured > 0 ? Math.floor(configured) : 1000;
+  return normalizeXpThreshold(configured);
 }
 
 export function normalizeCampaignAdvancement(campaign = {}) {
@@ -204,6 +225,11 @@ export function normalizeCampaignAdvancement(campaign = {}) {
     xpThreshold,
   };
   return next;
+}
+
+function normalizeXpThreshold(value) {
+  const configured = Number(value);
+  return Number.isFinite(configured) && configured > 0 ? Math.floor(configured) : 1000;
 }
 
 export function addPartyXpInCampaign(campaign, amount, options = {}) {

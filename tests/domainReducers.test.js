@@ -38,6 +38,7 @@ import {
     restoreCampaignInDb,
     restoreCharacterInCampaign,
     revokeUserInDb,
+    setCampaignXpThresholdInCampaign,
     setPartyXpInCampaign,
     softDeleteCampaignInDb,
     softDeleteCharacterInDb,
@@ -421,6 +422,26 @@ test('sets and adds party xp for active characters only', () => {
     assert.equal(addResult.xp, 225);
     assert.equal(addResult.characters[0].xp.current, 225);
     assert.deepEqual(addResult.xpNotification, { id: 123, amount: 25 });
+});
+
+test('sets campaign xp threshold and syncs active character xp max only', () => {
+    const campaign = {
+        id: 'camp1',
+        advancement: { xpThreshold: 1000 },
+        characters: [
+            { id: 'char1', xp: { current: 200, max: 1000 } },
+            { id: 'char2', deletedAt: '2026-01-01T00:00:00.000Z', xp: { current: 5, max: 1000 } },
+        ],
+    };
+
+    const result = setCampaignXpThresholdInCampaign(campaign, 1200);
+    assert.equal(result.advancement.xpThreshold, 1200);
+    assert.deepEqual(result.characters[0].xp, { current: 200, max: 1200 });
+    assert.deepEqual(result.characters[1].xp, { current: 5, max: 1000 });
+
+    const fallbackResult = setCampaignXpThresholdInCampaign(campaign, -1);
+    assert.equal(fallbackResult.advancement.xpThreshold, 1000);
+    assert.equal(fallbackResult.characters[0].xp.max, 1000);
 });
 
 test('quest structured item rewards apply to actors or quest lootbag', () => {

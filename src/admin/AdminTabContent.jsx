@@ -25,7 +25,6 @@ export default function AdminTabContent({
     addPartyXp,
     assignUser,
     characters,
-    dataActions,
     db,
     handleContentLinkClick,
     handleRebuild,
@@ -38,12 +37,12 @@ export default function AdminTabContent({
     rebuildStatus,
     resetData,
     revokeUser,
-    runDataAction,
     setActiveCharIndex,
     setModalData,
     setModalMode,
     setPartyXp,
     setPlayerTabMode,
+    setXpThreshold,
     updateCharacter,
 }) {
     if (activeTab === 'sessions') return <SessionManager db={db} />;
@@ -54,11 +53,9 @@ export default function AdminTabContent({
                 addPartyXp={addPartyXp}
                 assignUser={assignUser}
                 characters={characters}
-                dataActions={dataActions}
                 db={db}
                 playerTabMode={playerTabMode}
                 revokeUser={revokeUser}
-                runDataAction={runDataAction}
                 setActiveCharIndex={setActiveCharIndex}
                 setModalData={setModalData}
                 setModalMode={setModalMode}
@@ -116,15 +113,14 @@ function PlayersTab({
     addPartyXp,
     assignUser,
     characters,
-    dataActions,
     db,
     playerTabMode,
     revokeUser,
-    runDataAction,
     setActiveCharIndex,
     setModalData,
     setModalMode,
     setPartyXp,
+    setXpThreshold,
     setPlayerTabMode,
     updateCharacter,
 }) {
@@ -160,14 +156,7 @@ function PlayersTab({
                                 value={activeCampaign.advancement?.xpThreshold || 1000}
                                 onChange={(e) => {
                                     const xpThreshold = parseInt(e.target.value) || 1000;
-                                    if (!dataActions?.campaign?.updateCampaign) return;
-                                    runDataAction(dataActions.campaign.updateCampaign(activeCampaign.id, campaign => {
-                                        campaign.advancement = { ...(campaign.advancement || {}), xpThreshold };
-                                        campaign.characters = (campaign.characters || []).map(character => ({
-                                            ...character,
-                                            xp: { ...(character.xp || {}), max: xpThreshold },
-                                        }));
-                                    }));
+                                    setXpThreshold(activeCampaign.id, xpThreshold);
                                 }}
                             />
                         </div>

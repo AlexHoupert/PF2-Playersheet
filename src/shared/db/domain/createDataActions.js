@@ -18,6 +18,7 @@ import {
   restoreCampaignInDb,
   restoreCharacterInCampaign,
   revokeUserInDb,
+  setCampaignXpThresholdInCampaign,
   setPartyXpInCampaign,
   softDeleteCampaignInDb,
   softDeleteCharacterInDb,
@@ -1144,6 +1145,40 @@ export function createDataActions({
     return updateCampaignLegacy(campaignId, (campaignState) => setPartyXpInCampaign(campaignState, xp));
   };
 
+  const setXpThreshold = (campaignId, threshold) => {
+    const campaign = db?.campaigns?.[campaignId];
+    const activeActorIds = getActivePcActorIds(campaign);
+
+    if (useFirestoreV2) {
+      return repos.campaignRepo.updateCampaignAndActors(
+        firestore,
+        campaignId,
+        activeActorIds,
+        (campaignDoc, actorsById) => {
+          const current = {
+            ...campaignDoc,
+            id: campaignDoc.id || campaignId,
+            characters: activeActorIds.map((actorId) => actorDocToCharacter(actorsById[actorId], actorId)),
+          };
+          const nextCampaign = setCampaignXpThresholdInCampaign(current, threshold);
+          return {
+            campaign: stripChildCollections(nextCampaign),
+            actorsById: Object.fromEntries(
+              nextCampaign.characters.map((character) => [
+                character.id,
+                characterToPcActorDoc(actorsById[character.id], character, campaignId, character.id),
+              ])
+            ),
+          };
+        }
+      );
+    }
+
+    return updateCampaignLegacy(campaignId, (campaignState) =>
+      setCampaignXpThresholdInCampaign(campaignState, threshold)
+    );
+  };
+
   const addPartyXp = (campaignId, amount) => {
     const campaign = db?.campaigns?.[campaignId];
     const activeActorIds = getActivePcActorIds(campaign);
@@ -1476,6 +1511,7 @@ export function createDataActions({
       softDeleteCampaign,
       restoreCampaign,
       updateCampaign,
+      setXpThreshold,
       setPartyXp,
       addPartyXp,
       clearNotification,

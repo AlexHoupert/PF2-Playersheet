@@ -208,6 +208,14 @@ test('runtime views do not carry legacy setDb or character condition contracts',
     });
 });
 
+test('admin xp threshold writes use targeted campaign action', () => {
+    const adminSource = readSource('src/admin/AdminTabContent.jsx');
+
+    assert.match(adminSource, /setXpThreshold\(activeCampaign\.id, xpThreshold\)/);
+    assert.equal(adminSource.includes('campaign.characters ='), false);
+    assert.equal(adminSource.includes('campaign.updateCampaign(activeCampaign.id'), false);
+});
+
 test('creature presentation uses shared reveal constants and encounter actor sheets use real callbacks', () => {
     const creatureCardSource = readSource('src/shared/components/CreatureCard.jsx');
     const bestiarySource = readSource('src/admin/BestiaryView.jsx');
