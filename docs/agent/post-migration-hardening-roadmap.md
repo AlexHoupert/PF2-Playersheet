@@ -329,13 +329,58 @@ Akzeptanz:
 
 - [x] Ein neuer Entwickler kann klar erkennen: Runtime ist V2/Actor/Effect, Legacy ist nur Import/Backup.
 
+## Remaining Acceptance Gaps
+
+Diese Punkte sind nach Pass 8 bewusst noch offen. Sie blockieren nicht den
+aktuellen V2/Actor/Effect-Hardening-Stand, sollten aber als naechste
+zielgerichtete Arbeitspakete behandelt werden.
+
+### 1. Letzte UI-Read-Compatibility
+
+- Pass 2 hat den normalen Legacy-Projection-Vertrag entfernt, aber nicht jede
+  UI-Komponente liest schon direkt aus feingranularen Context-Viewmodels.
+- Es existieren weiterhin Compatibility-Props/Viewmodels fuer alte
+  Komponenten. Diese sind kein Legacy-Master-Runtime-Pfad mehr, aber noch
+  Refactor-Schuld.
+- Naechster sauberer Schritt: pro Route Player, GM, Party, Camp die noch
+  compatibility-shaped Props inventarisieren und schrittweise durch gezielte
+  `CampaignContext`-Viewmodels ersetzen.
+
+### 2. Tiefe Browser-Smokes
+
+- Playwright, Fixture und erste Oberflaechen-Smokes existieren.
+- Noch nicht automatisiert sind die mutierenden Spielabend-Flows:
+  - Player HP/Gold/Condition aendern.
+  - GM Custom Item an Player geben.
+  - Lootbag erstellen, Item claimen, Gold splitten.
+  - Quest Reward genau einmal anwenden.
+  - Encounter HP/Initiative/Condition auf Player und Creature.
+  - Spell/Item Catalog Override im Player-Add-Flow verifizieren.
+- Naechster sauberer Schritt: einen eigenen E2E-Pass bauen, der diese Flows
+  gegen deterministische V2-Fixtures testet.
+
+### 3. Manuelle UI-Smokes Fuer Shared Item Rows
+
+- Die statische Absicherung fuer Shared Rows ist vorhanden.
+- Ein vollstaendiger manueller Smoke fuer Inventory, Shop, Loot und GM Items
+  wurde noch nicht als Ergebnis dokumentiert.
+- Naechster sauberer Schritt: kurze Smoke-Matrix in `v2-default-readiness.md`
+  oder einer neuen `smoke-results.md` pflegen.
+
+### 4. Performance-/Bundle-Follow-Up
+
+- Die Runtime ist funktional gehaertet, aber der Build zeigt weiterhin grosse
+  Katalogchunks, besonders `ability-index`, `feat-index`, `creature-index` und
+  `shop-index`.
+- Das ist kein Migrations-Blocker, bleibt aber ein klarer Performance-Follow-up.
+
 ## Abschlusskriterien Der Roadmap
 
 - [x] V2-only Runtime ohne normalen `legacyProjection`-Vertrag.
-- [ ] Campaign XP Threshold synchronisiert Campaign und PC-Actors atomar.
-- [ ] Inventory/Loot/Combat nutzen zentrale Item-Identity.
+- [x] Campaign XP Threshold synchronisiert Campaign und PC-Actors atomar.
+- [x] Inventory/Loot/Combat nutzen zentrale Item-Identity.
 - [x] `createDataActions.js` ist modularisiert.
 - [x] Catalog Detail und Item Row sind wiederverwendbare Shared-Bausteine.
 - [ ] Kritische Spielabend-Flows haben Browser-Smoke-Abdeckung.
 - [x] Legacy-Code ist isoliert und durch Static Guards vom Runtime-Pfad getrennt.
-- [ ] `npm run check` und `git diff --check` sind gruen.
+- [x] `npm run check` und `git diff --check` sind gruen.
