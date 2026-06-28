@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import MapViewer from '../shared/components/MapViewer';
 import PinEditorModal from '../shared/components/PinEditorModal';
@@ -108,7 +109,7 @@ const S = {
 
 // ── Upload helper ─────────────────────────────────────────────────────────────
 
-async function uploadMapImage(file) {
+async function uploadMapImage(file, { confirmLargeInline } = {}) {
     // Always read as base64 first (needed for both server upload and inline fallback)
     const base64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -135,10 +136,10 @@ async function uploadMapImage(file) {
     // Fallback: store the data URL inline in the db (warn if large)
     if (file.size > 2 * 1024 * 1024) {
         const mb = (file.size / 1024 / 1024).toFixed(1);
-        if (!window.confirm(
-            `Server upload failed. The image (${mb} MB) will be stored inline.\n` +
-            `This may slow cloud syncing for large images. Continue?`
-        )) {
+        const confirmed = await confirmLargeInline?.(
+            `Server upload failed. The image (${mb} MB) will be stored inline. This may slow cloud syncing for large images. Continue?`
+        );
+        if (!confirmed) {
             throw new Error('Cancelled');
         }
     }
@@ -437,6 +438,7 @@ function MapViewerOverlay({ map, onClose, onSavePin, onDeletePin, onSaveScale })
 
 export default function MapAdminView() {
     const { activeCampaign, activeCampaignId, dataActions } = useCampaign();
+    const { confirm, notifyError } = useAppFeedback();
     const { isMobile } = useWindowSize();
 
     const [selectedMapId, setSelectedMapId] = useState(null);
@@ -457,7 +459,7 @@ export default function MapAdminView() {
     const runMapAction = (action) => {
         return Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
     };
 
@@ -477,9 +479,15 @@ export default function MapAdminView() {
         if (isMobile) setShowList(false);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (!campaignId) return;
-        if (!window.confirm('Archive this map? It can be restored later.')) return;
+        const confirmed = await confirm({
+            title: 'Archive map',
+            message: 'Archive this map? It can be restored later.',
+            confirmLabel: 'Archive',
+            danger: true,
+        });
+        if (!confirmed) return;
         runMapAction(dataActions.map.softDeleteMap(campaignId, id));
         if (selectedMapId === id) setSelectedMapId(null);
     };
@@ -515,7 +523,14 @@ export default function MapAdminView() {
         setUploadError(null);
         setUploading(true);
         try {
-            const url = await uploadMapImage(file);
+            const url = await uploadMapImage(file, {
+                confirmLargeInline: (message) => confirm({
+                    title: 'Store large map inline',
+                    message,
+                    confirmLabel: 'Continue',
+                    danger: true,
+                }),
+            });
             runMapAction(dataActions.map.setImageUrl(campaignId, selectedMapId, url));
         } catch (err) {
             if (err.message !== 'Cancelled') setUploadError(err.message || 'Upload failed');

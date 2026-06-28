@@ -5,6 +5,7 @@ import { getWeaponCapacity, isEquipableInventoryItem } from '../../shared/utils/
 import { findInventoryItemIndex, findStackableInventoryItemIndex, resolveInventoryItemIdentity } from '../../shared/utils/itemIdentity';
 import { consumeWandCharge, isWandItem, rechargeWand } from '../../shared/utils/wandUtils';
 import { createMutagenEffectInput } from '../../utils/rules/mutagens';
+import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 
 export function usePlayerInventoryActions({
     activeCampaign,
@@ -20,6 +21,7 @@ export function usePlayerInventoryActions({
     setModalMode,
     updateCharacter,
 }) {
+    const { confirm, notifyError } = useAppFeedback();
     const tapRef = useRef({ id: null, time: 0 });
     const tapTimeout = useRef(null);
     const longPressTimer = useRef(null);
@@ -201,7 +203,7 @@ export function usePlayerInventoryActions({
                 if (existing) existing.qty = (existing.qty || 1) + receivedQty;
                 else c.inventory.push({ ...item, qty: receivedQty });
             } else {
-                alert("Not enough gold!");
+                notifyError("Not enough gold!", { title: "Purchase failed" });
             }
         });
         setActionModal({ mode: null, item: null });
@@ -270,7 +272,7 @@ export function usePlayerInventoryActions({
             }
 
             if (!ammoToLoad) {
-                alert(requiredKeyword ? `No ammunition found! Required: ${requiredKeyword}s` : "No ammunition found!");
+                notifyError(requiredKeyword ? `No ammunition found. Required: ${requiredKeyword}s` : "No ammunition found.", { title: "Load failed" });
                 return;
             }
 
@@ -290,7 +292,7 @@ export function usePlayerInventoryActions({
                     isSpecial: !isStandard
                 };
             } else {
-                alert("Ammo not found in inventory.");
+                notifyError("Ammo not found in inventory.", { title: "Load failed" });
             }
         });
     };
@@ -351,7 +353,7 @@ export function usePlayerInventoryActions({
             }
         }
 
-        if (emptySlot === -1) alert("Weapon is full!");
+        if (emptySlot === -1) notifyError("Weapon is full.", { title: "Load failed" });
         else loadWeapon(weaponIndex, emptySlot, ammoItem);
 
         setActionModal({ mode: null, item: null });
@@ -411,18 +413,23 @@ export function usePlayerInventoryActions({
         setModalMode(null);
     };
 
-    const handleBuyFormula = (item, price) => {
-        if (!confirm(`Buy Formula for ${item.name} (${price} gp)?`)) return;
+    const handleBuyFormula = async (item, price) => {
+        const confirmed = await confirm({
+            title: "Buy formula",
+            message: `Buy Formula for ${item.name} (${price} gp)?`,
+            confirmLabel: "Buy",
+        });
+        if (!confirmed) return;
 
         updateCharacter(c => {
             const currentGold = parseFloat(c.gold || 0);
             if (currentGold < price) {
-                alert("Not enough gold!");
+                notifyError("Not enough gold.", { title: "Purchase failed" });
                 return;
             }
             if (!c.formulaBook) c.formulaBook = [];
             if (c.formulaBook.includes(item.name)) {
-                alert("You already know this formula.");
+                notifyError("You already know this formula.", { title: "Purchase failed" });
                 return;
             }
 
@@ -433,7 +440,7 @@ export function usePlayerInventoryActions({
 
     const buyFromCatalog = (item) => {
         if (character.gold < item.price) {
-            alert("Not enough gold!");
+            notifyError("Not enough gold.", { title: "Purchase failed" });
             return;
         }
 

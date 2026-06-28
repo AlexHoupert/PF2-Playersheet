@@ -7,6 +7,7 @@ import bloodMagicEffects from '../../../ressources/classfeatures/bloodmagic-effe
 import { useState } from 'react';
 import { consumeWandCharge, getWandCharges, getWandMaxCharges, getWandSpell, isWandItem, writeWandCharges } from '../../shared/utils/wandUtils';
 import { getItemIdentityKey, resolveInventoryItemIdentity } from '../../shared/utils/itemIdentity';
+import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 
 export function ItemDetailModal({
     character,
@@ -22,6 +23,7 @@ export function ItemDetailModal({
 }) {
     // Local state for Rune Picker
     const [showRunePicker, setShowRunePicker] = useState(false);
+    const { notifyError } = useAppFeedback();
 
     if (!modalData) return null;
 
@@ -218,7 +220,7 @@ export function ItemDetailModal({
         const { newItem, consumed, error } = applyRune(inventoryMatch, runeItem, { isWeapon, isArmor });
 
         if (error) {
-            alert(error);
+            notifyError(error);
             return;
         }
 

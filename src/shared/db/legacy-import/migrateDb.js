@@ -1,4 +1,8 @@
-import { normalizeCharacterRuntimeShape } from "./domain/characterShape.js";
+// LEGACY IMPORT/BACKUP ONLY.
+// Normal runtime uses Firestore V2 actors/effects. This migration helper only
+// normalizes old localStorage/data-master snapshots before explicit import.
+import { normalizeCharacterRuntimeShape } from "../domain/characterShape.js";
+import { debugLog } from "../../utils/debugLog.js";
 
 export function migrateDb(db) {
     const next = db && typeof db === 'object' ? db : {};
@@ -16,7 +20,7 @@ export function migrateDb(db) {
 
     // If we have data at root but NO campaigns, migrate it.
     if ((rootChars.length > 0 || rootQuests.length > 0 || rootLoot.length > 0) && Object.keys(next.campaigns).length === 0) {
-        console.log("Migrating Legacy Data to Default Campaign...");
+        debugLog("Migrating Legacy Data to Default Campaign...");
         const defaultId = 'campaign_' + Date.now(); // Simple ID
         next.campaigns[defaultId] = {
             id: defaultId,

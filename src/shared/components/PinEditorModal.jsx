@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useWindowSize } from '../hooks/useWindowSize';
 import BottomSheet from './BottomSheet';
+import { useAppFeedback } from '../feedback/AppFeedback';
 
 function uuid() {
     return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -104,6 +105,7 @@ function Field({ label, children }) {
 
 function PinEditorBody({ pin, position, onSave, onDelete, onClose }) {
     const isNew = !pin;
+    const { confirm } = useAppFeedback();
 
     const [form, setForm] = useState({
         label:            pin?.label            ?? '',
@@ -227,8 +229,14 @@ function PinEditorBody({ pin, position, onSave, onDelete, onClose }) {
                 </button>
                 {!isNew && onDelete && (
                     <button
-                        onClick={() => {
-                            if (window.confirm('Delete this pin?')) onDelete(pin.id);
+                        onClick={async () => {
+                            const confirmed = await confirm({
+                                title: 'Delete pin',
+                                message: 'Delete this pin?',
+                                confirmLabel: 'Delete',
+                                danger: true,
+                            });
+                            if (confirmed) onDelete(pin.id);
                         }}
                         style={{
                             padding: '9px 12px',

@@ -5,6 +5,7 @@ import {
 import { getConditionImgSrc, isConditionValued, getConditionCatalogEntry } from '../../shared/constants/conditionsCatalog';
 import { parseFoundry } from '../../shared/utils/foundryParser';
 import { useCampaign } from '../../shared/context/CampaignContext';
+import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 import {
     createStandardConditionEffectInput,
     normalizeConditionValue
@@ -48,6 +49,7 @@ export function ConditionsModal({
 }) {
     // --- STATE ---
     const { activeCampaignId, myActor, dataActions } = useCampaign();
+    const { notifyError } = useAppFeedback();
 
     // Internal state to track which condition is being viewed (if any).
     // If initialCondition is provided, start with that.
@@ -154,7 +156,7 @@ export function ConditionsModal({
         const valued = isConditionValued(condName);
 
         if (!activeCampaignId || !actorId || !dataActions?.effect) {
-            alert('No active actor is available for condition updates.');
+            notifyError('No active actor is available for condition updates.');
             return;
         }
 
@@ -191,7 +193,7 @@ export function ConditionsModal({
             })
             .catch(err => {
                 console.error(err);
-                alert(err?.message || String(err));
+                notifyError(err);
             });
     };
 

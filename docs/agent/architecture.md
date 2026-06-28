@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Last updated: 2026-06-20.
+Last updated: 2026-06-28.
 
 ## Runtime Shape
 
@@ -29,8 +29,8 @@ Production build uses `vite build`, then `scripts/copy_ressources_to_dist.js` co
 `src/App.jsx`:
 
 - Starts `useFirestoreV2Db(dbData)` directly on the `v2-convergence` branch.
-- Legacy `usePersistedDb` is no longer selected by the normal app entry; it remains import/backup/reference code until cleanup.
-- The UI still receives a legacy-shaped compatibility projection while the V2-native view model is being adopted.
+- Legacy `usePersistedDb` is no longer selected by the normal app entry; it lives under `src/shared/db/legacy-import/` for import/backup/reference code.
+- The normal app runtime reads from V2 documents and `CampaignContext` V2 viewmodels. Legacy projection code is isolated to `src/shared/db/v2/legacyProjection.js` for tests/import helpers.
 - See `docs/agent/v2-default-readiness.md` before deploying the convergence branch as the main production path.
 - Selects route through query params:
   - `?party=true` -> `PartyScreen`.
@@ -106,7 +106,7 @@ Catalog content links are produced by `parseFoundry` as spans with `.content-lin
 
 ## Data Flow
 
-The V2 convergence runtime has a native V2 store plus a temporary legacy-shaped projection for old reads. Runtime UI writes should not call broad DB setters:
+The V2 convergence runtime has a native V2 store and selector-backed compatibility viewmodels where old screens still need older shapes. Runtime UI writes should not call broad DB setters:
 
 1. User action calls local handler.
 2. Handler calls a scoped `dataActions` method.

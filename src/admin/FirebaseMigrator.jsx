@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { db as firestore } from '../shared/db/firebase-config';
 import { doc, setDoc } from 'firebase/firestore';
-import { DB_STORAGE_KEY } from '../shared/db/usePersistedDb';
+import { DB_STORAGE_KEY } from '../shared/db/legacy-import/usePersistedDb';
 import { normalizeMasterToV2 } from '../shared/db/v2/normalizers';
 import { writeMasterMigrationToV2 } from '../shared/db/v2/firestoreMigration';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 
 function safeTimestamp() {
     return new Date().toISOString().replace(/[:.]/g, '-');
@@ -27,14 +28,21 @@ export default function FirebaseMigrator({ db }) {
     const [backupStatus, setBackupStatus] = useState(null);
     const [v2Status, setV2Status] = useState(null);
     const [v2Report, setV2Report] = useState(null);
+    const { confirm, notifyError, notifySuccess, prompt } = useAppFeedback();
     const allowLegacyMasterUpload = import.meta.env.VITE_ENABLE_LEGACY_MASTER_UPLOAD === 'true';
 
     const handleUpload = async () => {
         if (!allowLegacyMasterUpload) {
-            alert('Legacy master upload is disabled. Set VITE_ENABLE_LEGACY_MASTER_UPLOAD=true only for an emergency restore.');
+            notifyError('Legacy master upload is disabled. Set VITE_ENABLE_LEGACY_MASTER_UPLOAD=true only for an emergency restore.', { title: 'Upload disabled' });
             return;
         }
-        if (!confirm('Overwrite legacy data/master with current LOCAL data? This can erase newer cloud data.')) return;
+        const confirmed = await confirm({
+            title: 'Overwrite legacy master',
+            message: 'Overwrite legacy data/master with current LOCAL data? This can erase newer cloud data.',
+            confirmLabel: 'Overwrite',
+            danger: true,
+        });
+        if (!confirmed) return;
 
         setStatus('working');
         try {
@@ -56,11 +64,11 @@ export default function FirebaseMigrator({ db }) {
             await Promise.race([uploadTask, timeoutPromise]);
 
             setStatus('success');
-            alert('Legacy data/master upload complete.');
+            notifySuccess('Legacy data/master upload complete.');
         } catch (err) {
             console.error('Legacy upload error:', err);
             setStatus('error');
-            alert(`Legacy Upload Failed: ${err.message}`);
+            notifyError(err, { title: 'Legacy upload failed' });
         }
     };
 
@@ -79,7 +87,7 @@ export default function FirebaseMigrator({ db }) {
         } catch (err) {
             console.error('Backup Error:', err);
             setBackupStatus('error');
-            alert(`Backup Failed: ${err.message}`);
+            notifyError(err, { title: 'Backup failed' });
         }
     };
 
@@ -93,12 +101,17 @@ export default function FirebaseMigrator({ db }) {
         } catch (err) {
             console.error('V2 dry run failed:', err);
             setV2Status('error');
-            alert(`V2 Dry Run Failed: ${err.message}`);
+            notifyError(err, { title: 'V2 dry run failed' });
         }
     };
 
     const handleMigrateV2 = async () => {
-        const typed = prompt('This writes normalized Firestore v2 documents and creates a backup of data/master first. Type MIGRATE V2 to continue.');
+        const typed = await prompt({
+            title: 'Write Firestore V2',
+            message: 'This writes normalized Firestore v2 documents and creates a backup of data/master first. Type MIGRATE V2 to continue.',
+            confirmLabel: 'Migrate',
+            danger: true,
+        });
         if (typed !== 'MIGRATE V2') return;
 
         setV2Status('working');
@@ -107,11 +120,11 @@ export default function FirebaseMigrator({ db }) {
             setV2Report(normalized.report);
             setV2Status('success');
             downloadJson(`pf2e-v2-migration-report-${safeTimestamp()}.json`, normalized.report);
-            alert(`V2 migration complete. Wrote ${normalized.documents.length} documents. Reload the V2 runtime to test the normalized store.`);
+            notifySuccess(`V2 migration complete. Wrote ${normalized.documents.length} documents. Reload the V2 runtime to test the normalized store.`);
         } catch (err) {
             console.error('V2 migration failed:', err);
             setV2Status('error');
-            alert(`V2 Migration Failed: ${err.message}`);
+            notifyError(err, { title: 'V2 migration failed' });
         }
     };
 

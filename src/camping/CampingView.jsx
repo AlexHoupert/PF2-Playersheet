@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { getMergedActivities, getActivityDC, getDegreeOfSuccess, getEffectText, DC_TYPE_LABELS } from './campingData';
 import { parseFoundry } from '../shared/utils/foundryParser';
 import CampScreen from './CampScreen';
@@ -9,6 +10,7 @@ const DEGREE_LABELS = { crit: 'Critical Success', success: 'Success', fail: 'Fai
 
 export default function CampingView({ character }) {
     const { activeCampaign, dataActions } = useCampaign();
+    const { notifyError } = useAppFeedback();
     const camping = activeCampaign?.camping || {};
     const activities = getMergedActivities(camping.activities || []);
     const assignments = camping.assignments || {};
@@ -36,7 +38,7 @@ export default function CampingView({ character }) {
     const runCampingAction = (action) => {
         return Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
     };
 

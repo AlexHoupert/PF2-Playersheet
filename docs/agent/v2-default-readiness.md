@@ -1,12 +1,12 @@
 # V2 Default Readiness
 
-Last updated: 2026-06-20.
+Last updated: 2026-06-28.
 
 ## Purpose
 
 This checklist tracks what must be true before the `v2-convergence` branch is deployable as the main runtime.
 
-Current branch decision: `src/App.jsx` starts Firestore V2 directly. Legacy remains only an import/backup source and the compatibility projection remains a temporary bridge.
+Current branch decision: `src/App.jsx` starts Firestore V2 directly. Legacy remains only an import/backup source; legacy projection is isolated to migration/import tests and explicit backup helpers.
 
 ## Readiness Summary
 
@@ -22,7 +22,7 @@ Status meanings:
 | --- | --- | --- |
 | Auth/Login | Needs manual smoke | Firebase Auth is still the entry gate. V2 does not alter auth, but deployed auth config must be verified in the target environment. |
 | Route mode selection | Ready by tests/code | `src/App.jsx` starts `useFirestoreV2Db` directly on the convergence branch. |
-| V2 compatibility cache | Ready by tests/code | `useFirestoreV2Db` caches the compatibility projection under `pf2e-data-v2-projection`; normal runtime context now composes from `v2Store`. |
+| V2 cache | Ready by tests/code | `useFirestoreV2Db` stores V2 snapshots under `pf2e-data-v2-projection`; normal runtime context composes from `v2Store`. |
 | V2-native view model | Ready by tests/code | `composeV2ViewModelFromDocuments` groups campaigns, actors, actor effects, effect templates, catalog overrides, and global content. |
 | DB status object | Ready by tests/code | `CampaignContext` exposes `dbStatus`, including the current V2 view model for debug/transition work. |
 

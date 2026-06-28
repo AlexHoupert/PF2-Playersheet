@@ -34,6 +34,24 @@ The root repo is `PF2-Playersheet`; the parent directory is not the git repo.
   - no special query: player app.
 - `src/shared/context/CampaignContext.jsx` derives active campaign, GM status, user assignment, and scoped domain actions.
 
+## Automated Browser Smokes
+
+- `npm run smoke` runs Playwright against the custom dev server on port `4174` by default.
+- `npm run smoke:install` installs the Chromium browser used by the smoke suite.
+- `src/shared/testing/e2eFixture.js` provides a DEV-only deterministic V2 fixture enabled by `?e2e=true`.
+  - It creates one campaign, one assigned PC actor (`Nimwe Smoke`), one quest, one lootbag, one encounter, one shop trader, and a spell catalog override for `Uplifting Overture`.
+  - `AuthProvider` uses a fake user only when `import.meta.env.DEV` and `?e2e=true`; production builds do not enable the fixture.
+  - `App.jsx` routes the fixture through `CampaignProvider` with a local runtime DB state so smoke tests do not write Firestore.
+- Current smoke coverage is a baseline surface smoke: login gate, Player character/quest/loot/magic/shop surfaces, and GM sessions/players/items/quests/encounters. Deeper mutation flows such as item give, loot claim/split, quest reward application, and encounter condition writes still need dedicated Playwright tests.
+- The custom dev server must let Vite transform `/ressources/...json?import` requests. `server/index.js` serves normal `/ressources` asset URLs statically, but passes `?import` requests through to Vite middleware.
+
+## Feedback And Runtime Logging
+
+- `src/shared/feedback/AppFeedback.jsx` provides the app-level feedback context: toasts plus controlled confirm/prompt dialogs. `src/main.jsx` wraps the app in `AppFeedbackProvider`.
+- `CampaignContext.runDataAction` reports failed domain actions through `useAppFeedback().notifyError` instead of browser `alert`.
+- `src/shared/utils/debugLog.js` is the preferred helper for debug-only runtime logs; it is gated behind `import.meta.env.DEV`.
+- Browser-native `alert`/`confirm`/`prompt` are banned in runtime source. Use `useAppFeedback().notifyError/notifySuccess/confirm/prompt` instead.
+
 ## High-Level Structure
 
 - `src/player/`: player shell, tabs, inventory/shop workflows, modals, party screen, view components.
@@ -55,7 +73,9 @@ The root repo is `PF2-Playersheet`; the parent directory is not the git repo.
 
 Legacy/import compatibility:
 
-- `src/shared/db/usePersistedDb.js`
+- `src/shared/db/legacy-import/usePersistedDb.js`
+- `src/shared/db/legacy-import/migrateDb.js`
+- `src/shared/db/v2/legacyProjection.js`
 - LocalStorage key `pf2e-data`.
 - Optional Firestore document `data/master`.
 - Adds `_lastWriteTimestamp` for echo suppression.

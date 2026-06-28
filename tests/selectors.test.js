@@ -47,7 +47,7 @@ import {
     mergeCatalogIndexWithOverrides,
     selectCatalogOverrideEntries,
 } from '../src/shared/db/selectors/catalogOverrideSelectors.js';
-import { composeLegacyDbFromV2Documents } from '../src/shared/db/v2/normalizers.js';
+import { composeLegacyDbFromV2Documents } from '../src/shared/db/v2/legacyProjection.js';
 
 test('campaign selectors separate active and archived campaigns and characters', () => {
     const db = {

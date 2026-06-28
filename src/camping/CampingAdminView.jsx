@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { getMergedActivities, DEFAULT_CAMPING_ACTIVITIES, DC_TYPE_LABELS } from './campingData';
 import RichTextEditor from '../shared/components/RichTextEditor';
 
@@ -22,6 +23,7 @@ function generateId(name) {
 
 export default function CampingAdminView() {
     const { activeCampaign, dataActions } = useCampaign();
+    const { confirm, notifyError } = useAppFeedback();
     const camping = activeCampaign?.camping || {};
     const activities = getMergedActivities(camping.activities || []);
     const archivedActivities = (camping.activities || []).filter(a => a?.deletedAt);
@@ -33,7 +35,7 @@ export default function CampingAdminView() {
     const runCampingAction = (action) => {
         return Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
     };
 
@@ -62,14 +64,28 @@ export default function CampingAdminView() {
         setEditing(null);
     };
 
-    const deleteActivity = (id) => {
-        if (!campaignId || !confirm('Archive this activity? It can be restored from the database if needed.')) return;
+    const deleteActivity = async (id) => {
+        if (!campaignId) return;
+        const confirmed = await confirm({
+            title: 'Archive camping activity',
+            message: 'Archive this activity? It can be restored from the database if needed.',
+            confirmLabel: 'Archive',
+            danger: true,
+        });
+        if (!confirmed) return;
         runCampingAction(dataActions.camping.deleteActivity(campaignId, id));
         if (editing?.id === id) setEditing(null);
     };
 
-    const resetToDefault = (id) => {
-        if (!campaignId || !confirm('Reset this activity to its default values?')) return;
+    const resetToDefault = async (id) => {
+        if (!campaignId) return;
+        const confirmed = await confirm({
+            title: 'Reset camping activity',
+            message: 'Reset this activity to its default values?',
+            confirmLabel: 'Reset',
+            danger: true,
+        });
+        if (!confirmed) return;
         runCampingAction(dataActions.camping.resetDefaultActivity(campaignId, id));
         if (editing?.id === id) setEditing(null);
     };

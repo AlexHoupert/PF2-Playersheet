@@ -77,7 +77,7 @@ Remaining Player-local edit paths:
 
 ## Completed In V2 Read Cutover / Actor Runtime Slice
 
-- `useFirestoreV2Db` returns `{ legacyProjection, v2Store, status }` and no longer writes broad legacy diffs back to Firestore.
+- `useFirestoreV2Db` returns `{ v2Store, status }` and no longer writes broad legacy diffs back to Firestore.
 - `writeLegacyDbDiffToV2` is isolated to migration/import code.
 - Player/Admin runtime trees no longer carry `setDb` props.
 - `campaign.characters` compatibility rows in the runtime compatibility DB are built from PC Actor documents only; old Character documents are import/projection-test material.
@@ -100,7 +100,7 @@ Remaining Player-local edit paths:
 
 Remaining presentation cleanup:
 
-- Player Inventory, Shop, Loot, and GM Items still have similar item-row rendering. Extract a shared `ItemRow`/`CatalogItemRow` in a future UI cleanup wave.
+- Player Loot, Shop, and GM Items side lists now use shared `ItemRow` primitives. Complex Player equipment rows remain local because wand/staff/ammo/equipment interactions need a dedicated pass.
 - Admin catalog previews for Spells, Actions, Feats, and Impulses already share `ContentPreviewCard`; harden editor/list reuse in a future catalog UI wave.
 
 ## Remaining By Domain
@@ -128,7 +128,7 @@ Deferred follow-ups:
 
 - Full `createDataActions.js` domain split remains a dedicated refactor wave; this wave avoided mixing broad file moves with rules/data fixes.
 - Shared `ItemRow`/`CatalogItemRow` cleanup remains useful for presentation consistency, but the first-pass instance identity hotspots are now centralized.
-- Browser-native dialogs and large modal/view files remain UI-debt and should be handled after the rules/data hardening is fully stable.
+- Browser-native dialogs have been replaced by `useAppFeedback` toasts/confirm/prompt dialogs. Large modal/view files remain UI-debt and should be handled after the rules/data hardening is fully stable.
 
 ### Campaign Compatibility
 
@@ -149,7 +149,8 @@ Remaining:
 
 ### Legacy V2 Compatibility
 
-- `useFirestoreV2Db` still builds a legacy-shaped projection for transitional reads, but it is no longer a write contract.
+- `useFirestoreV2Db` no longer builds a legacy-shaped projection in the normal runtime path.
 - `writeLegacyDbDiffToV2` must remain confined to legacy import/migration code.
-- `composeLegacyDbFromV2Documents` still exists for import/backup compatibility and tests, but `CampaignContext` builds the normal runtime compatibility DB from `v2Store`.
-- Legacy `characters` docs may still exist as transition data. Runtime reads and writes now target Actors; remaining work is to isolate/remove legacy character collection migration helpers.
+- `composeLegacyDbFromV2Documents` exists only in `src/shared/db/v2/legacyProjection.js` for import/backup compatibility and tests.
+- Legacy LocalStorage/data-master runtime helpers live under `src/shared/db/legacy-import/`.
+- Legacy `characters` docs may still exist as transition data. Runtime reads and writes target Actors; `V2_COLLECTIONS.characters` is confined to migration/projection/test paths.

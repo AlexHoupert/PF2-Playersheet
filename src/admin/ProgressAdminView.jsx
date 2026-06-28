@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { getProgress as getProgressState, splitProgressEntries } from '../shared/db/domain/progressReducers';
 import { createInstanceId } from '../shared/db/domain/inventoryReducers';
 
@@ -170,7 +171,7 @@ function SubTabBar({ active, onChange }) {
 
 // ─── REPUTATION ADMIN ─────────────────────────────────────────────────────────
 
-function ReputationAdmin({ progress, save, archiveEntry, restoreEntry }) {
+function ReputationAdmin({ progress, save, archiveEntry, restoreEntry, confirm }) {
     const [expandedFaction, setExpandedFaction] = useState(null);
     const [expandedRank, setExpandedRank] = useState({});
     const { active: factions, archived: archivedFactions } = splitProgressEntries(progress, 'reputation');
@@ -196,8 +197,14 @@ function ReputationAdmin({ progress, save, archiveEntry, restoreEntry }) {
         });
     };
 
-    const deleteFaction = (id) => {
-        if (!window.confirm('Archive this faction? It can be restored later.')) return;
+    const deleteFaction = async (id) => {
+        const confirmed = await confirm({
+            title: 'Archive faction',
+            message: 'Archive this faction? It can be restored later.',
+            confirmLabel: 'Archive',
+            danger: true,
+        });
+        if (!confirmed) return;
         archiveEntry('reputation', id);
         if (expandedFaction === id) setExpandedFaction(null);
     };
@@ -371,7 +378,7 @@ function ReputationAdmin({ progress, save, archiveEntry, restoreEntry }) {
 
 // ─── RESEARCH ADMIN ───────────────────────────────────────────────────────────
 
-function ResearchAdmin({ progress, save, archiveEntry, restoreEntry }) {
+function ResearchAdmin({ progress, save, archiveEntry, restoreEntry, confirm }) {
     const [expanded, setExpanded] = useState(null);
     const { active: topics, archived: archivedTopics } = splitProgressEntries(progress, 'research');
     const allTopics = progress.research.topics;
@@ -396,8 +403,14 @@ function ResearchAdmin({ progress, save, archiveEntry, restoreEntry }) {
         });
     };
 
-    const deleteTopic = (id) => {
-        if (!window.confirm('Archive this topic? It can be restored later.')) return;
+    const deleteTopic = async (id) => {
+        const confirmed = await confirm({
+            title: 'Archive topic',
+            message: 'Archive this topic? It can be restored later.',
+            confirmLabel: 'Archive',
+            danger: true,
+        });
+        if (!confirmed) return;
         archiveEntry('research', id);
         if (expanded === id) setExpanded(null);
     };
@@ -530,7 +543,7 @@ function ResearchAdmin({ progress, save, archiveEntry, restoreEntry }) {
 
 // ─── CALCIFER ADMIN ───────────────────────────────────────────────────────────
 
-function CalciferAdmin({ progress, save, archiveEntry, restoreEntry }) {
+function CalciferAdmin({ progress, save, archiveEntry, restoreEntry, confirm, prompt }) {
     const [expandedStage, setExpandedStage] = useState(null);
     const calcifer = progress.calcifer;
     const { active: activeStages, archived: archivedStages } = splitProgressEntries(progress, 'calcifer');
@@ -560,8 +573,14 @@ function CalciferAdmin({ progress, save, archiveEntry, restoreEntry }) {
         });
     };
 
-    const deleteStage = (id) => {
-        if (!window.confirm('Archive this stage? It can be restored later.')) return;
+    const deleteStage = async (id) => {
+        const confirmed = await confirm({
+            title: 'Archive stage',
+            message: 'Archive this stage? It can be restored later.',
+            confirmLabel: 'Archive',
+            danger: true,
+        });
+        if (!confirmed) return;
         archiveEntry('calcifer', id);
         if (expandedStage === id) setExpandedStage(null);
     };
@@ -611,8 +630,13 @@ function CalciferAdmin({ progress, save, archiveEntry, restoreEntry }) {
                             <button
                                 className="btn-add-condition"
                                 style={{ margin: 0, flex: 1 }}
-                                onClick={() => {
-                                    const amt = prompt('Add points:');
+                                onClick={async () => {
+                                    const amt = await prompt({
+                                        title: 'Add Calcifer points',
+                                        inputLabel: 'Points',
+                                        inputType: 'number',
+                                        confirmLabel: 'Add',
+                                    });
                                     if (!amt) return;
                                     const n = parseFloat(amt) || 0;
                                     updateCalcifer({ currentProgress: (calcifer.currentProgress || 0) + n });
@@ -624,8 +648,13 @@ function CalciferAdmin({ progress, save, archiveEntry, restoreEntry }) {
                                     border: 'none', borderRadius: 6, color: '#aaa',
                                     cursor: 'pointer', fontSize: '0.85em',
                                 }}
-                                onClick={() => {
-                                    const amt = prompt('Subtract points:');
+                                onClick={async () => {
+                                    const amt = await prompt({
+                                        title: 'Subtract Calcifer points',
+                                        inputLabel: 'Points',
+                                        inputType: 'number',
+                                        confirmLabel: 'Subtract',
+                                    });
                                     if (!amt) return;
                                     const n = parseFloat(amt) || 0;
                                     updateCalcifer({ currentProgress: Math.max(0, (calcifer.currentProgress || 0) - n) });
@@ -751,7 +780,7 @@ const DEFAULT_ELEMENTS = [
     { name: 'Metal', icon: '⚙️', color: '#94a3b8' },
 ];
 
-function MaterialsAdmin({ progress, save, archiveEntry, restoreEntry }) {
+function MaterialsAdmin({ progress, save, archiveEntry, restoreEntry, confirm }) {
     const [expandedEl, setExpandedEl] = useState(null);
     const [expandedTier, setExpandedTier] = useState({});
     const { active: elements, archived: archivedElements } = splitProgressEntries(progress, 'materials');
@@ -778,8 +807,14 @@ function MaterialsAdmin({ progress, save, archiveEntry, restoreEntry }) {
         });
     };
 
-    const deleteElement = (id) => {
-        if (!window.confirm('Archive this element? It can be restored later.')) return;
+    const deleteElement = async (id) => {
+        const confirmed = await confirm({
+            title: 'Archive element',
+            message: 'Archive this element? It can be restored later.',
+            confirmLabel: 'Archive',
+            danger: true,
+        });
+        if (!confirmed) return;
         archiveEntry('materials', id);
         if (expandedEl === id) setExpandedEl(null);
     };
@@ -974,6 +1009,7 @@ function MaterialsAdmin({ progress, save, archiveEntry, restoreEntry }) {
 
 export default function ProgressAdminView() {
     const { activeCampaign, dataActions } = useCampaign();
+    const { confirm, notifyError, prompt } = useAppFeedback();
     const [subTab, setSubTab] = useState('reputation');
 
     if (!activeCampaign) {
@@ -991,7 +1027,7 @@ export default function ProgressAdminView() {
     const runProgressAction = (action) => {
         return Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
     };
 
@@ -1011,10 +1047,10 @@ export default function ProgressAdminView() {
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
                 <SubTabBar active={subTab} onChange={setSubTab} />
-                {subTab === 'reputation' && <ReputationAdmin progress={progress} save={save} archiveEntry={archiveEntry} restoreEntry={restoreEntry} />}
-                {subTab === 'research'   && <ResearchAdmin   progress={progress} save={save} archiveEntry={archiveEntry} restoreEntry={restoreEntry} />}
-                {subTab === 'calcifer'   && <CalciferAdmin   progress={progress} save={save} archiveEntry={archiveEntry} restoreEntry={restoreEntry} />}
-                {subTab === 'materials'  && <MaterialsAdmin  progress={progress} save={save} archiveEntry={archiveEntry} restoreEntry={restoreEntry} />}
+                {subTab === 'reputation' && <ReputationAdmin progress={progress} save={save} archiveEntry={archiveEntry} restoreEntry={restoreEntry} confirm={confirm} />}
+                {subTab === 'research'   && <ResearchAdmin   progress={progress} save={save} archiveEntry={archiveEntry} restoreEntry={restoreEntry} confirm={confirm} />}
+                {subTab === 'calcifer'   && <CalciferAdmin   progress={progress} save={save} archiveEntry={archiveEntry} restoreEntry={restoreEntry} confirm={confirm} prompt={prompt} />}
+                {subTab === 'materials'  && <MaterialsAdmin  progress={progress} save={save} archiveEntry={archiveEntry} restoreEntry={restoreEntry} confirm={confirm} />}
             </div>
         </div>
     );

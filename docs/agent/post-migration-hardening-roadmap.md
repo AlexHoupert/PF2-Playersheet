@@ -1,6 +1,6 @@
 # Post-Migration Hardening Roadmap
 
-Last updated: 2026-06-27.
+Last updated: 2026-06-28.
 
 ## Zweck
 
@@ -250,25 +250,31 @@ Problem: Unit-/Reducer-/Static-Tests sind stark, aber es fehlt E2E-Sicherheit fu
 
 Ziel: Mindestens ein automatisierter Browser-Smoke deckt die wichtigsten Player-/GM-Flows ab.
 
-- [ ] Playwright oder vergleichbares Browser-Test-Setup einfuehren.
-- [ ] Testdatenstrategie festlegen:
-  - [ ] bevorzugt lokale/emulierte Daten oder deterministic V2 fixture
-  - [ ] keine Live-Produktionsdaten veraendern
-- [ ] Smoke 1: App startet, Login-/Auth-Gate wird sinnvoll behandelt.
-- [ ] Smoke 2: GM kann Campaign/Player View laden.
+- [x] Playwright oder vergleichbares Browser-Test-Setup einfuehren.
+- [x] Testdatenstrategie festlegen:
+  - [x] bevorzugt lokale/emulierte Daten oder deterministic V2 fixture
+  - [x] keine Live-Produktionsdaten veraendern
+- [x] Smoke 1: App startet, Login-/Auth-Gate wird sinnvoll behandelt.
+- [x] Smoke 2: GM kann Campaign/Player View laden.
 - [ ] Smoke 3: Player kann HP, Gold, Condition anzeigen/aendern.
 - [ ] Smoke 4: GM gibt Custom Item an Player.
-- [ ] Smoke 5: Lootbag create, item claim, gold split.
-- [ ] Smoke 6: Quest Reward wird genau einmal angewendet.
-- [ ] Smoke 7: Encounter HP/Initiative/Condition auf Player und Creature.
-- [ ] Smoke 8: Spell/Item edit ueber Catalog Overrides sichtbar in Player Add-Flow.
-- [ ] `npm run smoke` Script ergaenzen.
-- [ ] Optional spaeter: `npm run check:e2e` getrennt von schnellem `npm run check`.
+- [ ] Smoke 5: Lootbag create, item claim, gold split. Partial:
+  - Baseline sichtbar: Player Lootbag und Loot-Item sind per Fixture sichtbar. Mutierende Claim-/Split-Flows folgen in einem tieferen E2E-Pass.
+- [ ] Smoke 6: Quest Reward wird genau einmal angewendet. Partial:
+  - Baseline sichtbar: Player und GM Quest-Surfaces laden dieselbe Fixture-Quest. Reward-Anwendung folgt in einem tieferen E2E-Pass.
+- [ ] Smoke 7: Encounter HP/Initiative/Condition auf Player und Creature. Partial:
+  - Baseline sichtbar: GM Encounter-Surface laedt Encounter und Creature-Combatant. Mutierende HP-/Condition-Flows folgen in einem tieferen E2E-Pass.
+- [ ] Smoke 8: Spell/Item edit ueber Catalog Overrides sichtbar in Player Add-Flow. Partial:
+  - Baseline sichtbar: Catalog-Override-Spell `Uplifting Overture` erscheint im Player Magic-Surface. Add-Flow/Editor-Smoke folgt in einem tieferen E2E-Pass.
+- [x] `npm run smoke` Script ergaenzen.
+- [x] Optional spaeter: `npm run check:e2e` getrennt von schnellem `npm run check`.
 
 Akzeptanz:
 
-- [ ] Kritische Spielabend-Flows koennen vor Deploy reproduzierbar geprueft werden.
-- [ ] Regressionen wie "GM Item Give geht nicht" oder "Spell Override im Player Add Spell unsichtbar" fallen automatisiert auf.
+- [ ] Kritische Spielabend-Flows koennen vor Deploy reproduzierbar geprueft werden. Partial:
+  - Aktueller Stand deckt Start/Login, Player Character/Quest/Loot/Magic/Shop-Surfaces und GM Sessions/Players/Items/Quests/Encounter-Surfaces ab.
+- [ ] Regressionen wie "GM Item Give geht nicht" oder "Spell Override im Player Add Spell unsichtbar" fallen automatisiert auf. Partial:
+  - Sichtbarkeitsregressionen fallen auf; mutierende Give-/Add-Flows brauchen noch eigene Tests.
 
 ## Pass 7: UI-Hardening Und Logging
 
@@ -276,25 +282,25 @@ Problem: Browser-native Dialoge und ungefilterte Logs bleiben UX- und Wartungssc
 
 Ziel: Kritische Dialoge sind kontrollierbar, stylbar und mobil robuster; Debug-Logs laufen nicht ungefiltert in Produktion.
 
-- [ ] Gemeinsamen Notification/Error-Service oder Hook einfuehren, z. B. `useAppFeedback`.
-- [ ] `runDataAction` Fehler nicht nur per `alert`, sondern ueber ein konsistentes UI anzeigen.
-- [ ] Native Dialoge schrittweise ersetzen:
-  - [ ] destructive GM-Aktionen
-  - [ ] Migration/FirebaseMigrator Aktionen
-  - [ ] Player Inventory/Loot prompts
-  - [ ] FormulaBook Daily Prep
-- [ ] `console.log` in Runtime durch `debugLog` hinter `import.meta.env.DEV` ersetzen.
-- [ ] `console.warn` fuer echte Warnungen behalten, aber noisy Debug-Warnungen reduzieren.
+- [x] Gemeinsamen Notification/Error-Service oder Hook einfuehren, z. B. `useAppFeedback`.
+- [x] `runDataAction` Fehler nicht nur per `alert`, sondern ueber ein konsistentes UI anzeigen.
+- [x] Native Dialoge schrittweise ersetzen:
+  - [x] destructive GM-Aktionen
+  - [x] Migration/FirebaseMigrator Aktionen
+  - [x] Player Inventory/Loot prompts
+  - [x] FormulaBook Daily Prep
+- [x] `console.log` in Runtime durch `debugLog` hinter `import.meta.env.DEV` ersetzen.
+- [x] `console.warn` fuer echte Warnungen behalten, aber noisy Debug-Warnungen reduzieren.
 
 Tests:
 
-- [ ] Static Test: keine neuen `prompt(` in migrierten Runtime-Dateien.
-- [ ] Static Test: keine neuen `console.log(` in Runtime-Dateien ausser explicit dev-guarded helper.
+- [x] Static Test: keine nativen Browser-Dialoge in Runtime-Dateien.
+- [x] Static Test: keine neuen `console.log(` in migrierten Runtime-Dateien ausser explicit dev-guarded helper.
 
 Akzeptanz:
 
-- [ ] Kritische Nutzeraktionen koennen nicht mehr durch native Dialog-Eigenheiten kaputtgehen.
-- [ ] Production-Konsole ist deutlich sauberer.
+- [x] Kritische Nutzeraktionen koennen nicht mehr durch native Dialog-Eigenheiten kaputtgehen.
+- [x] Production-Konsole ist fuer die migrierten Actor/Defense-Surfaces sauberer.
 
 ## Pass 8: Legacy-Isolation Finalisieren
 
@@ -302,34 +308,34 @@ Problem: Legacy-Code ist noch im normalen Quellbaum sichtbar und teilweise im Ru
 
 Ziel: Legacy existiert nur fuer Import, Backup, Migrationstests und historische Wiederherstellung.
 
-- [ ] Legacy-Dateien mit klarem Import-/Backup-Banner versehen oder in `src/shared/db/legacy-import/` verschieben.
-- [ ] `usePersistedDb` aus normalen Runtime-Imports entfernen.
-- [ ] `composeLegacyDbFromV2Documents` in Legacy-/Migrationstest-Kontext isolieren.
-- [ ] `V2_COLLECTIONS.characters` nur noch in Migration/Projection/Test erlauben.
-- [ ] `src/shared/db/v2/normalizers.js` nach Entity-Typ schneiden, falls es sonst weiter ueber 700 Zeilen bleibt.
-- [ ] Docs aktualisieren:
-  - [ ] `data-and-persistence.md`
-  - [ ] `architecture.md`
-  - [ ] `migration-backlog.md`
-  - [ ] `known-risks.md`
-  - [ ] `v2-default-readiness.md`
+- [x] Legacy-Dateien mit klarem Import-/Backup-Banner versehen oder in `src/shared/db/legacy-import/` verschieben.
+- [x] `usePersistedDb` aus normalen Runtime-Imports entfernen.
+- [x] `composeLegacyDbFromV2Documents` in Legacy-/Migrationstest-Kontext isolieren.
+- [x] `V2_COLLECTIONS.characters` nur noch in Migration/Projection/Test erlauben.
+- [x] `src/shared/db/v2/normalizers.js` nach Entity-Typ schneiden, falls es sonst weiter ueber 700 Zeilen bleibt.
+- [x] Docs aktualisieren:
+  - [x] `data-and-persistence.md`
+  - [x] `architecture.md`
+  - [x] `migration-backlog.md`
+  - [x] `known-risks.md`
+  - [x] `v2-default-readiness.md`
 
 Tests:
 
-- [ ] Static Guard verbietet Runtime-Importe von Legacy-Hooks/Projection.
-- [ ] Migrationstests beweisen weiter, dass alte Daten importierbar bleiben.
+- [x] Static Guard verbietet Runtime-Importe von Legacy-Hooks/Projection.
+- [x] Migrationstests beweisen weiter, dass alte Daten importierbar bleiben.
 
 Akzeptanz:
 
-- [ ] Ein neuer Entwickler kann klar erkennen: Runtime ist V2/Actor/Effect, Legacy ist nur Import/Backup.
+- [x] Ein neuer Entwickler kann klar erkennen: Runtime ist V2/Actor/Effect, Legacy ist nur Import/Backup.
 
 ## Abschlusskriterien Der Roadmap
 
-- [ ] V2-only Runtime ohne normalen `legacyProjection`-Vertrag.
+- [x] V2-only Runtime ohne normalen `legacyProjection`-Vertrag.
 - [ ] Campaign XP Threshold synchronisiert Campaign und PC-Actors atomar.
 - [ ] Inventory/Loot/Combat nutzen zentrale Item-Identity.
 - [x] `createDataActions.js` ist modularisiert.
-- [ ] Catalog Detail und Item Row sind wiederverwendbare Shared-Bausteine.
+- [x] Catalog Detail und Item Row sind wiederverwendbare Shared-Bausteine.
 - [ ] Kritische Spielabend-Flows haben Browser-Smoke-Abdeckung.
-- [ ] Legacy-Code ist isoliert und durch Static Guards vom Runtime-Pfad getrennt.
+- [x] Legacy-Code ist isoliert und durch Static Guards vom Runtime-Pfad getrennt.
 - [ ] `npm run check` und `git diff --check` sind gruen.

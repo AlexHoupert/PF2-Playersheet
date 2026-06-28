@@ -17,6 +17,8 @@ Thumbs.db
 *.env
 .vite-dev.log
 .vite-dev-current.*
+playwright-report
+test-results
 
 # Generated data and local backups
 src/data/creature_catalog.json

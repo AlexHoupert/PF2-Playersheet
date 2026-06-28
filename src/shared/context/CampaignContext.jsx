@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../auth/AuthProvider';
+import { useAppFeedback } from '../feedback/AppFeedback';
 import { db as firestoreDb } from '../db/firebase-config';
 import { createDataActions } from '../db/domain/createDataActions';
 import { isSoftDeleted, normalizeEmail } from '../db/domain/campaignReducers';
@@ -40,14 +41,24 @@ export function useCampaign() {
     return useContext(CampaignContext);
 }
 
-export function CampaignProvider({ v2Store = null, children, isAdmin = false, dbMode = 'legacy', dbStatus = null }) {
+export function CampaignProvider({
+    v2Store = null,
+    runtimeDb = null,
+    setRuntimeDb = null,
+    children,
+    isAdmin = false,
+    dbMode = 'legacy',
+    dbStatus = null
+}) {
     const { user } = useAuth();
-    const db = useMemo(() => composeRuntimeDbFromV2Store(v2Store), [v2Store]);
+    const { notifyError } = useAppFeedback();
+    const db = useMemo(() => runtimeDb || composeRuntimeDbFromV2Store(v2Store), [runtimeDb, v2Store]);
     const userEmail = normalizeEmail(user?.email);
     const v2UserInfo = useMemo(() => selectUserInfoFromV2Store(v2Store, userEmail), [v2Store, userEmail]);
     const dataActions = useMemo(
         () => createDataActions({
             db,
+            setDb: setRuntimeDb,
             mode: dbMode,
             actorEmail: userEmail,
             firestore: firestoreDb,
@@ -114,9 +125,9 @@ export function CampaignProvider({ v2Store = null, children, isAdmin = false, db
     const runDataAction = React.useCallback((action) => {
         return Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
-    }, []);
+    }, [notifyError]);
 
     const createCampaign = React.useCallback((name) => {
         const action = dataActions.campaign.createCampaign(name);

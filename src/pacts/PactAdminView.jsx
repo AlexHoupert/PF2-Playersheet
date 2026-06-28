@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import RichTextEditor from '../shared/components/RichTextEditor';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { selectPactList } from '../shared/db/selectors/pactSelectors';
 import {
     ELEMENTS, ELEMENT_NAMES, BACKLASH_TIERS, BACKLASH_LABELS, BACKLASH_COLORS,
@@ -19,6 +20,7 @@ const EMPTY_PACT = {
 
 export default function PactAdminView({ db }) {
     const { dataActions } = useCampaign();
+    const { confirm, notifyError } = useAppFeedback();
     const pacts = useMemo(() => selectPactList(db), [db]);
 
     const deviantAbilities = useMemo(() => getDeviantAbilities(db), [db]);
@@ -28,7 +30,7 @@ export default function PactAdminView({ db }) {
     const runDataAction = (action) => {
         Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
     };
 
@@ -42,8 +44,14 @@ export default function PactAdminView({ db }) {
         setIsNew(false);
     };
 
-    const del = (id) => {
-        if (!confirm('Delete this pact?')) return;
+    const del = async (id) => {
+        const confirmed = await confirm({
+            title: 'Delete pact',
+            message: 'Delete this pact?',
+            confirmLabel: 'Delete',
+            danger: true,
+        });
+        if (!confirmed) return;
         runDataAction(dataActions.pact.deletePact(id));
         setEditing(null);
     };

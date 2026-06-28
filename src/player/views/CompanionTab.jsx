@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useCampaign } from '../../shared/context/CampaignContext';
+import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 import { selectConditionViewModels } from '../../shared/db/selectors/effectSelectors';
 import {
     COMPANION_TYPES, FAMILIAR_GROUPS, COMPANION_GROUPS, SPECIALIZATIONS,
@@ -621,6 +622,7 @@ function companionFormToActorInput(companion, { ownerActor, existingActor } = {}
 
 export default function CompanionTab({ character, ownerActor, companionActors = [], dataActions, activeCampaignId }) {
     const { activeCampaign } = useCampaign();
+    const { notifyError } = useAppFeedback();
     const companionActor = companionActors[0] || null;
     const companion = useMemo(() => actorToCompanionForm(companionActor), [companionActor]);
     const companionConditions = useMemo(
@@ -637,7 +639,7 @@ export default function CompanionTab({ character, ownerActor, companionActors = 
 
     const save = (data) => {
         if (!activeCampaignId || !ownerActor?.id || !dataActions?.actor) {
-            alert('No active actor is available for companion updates.');
+            notifyError('No active actor is available for companion updates.');
             return;
         }
         const actorInput = companionFormToActorInput(data, { ownerActor, existingActor: companionActor });
@@ -646,7 +648,7 @@ export default function CompanionTab({ character, ownerActor, companionActors = 
             : dataActions.actor.createActor(activeCampaignId, actorInput);
         Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
         setShowEdit(false);
         setEditingMode(false);
@@ -659,7 +661,7 @@ export default function CompanionTab({ character, ownerActor, companionActors = 
         const actorInput = companionFormToActorInput(nextCompanion, { ownerActor, existingActor: companionActor });
         Promise.resolve(dataActions.actor.updateActor(activeCampaignId, companionActor.id, () => actorInput)).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
     };
 
@@ -676,7 +678,7 @@ export default function CompanionTab({ character, ownerActor, companionActors = 
         }));
         Promise.all([...deletes, ...creates]).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
     };
 

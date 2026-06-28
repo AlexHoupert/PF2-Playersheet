@@ -1,6 +1,6 @@
 # Known Risks And Modernization Notes
 
-Last updated: 2026-06-26.
+Last updated: 2026-06-28.
 
 ## Highest-Impact Risks
 
@@ -17,7 +17,7 @@ The residual risk moved to the new hooks and controller/layout files. Continue e
 
 2. Compatibility viewmodels as hidden contract
 
-The `v2-convergence` branch starts Firestore V2 directly. `CampaignContext` now builds the normal runtime view from `v2Store`, but many screens still receive compatibility-shaped data. New V2 collections or fields must be added to the V2 store composition and selectors before they are safe UI contracts.
+The app starts Firestore V2 directly. `CampaignContext` builds the normal runtime view from `v2Store`, but some screens still receive compatibility-shaped data. New V2 collections or fields must be added to the V2 store composition and selectors before they are safe UI contracts.
 
 Global-facing reads for shop, pacts, abilities, lore, and bestiary are centralized in selectors, and a native V2 view model exists in `dbStatus.v2ViewModel`. Continue shrinking compatibility props until views consume native V2 selectors directly.
 
@@ -27,9 +27,9 @@ Inventory and loot code sometimes uses `name`, sometimes `_index`, sometimes `in
 
 Mitigation in progress: `src/shared/utils/itemIdentity.js` is the canonical identity resolver. Domain reducers and the main Player inventory action hook use it. Remaining UI-local matchers in GM item selection, rune selection, and small utility hooks are cleanup debt, not approved patterns.
 
-4. Legacy write compatibility
+4. Legacy import compatibility
 
-Normal UI write paths for Campaign/Session, Character/Inventory/Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary, actor effects, companion actors, and Player runtime fallbacks now use `dataActions` and targeted repositories. UI and context broad writes are guarded against regressions; broad writes remain only in the `createDataActions` legacy adapter used by legacy tests/import compatibility.
+Normal UI write paths for Campaign/Session, Character/Inventory/Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary, actor effects, companion actors, and Player runtime fallbacks now use `dataActions` and targeted repositories. UI and context broad writes are guarded against regressions. Legacy LocalStorage/data-master helpers are isolated under `src/shared/db/legacy-import/`, and legacy V2 projection is isolated to `src/shared/db/v2/legacyProjection.js` for migration/import tests.
 
 5. Generated data size and source duplication
 
@@ -39,7 +39,7 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 
 ## Data And Migration Risks
 
-- `migrateDb` mutates the input object in place by design. Be careful when calling it with shared references.
+- `src/shared/db/legacy-import/migrateDb.js` mutates the input object in place by design. It is import/backup-only; be careful when calling it with shared references.
 - Character runtime defaults and old skill names are normalized in `src/shared/db/domain/characterShape.js` during load, V2 migration, create, and update paths.
 - Player basis edits for gold, attributes, current/temp/max HP, speed, Class DC, Formula Book daily batch limits, saves/skills, weapon/armor proficiencies, spell/impulse proficiencies, magic slots, and armor/shield state use targeted Actor-backed methods. Keep direct nested writes for these fields out of Player modals and views.
 - Remaining Player UI-local edit paths are compound inventory flows that may update inventory, gold, HP, prepared items, staff/wand recharge, formulas, or item state together. They write PC Actors in V2 through the character compatibility facade, but should be split into narrower inventory/actor actions when touched.

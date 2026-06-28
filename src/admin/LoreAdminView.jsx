@@ -2,12 +2,14 @@ import React, { useState, useMemo } from 'react';
 import BottomSheet from '../shared/components/BottomSheet';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { selectLoreArticle, selectLoreArticles, selectLoreArticlesByCategory } from '../shared/db/selectors/loreSelectors';
 
 const LORE_CATEGORIES = ['History', 'Locations', 'NPCs', 'Bestiary'];
 
 export default function LoreAdminView({ db }) {
     const { dataActions } = useCampaign();
+    const { confirm, notifyError } = useAppFeedback();
     const { isMobile } = useWindowSize();
     const [selectedCategory, setSelectedCategory] = useState('History');
     const [selectedArticleId, setSelectedArticleId] = useState(null);
@@ -18,7 +20,7 @@ export default function LoreAdminView({ db }) {
     const runDataAction = (action) => {
         Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
     };
 
@@ -93,8 +95,14 @@ export default function LoreAdminView({ db }) {
         setIsEditing(true);
     };
 
-    const handleDelete = (articleId) => {
-        if (!window.confirm('Delete this article?')) return;
+    const handleDelete = async (articleId) => {
+        const confirmed = await confirm({
+            title: 'Delete article',
+            message: 'Delete this article?',
+            confirmLabel: 'Delete',
+            danger: true,
+        });
+        if (!confirmed) return;
         runDataAction(dataActions.globalContent.deleteLoreArticle(articleId));
         if (selectedArticleId === articleId) setSelectedArticleId(null);
     };
@@ -126,7 +134,10 @@ export default function LoreAdminView({ db }) {
     };
 
     const handleSave = () => {
-        if (!editForm.title?.trim()) return alert('Title is required');
+        if (!editForm.title?.trim()) {
+            notifyError('Title is required');
+            return;
+        }
 
         // Ensure category is lowercase
         const normalizedForm = {

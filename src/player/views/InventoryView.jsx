@@ -12,6 +12,7 @@ import { selectCustomShopItem } from '../../shared/db/selectors/shopSelectors';
 import { selectLootBagLists } from '../../shared/db/selectors/campaignSelectors';
 import { consumeWandCharge, getWandCharges, getWandMaxCharges, getWandSpell, isWandItem } from '../../shared/utils/wandUtils';
 import { findInventoryItemIndex } from '../../shared/utils/itemIdentity';
+import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 
 export function InventoryView({
     character,
@@ -38,6 +39,7 @@ export function InventoryView({
     const [showItemCreator, setShowItemCreator] = useState(false);
     const equipTapRef = useRef({ key: null, time: 0 });
     const equipTapTimeoutRef = useRef(null);
+    const { confirm, prompt } = useAppFeedback();
     const { activeCampaign } = useCampaign();
     const { lootBags } = selectLootBagLists(db, activeCampaign, activeCampaign?.id);
 
@@ -210,7 +212,12 @@ export function InventoryView({
                     return;
                 } else if (isDoubleTap && (item.type === 'Consumable' || item.consumable || item.type === 'consumable')) {
                     // Consumption Confirmation
-                    if (window.confirm(`Consume 1 ${item.name}?`)) {
+                    confirm({
+                        title: 'Consume item',
+                        message: `Consume 1 ${item.name}?`,
+                        confirmLabel: 'Consume',
+                    }).then((confirmed) => {
+                        if (!confirmed) return;
                         if (onConsumeItem) {
                             onConsumeItem(merged);
                         } else {
@@ -222,7 +229,7 @@ export function InventoryView({
                                 }
                             });
                         }
-                    }
+                    });
                     equipTapRef.current = { key: null, time: 0 };
                 } else {
                     equipTapRef.current = { key: tapKey, time: now };
@@ -546,8 +553,14 @@ export function InventoryView({
                                             <button
                                                 className="set-btn"
                                                 style={{ fontSize: '0.8em', padding: '4px 8px' }}
-                                                onClick={() => {
-                                                    const amount = prompt(`Take how much gold? (Max: ${bag.goldValue})`, bag.goldValue);
+                                                onClick={async () => {
+                                                    const amount = await prompt({
+                                                        title: 'Take loot gold',
+                                                        message: `Take how much gold? Max: ${bag.goldValue} GP`,
+                                                        defaultValue: String(bag.goldValue),
+                                                        inputType: 'number',
+                                                        confirmLabel: 'Take',
+                                                    });
                                                     if (!amount) return;
                                                     const val = parseFloat(amount);
                                                     if (isNaN(val) || val <= 0 || val > bag.goldValue) return;
@@ -560,8 +573,13 @@ export function InventoryView({
                                             <button
                                                 className="set-btn"
                                                 style={{ fontSize: '0.8em', padding: '4px 8px', background: '#e65100' }}
-                                                onClick={() => {
-                                                    if (!confirm(`Split ${bag.goldValue} GP evenly among all party members?`)) return;
+                                                onClick={async () => {
+                                                    const confirmed = await confirm({
+                                                        title: 'Split party gold',
+                                                        message: `Split ${bag.goldValue} GP evenly among all party members?`,
+                                                        confirmLabel: 'Split',
+                                                    });
+                                                    if (!confirmed) return;
                                                     if (!readOnly && onSplitGold) onSplitGold(bag.id);
                                                 }}
                                             >
@@ -586,12 +604,18 @@ export function InventoryView({
                                             right={<button
                                                 className="set-btn"
                                                 style={{ margin: '0 0 0 10px', padding: '6px 14px', fontSize: '0.9em', width: 'auto', flexShrink: 0, height: 'auto' }}
-                                                onClick={(e) => {
+                                                onClick={async (e) => {
                                                     e.stopPropagation();
                                                     if (!readOnly && onClaimLoot) {
                                                         // QTY Prompt only if stack > 1
                                                         if ((item.qty || 1) > 1) {
-                                                            const res = prompt(`Claim how many ${item.name}? (Max: ${item.qty})`, item.qty);
+                                                            const res = await prompt({
+                                                                title: 'Claim loot item',
+                                                                message: `Claim how many ${item.name}? Max: ${item.qty}`,
+                                                                defaultValue: String(item.qty),
+                                                                inputType: 'number',
+                                                                confirmLabel: 'Claim',
+                                                            });
                                                             if (res === null) return;
                                                             const val = parseInt(res);
                                                             if (isNaN(val) || val <= 0 || val > item.qty) return;

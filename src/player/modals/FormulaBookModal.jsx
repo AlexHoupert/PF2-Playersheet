@@ -5,6 +5,7 @@ import {
     filterHighestLevelFormulaItems,
     getFormulaItemType,
 } from '../utils/formulaBookUtils';
+import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 
 function isAmmoItem(item) {
     return (item?.type || '').toLowerCase() === 'ammunition' ||
@@ -26,6 +27,7 @@ export function FormulaBookModal({
     const formulas = character.formulaBook || [];
     const [typeFilter, setTypeFilter] = useState('all');
     const [highestLevelOnly, setHighestLevelOnly] = useState(false);
+    const { confirm, notifySuccess, prompt } = useAppFeedback();
 
     // Resolve all formula items once
     const formulaItems = useMemo(() =>
@@ -181,8 +183,14 @@ export function FormulaBookModal({
                             <h3 style={{ margin: 0, color: '#b39ddb' }}>Daily Preparation</h3>
                             <div
                                 style={{ background: '#222', padding: '4px 8px', borderRadius: 4, fontSize: '0.9em', cursor: 'pointer' }}
-                                onClick={() => {
-                                    const newMax = prompt("Set Maximum Batches:", maxBatches);
+                                onClick={async () => {
+                                    const newMax = await prompt({
+                                        title: "Set maximum batches",
+                                        message: "Set Maximum Batches:",
+                                        defaultValue: String(maxBatches),
+                                        inputType: "number",
+                                        confirmLabel: "Save",
+                                    });
                                     if (newMax !== null && !isNaN(newMax)) {
                                         characterActions?.setDailyCraftingMax(parseInt(newMax, 10) || 0);
                                     }
@@ -230,24 +238,28 @@ export function FormulaBookModal({
                                 <button
                                     className="btn-buy"
                                     style={{ marginTop: 10, background: '#673ab7', width: '100%' }}
-                                    onClick={() => {
-                                        if (confirm(`Create ${currentBatches} batches of items?`)) {
-                                            updateCharacter(c => {
-                                                dailyPrepQueue.forEach(qItem => {
-                                                    const effectiveBatchSize = isAmmoItem(qItem) ? 4 : 1;
-                                                    const totalQty = qItem.batches * effectiveBatchSize;
-                                                    c.inventory.push({
-                                                        ...qItem,
-                                                        qty: totalQty,
-                                                        prepared: true,
-                                                        addedAt: Date.now()
-                                                    });
+                                    onClick={async () => {
+                                        const confirmed = await confirm({
+                                            title: "Finish preparation",
+                                            message: `Create ${currentBatches} batches of items?`,
+                                            confirmLabel: "Create",
+                                        });
+                                        if (!confirmed) return;
+                                        updateCharacter(c => {
+                                            dailyPrepQueue.forEach(qItem => {
+                                                const effectiveBatchSize = isAmmoItem(qItem) ? 4 : 1;
+                                                const totalQty = qItem.batches * effectiveBatchSize;
+                                                c.inventory.push({
+                                                    ...qItem,
+                                                    qty: totalQty,
+                                                    prepared: true,
+                                                    addedAt: Date.now()
                                                 });
                                             });
-                                            setDailyPrepQueue([]);
-                                            alert("Daily preparation complete! Items added to inventory.");
-                                            setModalMode(null);
-                                        }
+                                        });
+                                        setDailyPrepQueue([]);
+                                        notifySuccess("Daily preparation complete. Items added to inventory.");
+                                        setModalMode(null);
                                     }}
                                 >
                                     Finish Preparation

@@ -6,6 +6,7 @@ import ItemsViewLayout from './items/ItemsViewLayout';
 import { selectShop } from '../shared/db/selectors/shopSelectors';
 import { selectLootBagLists } from '../shared/db/selectors/campaignSelectors';
 import { getItemIdentityKey } from '../shared/utils/itemIdentity';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 
 const uniqueTypes = SHOP_INDEX_FILTER_OPTIONS.types;
 const uniqueCategories = SHOP_INDEX_FILTER_OPTIONS.categories;
@@ -50,10 +51,11 @@ const sameId = (a, b) => a != null && b != null && String(a) === String(b);
 export default function ItemsView({ db, onInspectItem }) {
     const { activeCampaign, dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
+    const { notifyError, prompt } = useAppFeedback();
     const runDataAction = (action) => {
         Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
     };
     const shopState = useMemo(() => selectShop(db), [db]);
@@ -368,7 +370,7 @@ export default function ItemsView({ db, onInspectItem }) {
         });
     };
 
-    const performAction = (action, arg) => {
+    const performAction = async (action, arg) => {
         closeContextMenu();
         const source = contextMenu?.source || 'global';
         const targets = source === 'global'
@@ -406,7 +408,13 @@ export default function ItemsView({ db, onInspectItem }) {
         }
 
         if (action === 'setAmount' && source === 'loot') {
-            const newQty = prompt('Enter quantity:', targets[0].qty || 1);
+            const newQty = await prompt({
+                title: 'Set loot quantity',
+                message: 'Enter quantity:',
+                defaultValue: String(targets[0].qty || 1),
+                inputType: 'number',
+                confirmLabel: 'Set',
+            });
             if (newQty === null) return;
             const qty = parseInt(newQty, 10) || 1;
             if (activeCampaign && selectedLootId) {
@@ -429,10 +437,19 @@ export default function ItemsView({ db, onInspectItem }) {
         executeItemAction(action, arg, targets);
     };
 
-    const handleCreateTrader = () => {
-        const name = prompt('Trader Name:');
+    const handleCreateTrader = async () => {
+        const name = await prompt({
+            title: 'Create trader',
+            message: 'Trader Name:',
+            confirmLabel: 'Next',
+        });
         if (!name?.trim()) return;
-        const category = prompt('Category (Alchemy, Blacksmith, Remedies, Magic, Adventuring, Special):', 'General');
+        const category = await prompt({
+            title: 'Create trader',
+            message: 'Category (Alchemy, Blacksmith, Remedies, Magic, Adventuring, Special):',
+            defaultValue: 'General',
+            confirmLabel: 'Create',
+        });
         if (category === null) return;
         runDataAction(dataActions.shop.createTrader({
             id: Date.now(),
@@ -442,8 +459,12 @@ export default function ItemsView({ db, onInspectItem }) {
         }));
     };
 
-    const handleCreateLoot = () => {
-        const name = prompt("Loot Bag Name:");
+    const handleCreateLoot = async () => {
+        const name = await prompt({
+            title: 'Create loot bag',
+            message: 'Loot Bag Name:',
+            confirmLabel: 'Create',
+        });
         if (!name || !activeCampaign) return;
         const id = Date.now();
         runDataAction(dataActions.loot.createLootBag(activeCampaign.id, { id, name, items: [], goldValue: 0 }));

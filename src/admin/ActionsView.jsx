@@ -6,6 +6,7 @@ import ContentPreviewCard from './components/ContentPreviewCard';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { getAllActionIndexItems, ACTION_INDEX_FILTER_OPTIONS, fetchActionDetailBySourceFile } from '../shared/catalog/actionIndex';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { readJsonApiResponse } from '../shared/utils/apiResponse';
 import { mergeCatalogIndexWithOverrides } from '../shared/db/selectors/catalogOverrideSelectors';
 
@@ -15,10 +16,11 @@ const uniqueSubtypes = ACTION_INDEX_FILTER_OPTIONS.subtypes;
 export default function ActionsView({ db, onInspectItem }) {
     const { isMobile } = useWindowSize();
     const { db: contextDb, dataActions } = useCampaign();
+    const { confirm, notifyError } = useAppFeedback();
     const effectiveDb = db || contextDb;
     const runDataAction = (action) => Promise.resolve(action).catch(err => {
         console.error(err);
-        alert(err?.message || String(err));
+        notifyError(err);
     });
 
     const [itemSearch, setItemSearch] = useState('');
@@ -96,7 +98,13 @@ export default function ActionsView({ db, onInspectItem }) {
     };
 
     const deleteAction = async (item) => {
-        if (!window.confirm(`Delete action "${item.name}"?`)) return;
+        const confirmed = await confirm({
+            title: 'Delete action',
+            message: `Delete action "${item.name}"?`,
+            confirmLabel: 'Delete',
+            danger: true,
+        });
+        if (!confirmed) return;
 
         try {
             if (item.catalogOverrideId) {
@@ -112,7 +120,7 @@ export default function ActionsView({ db, onInspectItem }) {
             }
 
             if (import.meta.env.PROD) {
-                alert('Static action files can only be deleted in the local dev server. Custom actions can be deleted here.');
+                notifyError('Static action files can only be deleted in the local dev server. Custom actions can be deleted here.');
                 return;
             }
 
@@ -130,7 +138,7 @@ export default function ActionsView({ db, onInspectItem }) {
 
             window.location.reload();
         } catch (err) {
-            alert(`Error deleting action: ${err.message}`);
+            notifyError(`Error deleting action: ${err.message}`);
         }
     };
 

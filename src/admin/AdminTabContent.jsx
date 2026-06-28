@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import SessionManager from './views/SessionManager';
 import { CharacterCard } from './components/CharacterCard';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 
 const ItemsView = lazy(() => import('./ItemsView'));
 const SpellsView = lazy(() => import('./SpellsView'));
@@ -44,6 +45,7 @@ export default function AdminTabContent({
     setXpThreshold,
     updateCharacter,
 }) {
+    const { prompt } = useAppFeedback();
     if (activeTab === 'sessions') return <SessionManager db={db} />;
     if (activeTab === 'players') {
         return (
@@ -161,8 +163,13 @@ function PlayersTab({
                         <button
                             className="btn-add-condition"
                             style={{ margin: 0, background: '#c5a059', color: '#111', fontWeight: 'bold' }}
-                            onClick={() => {
-                                const amtStr = prompt("Amount of XP to add:");
+                            onClick={async () => {
+                                const amtStr = await prompt({
+                                    title: "Add party XP",
+                                    message: "Amount of XP to add:",
+                                    inputType: "number",
+                                    confirmLabel: "Add",
+                                });
                                 if (!amtStr) return;
                                 const amt = parseInt(amtStr);
                                 if (isNaN(amt) || amt === 0) return;

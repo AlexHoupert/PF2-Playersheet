@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { useFirestoreV2Db } from './shared/db/v2/useFirestoreV2Db';
 import { CampaignProvider } from './shared/context/CampaignContext';
 import ErrorBoundary from './shared/components/ErrorBoundary';
+import { createE2eRuntimeDb, createE2eV2Store, isE2eFixtureEnabled } from './shared/testing/e2eFixture';
 
 const PlayerApp = lazy(() => import('./player/PlayerApp'));
 const AdminApp = lazy(() => import('./admin/AdminApp'));
@@ -9,7 +10,29 @@ const PartyScreen = lazy(() => import('./player/PartyScreen'));
 const CampScreen = lazy(() => import('./camping/CampScreen'));
 
 export default function App() {
+    if (isE2eFixtureEnabled()) return <E2eFixtureApp />;
     return <FirestoreV2App />;
+}
+
+function E2eFixtureApp() {
+    const [runtimeDb, setRuntimeDb] = React.useState(() => createE2eRuntimeDb());
+    const v2Store = React.useMemo(() => createE2eV2Store(), []);
+    const status = React.useMemo(() => ({
+        mode: 'e2e-fixture',
+        configured: true,
+        ready: true,
+        error: null,
+        documentCount: v2Store.documentCount || 0,
+    }), [v2Store.documentCount]);
+    return (
+        <AppRoutes
+            v2Store={v2Store}
+            runtimeDb={runtimeDb}
+            setRuntimeDb={setRuntimeDb}
+            dbMode="legacy"
+            dbStatus={status}
+        />
+    );
 }
 
 function FirestoreV2App() {
@@ -17,7 +40,7 @@ function FirestoreV2App() {
     return <AppRoutes v2Store={v2Store} dbMode="firestore-v2" dbStatus={status} />;
 }
 
-function AppRoutes({ v2Store, dbMode, dbStatus }) {
+function AppRoutes({ v2Store, runtimeDb = null, setRuntimeDb = null, dbMode, dbStatus }) {
     const queryParams = new URLSearchParams(window.location.search);
 
     if (!v2Store) return <div style={{ color: '#fff' }}>Loading...</div>;
@@ -27,17 +50,26 @@ function AppRoutes({ v2Store, dbMode, dbStatus }) {
     const isCamp  = queryParams.get('camp')  === 'true';
 
     return (
-        <CampaignProvider v2Store={v2Store} isAdmin={isAdmin || isParty || isCamp} dbMode={dbMode} dbStatus={dbStatus}>
+        <CampaignProvider
+            v2Store={v2Store}
+            runtimeDb={runtimeDb}
+            setRuntimeDb={setRuntimeDb}
+            isAdmin={isAdmin || isParty || isCamp}
+            dbMode={dbMode}
+            dbStatus={dbStatus}
+        >
             <ErrorBoundary>
                 <Suspense fallback={<RouteFallback />}>
-                    {isParty
-                        ? <PartyScreen />
-                        : isCamp
-                            ? <CampScreenWrapper />
-                            : isAdmin
-                                ? <AdminApp />
-                                : <PlayerApp />
-                    }
+                    <div data-testid={isParty ? "party-route" : isCamp ? "camp-route" : isAdmin ? "admin-route" : "player-route"}>
+                        {isParty
+                            ? <PartyScreen />
+                            : isCamp
+                                ? <CampScreenWrapper />
+                                : isAdmin
+                                    ? <AdminApp />
+                                    : <PlayerApp />
+                        }
+                    </div>
                 </Suspense>
             </ErrorBoundary>
         </CampaignProvider>

@@ -1,18 +1,18 @@
 # Data And Persistence
 
-Last updated: 2026-06-26.
+Last updated: 2026-06-28.
 
 ## Mental Model
 
 The `v2-convergence` branch has started the V2-only cutover. `src/App.jsx` now starts the Firestore V2 hook directly instead of selecting the legacy runtime.
 
-Existing screens still expect some compatibility props, but `CampaignContext` now builds its normal runtime view from the V2 store. The hook-level `legacyProjection` has been removed from the normal app path; legacy projection code remains only in normalizer/migration tests and explicit import/backup helpers.
+Existing screens still expect some compatibility props, but `CampaignContext` now builds its normal runtime view from the V2 store. The hook-level `legacyProjection` has been removed from the normal app path; legacy projection code is isolated in `src/shared/db/v2/legacyProjection.js` for migration tests and explicit import/backup helpers.
 
 This means a feature is not fully v2-ready just because it appears in the legacy-shaped projection; v2 still needs targeted repository/actions so data is written into the intended collection and reconstructed correctly.
 
 ## Legacy Mode
 
-File: `src/shared/db/usePersistedDb.js`
+File: `src/shared/db/legacy-import/usePersistedDb.js`
 
 No longer selected by `src/App.jsx` on the V2 convergence branch. Legacy remains useful as an import/backup source and as implementation reference until its runtime code is isolated or removed.
 
@@ -36,7 +36,7 @@ Important risk:
 
 ## Migration Defaults
 
-File: `src/shared/db/migrateDb.js`
+File: `src/shared/db/legacy-import/migrateDb.js`
 
 Current responsibilities:
 
@@ -97,7 +97,7 @@ Read path:
 3. For every campaign, subscribe to known subcollections.
 4. Store documents in a `Map` keyed by Firestore path.
 5. Build a V2-native debug/read view with `composeV2ViewModelFromDocuments`.
-6. Legacy projection is not built by the normal runtime hook. Call `composeLegacyDbFromV2Documents` only for explicit compatibility/import use.
+6. Legacy projection is not built by the normal runtime hook. Call `composeLegacyDbFromV2Documents` from `src/shared/db/v2/legacyProjection.js` only for explicit compatibility/import use.
 7. Run `migrateDb` on that compatibility projection when using the import/backup helper.
 
 `CampaignContext` uses `composeRuntimeDbFromV2Store` for the normal runtime compatibility DB and exposes V2-native viewmodels such as `actors`, `pcActors`, `myActor`, quests, loot bags, maps, shop, lore, pacts, abilities, bestiary, and catalog overrides.
@@ -248,6 +248,8 @@ File: `src/shared/db/v2/normalizers.js`
 - Stamps documents with schema metadata and migration info.
 - Produces a report with counts, renamed fields, moved fields, invalid values, and assumptions.
 
+File: `src/shared/db/v2/legacyProjection.js`
+
 `composeLegacyDbFromV2Documents(documents, baseDb)`:
 
 - Builds the legacy projection used by migration/import compatibility tests and explicit backup/import helpers.
@@ -338,6 +340,7 @@ Tests cover:
 Add tests here when changing:
 
 - `normalizers.js`
+- `legacyProjection.js`
 - `firestoreMigration.js`
 - v2 schema paths
 - migration assumptions

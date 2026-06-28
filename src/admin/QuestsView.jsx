@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import RichTextEditor from '../shared/components/RichTextEditor';
 import QuestCard from '../shared/components/QuestCard';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { selectQuestLists } from '../shared/db/selectors/campaignSelectors';
 
 export default function QuestsView({ db }) {
     // Get activeCampaignId from context (this is CRITICAL for rewards distribution)
     const { activeCampaignId, activeCampaign, dataActions } = useCampaign();
+    const { confirm, notifyError } = useAppFeedback();
     const { quests, archivedQuests, allQuests: rawQuests } = selectQuestLists(db, activeCampaign, activeCampaignId);
     const [isEditing, setIsEditing] = useState(false);
     const [editingQuest, setEditingQuest] = useState(null);
@@ -20,7 +22,7 @@ export default function QuestsView({ db }) {
     // --- ACTIONS ---
     const runQuestAction = async (operation) => {
         if (!activeCampaignId) {
-            alert("No active campaign selected.");
+            notifyError("No active campaign selected.");
             return null;
         }
         setSaveStatus('saving');
@@ -32,7 +34,7 @@ export default function QuestsView({ db }) {
         } catch (err) {
             console.error(err);
             setSaveStatus('error');
-            alert(err?.message || String(err));
+            notifyError(err);
             return null;
         }
     };
@@ -70,7 +72,13 @@ export default function QuestsView({ db }) {
             setEditingQuest(null);
             return;
         }
-        if (!window.confirm("Archive this quest AND its subquests?")) return;
+        const confirmed = await confirm({
+            title: 'Archive quest',
+            message: 'Archive this quest AND its subquests?',
+            confirmLabel: 'Archive',
+            danger: true,
+        });
+        if (!confirmed) return;
         await runQuestAction(() => dataActions.quest.softDeleteQuest(activeCampaignId, questId));
         if (editingQuest?.id === questId) setIsEditing(false);
     };
@@ -80,7 +88,10 @@ export default function QuestsView({ db }) {
     };
 
     const handleSaveEdit = async () => {
-        if (!editingQuest.title) return alert("Title required");
+        if (!editingQuest.title) {
+            notifyError("Title required");
+            return;
+        }
         const questToSave = { ...editingQuest };
         delete questToSave.tempObjectivesText;
         const exists = rawQuests.some(q => q.id === questToSave.id);
@@ -111,7 +122,12 @@ export default function QuestsView({ db }) {
             ? `Mark objective "${q.objectives[objIndex].text}" as Incomplete?`
             : `Mark objective "${q.objectives[objIndex].text}" as Completed?`;
 
-        if (!window.confirm(msg)) return;
+        const confirmed = await confirm({
+            title: 'Update objective',
+            message: msg,
+            confirmLabel: isCompleted ? 'Mark incomplete' : 'Mark complete',
+        });
+        if (!confirmed) return;
         await runQuestAction(() =>
             dataActions.quest.toggleObjective(activeCampaignId, questId, objIndex, !isCompleted)
         );
@@ -127,7 +143,12 @@ export default function QuestsView({ db }) {
             ? `Reveal objective "${q.objectives[objIndex].text}" to players?`
             : `Hide objective "${q.objectives[objIndex].text}" from players?`;
 
-        if (!window.confirm(msg)) return;
+        const confirmed = await confirm({
+            title: 'Update objective visibility',
+            message: msg,
+            confirmLabel: isHidden ? 'Reveal' : 'Hide',
+        });
+        if (!confirmed) return;
 
         await runQuestAction(() => dataActions.quest.toggleObjectiveHidden(activeCampaignId, questId, objIndex));
     };

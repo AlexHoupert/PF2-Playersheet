@@ -1,11 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const readSource = (path) => readFileSync(resolve(repoRoot, path), 'utf8');
+
+function listSourceFiles(dir) {
+    const absolute = resolve(repoRoot, dir);
+    return readdirSync(absolute).flatMap((entry) => {
+        const fullPath = resolve(absolute, entry);
+        const relativePath = `${dir}/${entry}`.replaceAll('\\', '/');
+        const stats = statSync(fullPath);
+        if (stats.isDirectory()) return listSourceFiles(relativePath);
+        return /\.(jsx?|tsx?)$/.test(entry) ? [relativePath] : [];
+    });
+}
 
 test('items layout does not reference split module globals', () => {
     const source = readSource('src/admin/items/ItemsViewLayout.jsx');
@@ -177,6 +188,8 @@ test('firestore v2 runtime no longer broad-diffs legacy projections', () => {
     const contextSource = readSource('src/shared/context/CampaignContext.jsx');
     const runtimeDbSource = readSource('src/shared/db/v2/runtimeDb.js');
     const sessionSource = readSource('src/admin/views/SessionManager.jsx');
+    const normalizerSource = readSource('src/shared/db/v2/normalizers.js');
+    const legacyProjectionSource = readSource('src/shared/db/v2/legacyProjection.js');
 
     assert.equal(source.includes('writeLegacyDbDiffToV2'), false);
     assert.equal(source.includes('composeLegacyDbFromV2Documents'), false);
@@ -195,6 +208,9 @@ test('firestore v2 runtime no longer broad-diffs legacy projections', () => {
     assert.equal(sessionSource.includes('legacyCharacters'), false);
     assert.equal(runtimeDbSource.includes('db.quests ='), false);
     assert.equal(runtimeDbSource.includes('db.lootBags ='), false);
+    assert.equal(normalizerSource.includes('composeLegacyDbFromV2Documents'), false);
+    assert.match(legacyProjectionSource, /LEGACY IMPORT\/BACKUP\/TEST ONLY/);
+    assert.match(legacyProjectionSource, /composeLegacyDbFromV2Documents/);
 });
 
 test('runtime views do not carry legacy setDb or character condition contracts', () => {
@@ -315,6 +331,44 @@ test('v2 runtime actions do not inject or call characterRepo', () => {
     assert.equal(characterSelectorsSource.includes('campaign?.characters'), false);
 });
 
+test('legacy import hooks and projections stay out of runtime modules', () => {
+    const runtimeSources = [
+        'src/App.jsx',
+        'src/main.jsx',
+        'src/shared/context/CampaignContext.jsx',
+        'src/shared/db/v2/useFirestoreV2Db.js',
+        'src/shared/db/v2/runtimeDb.js',
+        'src/shared/db/v2/viewModel.js',
+        'src/admin/AdminApp.jsx',
+        'src/player/PlayerAppController.jsx',
+        'src/player/PartyScreen.jsx',
+        'src/camping/CampScreen.jsx',
+    ];
+
+    runtimeSources.forEach((path) => {
+        const source = readSource(path);
+        assert.equal(source.includes('legacy-import'), false, `${path} should not import legacy import helpers`);
+        assert.equal(source.includes('usePersistedDb'), false, `${path} should not import legacy persisted DB`);
+        assert.equal(source.includes('composeLegacyDbFromV2Documents'), false, `${path} should not import legacy projection`);
+        assert.equal(source.includes('writeLegacyDbDiffToV2'), false, `${path} should not broad-diff legacy DB`);
+    });
+
+    assert.match(readSource('src/admin/FirebaseMigrator.jsx'), /legacy-import\/usePersistedDb/);
+    assert.match(readSource('src/shared/db/legacy-import/usePersistedDb.js'), /LEGACY IMPORT\/BACKUP ONLY/);
+    assert.match(readSource('src/shared/db/legacy-import/migrateDb.js'), /LEGACY IMPORT\/BACKUP ONLY/);
+});
+
+test('v2 normalizers remain focused and legacy projection is isolated', () => {
+    const normalizerSource = readSource('src/shared/db/v2/normalizers.js');
+    const projectionSource = readSource('src/shared/db/v2/legacyProjection.js');
+
+    assert.ok(normalizerSource.split('\n').length < 700);
+    assert.equal(normalizerSource.includes('actorToLegacyCharacter'), false);
+    assert.equal(normalizerSource.includes('composeLegacyDbFromV2Documents'), false);
+    assert.match(projectionSource, /actorToLegacyCharacter/);
+    assert.match(projectionSource, /V2_COLLECTIONS\.characters/);
+});
+
 test('createDataActions delegates extracted domain action factories', () => {
     const actionSource = readSource('src/shared/db/domain/createDataActions.js');
 
@@ -375,4 +429,57 @@ test('catalog details and item rows use shared reusable controllers', () => {
     assert.match(inventorySource, /ItemRow/);
     assert.match(shopSource, /ItemRow/);
     assert.match(itemsLayoutSource, /ItemRow/);
+});
+
+test('runtime feedback and debug logging use shared helpers in migrated surfaces', () => {
+    const mainSource = readSource('src/main.jsx');
+    const contextSource = readSource('src/shared/context/CampaignContext.jsx');
+    const defensesSource = readSource('src/player/sections/DefensesSection.jsx');
+    const actorSheetSource = readSource('src/shared/components/ActorSheetCard.jsx');
+    const debugLogSource = readSource('src/shared/utils/debugLog.js');
+
+    assert.match(mainSource, /AppFeedbackProvider/);
+    assert.match(contextSource, /useAppFeedback/);
+    assert.match(contextSource, /notifyError\(err\)/);
+    assert.equal(contextSource.includes('alert(err?.message'), false);
+    assert.match(defensesSource, /debugLog\(/);
+    assert.equal(defensesSource.includes('console.log('), false);
+    assert.equal(actorSheetSource.includes('console.log('), false);
+    assert.match(debugLogSource, /import\.meta\.env\.DEV/);
+});
+
+test('runtime source does not use native browser dialogs', () => {
+    const forbidden = [
+        /window\.confirm/,
+        /window\.prompt/,
+        /window\.alert/,
+        /\balert\(/,
+    ];
+
+    listSourceFiles('src').forEach((path) => {
+        const source = readSource(path);
+        forbidden.forEach((pattern) => {
+            assert.equal(pattern.test(source), false, `${path} uses native browser dialog: ${pattern}`);
+        });
+    });
+
+    const feedbackSource = readSource('src/shared/feedback/AppFeedback.jsx');
+    assert.match(feedbackSource, /confirm: async/);
+    assert.match(feedbackSource, /prompt: async/);
+    assert.match(feedbackSource, /role="dialog"/);
+});
+
+test('console log output is dev-gated through debugLog helper', () => {
+    listSourceFiles('src').forEach((path) => {
+        const source = readSource(path);
+        if (path === 'src/shared/utils/debugLog.js') {
+            assert.match(source, /import\.meta\.env\.DEV/);
+            assert.match(source, /console\.log/);
+            return;
+        }
+        assert.equal(source.includes('console.log'), false, `${path} should use debugLog instead of console.log`);
+    });
+
+    assert.match(readSource('src/shared/db/legacy-import/usePersistedDb.js'), /debugLog/);
+    assert.match(readSource('src/shared/db/legacy-import/migrateDb.js'), /debugLog/);
 });

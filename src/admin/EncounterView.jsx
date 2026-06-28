@@ -5,6 +5,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { deepClone } from '../shared/utils/deepClone';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
 import { selectBestiaryRevealState, selectCustomCreatureData, selectCustomCreatureList } from '../shared/db/selectors/bestiarySelectors';
@@ -23,6 +24,7 @@ import './EncounterView.css';
 
 export default function EncounterView({ db }) {
     const { activeCampaign, activeCampaignId, dataActions } = useCampaign();
+    const { confirm, notifyError, prompt } = useAppFeedback();
     const { isMobile } = useWindowSize();
 
     // Local UI state
@@ -92,23 +94,28 @@ export default function EncounterView({ db }) {
     const runEncounterAction = useCallback((action) => {
         Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
-    }, []);
+    }, [notifyError]);
 
     const requireCampaignId = useCallback(() => {
         if (!activeCampaignId) {
-            alert('No active campaign selected.');
+            notifyError('No active campaign selected.');
             return null;
         }
         return activeCampaignId;
-    }, [activeCampaignId]);
+    }, [activeCampaignId, notifyError]);
 
     // ── Encounter CRUD ──
-    const createEncounter = () => {
+    const createEncounter = async () => {
         const campaignId = requireCampaignId();
         if (!campaignId) return;
-        const name = prompt('Encounter name:');
+        const name = await prompt({
+            title: 'Create encounter',
+            message: 'Encounter name:',
+            inputLabel: 'Name',
+            confirmLabel: 'Create',
+        });
         if (!name) return;
         const action = dataActions.encounter.createEncounter(campaignId, name).then(id => {
             if (id) setSelectedEncounterId(id);
@@ -116,9 +123,16 @@ export default function EncounterView({ db }) {
         runEncounterAction(action);
     };
 
-    const deleteEncounter = (id) => {
+    const deleteEncounter = async (id) => {
         const campaignId = requireCampaignId();
-        if (!campaignId || !confirm('Archive this encounter?')) return;
+        if (!campaignId) return;
+        const confirmed = await confirm({
+            title: 'Archive encounter',
+            message: 'Archive this encounter?',
+            confirmLabel: 'Archive',
+            danger: true,
+        });
+        if (!confirmed) return;
         runEncounterAction(dataActions.encounter.softDeleteEncounter(campaignId, id));
         if (selectedEncounterId === id) setSelectedEncounterId(null);
     };
@@ -186,6 +200,18 @@ export default function EncounterView({ db }) {
         runEncounterAction(dataActions.encounter.updateCombatant(campaignId, activeEncounter.id, combatantId, {
             initiative: value,
         }));
+    };
+
+    const promptForInitiative = async (combatant) => {
+        const val = await prompt({
+            title: 'Set initiative',
+            inputLabel: 'Initiative',
+            inputType: 'number',
+            initialValue: combatant?.initiative ?? 0,
+            confirmLabel: 'Set',
+        });
+        if (val === null || val === '') return;
+        setInitiative(combatant.id, parseFloat(val) || 0);
     };
 
     const setHp = (combatantId, value) => {
@@ -445,8 +471,7 @@ export default function EncounterView({ db }) {
                         🗑️ Remove
                     </button>
                     <button onClick={() => {
-                        const val = prompt('Set initiative:', contextMenu.combatant.initiative);
-                        if (val !== null) { setInitiative(contextMenu.combatant.id, parseFloat(val) || 0); }
+                        promptForInitiative(contextMenu.combatant);
                         closeContextMenu();
                     }}>
                         🎲 Set Initiative

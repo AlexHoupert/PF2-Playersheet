@@ -6,6 +6,7 @@ import BottomSheet from '../shared/components/BottomSheet';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { copyRef } from '../shared/clipboard/refClipboard';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { selectCustomAbilityList } from '../shared/db/selectors/abilitySelectors';
 import { selectCustomCreature, selectCustomCreatures } from '../shared/db/selectors/bestiarySelectors';
 
@@ -201,6 +202,7 @@ function AbilityPreviewContent({ selected, setAbilityForm, copyRef, showToast, s
 // ── Main View ─────────────────────────────────────────────────────────────────
 export default function AbilitiesView({ db }) {
     const { dataActions } = useCampaign();
+    const { confirm, notifyError } = useAppFeedback();
     const { isMobile } = useWindowSize();
 
     // Merge indexed abilities with custom db abilities (custom takes priority by name)
@@ -223,7 +225,7 @@ export default function AbilitiesView({ db }) {
     const runDataAction = (action) => {
         Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
     };
 
@@ -256,8 +258,14 @@ export default function AbilitiesView({ db }) {
         setSelected(saved);
     };
 
-    const deleteCustomAbility = (ability) => {
-        if (!window.confirm(`Delete "${ability.name}"? This cannot be undone.`)) return;
+    const deleteCustomAbility = async (ability) => {
+        const confirmed = await confirm({
+            title: 'Delete ability',
+            message: `Delete "${ability.name}"? This cannot be undone.`,
+            confirmLabel: 'Delete',
+            danger: true,
+        });
+        if (!confirmed) return;
         runDataAction(dataActions.globalContent.deleteCustomAbility(ability));
         if (selected?.id === ability.id) setSelected(null);
         setContextMenu(null);

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { composeLegacyDbFromV2Documents, normalizeMasterToV2 } from '../src/shared/db/v2/normalizers.js';
+import { normalizeMasterToV2 } from '../src/shared/db/v2/normalizers.js';
+import { composeLegacyDbFromV2Documents } from '../src/shared/db/v2/legacyProjection.js';
 import { composeV2ViewModelFromDocuments } from '../src/shared/db/v2/viewModel.js';
 
 test('normalizes legacy master data into campaign-scoped v2 documents', () => {

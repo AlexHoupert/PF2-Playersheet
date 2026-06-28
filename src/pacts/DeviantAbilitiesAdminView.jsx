@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import RichTextEditor from '../shared/components/RichTextEditor';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { selectDeviantAbilityList } from '../shared/db/selectors/abilitySelectors';
 import { ELEMENTS, ELEMENT_NAMES, generateId } from './pactsData';
 
@@ -13,6 +14,7 @@ const EMPTY_ABILITY = {
 
 export default function DeviantAbilitiesAdminView({ db }) {
     const { dataActions } = useCampaign();
+    const { confirm, notifyError } = useAppFeedback();
     const abilities = useMemo(() => selectDeviantAbilityList(db), [db]);
 
     const [search, setSearch] = useState('');
@@ -22,7 +24,7 @@ export default function DeviantAbilitiesAdminView({ db }) {
     const runDataAction = (action) => {
         Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
     };
 
@@ -40,8 +42,14 @@ export default function DeviantAbilitiesAdminView({ db }) {
         setEditing(null);
     };
 
-    const del = (id) => {
-        if (!confirm('Delete this deviant ability?')) return;
+    const del = async (id) => {
+        const confirmed = await confirm({
+            title: 'Delete deviant ability',
+            message: 'Delete this deviant ability?',
+            confirmLabel: 'Delete',
+            danger: true,
+        });
+        if (!confirmed) return;
         runDataAction(dataActions.pact.deleteDeviantAbility(id));
         if (editing?.id === id) setEditing(null);
     };

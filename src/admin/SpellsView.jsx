@@ -7,6 +7,7 @@ import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { SPELL_INDEX_FILTER_OPTIONS, SPELL_INDEX_ITEMS, fetchSpellDetailBySourceFile, fetchSpellRawJsonBySourceFile, normalizeSpellSourceFile } from '../shared/catalog/spellIndex';
 import { readJsonApiResponse } from '../shared/utils/apiResponse';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { mergeCatalogIndexWithOverrides } from '../shared/db/selectors/catalogOverrideSelectors';
 
 const uniqueTypes = SPELL_INDEX_FILTER_OPTIONS.types;
@@ -17,6 +18,7 @@ const uniqueTraits = SPELL_INDEX_FILTER_OPTIONS.traits;
 export default function SpellsView({ onInspectItem }) {
     const { isMobile } = useWindowSize();
     const { db, dataActions } = useCampaign();
+    const { notifyError } = useAppFeedback();
 
     const [itemSearch, setItemSearch] = useState('');
     const [filterType, setFilterType] = useState([]);
@@ -113,7 +115,7 @@ export default function SpellsView({ onInspectItem }) {
         try {
             if (!item.sourceFile) {
                 console.error("No source file for spell", item);
-                alert("Cannot modify this spell: Source file not found.");
+                notifyError("Cannot modify this spell: Source file not found.");
                 return;
             }
 
@@ -166,12 +168,12 @@ export default function SpellsView({ onInspectItem }) {
                     return;
                 } catch (dbErr) {
                     console.error(dbErr);
-                    alert(`Error updating spell: ${err.message}; DB fallback failed: ${dbErr.message}`);
+                    notifyError(`Error updating spell: ${err.message}; DB fallback failed: ${dbErr.message}`);
                     return;
                 }
             }
             console.error(err);
-            alert(`Error updating spell: ${err.message}`);
+            notifyError(`Error updating spell: ${err.message}`);
         }
     };
 

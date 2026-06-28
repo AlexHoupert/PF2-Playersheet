@@ -1,3 +1,6 @@
+// LEGACY IMPORT/MIGRATION ONLY.
+// Normal runtime writes use targeted repositories and domain actions. Do not
+// call writeLegacyDbDiffToV2 from UI or runtime hooks.
 import { deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { normalizeMasterToV2 } from './normalizers.js';
 import { V2_COLLECTIONS } from './schema.js';

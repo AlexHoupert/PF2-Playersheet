@@ -7,6 +7,7 @@
  */
 import React, { useMemo, useState, useEffect } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import FilterBar from './components/FilterBar';
 import BottomSheet from '../shared/components/BottomSheet';
 import CreatureCard from '../shared/components/CreatureCard';
@@ -34,6 +35,7 @@ const COL_PRIORITY = {
 
 export default function BestiaryView({ db, initialFilterType, onContentLinkClick }) {
     const { dataActions } = useCampaign();
+    const { confirm, notifyError, notifySuccess, prompt } = useAppFeedback();
     const { isMobile } = useWindowSize();
 
     // ── Filter / search state ────────────────────────────────────────────────
@@ -69,7 +71,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     const runDataAction = (action) => {
         Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
     };
 
@@ -229,7 +231,10 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
 
     const handleSave = (creatureData) => {
         const id = creatureData.id;
-        if (!id) { alert('Cannot save: creature must have an ID from the catalog'); return; }
+        if (!id) {
+            notifyError('Cannot save: creature must have an ID from the catalog');
+            return;
+        }
         const level = creatureData.data?.system?.details?.level?.value ?? 0;
         runDataAction(dataActions.bestiary.updateCreatureMetadata(id, {
             id,
@@ -249,8 +254,14 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         setJsonImportText('');
     };
 
-    const handleDelete = (id) => {
-        if (!confirm('Delete this creature?')) return;
+    const handleDelete = async (id) => {
+        const confirmed = await confirm({
+            title: 'Delete creature',
+            message: 'Delete this creature?',
+            confirmLabel: 'Delete',
+            danger: true,
+        });
+        if (!confirmed) return;
         runDataAction(dataActions.bestiary.deleteCreature(id));
         setContextMenu(null);
         if (previewCreature?.id === id) setPreviewCreature(null);
@@ -259,14 +270,22 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     const handleEdit = async (creature) => {
         if (creature.isCustom) {
             const data = selectCustomCreatures(db)[creature.id]?.data;
-            if (!data) { alert('Custom creature data not found in database'); setContextMenu(null); return; }
+            if (!data) {
+                notifyError('Custom creature data not found in database');
+                setContextMenu(null);
+                return;
+            }
             setEditingCreature({ ...creature, data });
             setContextMenu(null);
             setPreviewCreature(null);
             return;
         }
         const data = await fetchCreatureData(creature.id);
-        if (!data) { alert('Failed to load creature data'); setContextMenu(null); return; }
+        if (!data) {
+            notifyError('Failed to load creature data');
+            setContextMenu(null);
+            return;
+        }
         setEditingCreature({ ...creature, data });
         setContextMenu(null);
         setPreviewCreature(null);
@@ -276,7 +295,11 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         const rawData = creature.isCustom
             ? selectCustomCreatures(db)[creature.id]?.data
             : await fetchCreatureData(creature.id);
-        if (!rawData) { alert('Failed to load creature data'); setContextMenu(null); return; }
+        if (!rawData) {
+            notifyError('Failed to load creature data');
+            setContextMenu(null);
+            return;
+        }
         // Deep-copy so the clone shares no nested object references with the original
         const data = deepClone(rawData);
         setEditingCreature({
@@ -309,8 +332,14 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         }));
     };
 
-    const handleSetGroup = (creature) => {
-        const newGroup = prompt('Enter group name:', creature.group || 'Uncategorized');
+    const handleSetGroup = async (creature) => {
+        const newGroup = await prompt({
+            title: 'Set creature group',
+            message: 'Enter group name:',
+            inputLabel: 'Group',
+            initialValue: creature.group || 'Uncategorized',
+            confirmLabel: 'Set group',
+        });
         if (newGroup === null) return;
         const id = creature.id;
         runDataAction(dataActions.bestiary.updateCreatureMetadata(id, existing => {
@@ -356,7 +385,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
             }];
         });
         runDataAction(dataActions.bestiary.initializeCreatureMetadata(metadataEntries));
-        alert(`Initialized metadata for ${metadataEntries.length} creatures.`);
+        notifySuccess(`Initialized metadata for ${metadataEntries.length} creatures.`);
         setImportingCatalog(false);
     };
 

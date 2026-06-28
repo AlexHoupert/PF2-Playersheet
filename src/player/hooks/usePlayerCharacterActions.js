@@ -1,5 +1,6 @@
 import React from 'react';
 import { selectActiveCharacters } from '../../shared/db/selectors/characterSelectors';
+import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 
 export function usePlayerCharacterActions({
     activeCampaign,
@@ -8,12 +9,13 @@ export function usePlayerCharacterActions({
     dataActions,
     setModalMode,
 }) {
+    const { notifyError } = useAppFeedback();
     const runDataAction = React.useCallback((action) => {
         Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
-    }, []);
+    }, [notifyError]);
 
     const updateCharacter = React.useCallback((updater) => {
         const campaignId = activeCampaign?.id;

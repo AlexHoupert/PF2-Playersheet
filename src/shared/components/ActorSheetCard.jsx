@@ -7,6 +7,7 @@ import { ImpulsesView } from '../../player/views/ImpulsesView';
 import { ModalManager } from '../../player/ModalManager';
 import { ELEMENTS, BACKLASH_TIERS, BACKLASH_LABELS, BACKLASH_COLORS, buildBacklashEffectInputs } from '../../pacts/pactsData';
 import { useCampaign } from '../context/CampaignContext';
+import { useAppFeedback } from '../feedback/AppFeedback';
 import { selectDeviantAbility } from '../db/selectors/abilitySelectors';
 import { selectPact, selectPactList } from '../db/selectors/pactSelectors';
 import { selectActorRulesViewModel } from '../rules/actorRulesViewModel';
@@ -35,6 +36,7 @@ export function ActorSheetCard({
     onOpenModal,
 }) {
     const { activeCampaign, activeCampaignId, dataActions } = useCampaign();
+    const { notifyError } = useAppFeedback();
     const [activeTab, setActiveTab] = useState('stats');
     const [backlashOpen, setBacklashOpen] = useState(false);
     const [localModalMode, setLocalModalMode] = useState(null);
@@ -104,11 +106,11 @@ export function ActorSheetCard({
         if (!assignedPact) return;
         const tierData = assignedPact.backlash?.[tier];
         if (!tierData?.effects?.length) {
-            alert(`${BACKLASH_LABELS[tier]}: No condition effects defined for this tier.`);
+            notifyError(`${BACKLASH_LABELS[tier]}: No condition effects defined for this tier.`);
             return;
         }
         if (!activeCampaignId || !character?.id || !dataActions?.effect) {
-            alert('No active actor is available for backlash effects.');
+            notifyError('No active actor is available for backlash effects.');
             return;
         }
         const existingEffects = activeCampaign?.actorEffects || [];
@@ -128,7 +130,7 @@ export function ActorSheetCard({
                 : dataActions.effect.createEffect(activeCampaignId, character.id, effectInput);
             Promise.resolve(action).catch(err => {
                 console.error(err);
-                alert(err?.message || String(err));
+                notifyError(err);
             });
         });
         setBacklashOpen(false);
@@ -204,7 +206,7 @@ export function ActorSheetCard({
                         updateCharacter={updateCharacter}
                         setModalData={setModalData || setLocalModalData}
                         setModalMode={setModalMode || setLocalModalMode}
-                        setCatalogMode={(catalogMode) => console.log('Catalog not implemented in actor sheet', catalogMode)}
+                        setCatalogMode={() => {}}
                         onLongPress={onOpenModalLong}
                     />
                 )}

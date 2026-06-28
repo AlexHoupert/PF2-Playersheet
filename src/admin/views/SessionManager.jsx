@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../../shared/context/CampaignContext';
+import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 import { selectActiveCharacters, selectArchivedCharacters } from '../../shared/db/selectors/characterSelectors';
 import { useWindowSize } from '../../shared/hooks/useWindowSize';
 
 export default function SessionManager({ db }) {
     const { isMobile } = useWindowSize();
+    const { confirm } = useAppFeedback();
     const {
         campaigns,
         archivedCampaigns,
@@ -96,8 +98,15 @@ export default function SessionManager({ db }) {
         setIsSpellcaster(false);
     };
 
-    const handleDeleteChar = (charId) => {
-        if (!activeCampaignId || !confirm('Archive this character? It can be restored later.')) return;
+    const handleDeleteChar = async (charId) => {
+        if (!activeCampaignId) return;
+        const confirmed = await confirm({
+            title: 'Archive character',
+            message: 'Archive this character? It can be restored later.',
+            confirmLabel: 'Archive',
+            danger: true,
+        });
+        if (!confirmed) return;
         deleteCharacter(activeCampaignId, charId);
     };
 

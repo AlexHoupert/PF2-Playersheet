@@ -2,12 +2,13 @@
 // The normal runtime starts Firestore V2 through useFirestoreV2Db. Do not use
 // this hook for new UI or runtime writes.
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocalStorageJson } from '../hooks/useLocalStorageJson';
-import { deepClone } from '../utils/deepClone';
+import { useLocalStorageJson } from '../../hooks/useLocalStorageJson';
+import { deepClone } from '../../utils/deepClone';
 import { migrateDb } from './migrateDb';
-import { db as firestore } from './firebase-config';
+import { db as firestore } from '../firebase-config';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { cleanForFirestore } from './v2/normalizers';
+import { cleanForFirestore } from '../v2/normalizers';
+import { debugLog } from '../../utils/debugLog';
 
 export const DB_STORAGE_KEY = 'pf2e-data';
 const IS_FIREBASE_CONFIGURED = firestore && firestore.app.options.apiKey !== "YOUR_API_KEY";
@@ -46,7 +47,7 @@ export function usePersistedDb(defaultDb) {
 
                 // ECHO SUPPRESSION: Skip if this is our own write echoing back
                 if (!isFirstRemoteSnapshot && incomingTimestamp === ourLastWrite && ourLastWrite > 0) {
-                    console.log("[Firebase] Skipping own echo (exact match)");
+                    debugLog("[Firebase] Skipping own echo (exact match)");
                     return;
                 }
 
@@ -55,7 +56,7 @@ export function usePersistedDb(defaultDb) {
                 if (!isFirstRemoteSnapshot && pendingWriteRef.current && timeSinceOurWrite < ECHO_SUPPRESSION_WINDOW_MS) {
                     // Check if incoming is same or older than what we wrote
                     if (incomingTimestamp <= ourLastWrite) {
-                        console.log("[Firebase] Skipping stale echo within suppression window");
+                        debugLog("[Firebase] Skipping stale echo within suppression window");
                         return;
                     }
                 }
@@ -64,7 +65,7 @@ export function usePersistedDb(defaultDb) {
                 // This handles the case where another client made a change
                 const currentTimestamp = dbStateRef.current?._lastWriteTimestamp || 0;
                 if (isFirstRemoteSnapshot || incomingTimestamp > currentTimestamp) {
-                    console.log("[Firebase] Accepting newer update from remote", {
+                    debugLog("[Firebase] Accepting newer update from remote", {
                         incoming: incomingTimestamp,
                         current: currentTimestamp
                     });
@@ -74,9 +75,9 @@ export function usePersistedDb(defaultDb) {
                     pendingWriteRef.current = false;
                 } else if (incomingTimestamp === currentTimestamp) {
                     // Same timestamp, likely initial load or duplicate - ignore
-                    console.log("[Firebase] Ignoring duplicate timestamp");
+                    debugLog("[Firebase] Ignoring duplicate timestamp");
                 } else {
-                    console.log("[Firebase] Ignoring older update", {
+                    debugLog("[Firebase] Ignoring older update", {
                         incoming: incomingTimestamp,
                         current: currentTimestamp
                     });
@@ -126,7 +127,7 @@ export function usePersistedDb(defaultDb) {
             if (IS_FIREBASE_CONFIGURED) {
                 setDoc(doc(firestore, "data", "master"), cleanForFirestore(newValue))
                     .then(() => {
-                        console.log("[Firebase] Write successful");
+                        debugLog("[Firebase] Write successful");
                         // Keep pendingWrite true briefly to handle echo
                         setTimeout(() => {
                             if (lastWriteTimestampRef.current === writeTimestamp) {

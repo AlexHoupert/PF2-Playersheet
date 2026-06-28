@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 
 import { selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
 import { useCatalogDetailController } from '../shared/hooks/useCatalogDetailController';
@@ -16,6 +17,7 @@ import './AdminApp.css';
 
 export default function AdminApp() {
     const { activeCampaign, assignUser, revokeUser, setPartyXp, setXpThreshold, addPartyXp, dataActions, db } = useCampaign();
+    const { notifyError } = useAppFeedback();
     const [activeTab, setActiveTab] = useState('sessions');
     const [playerTabMode, setPlayerTabMode] = useState('cards'); // 'cards' or 'users'
 
@@ -33,7 +35,7 @@ export default function AdminApp() {
     const runDataAction = (action) => {
         Promise.resolve(action).catch(err => {
             console.error(err);
-            alert(err?.message || String(err));
+            notifyError(err);
         });
     };
 

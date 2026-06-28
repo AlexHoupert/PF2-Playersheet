@@ -1,5 +1,6 @@
 import React from 'react';
 import { parseFoundry } from '../utils/foundryParser';
+import { useAppFeedback } from '../feedback/AppFeedback';
 
 const getStatusColor = (s) => {
     switch (s) {
@@ -22,6 +23,7 @@ const getStatusIcon = (s) => {
 };
 
 export default function QuestCard({ quest, quests, expandedQuestIds, onToggle, onEdit, onCreateSub, onToggleObjective, onToggleObjectiveHidden, onRevealSecret, depth = 0, isGM = false }) {
+    const { confirm } = useAppFeedback();
     const isExpanded = expandedQuestIds.has(quest.id);
     const children = quests.filter(q => q.parentId === quest.id);
     const hasChildren = children.length > 0;
@@ -89,14 +91,19 @@ export default function QuestCard({ quest, quests, expandedQuestIds, onToggle, o
                                 className="formatted-content"
                                 style={{ marginBottom: 15 }}
                                 dangerouslySetInnerHTML={{ __html: parseFoundry(quest.descriptionPublic, { secretMode: isGM ? 'reveal' : 'hide' }) }}
-                                onContextMenu={(e) => {
+                                onContextMenu={async (e) => {
                                     if (isGM && onRevealSecret) {
                                         // Check if clicked exactly on a revealable secret
                                         const target = e.target;
                                         if (target.classList.contains('gm-secret-revealable')) {
                                             e.preventDefault();
                                             e.stopPropagation();
-                                            if (window.confirm(`Reveal this text to players?\n"${target.innerText}"`)) {
+                                            const confirmed = await confirm({
+                                                title: 'Reveal secret',
+                                                message: `Reveal this text to players?\n"${target.innerText}"`,
+                                                confirmLabel: 'Reveal',
+                                            });
+                                            if (confirmed) {
                                                 onRevealSecret(quest.id, target.innerText);
                                             }
                                         }
