@@ -23,6 +23,23 @@ export function createLootActions(actionContext) {
     useFirestoreV2,
   } = actionContext;
 
+  const updateLegacyActorAndCharacter = (campaign, actorId, character) => {
+    const actorIndex = (campaign.actors || []).findIndex((actor) => actor.id === actorId);
+    if (actorIndex >= 0) {
+      campaign.actors[actorIndex] = characterToPcActorDoc(campaign.actors[actorIndex], character, campaign.id, actorId);
+    }
+    const characterIndex = (campaign.characters || []).findIndex((char) => char.id === actorId);
+    if (characterIndex >= 0) {
+      campaign.characters[characterIndex] = character;
+    }
+  };
+
+  const getLegacyCharacterForActor = (campaign, actorId) => {
+    const actorDoc = (campaign.actors || []).find((actor) => actor.id === actorId);
+    if (actorDoc) return actorDocToCharacter(actorDoc, actorId);
+    return (campaign.characters || []).find((char) => char.id === actorId) || null;
+  };
+
   const updateLootBagLegacy = (campaignId, lootBagId, updater) =>
     updateCampaignLegacy(campaignId, (campaign) =>
       updateCampaignLootBag(campaign, lootBagId, (lootBag) => applyLootBagUpdate(lootBag, updater, { createId }), {
@@ -87,14 +104,14 @@ export function createLootActions(actionContext) {
     return updateCampaignLegacy(campaignId, (campaign) => {
       const next = cloneValue(campaign);
       const bagIndex = (next.lootBags || []).findIndex((bag) => bag.id === lootBagId);
-      const characterIndex = (next.characters || []).findIndex((char) => char.id === characterId);
-      if (bagIndex < 0 || characterIndex < 0) return next;
-      const result = claimLootItemState(next.lootBags[bagIndex], next.characters[characterIndex], item, {
+      const character = getLegacyCharacterForActor(next, characterId);
+      if (bagIndex < 0 || !character) return next;
+      const result = claimLootItemState(next.lootBags[bagIndex], character, item, {
         createId,
         claimedBy: characterId,
       });
       next.lootBags[bagIndex] = result.lootBag;
-      next.characters[characterIndex] = result.character;
+      updateLegacyActorAndCharacter(next, characterId, result.character);
       return next;
     });
   };
@@ -120,13 +137,13 @@ export function createLootActions(actionContext) {
     return updateCampaignLegacy(campaignId, (campaign) => {
       const next = cloneValue(campaign);
       const bagIndex = (next.lootBags || []).findIndex((bag) => bag.id === lootBagId);
-      const characterIndex = (next.characters || []).findIndex((char) => char.id === characterId);
-      if (bagIndex < 0 || characterIndex < 0) return next;
-      const result = claimLootGoldState(next.lootBags[bagIndex], next.characters[characterIndex], amount, {
+      const character = getLegacyCharacterForActor(next, characterId);
+      if (bagIndex < 0 || !character) return next;
+      const result = claimLootGoldState(next.lootBags[bagIndex], character, amount, {
         createId,
       });
       next.lootBags[bagIndex] = result.lootBag;
-      next.characters[characterIndex] = result.character;
+      updateLegacyActorAndCharacter(next, characterId, result.character);
       return next;
     });
   };
@@ -163,9 +180,13 @@ export function createLootActions(actionContext) {
       const next = cloneValue(campaignState);
       const bagIndex = (next.lootBags || []).findIndex((bag) => bag.id === lootBagId);
       if (bagIndex < 0) return next;
-      const result = splitLootGoldState(next.lootBags[bagIndex], next.characters || [], { createId });
+      const characters = characterIds.length
+        ? characterIds.map((characterId) => getLegacyCharacterForActor(next, characterId)).filter(Boolean)
+        : next.characters || [];
+      const result = splitLootGoldState(next.lootBags[bagIndex], characters, { createId });
       next.lootBags[bagIndex] = result.lootBag;
-      next.characters = result.characters;
+      result.characters.forEach((character) => updateLegacyActorAndCharacter(next, character.id, character));
+      if (!characterIds.length) next.characters = result.characters;
       return next;
     });
   };

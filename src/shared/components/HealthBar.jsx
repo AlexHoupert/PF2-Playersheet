@@ -19,9 +19,10 @@ export function HealthBar({ current, max, temp, penalty, onLongPress, onClick })
     const tempPercent = Math.min(100, (temp / max) * 100);
 
     return (
-        <div className={`health-section ${temp > 0 ? 'has-temp-hp' : ''}`}>
+        <div className={`health-section ${temp > 0 ? 'has-temp-hp' : ''}`} data-testid="player-health-section">
             <LongPressable
                 className="bar-container"
+                data-testid="player-health-bar"
                 onClick={onClick}
                 onLongPress={() => onLongPress && onLongPress(null, 'hp')}
                 style={{ position: 'relative', background: '#333' }}
@@ -40,7 +41,7 @@ export function HealthBar({ current, max, temp, penalty, onLongPress, onClick })
                 )}
 
                 <div className="bar-fill" style={{ width: `${hpPercent}%`, backgroundColor: getHpColor(current, max, temp), zIndex: 2 }}></div>
-                <div className="bar-text" style={{ zIndex: 3 }}>
+                <div className="bar-text" style={{ zIndex: 3 }} data-testid="player-health-text">
                     {current} <span style={{ color: '#888', margin: '0 5px' }}>/</span> {max - (penalty || 0)}
                     {penalty > 0 && <span style={{ fontSize: '0.8em', color: '#bbb', marginLeft: 4 }}>({max})</span>}
                 </div>

@@ -4,6 +4,7 @@ export const E2E_USER_EMAIL = "e2e.player@example.test";
 export const E2E_CAMPAIGN_ID = "e2e_campaign";
 export const E2E_ACTOR_ID = "e2e_actor_nimwe";
 export const E2E_CUSTOM_SPELL_ID = "spell_uplifting_overture_e2e";
+export const E2E_CUSTOM_ITEM_ID = "item_smoke_custom_charm";
 
 export function isE2eFixtureEnabled() {
   if (!import.meta.env.DEV) return false;
@@ -158,7 +159,22 @@ export function createE2eV2Store() {
         },
       },
     },
-    customItems: {},
+    customItems: {
+      [E2E_CUSTOM_ITEM_ID]: {
+        id: E2E_CUSTOM_ITEM_ID,
+        name: "Smoke Custom Charm",
+        type: "equipment",
+        img: "icons/equipment/held-items/feather-blue.webp",
+        system: {
+          level: { value: 0 },
+          price: { value: { gp: 1 } },
+          traits: { value: ["magical"], rarity: "common" },
+          description: { value: "A deterministic E2E custom item." },
+          bulk: { value: "L" },
+          category: "held",
+        },
+      },
+    },
     customActions: {},
     customCreatures: {},
     loreArticles: {},

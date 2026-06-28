@@ -37,13 +37,13 @@ export function EditGoldModal({ character, characterActions, onClose }) {
                 color: '#e0e0e0', textAlign: 'center'
             }} onClick={e => e.stopPropagation()}>
                 <h2>Manage Gold</h2>
-                <p style={{ textAlign: 'center', color: '#888' }}>Current: <span style={{ color: 'var(--text-gold)', fontWeight: 'bold' }}>{currentGold.toFixed(2)} gp</span></p>
+                <p style={{ textAlign: 'center', color: '#888' }}>Current: <span data-testid="gold-modal-current" style={{ color: 'var(--text-gold)', fontWeight: 'bold' }}>{currentGold.toFixed(2)} gp</span></p>
                 <div className="qty-control-box">
-                    <button className="qty-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }} onClick={() => applyDelta(-(parseGold(editVal)))}>-</button>
-                    <input type="number" className="modal-input" style={{ width: 100, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="0" />
-                    <button className="qty-btn" style={{ borderColor: 'var(--accent-green)', color: 'var(--accent-green)' }} onClick={() => applyDelta(parseGold(editVal))}>+</button>
+                    <button data-testid="gold-modal-minus" className="qty-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }} onClick={() => applyDelta(-(parseGold(editVal)))}>-</button>
+                    <input data-testid="gold-modal-input" type="number" className="modal-input" style={{ width: 100, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="0" />
+                    <button data-testid="gold-modal-plus" className="qty-btn" style={{ borderColor: 'var(--accent-green)', color: 'var(--accent-green)' }} onClick={() => applyDelta(parseGold(editVal))}>+</button>
                 </div>
-                <button className="set-btn" onClick={() => {
+                <button data-testid="gold-modal-set" className="set-btn" onClick={() => {
                     characterActions?.setGold(parseGold(editVal));
                     setEditVal("");
                     onClose();
@@ -632,11 +632,11 @@ export function ManageHPModal({ character, characterActions, onClose }) {
                     <label>Hit Points</label>
                     <div className="qty-control-box">
                         <button className="qty-btn" onClick={() => characterActions?.adjustHp(-editAmount())}>-</button>
-                        <input type="number" className="modal-input" style={{ width: 100, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="0" />
+                        <input data-testid="hp-modal-input" type="number" className="modal-input" style={{ width: 100, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="0" />
                         <button className="qty-btn" onClick={() => characterActions?.adjustHp(editAmount())}>+</button>
                     </div>
                     <div style={{ marginTop: 10 }}>
-                        <button className="set-btn" onClick={() => { characterActions?.setHp(editAmount()); setEditVal(""); onClose(); }}>Set HP</button>
+                        <button data-testid="hp-modal-set" className="set-btn" onClick={() => { characterActions?.setHp(editAmount()); setEditVal(""); onClose(); }}>Set HP</button>
                     </div>
                 </div>
 
@@ -645,7 +645,7 @@ export function ManageHPModal({ character, characterActions, onClose }) {
                         <label style={{ color: 'var(--accent-blue)' }}>Temp HP</label>
                         <div className="qty-control-box">
                             <button className="qty-btn" onClick={() => characterActions?.adjustTempHp(-editAmount())}>-</button>
-                            <input type="number" className="modal-input" style={{ width: 100, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="0" />
+                            <input data-testid="temp-hp-modal-input" type="number" className="modal-input" style={{ width: 100, textAlign: 'center' }} value={editVal} onChange={e => setEditVal(e.target.value)} placeholder="0" />
                             <button className="qty-btn" onClick={() => characterActions?.adjustTempHp(editAmount())}>+</button>
                         </div>
                         <button className="set-btn" onClick={() => { characterActions?.setTempHp(editAmount()); setEditVal(""); onClose(); }}>Set Temp to Value</button>

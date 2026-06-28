@@ -177,6 +177,7 @@ function FeedbackDialog({ dialog, onClose }) {
     return (
         <div
             role="presentation"
+            data-testid="app-feedback-backdrop"
             onMouseDown={(event) => {
                 if (event.target === event.currentTarget) cancel();
             }}
@@ -195,6 +196,7 @@ function FeedbackDialog({ dialog, onClose }) {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="app-feedback-dialog-title"
+                data-testid="app-feedback-dialog"
                 style={{
                     width: 'min(440px, 100%)',
                     background: '#202020',
@@ -230,6 +232,7 @@ function FeedbackDialog({ dialog, onClose }) {
                         <input
                             autoFocus
                             className="modal-input"
+                            data-testid="app-feedback-input"
                             type={dialog.inputType}
                             value={value}
                             placeholder={dialog.placeholder}
@@ -246,12 +249,13 @@ function FeedbackDialog({ dialog, onClose }) {
                     </label>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                    <button type="button" className="btn-secondary" onClick={cancel}>
+                    <button type="button" className="btn-secondary" data-testid="app-feedback-cancel" onClick={cancel}>
                         {dialog.cancelLabel}
                     </button>
                     <button
                         type="button"
                         className="btn-primary"
+                        data-testid="app-feedback-confirm"
                         onClick={submit}
                         style={dialog.danger ? { background: '#9b2d2d', borderColor: '#d45a5a' } : undefined}
                     >

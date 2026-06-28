@@ -465,6 +465,7 @@ export function InventoryView({
                     <button
                         key={t}
                         className={`sub-tab-btn ${itemSubTab === t ? 'active' : ''}`}
+                        data-testid={isLoot ? 'inventory-tab-loot' : `inventory-tab-${t.toLowerCase()}`}
                         onClick={() => setItemSubTab(t)}
                     >
                         {t}
@@ -540,7 +541,11 @@ export function InventoryView({
                         const unclaimedItems = bag.items ? bag.items.filter(i => !i.claimedBy) : [];
 
                         return (
-                            <div key={bag.id} style={{ background: '#222', border: '1px solid #c5a059', borderRadius: 8, padding: 10, marginBottom: 15, marginTop: 10 }}>
+                            <div
+                                key={bag.id}
+                                data-testid={`loot-bag-${bag.id}`}
+                                style={{ background: '#222', border: '1px solid #c5a059', borderRadius: 8, padding: 10, marginBottom: 15, marginTop: 10 }}
+                            >
                                 <div style={{ borderBottom: '1px solid #444', paddingBottom: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <h3 style={{ margin: 0, color: '#ffecb3', fontSize: '1em' }}>💰 {bag.name}</h3>
                                 </div>
@@ -548,10 +553,11 @@ export function InventoryView({
                                 {/* Gold Section */}
                                 {(bag.goldValue > 0) && (
                                     <div style={{ background: 'rgba(255, 215, 0, 0.1)', padding: 10, margin: '10px 0', borderRadius: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ color: '#ffd700', fontWeight: 'bold' }}>{bag.goldValue} GP</span>
+                                        <span data-testid={`loot-gold-${bag.id}`} style={{ color: '#ffd700', fontWeight: 'bold' }}>{bag.goldValue} GP</span>
                                         <div style={{ display: 'flex', gap: 5 }}>
                                             <button
                                                 className="set-btn"
+                                                data-testid={`loot-take-gold-${bag.id}`}
                                                 style={{ fontSize: '0.8em', padding: '4px 8px' }}
                                                 onClick={async () => {
                                                     const amount = await prompt({
@@ -572,6 +578,7 @@ export function InventoryView({
                                             </button>
                                             <button
                                                 className="set-btn"
+                                                data-testid={`loot-split-gold-${bag.id}`}
                                                 style={{ fontSize: '0.8em', padding: '4px 8px', background: '#e65100' }}
                                                 onClick={async () => {
                                                     const confirmed = await confirm({
@@ -597,12 +604,14 @@ export function InventoryView({
                                         <ItemRow
                                             key={item.instanceId}
                                             item={merged}
+                                            data-testid={`loot-item-${item.instanceId || item.name}`}
                                             className="inventory-item-row"
                                             style={{ marginTop: 5 }}
                                             onClick={() => onInspectItem(merged)}
                                             nameAddon={(merged.qty > 1) && <span style={{ color: '#888', fontSize: '0.8em', marginLeft: 8 }}>x{merged.qty}</span>}
                                             right={<button
                                                 className="set-btn"
+                                                data-testid={`loot-claim-item-${item.instanceId || item.name}`}
                                                 style={{ margin: '0 0 0 10px', padding: '6px 14px', fontSize: '0.9em', width: 'auto', flexShrink: 0, height: 'auto' }}
                                                 onClick={async (e) => {
                                                     e.stopPropagation();

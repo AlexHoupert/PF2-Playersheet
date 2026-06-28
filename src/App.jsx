@@ -15,8 +15,22 @@ export default function App() {
 }
 
 function E2eFixtureApp() {
-    const [runtimeDb, setRuntimeDb] = React.useState(() => createE2eRuntimeDb());
+    const [runtimeDb, setRuntimeDb] = React.useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('e2eReset') === 'true') {
+            localStorage.removeItem('pf2:e2e-runtime-db');
+        }
+        try {
+            const stored = localStorage.getItem('pf2:e2e-runtime-db');
+            return stored ? JSON.parse(stored) : createE2eRuntimeDb();
+        } catch {
+            return createE2eRuntimeDb();
+        }
+    });
     const v2Store = React.useMemo(() => createE2eV2Store(), []);
+    React.useEffect(() => {
+        localStorage.setItem('pf2:e2e-runtime-db', JSON.stringify(runtimeDb));
+    }, [runtimeDb]);
     const status = React.useMemo(() => ({
         mode: 'e2e-fixture',
         configured: true,

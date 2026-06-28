@@ -23,6 +23,12 @@ const Card = ({ children, style, className, ...rest }) => (
     </div>
 );
 
+const toTestId = (value) => String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
 export default function ItemsViewLayout({
     activeCampaign,
     activeFilters,
@@ -101,8 +107,9 @@ export default function ItemsViewLayout({
     const isSideSelected = (item) => selectedSideItems.some(i => getItemIdentityKey(i) === getItemIdentityKey(item));
 
     // Context menu item component
-    const CtxItem = ({ icon, label, onClick, danger, hasSubmenu, onMouseEnter }) => (
+    const CtxItem = ({ icon, label, onClick, danger, hasSubmenu, onMouseEnter, testId }) => (
         <div
+            data-testid={testId}
             onClick={onClick}
             onMouseEnter={onMouseEnter}
             style={{
@@ -158,9 +165,9 @@ export default function ItemsViewLayout({
                         columnLabels={{ Available: 'Available', Formula: 'Formula' }}
                         extraLeft={
                             <div style={{ display: 'flex', gap: 0, border: '1px solid #444', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
-                                <button style={{ padding: '5px 12px', background: sideMode === 'none' ? '#c5a059' : '#222', color: sideMode === 'none' ? '#000' : '#888', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('none'); setSelectedSideItems([]); }}>Items</button>
-                                <button style={{ padding: '5px 12px', background: sideMode === 'trader' ? '#c5a059' : '#222', color: sideMode === 'trader' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('trader'); setSelectedLootId(null); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Trader</button>
-                                <button style={{ padding: '5px 12px', background: sideMode === 'loot' ? '#c5a059' : '#222', color: sideMode === 'loot' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('loot'); setSelectedTraderId(null); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Loot</button>
+                                <button data-testid="gm-items-side-items" style={{ padding: '5px 12px', background: sideMode === 'none' ? '#c5a059' : '#222', color: sideMode === 'none' ? '#000' : '#888', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('none'); setSelectedSideItems([]); }}>Items</button>
+                                <button data-testid="gm-items-side-trader" style={{ padding: '5px 12px', background: sideMode === 'trader' ? '#c5a059' : '#222', color: sideMode === 'trader' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('trader'); setSelectedLootId(null); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Trader</button>
+                                <button data-testid="gm-items-side-loot" style={{ padding: '5px 12px', background: sideMode === 'loot' ? '#c5a059' : '#222', color: sideMode === 'loot' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('loot'); setSelectedTraderId(null); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Loot</button>
                             </div>
                         }
                         extraRight={
@@ -209,6 +216,7 @@ export default function ItemsViewLayout({
                                 {paginatedItems.map((item, idx) => (
                                     <tr
                                         key={item.instanceId || idx}
+                                        data-testid={`gm-item-row-${toTestId(item.name || item.instanceId || idx)}`}
                                         draggable
                                         onDragStart={e => handleDragStart(e, item, 'global')}
                                         onContextMenu={e => handleContextMenu(e, item, 'global')}
@@ -251,7 +259,13 @@ export default function ItemsViewLayout({
                         <Card style={{ flex: '0 0 auto', maxHeight: '35%' }}>
                             <div style={{ padding: 8, borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#222' }}>
                                 <span style={{ color: '#c5a059', fontWeight: 'bold' }}>{sideMode === 'trader' ? 'Traders' : 'Loot Bags'}</span>
-                                <button style={{ fontSize: '0.75em', background: '#333', border: '1px solid #555', padding: '3px 8px', cursor: 'pointer' }} onClick={sideMode === 'trader' ? handleCreateTrader : handleCreateLoot}>+ New</button>
+                                <button
+                                    data-testid={sideMode === 'trader' ? 'gm-items-create-trader' : 'gm-items-create-loot'}
+                                    style={{ fontSize: '0.75em', background: '#333', border: '1px solid #555', padding: '3px 8px', cursor: 'pointer' }}
+                                    onClick={sideMode === 'trader' ? handleCreateTrader : handleCreateLoot}
+                                >
+                                    + New
+                                </button>
                             </div>
                             <div className="items-view-scroll" style={{ flex: 1, overflow: 'auto' }}>
                                 {sideMode === 'trader' ? (
@@ -303,6 +317,7 @@ export default function ItemsViewLayout({
                                     sideLists.sliced.map(entry => (
                                         <div
                                             key={entry.id}
+                                            data-testid={`gm-lootbag-row-${entry.id}`}
                                             onClick={() => { setSelectedLootId(entry.id); setSelectedTraderId(null); setSelectedSideItems([]); }}
                                             onDrop={e => handleDrop(e, 'loot', entry.id)}
                                             onDragOver={e => e.preventDefault()}
@@ -456,7 +471,7 @@ export default function ItemsViewLayout({
                 {/* CONTEXT MENU */}
                 {contextMenu && (
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 2000 }} onClick={closeContextMenu} onContextMenu={e => { e.preventDefault(); closeContextMenu(); }}>
-                        <div style={{ position: 'absolute', top: contextMenu.y, left: contextMenu.x, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,0.6)', overflow: 'visible' }} onClick={e => e.stopPropagation()}>
+                        <div data-testid="gm-items-context-menu" style={{ position: 'absolute', top: contextMenu.y, left: contextMenu.x, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,0.6)', overflow: 'visible' }} onClick={e => e.stopPropagation()}>
                             {/* Side panel context menu */}
                             {(contextMenu.source === 'trader' || contextMenu.source === 'loot') ? (
                                 <>
@@ -500,10 +515,10 @@ export default function ItemsViewLayout({
                                         )}
                                     </div>
                                     <div style={{ position: 'relative' }} onMouseEnter={() => setContextSubMenu('player')} onMouseLeave={() => contextSubMenu === 'player' && setContextSubMenu(null)}>
-                                        <CtxItem icon="🎁" label="Give to Player" hasSubmenu />
+                                        <CtxItem icon="🎁" label="Give to Player" hasSubmenu testId="gm-items-give-to-player" />
                                         {contextSubMenu === 'player' && (
                                             <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
-                                                {playerTargets.map(p => <CtxItem key={p.id} label={p.name} onClick={() => performAction('giveToPlayer', p.id)} />)}
+                                                {playerTargets.map(p => <CtxItem key={p.id} label={p.name} testId={`gm-items-give-player-${p.id}`} onClick={() => performAction('giveToPlayer', p.id)} />)}
                                             </div>
                                         )}
                                     </div>

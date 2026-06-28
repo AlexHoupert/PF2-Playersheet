@@ -239,6 +239,7 @@ Tests:
 
 - [x] Snapshot- oder static test: relevante Views importieren Shared Row.
 - [ ] Manual Smoke: Inventory, Shop, Loot, GM Items zeigen weiterhin korrekte Icons/Metas/Aktionen.
+  - Matrix angelegt in `docs/agent/smoke-results.md`; automatisierte Fixture-Smokes sind verifiziert, manuelle Preview-/Production-Smokes bleiben offen.
 
 Akzeptanz:
 
@@ -256,25 +257,21 @@ Ziel: Mindestens ein automatisierter Browser-Smoke deckt die wichtigsten Player-
   - [x] keine Live-Produktionsdaten veraendern
 - [x] Smoke 1: App startet, Login-/Auth-Gate wird sinnvoll behandelt.
 - [x] Smoke 2: GM kann Campaign/Player View laden.
-- [ ] Smoke 3: Player kann HP, Gold, Condition anzeigen/aendern.
-- [ ] Smoke 4: GM gibt Custom Item an Player.
-- [ ] Smoke 5: Lootbag create, item claim, gold split. Partial:
-  - Baseline sichtbar: Player Lootbag und Loot-Item sind per Fixture sichtbar. Mutierende Claim-/Split-Flows folgen in einem tieferen E2E-Pass.
-- [ ] Smoke 6: Quest Reward wird genau einmal angewendet. Partial:
-  - Baseline sichtbar: Player und GM Quest-Surfaces laden dieselbe Fixture-Quest. Reward-Anwendung folgt in einem tieferen E2E-Pass.
-- [ ] Smoke 7: Encounter HP/Initiative/Condition auf Player und Creature. Partial:
-  - Baseline sichtbar: GM Encounter-Surface laedt Encounter und Creature-Combatant. Mutierende HP-/Condition-Flows folgen in einem tieferen E2E-Pass.
-- [ ] Smoke 8: Spell/Item edit ueber Catalog Overrides sichtbar in Player Add-Flow. Partial:
-  - Baseline sichtbar: Catalog-Override-Spell `Uplifting Overture` erscheint im Player Magic-Surface. Add-Flow/Editor-Smoke folgt in einem tieferen E2E-Pass.
+- [x] Smoke 3: Player kann HP, Gold, Condition anzeigen/aendern.
+- [x] Smoke 4: GM gibt Custom Item an Player.
+- [x] Smoke 5: Lootbag create, item claim, gold split.
+- [x] Smoke 6: Quest Reward wird genau einmal angewendet.
+- [x] Smoke 7: Encounter HP/Initiative/Condition auf Player und Creature.
+- [x] Smoke 8: Spell/Item edit ueber Catalog Overrides sichtbar in Player Add-Flow.
 - [x] `npm run smoke` Script ergaenzen.
 - [x] Optional spaeter: `npm run check:e2e` getrennt von schnellem `npm run check`.
 
 Akzeptanz:
 
-- [ ] Kritische Spielabend-Flows koennen vor Deploy reproduzierbar geprueft werden. Partial:
-  - Aktueller Stand deckt Start/Login, Player Character/Quest/Loot/Magic/Shop-Surfaces und GM Sessions/Players/Items/Quests/Encounter-Surfaces ab.
-- [ ] Regressionen wie "GM Item Give geht nicht" oder "Spell Override im Player Add Spell unsichtbar" fallen automatisiert auf. Partial:
-  - Sichtbarkeitsregressionen fallen auf; mutierende Give-/Add-Flows brauchen noch eigene Tests.
+- [x] Kritische Spielabend-Flows koennen vor Deploy reproduzierbar geprueft werden.
+  - Automatisiert gegen lokale V2-Fixture in `tests/e2e/playnight-smoke.spec.js`.
+- [x] Regressionen wie "GM Item Give geht nicht" oder "Spell Override im Player Add Spell unsichtbar" fallen automatisiert auf.
+  - Custom item give und Add-Spell-Override sind eigene Playwright-Smokes.
 
 ## Pass 7: UI-Hardening Und Logging
 
@@ -348,31 +345,28 @@ zielgerichtete Arbeitspakete behandelt werden.
 
 ### 2. Tiefe Browser-Smokes
 
-- Playwright, Fixture und erste Oberflaechen-Smokes existieren.
-- Noch nicht automatisiert sind die mutierenden Spielabend-Flows:
-  - Player HP/Gold/Condition aendern.
-  - GM Custom Item an Player geben.
-  - Lootbag erstellen, Item claimen, Gold splitten.
-  - Quest Reward genau einmal anwenden.
-  - Encounter HP/Initiative/Condition auf Player und Creature.
-  - Spell/Item Catalog Override im Player-Add-Flow verifizieren.
-- Naechster sauberer Schritt: einen eigenen E2E-Pass bauen, der diese Flows
-  gegen deterministische V2-Fixtures testet.
+- Erledigt fuer lokale deterministische Fixture-Smokes.
+- `tests/e2e/playnight-smoke.spec.js` deckt jetzt mutierende Player-, GM-,
+  Loot-, Quest-, Encounter- und Catalog-Override-Flows mit Reload-Persistenz ab.
+- Offen bleibt nur der separate manuelle Firebase-/Production-Smoke, weil Auth,
+  Firestore Rules, Subscription Timing und Multi-Client-Verhalten nicht durch
+  die lokale Fixture ersetzt werden.
 
 ### 3. Manuelle UI-Smokes Fuer Shared Item Rows
 
 - Die statische Absicherung fuer Shared Rows ist vorhanden.
-- Ein vollstaendiger manueller Smoke fuer Inventory, Shop, Loot und GM Items
-  wurde noch nicht als Ergebnis dokumentiert.
-- Naechster sauberer Schritt: kurze Smoke-Matrix in `v2-default-readiness.md`
-  oder einer neuen `smoke-results.md` pflegen.
+- Eine Smoke-Matrix liegt in `docs/agent/smoke-results.md`.
+- Automatisierte Fixture-Smokes sind dokumentiert; manuelle Preview-/Production-
+  Smokes fuer Icons/Metas/Aktionen bleiben bewusst `not tested`.
 
 ### 4. Performance-/Bundle-Follow-Up
 
 - Die Runtime ist funktional gehaertet, aber der Build zeigt weiterhin grosse
   Katalogchunks, besonders `ability-index`, `feat-index`, `creature-index` und
   `shop-index`.
-- Das ist kein Migrations-Blocker, bleibt aber ein klarer Performance-Follow-up.
+- Baseline und Importpfad-Analyse sind in `docs/agent/catalog-pipeline.md`
+  dokumentiert. Das ist kein Migrations-Blocker, bleibt aber ein klarer
+  Performance-Follow-up.
 
 ## Abschlusskriterien Der Roadmap
 
@@ -381,6 +375,6 @@ zielgerichtete Arbeitspakete behandelt werden.
 - [x] Inventory/Loot/Combat nutzen zentrale Item-Identity.
 - [x] `createDataActions.js` ist modularisiert.
 - [x] Catalog Detail und Item Row sind wiederverwendbare Shared-Bausteine.
-- [ ] Kritische Spielabend-Flows haben Browser-Smoke-Abdeckung.
+- [x] Kritische Spielabend-Flows haben Browser-Smoke-Abdeckung.
 - [x] Legacy-Code ist isoliert und durch Static Guards vom Runtime-Pfad getrennt.
 - [x] `npm run check` und `git diff --check` sind gruen.

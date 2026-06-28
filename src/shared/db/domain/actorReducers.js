@@ -42,8 +42,16 @@ export function createActorRecord(actor, options = {}) {
     ruleset: actor?.ruleset || "pf2e_remaster",
     sheet: cloneValue(actor?.sheet || {}),
     stats: cloneValue(actor?.stats || {}),
+    skills: cloneValue(actor?.skills || actor?.sheet?.skills || {}),
     inventory: cloneValue(actor?.inventory || []),
     magic: cloneValue(actor?.magic || { slots: {}, list: [] }),
+    formulaBook: cloneValue(actor?.formulaBook || actor?.sheet?.formulaBook || []),
+    languages: cloneValue(actor?.languages || actor?.sheet?.languages || []),
+    senses: cloneValue(actor?.senses || actor?.sheet?.senses || []),
+    proficiencies: cloneValue(actor?.proficiencies || actor?.sheet?.proficiencies || {}),
+    gold: toFiniteNumber(actor?.gold ?? actor?.sheet?.gold, 0),
+    xp: cloneValue(actor?.xp || actor?.sheet?.xp || { current: 0, max: 1000 }),
+    dailyCraftingMax: actor?.dailyCraftingMax ?? actor?.sheet?.dailyCraftingMax,
     baseTemplateId: actor?.baseTemplateId || null,
     progression: cloneValue(actor?.progression || {}),
     selectionSlots: cloneValue(actor?.selectionSlots || {}),
@@ -65,8 +73,16 @@ export function createActorRecord(actor, options = {}) {
       legacyCharacterId: base.sheet.legacyCharacterId || normalized.id || id,
     };
     base.stats = normalized.stats;
+    base.skills = normalized.skills || {};
     base.inventory = normalized.inventory;
     base.magic = normalized.magic;
+    base.formulaBook = normalized.formulaBook || [];
+    base.languages = normalized.languages || [];
+    base.senses = normalized.senses || [];
+    base.proficiencies = normalized.proficiencies || {};
+    base.gold = normalized.gold ?? base.gold;
+    base.xp = normalized.xp || base.xp;
+    base.dailyCraftingMax = normalized.dailyCraftingMax ?? base.dailyCraftingMax;
   }
 
   if (actor?.deletedAt) base.deletedAt = actor.deletedAt;

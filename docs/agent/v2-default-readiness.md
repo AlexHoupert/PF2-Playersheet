@@ -99,6 +99,10 @@ Known operational caveat:
 
 ## Required Manual Smoke Before Default Switch
 
+Local deterministic browser smoke results are tracked in
+`docs/agent/smoke-results.md`. They do not replace the Firebase-backed manual
+checks below.
+
 Run these in a Firebase-backed environment on the `v2-convergence` branch:
 
 1. Login as GM/global admin, create a campaign, select it, reload, and verify selection/data persist.

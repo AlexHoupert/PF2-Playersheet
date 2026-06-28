@@ -240,6 +240,7 @@ export const MagicView = ({ character, characterActions, setModalData, setModalM
                 {renderSpellList()}
                 <button
                     className="btn-add-condition"
+                    data-testid="magic-add-spell"
                     style={{ marginTop: 20, width: '100%' }}
                     onClick={() => setCatalogMode('spell')}
                 >

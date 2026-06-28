@@ -358,6 +358,46 @@ test('legacy import hooks and projections stay out of runtime modules', () => {
     assert.match(readSource('src/shared/db/legacy-import/migrateDb.js'), /LEGACY IMPORT\/BACKUP ONLY/);
 });
 
+test('runtime views do not reintroduce root compatibility read fallbacks', () => {
+    const runtimeSources = [
+        'src/App.jsx',
+        'src/admin/AdminApp.jsx',
+        'src/admin/AdminTabContent.jsx',
+        'src/admin/ItemsView.jsx',
+        'src/admin/items/ItemsViewLayout.jsx',
+        'src/admin/QuestsView.jsx',
+        'src/admin/EncounterView.jsx',
+        'src/admin/MapAdminView.jsx',
+        'src/admin/ProgressAdminView.jsx',
+        'src/admin/BestiaryView.jsx',
+        'src/admin/LoreAdminView.jsx',
+        'src/player/PlayerAppController.jsx',
+        'src/player/PartyScreen.jsx',
+        'src/player/views/InventoryView.jsx',
+        'src/player/views/LoreView.jsx',
+        'src/player/views/StatsView.jsx',
+        'src/camping/CampScreen.jsx',
+    ];
+    const forbidden = [
+        /db\.characters/,
+        /db\.quests/,
+        /db\.lootBags/,
+        /activeCampaign\?\.quests\s*\|\|/,
+        /activeCampaign\?\.lootBags\s*\|\|/,
+        /campaign\.characters/,
+        /activeCampaign\.characters/,
+        /legacyProjection/,
+        /legacy-import/,
+    ];
+
+    runtimeSources.forEach((path) => {
+        const source = readSource(path);
+        forbidden.forEach((pattern) => {
+            assert.equal(pattern.test(source), false, `${path} reintroduced compatibility read fallback: ${pattern}`);
+        });
+    });
+});
+
 test('v2 normalizers remain focused and legacy projection is isolated', () => {
     const normalizerSource = readSource('src/shared/db/v2/normalizers.js');
     const projectionSource = readSource('src/shared/db/v2/legacyProjection.js');

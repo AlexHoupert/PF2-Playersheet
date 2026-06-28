@@ -91,6 +91,7 @@ export default function EncounterEffectDialogs({
                     <div className="enc-effect-dialog__value-row">
                         <Badge variant="secondary">Value</Badge>
                         <Input
+                            data-testid="encounter-condition-value"
                             type="number"
                             min="1"
                             value={conditionValue}
@@ -106,6 +107,7 @@ export default function EncounterEffectDialogs({
                                     <CommandItem
                                         key={conditionName}
                                         value={conditionName}
+                                        data-testid={`encounter-condition-option-${conditionName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
                                         onSelect={() => handleCondition(conditionName)}
                                     >
                                         <span>{conditionName}</span>
@@ -159,6 +161,7 @@ export default function EncounterEffectDialogs({
                                 <label>
                                     Dice
                                     <Input
+                                        data-testid="encounter-persistent-dice-count"
                                         type="number"
                                         min="1"
                                         value={diceCount}
@@ -185,6 +188,7 @@ export default function EncounterEffectDialogs({
                             <label>
                                 Static Value
                                 <Input
+                                    data-testid="encounter-persistent-static-value"
                                     type="number"
                                     min="1"
                                     value={staticValue}
@@ -195,7 +199,7 @@ export default function EncounterEffectDialogs({
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={onClose}>Cancel</Button>
-                        <Button onClick={handlePersistentDamage}>Add</Button>
+                        <Button data-testid="encounter-persistent-add" onClick={handlePersistentDamage}>Add</Button>
                     </DialogFooter>
                 </DialogContent>
             )}
@@ -208,6 +212,7 @@ export default function EncounterEffectDialogs({
                     </DialogHeader>
                     <Input
                         autoFocus
+                        data-testid="encounter-custom-condition-input"
                         value={customLabel}
                         onChange={(e) => setCustomLabel(e.target.value)}
                         placeholder="Custom badge"
@@ -215,7 +220,7 @@ export default function EncounterEffectDialogs({
                     />
                     <DialogFooter>
                         <Button variant="outline" onClick={onClose}>Cancel</Button>
-                        <Button onClick={handleCustomBadge} disabled={!customLabel.trim()}>Add</Button>
+                        <Button data-testid="encounter-custom-condition-add" onClick={handleCustomBadge} disabled={!customLabel.trim()}>Add</Button>
                     </DialogFooter>
                 </DialogContent>
             )}

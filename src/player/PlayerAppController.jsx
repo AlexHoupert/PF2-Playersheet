@@ -269,6 +269,7 @@ export default function PlayerAppController() {
                     {/* MODE TOGGLE */}
                     <button
                         className="btn-char-switch"
+                        data-testid="player-mode-toggle"
                         onClick={() => {
                             const newMode = appMode === 'character' ? 'story' : 'character';
                             setAppMode(newMode);
@@ -285,7 +286,7 @@ export default function PlayerAppController() {
                     {isGM && <button className="btn-char-switch" onClick={() => {
                         setActiveCharIndex((prev) => (prev + 1) % characters.length);
                     }}>👥</button>}
-                    <div className="gold-display" onClick={() => setModalMode('gold')}>
+                    <div className="gold-display" data-testid="player-gold-display" onClick={() => setModalMode('gold')}>
                         <span>💰</span> {parseFloat(character.gold).toFixed(2)} <span className="gold-unit">gp</span>
                     </div>
                     {isGM && <button className="btn-char-switch" onClick={() => window.location.search = '?admin=true'} title="GM Screen">GM</button>}

@@ -133,6 +133,7 @@ const InitiativeCard = forwardRef(function InitiativeCard({
                 isHidden && 'init-card--hidden',
                 isPlayer ? 'init-card--player' : 'init-card--creature',
             ].filter(Boolean).join(' ')}
+            data-testid={`initiative-card-${combatant.id}`}
             onClick={() => onClick?.(combatant.id)}
             onContextMenu={(e) => {
                 e.preventDefault();
@@ -147,11 +148,12 @@ const InitiativeCard = forwardRef(function InitiativeCard({
             }}
         >
             {/* Initiative Badge */}
-            <div className="init-card__badge" onClick={handleInitiativeClick}>
+            <div className="init-card__badge" data-testid={`initiative-badge-${combatant.id}`} onClick={handleInitiativeClick}>
                 {editingInit ? (
                     <input
                         autoFocus
                         className="init-card__badge-input"
+                        data-testid={`initiative-input-${combatant.id}`}
                         value={tempInit}
                         onChange={(e) => setTempInit(e.target.value)}
                         onBlur={commitInit}
@@ -173,7 +175,7 @@ const InitiativeCard = forwardRef(function InitiativeCard({
                 </div>
 
                 {/* Row 2: HP bar */}
-                <div className="init-card__hp-row" onClick={isGM ? handleHpClick : undefined}>
+                <div className="init-card__hp-row" data-testid={`initiative-hp-${combatant.id}`} onClick={isGM ? handleHpClick : undefined}>
                     <div className="init-card__hp-bar-bg">
                         <div
                             className="init-card__hp-bar-fill"
@@ -184,6 +186,7 @@ const InitiativeCard = forwardRef(function InitiativeCard({
                         <input
                             autoFocus
                             className="init-card__hp-input"
+                            data-testid={`initiative-hp-input-${combatant.id}`}
                             value={tempHp}
                             onChange={(e) => setTempHp(e.target.value)}
                             onBlur={commitHp}
@@ -217,6 +220,7 @@ const InitiativeCard = forwardRef(function InitiativeCard({
                         {conditionBadges.map((badge) => (
                             <span
                                 key={badge.id || badge.label}
+                                data-testid={`initiative-condition-${combatant.id}-${String(badge.label || badge.id).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
                                 className={[
                                     'init-card__condition-pill',
                                     badge.category === 'damage_effect' && 'init-card__condition-pill--damage',

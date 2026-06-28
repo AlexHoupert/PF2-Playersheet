@@ -104,9 +104,29 @@ export function createQuestActions(actionContext) {
         );
       }
 
-      return updateCampaignLegacy(campaignId, (campaignState) =>
-        toggleQuestObjectiveInCampaign(campaignState, questId, objectiveIndex, completed, options)
-      );
+      return updateCampaignLegacy(campaignId, (campaignState) => {
+        if (!Array.isArray(campaignState?.actors) || campaignState.actors.length === 0) {
+          return toggleQuestObjectiveInCampaign(campaignState, questId, objectiveIndex, completed, options);
+        }
+
+        const current = {
+          ...campaignState,
+          characters: activeActorIds.map((actorId) => {
+            const actorDoc = campaignState.actors.find((entry) => entry.id === actorId);
+            return actorDocToCharacter(actorDoc, actorId);
+          }),
+        };
+        const nextCampaign = toggleQuestObjectiveInCampaign(current, questId, objectiveIndex, completed, options);
+        const charactersById = Object.fromEntries((nextCampaign.characters || []).map((character) => [character.id, character]));
+        return {
+          ...nextCampaign,
+          actors: (campaignState.actors || []).map((actorDoc) =>
+            charactersById[actorDoc.id]
+              ? characterToPcActorDoc(actorDoc, charactersById[actorDoc.id], campaignId, actorDoc.id)
+              : actorDoc
+          ),
+        };
+      });
     },
     toggleObjectiveHidden(campaignId, questId, objectiveIndex) {
       if (useFirestoreV2) {

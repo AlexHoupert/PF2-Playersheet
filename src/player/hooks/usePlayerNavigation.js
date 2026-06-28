@@ -11,8 +11,14 @@ export function usePlayerNavigation({
     myCharacter,
 }) {
     const [activeCharIndex, setActiveCharIndex] = useState(0);
-    const [activeTab, setActiveTab] = useState('stats');
-    const [appMode, setAppMode] = useState('character');
+    const [activeTab, setActiveTab] = useState(() => {
+        if (typeof window === 'undefined') return 'stats';
+        return new URLSearchParams(window.location.search).get('playerTab') || 'stats';
+    });
+    const [appMode, setAppMode] = useState(() => {
+        if (typeof window === 'undefined') return 'character';
+        return new URLSearchParams(window.location.search).get('playerMode') || 'character';
+    });
     const characters = useMemo(() => selectActiveCharacters(activeCampaign), [activeCampaign]);
     const character = characters[activeCharIndex];
 

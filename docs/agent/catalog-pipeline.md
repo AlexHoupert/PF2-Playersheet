@@ -122,6 +122,31 @@ Known remaining large chunks after the 2026-06-20 build baseline:
 - `spell-index`: about 273 kB minified / 63 kB gzip.
 - Player route code still imports item/action helpers synchronously for inventory/detail flows. A deeper follow-up would make those remaining player catalog flows async-data driven.
 
+Import-path review on 2026-06-28:
+
+- `ability-index` is pulled by `AbilitiesView` and `AbilityPicker`. `AbilityPicker`
+  is already lazy in creature editing flows; the remaining high-impact path is
+  the admin abilities route.
+- `creature-index` is pulled by GM `BestiaryView` and `EncounterView`.
+  Player `LoreView` and `PartyScreen` use dynamic imports for creature detail
+  paths.
+- `feat-index` is pulled by GM `FeatsView`, feat editor support, player feat
+  display helpers, and the player lazy catalog overlay.
+- `shop-index` is still broad because core player inventory/shop/detail rules,
+  GM `ItemsView`, and shared item detail controllers all need item lookup by
+  name/source file.
+- `spell-index` is pulled by GM spell editing, spell scroll/wand selection,
+  player magic helpers, and the player lazy catalog overlay.
+
+Safe next bundle pass:
+
+1. Split lookup helpers from full index arrays where possible, starting with
+   player inventory/shop paths that only need `get*ByName`.
+2. Keep admin full-list views route-lazy, but avoid importing those full lists
+   from shared controllers used by player surfaces.
+3. Defer cosmetic `manualChunks` changes unless they follow actual import-path
+   reductions.
+
 ## Shop Pipeline Details
 
 Files:

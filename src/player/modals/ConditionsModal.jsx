@@ -249,9 +249,9 @@ export function ConditionsModal({
                     )}
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <button onClick={() => adjustCondition(condName, -1)} style={{ width: 32, height: 32, cursor: 'pointer' }}>-</button>
+                        <button data-testid={`condition-detail-minus-${String(condName).toLowerCase().replace(/\s+/g, '-')}`} onClick={() => adjustCondition(condName, -1)} style={{ width: 32, height: 32, cursor: 'pointer' }}>-</button>
                         <span style={{ minWidth: 24, textAlign: 'center', fontSize: '1.2em', fontWeight: 'bold' }}>{level}</span>
-                        <button onClick={() => adjustCondition(condName, 1)} style={{ width: 32, height: 32, cursor: 'pointer' }}>+</button>
+                        <button data-testid={`condition-detail-plus-${String(condName).toLowerCase().replace(/\s+/g, '-')}`} onClick={() => adjustCondition(condName, 1)} style={{ width: 32, height: 32, cursor: 'pointer' }}>+</button>
                     </div>
                 </div>
 
@@ -381,7 +381,7 @@ export function ConditionsModal({
                         const emojiIcon = getConditionIcon(condName);
 
                         return (
-                            <div key={condName} style={{
+                            <div key={condName} data-testid={`condition-row-${String(condName).toLowerCase().replace(/\s+/g, '-')}`} style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                 borderBottom: '1px solid #444',
                                 padding: '8px 5px',
@@ -410,6 +410,7 @@ export function ConditionsModal({
                                 {/* Quick Adjustment Controls in List */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                     <button
+                                        data-testid={`condition-list-minus-${String(condName).toLowerCase().replace(/\s+/g, '-')}`}
                                         onClick={() => adjustCondition(condName, -1)}
                                         style={{
                                             background: '#1a1a1d', border: '1px solid #c5a059', color: '#c5a059',
@@ -425,6 +426,7 @@ export function ConditionsModal({
                                     </span>
 
                                     <button
+                                        data-testid={`condition-list-plus-${String(condName).toLowerCase().replace(/\s+/g, '-')}`}
                                         onClick={() => adjustCondition(condName, 1)}
                                         style={{
                                             background: '#1a1a1d', border: '1px solid #c5a059', color: '#c5a059',

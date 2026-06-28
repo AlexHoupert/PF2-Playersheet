@@ -53,8 +53,8 @@ export default function QuestCard({ quest, quests, expandedQuestIds, onToggle, o
 
     return (
         <div style={{ marginLeft: depth * 15 }}>
-            <div className={`quest-panel ${isExpanded ? 'open' : ''}`}>
-                <div className="quest-summary" onClick={handleExpand}>
+            <div className={`quest-panel ${isExpanded ? 'open' : ''}`} data-testid={`quest-card-${quest.id}`}>
+                <div className="quest-summary" data-testid={`quest-summary-${quest.id}`} onClick={handleExpand}>
                     <div className="quest-summary-content">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             {hasChildren && <span style={{ fontSize: '0.8em', color: '#888' }}>{isExpanded ? '▼' : '▶'}</span>}
@@ -127,6 +127,7 @@ export default function QuestCard({ quest, quests, expandedQuestIds, onToggle, o
                                         return (
                                             <li
                                                 key={idx}
+                                                data-testid={`quest-objective-${quest.id}-${idx}`}
                                                 className={`quest-objective ${obj.completed ? 'completed' : ''} ${obj.failed ? 'failed' : ''}`}
                                                 style={{
                                                     cursor: isGM ? 'pointer' : 'default',

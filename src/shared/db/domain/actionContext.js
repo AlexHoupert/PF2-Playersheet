@@ -55,8 +55,16 @@ export function createActionContext({
     name: actorDoc?.sheet?.name || actorDoc?.name,
     level: actorDoc?.sheet?.level ?? actorDoc?.level,
     stats: actorDoc?.stats || actorDoc?.sheet?.stats,
+    skills: actorDoc?.skills || actorDoc?.sheet?.skills || {},
     inventory: actorDoc?.inventory || actorDoc?.sheet?.inventory,
     magic: actorDoc?.magic || actorDoc?.sheet?.magic,
+    formulaBook: actorDoc?.formulaBook || actorDoc?.sheet?.formulaBook || [],
+    languages: actorDoc?.languages || actorDoc?.sheet?.languages || [],
+    senses: actorDoc?.senses || actorDoc?.sheet?.senses || [],
+    proficiencies: actorDoc?.proficiencies || actorDoc?.sheet?.proficiencies || {},
+    gold: actorDoc?.gold ?? actorDoc?.sheet?.gold ?? 0,
+    xp: actorDoc?.xp || actorDoc?.sheet?.xp,
+    dailyCraftingMax: actorDoc?.dailyCraftingMax ?? actorDoc?.sheet?.dailyCraftingMax,
   });
 
   const characterToPcActorDoc = (actorDoc, character, campaignId, actorId) =>
@@ -67,17 +75,33 @@ export function createActionContext({
       name: character.name || actorDoc?.name,
       level: character.level ?? actorDoc?.level,
       stats: character.stats,
+      skills: character.skills,
       inventory: character.inventory,
       magic: character.magic,
+      formulaBook: character.formulaBook,
+      languages: character.languages,
+      senses: character.senses,
+      proficiencies: character.proficiencies,
+      gold: character.gold,
+      xp: character.xp,
+      dailyCraftingMax: character.dailyCraftingMax,
       sheet: {
         ...(actorDoc?.sheet || {}),
         ...character,
         id: character.id || actorDoc?.sheet?.id || actorDoc?.id || actorId,
         stats: character.stats,
+        skills: character.skills,
         inventory: character.inventory,
         magic: character.magic,
+        formulaBook: character.formulaBook,
+        languages: character.languages,
+        senses: character.senses,
+        proficiencies: character.proficiencies,
+        gold: character.gold,
+        xp: character.xp,
+        dailyCraftingMax: character.dailyCraftingMax,
       },
-    }, {
+    }, (current) => current, {
       createId: () => createDomainId("actor"),
       campaignId,
     });
@@ -90,14 +114,34 @@ export function createActionContext({
         return characterToPcActorDoc(actorDoc, nextCharacter, campaignId, actorId);
       });
     }
-    return updateCharacterLegacy(campaignId, actorId, updater);
+    return updateCampaignLegacy(campaignId, (campaign) => {
+      const next = cloneValue(campaign);
+      next.actors = Array.isArray(next.actors) ? next.actors.map((item) => cloneValue(item)) : [];
+      next.characters = Array.isArray(next.characters) ? next.characters.map((char) => cloneValue(char)) : [];
+
+      const actorIndex = next.actors.findIndex((item) => item.id === actorId);
+      if (actorIndex >= 0) {
+        const actorDoc = next.actors[actorIndex];
+        const currentCharacter = actorDocToCharacter(actorDoc, actorId);
+        const nextCharacter = applyCharacterUpdate(currentCharacter, updater, { createId });
+        next.actors[actorIndex] = characterToPcActorDoc(actorDoc, nextCharacter, campaignId, actorId);
+        const characterIndex = next.characters.findIndex((char) => char.id === actorId);
+        if (characterIndex >= 0) next.characters[characterIndex] = nextCharacter;
+        return next;
+      }
+
+      const characterIndex = next.characters.findIndex((char) => char.id === actorId);
+      if (characterIndex < 0) return next;
+      next.characters[characterIndex] = applyCharacterUpdate(next.characters[characterIndex], updater, { createId });
+      return next;
+    });
   };
 
   const updateCharacter = (campaignId, characterId, updater) => {
     if (useFirestoreV2) {
       return updatePcActorAsCharacter(campaignId, characterId, updater);
     }
-    return updateCharacterLegacy(campaignId, characterId, updater);
+    return updatePcActorAsCharacter(campaignId, characterId, updater);
   };
 
   const updateActorLegacy = (campaignId, actorId, updater) =>

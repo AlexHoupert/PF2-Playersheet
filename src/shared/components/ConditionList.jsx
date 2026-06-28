@@ -17,7 +17,7 @@ export function ConditionList({ conditions = [], onClick, onAdd }) {
                 if (isPos) bg = '#1a5c1a';
 
                 return (
-                    <div key={c.name} style={{
+                    <div key={c.name} data-testid={`condition-badge-${String(c.name).toLowerCase().replace(/\s+/g, '-')}`} style={{
                         background: bg, padding: '4px 8px', borderRadius: 15,
                         display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.9em',
                         border: '1px solid #555', cursor: 'pointer',
@@ -31,6 +31,7 @@ export function ConditionList({ conditions = [], onClick, onAdd }) {
 
             {active.length === 0 && (
                 <button
+                    data-testid="condition-add-button"
                     className="btn-add-condition"
                     onClick={onAdd}
                     style={{

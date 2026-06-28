@@ -461,6 +461,7 @@ export default function EncounterView({ db }) {
             {contextMenu && (
                 <div
                     className="enc-context-menu"
+                    data-testid="encounter-context-menu"
                     style={{ top: contextMenu.y, left: contextMenu.x }}
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -476,10 +477,10 @@ export default function EncounterView({ db }) {
                     }}>
                         🎲 Set Initiative
                     </button>
-                    <button onClick={() => openEffectDialog('condition')}>🏷️ Add Condition</button>
-                    <button onClick={() => openEffectDialog('persistent')}>🔥 Add Persistent Damage</button>
-                    <button onClick={() => openEffectDialog('affliction')}>☣️ Add Affliction</button>
-                    <button onClick={() => openEffectDialog('custom')}>✏️ Set Custom Condition</button>
+                    <button data-testid="encounter-add-condition" onClick={() => openEffectDialog('condition')}>🏷️ Add Condition</button>
+                    <button data-testid="encounter-add-persistent-damage" onClick={() => openEffectDialog('persistent')}>🔥 Add Persistent Damage</button>
+                    <button data-testid="encounter-add-affliction" onClick={() => openEffectDialog('affliction')}>☣️ Add Affliction</button>
+                    <button data-testid="encounter-add-custom-condition" onClick={() => openEffectDialog('custom')}>✏️ Set Custom Condition</button>
                 </div>
             )}
             <EncounterEffectDialogs

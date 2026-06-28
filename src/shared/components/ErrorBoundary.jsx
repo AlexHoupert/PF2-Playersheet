@@ -16,6 +16,8 @@ export default class ErrorBoundary extends React.Component {
 
     render() {
         if (!this.state.error) return this.props.children;
+        const showDetails = import.meta.env.DEV;
+        const errorText = this.state.error?.stack || this.state.error?.message || String(this.state.error);
 
         return (
             <div style={{
@@ -42,6 +44,25 @@ export default class ErrorBoundary extends React.Component {
                     <p style={{ margin: '0 0 16px 0', color: '#cfc7c2', lineHeight: 1.5 }}>
                         A screen crashed while rendering. The technical details are in the browser console.
                     </p>
+                    {showDetails && (
+                        <pre
+                            data-testid="error-boundary-details"
+                            style={{
+                                maxHeight: 220,
+                                overflow: 'auto',
+                                whiteSpace: 'pre-wrap',
+                                background: '#100d0d',
+                                border: '1px solid #3a2424',
+                                color: '#f2c7c0',
+                                padding: 10,
+                                borderRadius: 6,
+                                fontSize: '0.78rem',
+                                margin: '0 0 16px 0',
+                            }}
+                        >
+                            {errorText}
+                        </pre>
+                    )}
                     <button
                         className="set-btn"
                         type="button"
