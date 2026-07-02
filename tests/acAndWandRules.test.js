@@ -148,6 +148,25 @@ test('actor rules viewmodel applies actorEffects to skills and saves', () => {
     assert.equal(calculateStat(viewModel.character, 'Reflex', 2).total, 6);
 });
 
+test('actor rules viewmodel normalizes incomplete actor shapes', () => {
+    const viewModel = buildActorStatsViewModel(buildActorRulesContext({
+        actor: {
+            id: 'actor-minimal',
+            kind: 'pc',
+            name: 'Minimal Hero',
+            level: 1,
+        },
+        effects: [],
+    }));
+
+    assert.deepEqual(viewModel.character.skills, {});
+    assert.deepEqual(viewModel.character.inventory, []);
+    assert.equal(viewModel.character.stats.hp.current, 0);
+    assert.equal(viewModel.character.stats.hp.max, 1);
+    assert.equal(viewModel.character.stats.speed.land, 25);
+    assert.equal(calculateStat(viewModel.character, 'Stealth', 0).total, 0);
+});
+
 test('mutagen actorEffects provide modifiers and do not stack item AC with armor', () => {
     const mutagen = createMutagenEffectInput({ name: 'Drakeheart Mutagen', level: 3 }, 'actor1');
     mutagen.modifiers = [{ selector: 'ac', mode: 'bonus', bonusType: 'item', value: 2, source: 'Drakeheart Mutagen' }];

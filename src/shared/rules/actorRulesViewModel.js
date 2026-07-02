@@ -1,4 +1,5 @@
 import { selectActorEffects, selectConditionViewModels } from "../db/selectors/effectSelectors.js";
+import { normalizeCharacterRuntimeShape } from "../db/domain/characterShape.js";
 
 export function buildActorRulesContext({ actor, campaign = null, effects = null } = {}) {
     if (!actor) {
@@ -40,7 +41,7 @@ export function buildActorStatsViewModel(context = {}) {
     const effects = Array.isArray(context.effects) ? context.effects : [];
     const conditions = Array.isArray(context.conditions) ? context.conditions : [];
     const character = {
-        ...actor,
+        ...toRulesCharacter(actor),
         actorEffects: effects,
     };
 
@@ -50,6 +51,27 @@ export function buildActorStatsViewModel(context = {}) {
         effects,
         conditions,
     };
+}
+
+function toRulesCharacter(actor) {
+    const sheet = actor?.sheet || {};
+    return normalizeCharacterRuntimeShape({
+        ...actor,
+        ...sheet,
+        id: sheet.id || sheet.legacyCharacterId || actor?.id,
+        name: sheet.name || actor?.name,
+        level: sheet.level ?? actor?.level,
+        stats: sheet.stats || actor?.stats || {},
+        skills: sheet.skills || actor?.skills || {},
+        inventory: sheet.inventory || actor?.inventory || [],
+        magic: sheet.magic || actor?.magic || { slots: {}, list: [] },
+        formulaBook: sheet.formulaBook || actor?.formulaBook || [],
+        languages: sheet.languages || actor?.languages || [],
+        senses: sheet.senses || actor?.senses || [],
+        proficiencies: sheet.proficiencies || actor?.proficiencies || {},
+        gold: sheet.gold ?? actor?.gold ?? 0,
+        xp: sheet.xp || actor?.xp || { current: 0, max: 1000 },
+    });
 }
 
 export function selectActorRulesViewModel(campaign, actorId) {

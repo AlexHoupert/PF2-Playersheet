@@ -1,6 +1,6 @@
 # Smoke Results
 
-Last updated: 2026-06-28.
+Last updated: 2026-07-02.
 
 ## Scope
 
@@ -33,12 +33,26 @@ Result on 2026-06-28: `verified`.
 
 | Flow | Result | Notes |
 | --- | --- | --- |
-| Legacy runtime is irrelevant / V2-only runtime confirmed | not tested | Needs deployed preview/production confirmation with real Firestore. |
+| Legacy runtime is irrelevant / V2-only runtime confirmed | partial | 2026-07-02 production smoke reached V2 production and rendered Admin/Sessions with real Firestore data. Player route for the test user crashed before the current local fix is deployed. |
 | Inventory Item Row: icons, meta, actions | not tested | Automated fixture covers basic inventory visibility, not visual icon/meta review. |
 | Shop Item Row: buy price, quantity, give/buy | not tested | Needs manual preview smoke. |
 | Loot Item Row: claim, partial claim, gold split | not tested | Automated fixture covers single claim and split; partial claim still manual. |
 | GM Items side lists: trader/lootbag selection, icons, actions | not tested | Automated fixture covers lootbag creation and item give only. |
 | Production catalog edit and player visibility | not tested | Automated fixture covers override visibility; deployed Firestore write still manual. |
+
+## Production Smoke Attempts
+
+### 2026-07-02
+
+- URL: `https://pf-2-playersheet.vercel.app/`
+- Result: `partial`
+- Zscaler warning page appeared in the smoke environment and was bypassed with its `Continue` button.
+- Email/password login with the dedicated test user succeeded.
+- Admin route `?admin=true` rendered the Sessions view with real campaigns and user assignments.
+- Player route crashed after login with `TypeError: Cannot convert undefined or null to object` in the deployed bundle.
+- Root cause identified locally: the Actor rules viewmodel used raw Actor documents for stat rendering, so minimally shaped PC Actors could reach `SkillsSection` without normalized `skills`/runtime defaults.
+- Local fix: `buildActorStatsViewModel` now normalizes Actor data into the Character runtime shape before stat rendering; regression test added.
+- Follow-up: deploy the local fix, then rerun the Firebase-backed Player/GM mutation smokes.
 
 ## Notes
 
