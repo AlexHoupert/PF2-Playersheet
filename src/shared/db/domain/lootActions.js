@@ -70,14 +70,14 @@ export function createLootActions(actionContext) {
     );
 
     if (useFirestoreV2) {
-      return repos.lootRepo.createLootBag(firestore, campaignId, normalizedBag);
+      return repos.lootRepo.createLootBag(firestore, campaignId, normalizedBag).then(() => normalizedBag.id);
     }
 
     return updateCampaignLegacy(campaignId, (campaign) => {
       const next = cloneValue(campaign);
       next.lootBags = Array.isArray(next.lootBags) ? [...next.lootBags, normalizedBag] : [normalizedBag];
       return next;
-    });
+    }).then(() => normalizedBag.id);
   };
 
   const claimItem = (campaignId, lootBagId, item, characterId) => {

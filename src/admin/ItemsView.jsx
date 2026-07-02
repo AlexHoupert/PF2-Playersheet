@@ -482,9 +482,11 @@ export default function ItemsView({ db, onInspectItem }) {
         });
         if (!name || !activeCampaign) return;
         const id = Date.now();
-        runDataAction(dataActions.loot.createLootBag(activeCampaign.id, { id, name, items: [], goldValue: 0 }));
+        const createdId = await runDataAction(
+            dataActions.loot.createLootBag(activeCampaign.id, { id, name, items: [], goldValue: 0 })
+        );
         setSideMode('loot');
-        setSelectedLootId(id);
+        setSelectedLootId(createdId || id);
         setSelectedSideItems([]);
         if (isMobile) setMobileSideOpen(true);
     };

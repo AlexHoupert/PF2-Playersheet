@@ -58,6 +58,9 @@ function createActionHarness(db = {}) {
             },
         },
         lootRepo: {
+            async createLootBag(_firestore, campaignId, lootBag) {
+                calls.push(['loot.createLootBag', campaignId, lootBag.id]);
+            },
             async updateLootBagAndActor(_firestore, campaignId, lootBagId, actorId, updater) {
                 calls.push(['loot.updateLootBagAndActor', campaignId, lootBagId, actorId]);
                 updater({ id: lootBagId, items: [{ instanceId: 'loot_item', name: 'Rope', qty: 1 }], goldValue: 0 }, { id: actorId, kind: 'pc', inventory: [] });
@@ -171,6 +174,7 @@ test('v2 adapter uses targeted repositories for migrated campaign domains', asyn
 
     await actions.inventory.addItem('camp1', 'char1', { name: 'Torch' });
     await actions.inventory.transferItem('camp1', 'char1', 'char2', { instanceId: 'torch1', name: 'Torch' }, 1);
+    const createdLootId = await actions.loot.createLootBag('camp1', { id: 'loot_new', name: 'New Chest' });
     await actions.loot.claimItem('camp1', 'loot1', { instanceId: 'loot_item' }, 'char1');
     await actions.quest.toggleObjective('camp1', 'quest1', 0, true);
     await actions.encounter.addCombatant('camp1', 'enc1', 'player', { id: 'char1', name: 'Hero' });
@@ -182,6 +186,7 @@ test('v2 adapter uses targeted repositories for migrated campaign domains', asyn
     assert.deepEqual(calls.map(call => call[0]), [
         'actor.updateActor',
         'actor.updateActors',
+        'loot.createLootBag',
         'loot.updateLootBagAndActor',
         'quest.updateQuestAndCampaignAndActors',
         'encounter.updateEncounter',
@@ -190,6 +195,7 @@ test('v2 adapter uses targeted repositories for migrated campaign domains', asyn
         'campaign.updateCampaign',
         'campaign.updateCampaignAndActors',
     ]);
+    assert.equal(createdLootId, 'loot_new');
     assert.deepEqual(calls.at(-1), ['campaign.updateCampaignAndActors', 'camp1', ['char1', 'char2']]);
 });
 
