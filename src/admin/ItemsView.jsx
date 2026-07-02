@@ -106,6 +106,7 @@ export default function ItemsView({ db, onInspectItem }) {
     const [contextMenu, setContextMenu] = useState(null);
     const [contextSubMenu, setContextSubMenu] = useState(null);
     const [pendingSpellAction, setPendingSpellAction] = useState(null);
+    const [lootGoldDrafts, setLootGoldDrafts] = useState({});
 
     useEffect(() => {
         localStorage.setItem('itemsViewColumns', JSON.stringify(visibleColumns));
@@ -491,6 +492,26 @@ export default function ItemsView({ db, onInspectItem }) {
         if (isMobile) setMobileSideOpen(true);
     };
 
+    const handleLootGoldDraftChange = (lootBagId, value) => {
+        if (lootBagId == null) return;
+        setLootGoldDrafts(prev => ({ ...prev, [lootBagId]: value }));
+    };
+
+    const handleLootGoldCommit = (lootBagId) => {
+        if (!activeCampaign || lootBagId == null || !(lootBagId in lootGoldDrafts)) return;
+        const rawValue = lootGoldDrafts[lootBagId];
+        const val = parseFloat(rawValue) || 0;
+        setLootGoldDrafts(prev => {
+            const next = { ...prev };
+            delete next[lootBagId];
+            return next;
+        });
+        runDataAction(dataActions.loot.updateLootBag(activeCampaign.id, lootBagId, bag => ({
+            ...bag,
+            goldValue: val
+        })));
+    };
+
     // Double-click handler for info modal
     const handleDoubleClick = (item) => {
         if (onInspectItem) {
@@ -534,6 +555,9 @@ export default function ItemsView({ db, onInspectItem }) {
             paginatedItems={paginatedItems}
             pendingSpellAction={pendingSpellAction}
             playerTargets={playerTargets}
+            lootGoldDrafts={lootGoldDrafts}
+            onLootGoldDraftChange={handleLootGoldDraftChange}
+            onLootGoldCommit={handleLootGoldCommit}
             performAction={performAction}
             runDataAction={runDataAction}
             scrollbarStyles={scrollbarStyles}

@@ -59,10 +59,13 @@ export default function ItemsViewLayout({
     itemsPerPage,
     mobileSideOpen,
     onInspectItem,
+    onLootGoldCommit,
+    onLootGoldDraftChange,
     page,
     paginatedItems,
     pendingSpellAction,
     playerTargets = [],
+    lootGoldDrafts = {},
     performAction,
     runDataAction,
     scrollbarStyles,
@@ -390,15 +393,17 @@ export default function ItemsViewLayout({
                             {sideMode === 'loot' && activeLoot && (
                                 <div style={{ padding: 5, borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', gap: 5 }}>
                                     <span style={{ color: '#ffd700', fontSize: '0.8em' }}>Gold:</span>
-                                    <input type="number" className="modal-input" style={{ width: 80, padding: 2 }} value={activeLoot.goldValue || 0}
+                                    <input type="number" className="modal-input" style={{ width: 80, padding: 2 }} value={lootGoldDrafts[activeLoot.id] ?? activeLoot.goldValue ?? 0}
                                         onChange={e => {
-                                            const val = parseFloat(e.target.value) || 0;
-                                            if (!activeCampaign) return;
-                                            runDataAction(dataActions.loot.updateLootBag(activeCampaign.id, activeLoot.id, bag => ({
-                                                ...bag,
-                                                goldValue: val
-                                            })));
-                                        }} />
+                                            onLootGoldDraftChange?.(activeLoot.id, e.target.value);
+                                        }}
+                                        onBlur={() => onLootGoldCommit?.(activeLoot.id)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.currentTarget.blur();
+                                            }
+                                        }}
+                                    />
                                 </div>
                             )}
                             <div className="items-view-scroll" style={{ flex: 1, overflow: 'auto' }}>
