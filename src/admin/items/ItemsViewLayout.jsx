@@ -4,7 +4,6 @@ import FilterBar from '../components/FilterBar';
 import BottomSheet from '../../shared/components/BottomSheet';
 import ItemRow from '../../shared/components/ItemRow';
 import { SHOP_CATEGORIES } from '../../shared/constants/shop';
-import { selectActiveCharacters } from '../../shared/db/selectors/characterSelectors';
 import SpellScrollSelectorModal from '../../player/modals/SpellScrollSelectorModal';
 import { deepClone } from '../../shared/utils/deepClone';
 import { getItemIdentityKey } from '../../shared/utils/itemIdentity';
@@ -63,6 +62,7 @@ export default function ItemsViewLayout({
     page,
     paginatedItems,
     pendingSpellAction,
+    playerTargets = [],
     performAction,
     runDataAction,
     scrollbarStyles,
@@ -101,7 +101,6 @@ export default function ItemsViewLayout({
     const availableItems = shopState?.availableItems || [];
     const availableFormulas = shopState?.availableFormulas || [];
     const traders = shopState?.traders || [];
-    const playerTargets = selectActiveCharacters(activeCampaign);
     const sameId = (a, b) => a != null && b != null && String(a) === String(b);
     const isSelected = (item) => selectedItems.some(i => i.name === item.name);
     const isSideSelected = (item) => selectedSideItems.some(i => getItemIdentityKey(i) === getItemIdentityKey(item));

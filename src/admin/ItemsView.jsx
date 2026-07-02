@@ -5,6 +5,7 @@ import { SHOP_INDEX_FILTER_OPTIONS, SHOP_INDEX_ITEMS, fetchShopItemDetailBySourc
 import ItemsViewLayout from './items/ItemsViewLayout';
 import { selectShop } from '../shared/db/selectors/shopSelectors';
 import { selectLootBagLists } from '../shared/db/selectors/campaignSelectors';
+import { actorToCharacterView, selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
 import { getItemIdentityKey } from '../shared/utils/itemIdentity';
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
 
@@ -49,7 +50,7 @@ const scrollbarStyles = `
 const sameId = (a, b) => a != null && b != null && String(a) === String(b);
 
 export default function ItemsView({ db, onInspectItem }) {
-    const { activeCampaign, dataActions } = useCampaign();
+    const { activeCampaign, pcActors, dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
     const { notifyError, prompt } = useAppFeedback();
     const runDataAction = (action) => {
@@ -201,6 +202,20 @@ export default function ItemsView({ db, onInspectItem }) {
     const activeTrader = shopState.traders.find(t => sameId(t.id, selectedTraderId));
     const { lootBags: campaignLootBags } = selectLootBagLists(db, activeCampaign, activeCampaign?.id);
     const activeLoot = campaignLootBags.find(b => sameId(b.id, selectedLootId));
+    const playerTargets = useMemo(() => {
+        const targetsById = new Map();
+        const addTarget = (target) => {
+            if (!target?.id || target.deletedAt) return;
+            targetsById.set(String(target.id), target);
+        };
+        if (Array.isArray(pcActors)) {
+            pcActors.forEach(actor => addTarget(actorToCharacterView(actor)));
+        }
+        if (targetsById.size === 0) {
+            selectActiveCharacters(activeCampaign).forEach(addTarget);
+        }
+        return Array.from(targetsById.values()).sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    }, [activeCampaign, pcActors]);
 
     const sideItems = useMemo(() => {
         let items = [];
@@ -516,6 +531,7 @@ export default function ItemsView({ db, onInspectItem }) {
             page={page}
             paginatedItems={paginatedItems}
             pendingSpellAction={pendingSpellAction}
+            playerTargets={playerTargets}
             performAction={performAction}
             runDataAction={runDataAction}
             scrollbarStyles={scrollbarStyles}
