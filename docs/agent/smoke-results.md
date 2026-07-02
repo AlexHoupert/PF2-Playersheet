@@ -33,11 +33,11 @@ Result on 2026-06-28: `verified`.
 
 | Flow | Result | Notes |
 | --- | --- | --- |
-| Legacy runtime is irrelevant / V2-only runtime confirmed | partial | 2026-07-02 production smoke reached V2 production and rendered Admin/Sessions with real Firestore data. Player route for the test user crashed before the current local fix is deployed. |
+| Legacy runtime is irrelevant / V2-only runtime confirmed | partial | 2026-07-02 production smoke reached V2 production, rendered Player and Admin/Sessions with real Firestore data, and confirmed Actor-backed Player edits. Remaining GM Items give-to-player issue is tracked below. |
 | Inventory Item Row: icons, meta, actions | not tested | Automated fixture covers basic inventory visibility, not visual icon/meta review. |
 | Shop Item Row: buy price, quantity, give/buy | not tested | Needs manual preview smoke. |
 | Loot Item Row: claim, partial claim, gold split | not tested | Automated fixture covers single claim and split; partial claim still manual. |
-| GM Items side lists: trader/lootbag selection, icons, actions | not tested | Automated fixture covers lootbag creation and item give only. |
+| GM Items side lists: trader/lootbag selection, icons, actions | partial | Production smoke verified selecting `Test V2` and creating `Codex Production Smoke Loot`. Give-to-player submenu rendered no player targets, so item give is not verified. |
 | Production catalog edit and player visibility | not tested | Automated fixture covers override visibility; deployed Firestore write still manual. |
 
 ## Production Smoke Attempts
@@ -53,6 +53,24 @@ Result on 2026-06-28: `verified`.
 - Root cause identified locally: the Actor rules viewmodel used raw Actor documents for stat rendering, so minimally shaped PC Actors could reach `SkillsSection` without normalized `skills`/runtime defaults.
 - Local fix: `buildActorStatsViewModel` now normalizes Actor data into the Character runtime shape before stat rendering; regression test added.
 - Follow-up: deploy the local fix, then rerun the Firebase-backed Player/GM mutation smokes.
+
+### 2026-07-02 After Actor Rules Fix Deployment
+
+- Result: `partial`
+- Player route for the test user now renders without the previous crash.
+- Player HP and Gold edits were verified against real Firestore:
+  - HP set to `14 / 15`
+  - Gold set to `1.00 gp`
+  - Values remained visible after reload.
+- Player Condition edit was verified against real Firestore:
+  - `Frightened` was added.
+  - AC, saves, perception, and skills reflected the `-1` effect.
+  - The effect remained visible after reload.
+- Admin Sessions route rendered real campaigns and selected `Test V2`.
+- GM Items side-list smoke:
+  - Created `Codex Production Smoke Loot` in `Test V2`.
+  - `Give to Player` submenu opened, but exposed no player target entries (`playerOptions=[]`), so giving an item to the test player remains failed/not verified.
+- No browser console errors were observed in the verified Player and Admin smoke steps after deployment.
 
 ## Notes
 
