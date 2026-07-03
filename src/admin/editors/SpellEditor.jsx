@@ -3,8 +3,11 @@ import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import { SPELL_INDEX_FILTER_OPTIONS, fetchSpellDetailBySourceFile, normalizeSpellSourceFile } from '../../shared/catalog/spellIndex';
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
+import { buildCatalogEditorOverride, buildCatalogSafeId, getCatalogEditorInitialItem } from '../../shared/catalog/catalogEditorContract';
 
-export default function SpellEditor({ initialItem, onSave, onCancel, onSaveToDb }) {
+export default function SpellEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'spell', onSave, onCancel, onSaveToDb, onSaveCatalogEntry }) {
+    const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
+    const saveCatalogEntry = onSaveCatalogEntry || onSaveToDb;
     const [formData, setFormData] = useState({
         name: '',
         level: 1,
@@ -111,10 +114,10 @@ export default function SpellEditor({ initialItem, onSave, onCancel, onSaveToDb 
                 ? { directory: `ressources/spells`, filename: `${formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`, content: spellJson }
                 : { filePath: `ressources/${normalizeSpellSourceFile(filePath)}`, content: spellJson };
 
-            const spellOverride = buildSpellOverride(spellJson, formData, initialItem);
+            const spellOverride = buildSpellOverride(spellJson, formData, initialItem, { editorMode, catalogType, baseEntry });
 
-            if (import.meta.env.PROD && onSaveToDb) {
-                await onSaveToDb(spellOverride);
+            if (import.meta.env.PROD && saveCatalogEntry) {
+                await saveCatalogEntry(spellOverride);
                 onSave({ success: true, message: 'Saved spell override to database', data: spellOverride });
                 return;
             }
@@ -137,7 +140,7 @@ export default function SpellEditor({ initialItem, onSave, onCancel, onSaveToDb 
 
             onSave(data);
         } catch (err) {
-            if (onSaveToDb) {
+            if (saveCatalogEntry) {
                 try {
                     const fallbackJson = {
                         name: formData.name,
@@ -159,8 +162,8 @@ export default function SpellEditor({ initialItem, onSave, onCancel, onSaveToDb 
                             defense: { save: { statistic: formData.defense } }
                         }
                     };
-                    const fallbackOverride = buildSpellOverride(fallbackJson, formData, initialItem);
-                    await onSaveToDb(fallbackOverride);
+                    const fallbackOverride = buildSpellOverride(fallbackJson, formData, initialItem, { editorMode, catalogType, baseEntry });
+                    await saveCatalogEntry(fallbackOverride);
                     onSave({ success: true, message: 'Saved spell override to database', data: fallbackOverride });
                     return;
                 } catch (dbErr) {
@@ -267,30 +270,23 @@ export default function SpellEditor({ initialItem, onSave, onCancel, onSaveToDb 
     );
 }
 
-export function buildSpellOverride(spellJson, formData, initialItem) {
-    const safeId = String(initialItem?.id || formData.name || 'spell')
-        .replace(/[^a-z0-9]/gi, '_')
-        .toLowerCase();
-    const sourceFile = formData.sourceFile || initialItem?.sourceFile || initialItem?.overrideSourceFile || null;
-    return {
-        id: `spell_${safeId}`,
-        catalogType: 'spell',
-        baseId: initialItem?.id || sourceFile || null,
-        mode: sourceFile ? 'override' : 'custom',
+export function buildSpellOverride(spellJson, formData, initialItem, options = {}) {
+    const safeId = buildCatalogSafeId(initialItem?.id || formData.name || 'spell');
+    return buildCatalogEditorOverride(options.catalogType || 'spell', {
+        ...spellJson,
+        id: safeId,
+        _id: safeId,
+        level: parseInt(formData.level) || 0,
+        traditions: formData.traditions || [],
+        traits: formData.traits || [],
+        rarity: formData.rarity || 'common',
+        description: formData.description || '',
+    }, {
+        formData,
+        initialItem,
+        baseEntry: options.baseEntry,
+        editorMode: options.editorMode,
+        id: initialItem?.catalogOverrideId || `spell_${safeId}`,
         label: formData.name,
-        payload: {
-            ...spellJson,
-            id: safeId,
-            _id: safeId,
-            sourceFile: null,
-            isCustom: !sourceFile,
-            overrideSourceFile: sourceFile,
-            level: parseInt(formData.level) || 0,
-            traditions: formData.traditions || [],
-            traits: formData.traits || [],
-            rarity: formData.rarity || 'common',
-            description: formData.description || '',
-        },
-        sourceFile: null,
-    };
+    });
 }

@@ -7,8 +7,11 @@ import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 // or define custom ones. Impulse index might have generated options too.
 import { IMPULSE_INDEX_FILTER_OPTIONS, fetchImpulseDetailBySourceFile } from '../../shared/catalog/impulseIndex';
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
+import { buildCatalogEditorOverride, buildCatalogSafeId, getCatalogEditorInitialItem } from '../../shared/catalog/catalogEditorContract';
 
-export default function ImpulseEditor({ initialItem, onSave, onCancel, onSaveToDb }) {
+export default function ImpulseEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'impulse', onSave, onCancel, onSaveToDb, onSaveCatalogEntry }) {
+    const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
+    const saveCatalogEntry = onSaveCatalogEntry || onSaveToDb;
     const [formData, setFormData] = useState({
         name: '',
         level: 1,
@@ -106,10 +109,10 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel, onSaveToD
             let filePath = formData.sourceFile;
             let isNew = !filePath;
             const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            const impulseOverride = buildImpulseOverride(impulseJson, formData, initialItem);
+            const impulseOverride = buildImpulseOverride(impulseJson, formData, initialItem, { editorMode, catalogType, baseEntry });
 
-            if (import.meta.env.PROD && onSaveToDb) {
-                await onSaveToDb(impulseOverride);
+            if (import.meta.env.PROD && saveCatalogEntry) {
+                await saveCatalogEntry(impulseOverride);
                 onSave({ success: true, message: 'Saved impulse override to database', data: impulseOverride });
                 return;
             }
@@ -142,7 +145,7 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel, onSaveToD
 
             onSave(data);
         } catch (err) {
-            if (onSaveToDb) {
+            if (saveCatalogEntry) {
                 try {
                     const fallbackJson = {
                         name: formData.name,
@@ -165,8 +168,8 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel, onSaveToD
                             defense: { save: { statistic: formData.defense } }
                         }
                     };
-                    const fallbackOverride = buildImpulseOverride(fallbackJson, formData, initialItem);
-                    await onSaveToDb(fallbackOverride);
+                    const fallbackOverride = buildImpulseOverride(fallbackJson, formData, initialItem, { editorMode, catalogType, baseEntry });
+                    await saveCatalogEntry(fallbackOverride);
                     onSave({ success: true, message: 'Saved impulse override to database', data: fallbackOverride });
                     return;
                 } catch (dbErr) {
@@ -263,37 +266,30 @@ export default function ImpulseEditor({ initialItem, onSave, onCancel, onSaveToD
     );
 }
 
-export function buildImpulseOverride(impulseJson, formData, initialItem) {
-    const safeId = String(initialItem?.id || initialItem?._id || formData.name || 'impulse')
-        .replace(/[^a-z0-9]/gi, '_')
-        .toLowerCase();
-    const sourceFile = formData.sourceFile || initialItem?.sourceFile || initialItem?.overrideSourceFile || null;
-    return {
+export function buildImpulseOverride(impulseJson, formData, initialItem, options = {}) {
+    const safeId = buildCatalogSafeId(initialItem?.id || initialItem?._id || formData.name || 'impulse');
+    return buildCatalogEditorOverride(options.catalogType || 'impulse', {
+        ...impulseJson,
+        id: safeId,
+        _id: safeId,
+        level: parseInt(formData.level) || 0,
+        school: formData.school || '',
+        traditions: formData.traditions || [],
+        traits: formData.traits || [],
+        rarity: formData.rarity || 'common',
+        time: formData.time || '',
+        range: formData.range || '',
+        target: formData.target || '',
+        area: formData.area || '',
+        duration: formData.duration || '',
+        defense: formData.defense || '',
+        description: formData.description || '',
+    }, {
+        formData,
+        initialItem,
+        baseEntry: options.baseEntry,
+        editorMode: options.editorMode,
         id: initialItem?.catalogOverrideId || `impulse_${safeId}`,
-        catalogType: 'impulse',
-        baseId: initialItem?.baseId || sourceFile || null,
-        mode: sourceFile ? 'override' : 'custom',
         label: formData.name,
-        payload: {
-            ...impulseJson,
-            id: safeId,
-            _id: safeId,
-            sourceFile: null,
-            overrideSourceFile: sourceFile,
-            isCustom: !sourceFile,
-            level: parseInt(formData.level) || 0,
-            school: formData.school || '',
-            traditions: formData.traditions || [],
-            traits: formData.traits || [],
-            rarity: formData.rarity || 'common',
-            time: formData.time || '',
-            range: formData.range || '',
-            target: formData.target || '',
-            area: formData.area || '',
-            duration: formData.duration || '',
-            defense: formData.defense || '',
-            description: formData.description || '',
-        },
-        sourceFile: null,
-    };
+    });
 }

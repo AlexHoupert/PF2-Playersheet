@@ -3,8 +3,11 @@ import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import { FEAT_INDEX_FILTER_OPTIONS, fetchFeatDetailBySourceFile } from '../../shared/catalog/featIndex';
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
+import { buildCatalogEditorOverride, buildCatalogSafeId, getCatalogEditorInitialItem } from '../../shared/catalog/catalogEditorContract';
 
-export default function FeatEditor({ initialItem, onSave, onCancel, onSaveToDb }) {
+export default function FeatEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'feat', onSave, onCancel, onSaveToDb, onSaveCatalogEntry }) {
+    const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
+    const saveCatalogEntry = onSaveCatalogEntry || onSaveToDb;
     const [formData, setFormData] = useState({
         name: '',
         level: 1,
@@ -90,10 +93,10 @@ export default function FeatEditor({ initialItem, onSave, onCancel, onSaveToDb }
             let filePath = formData.sourceFile;
             let isNew = !filePath;
             const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            const featOverride = buildFeatOverride(featJson, formData, initialItem);
+            const featOverride = buildFeatOverride(featJson, formData, initialItem, { editorMode, catalogType, baseEntry });
 
-            if (import.meta.env.PROD && onSaveToDb) {
-                await onSaveToDb(featOverride);
+            if (import.meta.env.PROD && saveCatalogEntry) {
+                await saveCatalogEntry(featOverride);
                 onSave({ success: true, message: 'Saved feat override to database', data: featOverride });
                 return;
             }
@@ -126,7 +129,7 @@ export default function FeatEditor({ initialItem, onSave, onCancel, onSaveToDb }
 
             onSave(data);
         } catch (err) {
-            if (onSaveToDb) {
+            if (saveCatalogEntry) {
                 try {
                     const fallbackJson = {
                         name: formData.name,
@@ -145,8 +148,8 @@ export default function FeatEditor({ initialItem, onSave, onCancel, onSaveToDb }
                             category: formData.category.toLowerCase()
                         }
                     };
-                    const fallbackOverride = buildFeatOverride(fallbackJson, formData, initialItem);
-                    await onSaveToDb(fallbackOverride);
+                    const fallbackOverride = buildFeatOverride(fallbackJson, formData, initialItem, { editorMode, catalogType, baseEntry });
+                    await saveCatalogEntry(fallbackOverride);
                     onSave({ success: true, message: 'Saved feat override to database', data: fallbackOverride });
                     return;
                 } catch (dbErr) {
@@ -228,34 +231,27 @@ export default function FeatEditor({ initialItem, onSave, onCancel, onSaveToDb }
     );
 }
 
-export function buildFeatOverride(featJson, formData, initialItem) {
-    const safeId = String(initialItem?.id || initialItem?._id || formData.name || 'feat')
-        .replace(/[^a-z0-9]/gi, '_')
-        .toLowerCase();
-    const sourceFile = formData.sourceFile || initialItem?.sourceFile || initialItem?.overrideSourceFile || null;
-    return {
+export function buildFeatOverride(featJson, formData, initialItem, options = {}) {
+    const safeId = buildCatalogSafeId(initialItem?.id || initialItem?._id || formData.name || 'feat');
+    return buildCatalogEditorOverride(options.catalogType || 'feat', {
+        ...featJson,
+        id: safeId,
+        _id: safeId,
+        level: parseInt(formData.level) || 0,
+        category: formData.category,
+        traits: formData.traits || [],
+        rarity: formData.rarity || 'common',
+        actionType: formData.actionType || '',
+        prerequisites: formData.prerequisites
+            ? formData.prerequisites.split(',').map((entry) => entry.trim()).filter(Boolean)
+            : [],
+        description: formData.description || '',
+    }, {
+        formData,
+        initialItem,
+        baseEntry: options.baseEntry,
+        editorMode: options.editorMode,
         id: initialItem?.catalogOverrideId || `feat_${safeId}`,
-        catalogType: 'feat',
-        baseId: initialItem?.baseId || sourceFile || null,
-        mode: sourceFile ? 'override' : 'custom',
         label: formData.name,
-        payload: {
-            ...featJson,
-            id: safeId,
-            _id: safeId,
-            sourceFile: null,
-            overrideSourceFile: sourceFile,
-            isCustom: !sourceFile,
-            level: parseInt(formData.level) || 0,
-            category: formData.category,
-            traits: formData.traits || [],
-            rarity: formData.rarity || 'common',
-            actionType: formData.actionType || '',
-            prerequisites: formData.prerequisites
-                ? formData.prerequisites.split(',').map((entry) => entry.trim()).filter(Boolean)
-                : [],
-            description: formData.description || '',
-        },
-        sourceFile: null,
-    };
+    });
 }

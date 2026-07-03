@@ -6,10 +6,17 @@ import ImagePicker from '../../shared/components/ImagePicker';
 import { useWindowSize } from '../../shared/hooks/useWindowSize';
 import { SHOP_INDEX_FILTER_OPTIONS } from '../../shared/catalog/shopIndex';
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
+import {
+    buildCatalogEditorOverride,
+    buildCatalogSafeId,
+    buildLegacyDbCatalogPayload,
+    getCatalogEditorInitialItem,
+} from '../../shared/catalog/catalogEditorContract';
 
 const STATIC_RESOURCE_BASE_URL = import.meta.env.PROD ? '/ressources' : '/api/static';
 
-export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, dbOnly = false }) {
+export default function ItemEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'item', onSave, onCancel, onSaveToDb, onSaveCatalogEntry, dbOnly = false }) {
+    const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
     const [formData, setFormData] = useState({
         name: '',
         level: 0,
@@ -104,14 +111,19 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, 
 
             // Production editing is DB-backed; local dev may still use file APIs.
             if (dbOnly || import.meta.env.PROD) {
-                if (!onSaveToDb) { setError("No save handler provided."); setIsSaving(false); return; }
-                const safeId = itemJson.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                if (!onSaveToDb && !onSaveCatalogEntry) { setError("No save handler provided."); setIsSaving(false); return; }
                 const hasDamage = formData.damages && formData.damages.length > 0 && formData.damages.some(d => d.dice > 0);
-                const dbItem = {
-                    ...itemJson, _id: safeId, sourceFile: null, isCustom: true,
-                    system: { ...itemJson.system, level: { value: parseInt(formData.level) }, price: { value: { gp: parseFloat(formData.price) } }, damage: hasDamage ? itemJson.system.damage : null }
-                };
-                try { await onSaveToDb(dbItem); onSave({ success: true, message: 'Saved to Database', data: dbItem }); }
+                const dbItem = buildItemDbPayload(itemJson, formData, hasDamage);
+                const itemOverride = buildItemOverride(dbItem, formData, initialItem, { editorMode, catalogType, baseEntry });
+                try {
+                    if (onSaveCatalogEntry) {
+                        await onSaveCatalogEntry(itemOverride);
+                        onSave({ success: true, message: 'Saved catalog override to database', data: itemOverride });
+                    } else {
+                        await onSaveToDb(dbItem);
+                        onSave({ success: true, message: 'Saved to Database', data: dbItem });
+                    }
+                }
                 catch (err) { setError(err.message); }
                 finally { setIsSaving(false); }
                 return;
@@ -159,30 +171,19 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, 
                 onSave(data);
             } catch (apiErr) {
                 console.warn("API Save failed, attempting DB fallback:", apiErr);
-                if (onSaveToDb) {
-                    // Add an ID if not present (simulate FS process)
-                    const safeId = itemJson.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                if (onSaveToDb || onSaveCatalogEntry) {
                     const hasDamage = formData.damages && formData.damages.length > 0 && formData.damages.some(d => d.dice > 0);
-
-                    const dbItem = {
-                        ...itemJson,
-                        _id: safeId,
-                        sourceFile: null,
-                        isCustom: true,
-                        // Ensure system data structure is complete
-                        system: {
-                            ...itemJson.system,
-                            // Ensure these are present for display
-                            level: { value: parseInt(formData.level) },
-                            price: { value: { gp: parseFloat(formData.price) } },
-                            // Fix: Explicitly clear damage if removed in editor
-                            damage: hasDamage ? itemJson.system.damage : null,
-                        }
-                    };
+                    const dbItem = buildItemDbPayload(itemJson, formData, hasDamage);
+                    const itemOverride = buildItemOverride(dbItem, formData, initialItem, { editorMode, catalogType, baseEntry });
 
                     try {
-                        await onSaveToDb(dbItem);
-                        onSave({ success: true, message: 'Saved to Database', data: dbItem });
+                        if (onSaveCatalogEntry) {
+                            await onSaveCatalogEntry(itemOverride);
+                            onSave({ success: true, message: 'Saved catalog override to database', data: itemOverride });
+                        } else {
+                            await onSaveToDb(dbItem);
+                            onSave({ success: true, message: 'Saved to Database', data: dbItem });
+                        }
                     } catch (dbErr) {
                         console.error("DB Fallback failed:", dbErr);
                         throw new Error(`Failed to save to Server AND Database. Server: ${apiErr.message}. DB: ${dbErr.message}`);
@@ -477,4 +478,37 @@ export default function ItemEditor({ initialItem, onSave, onCancel, onSaveToDb, 
             />
         </div>
     );
+}
+
+export function buildItemDbPayload(itemJson, formData, hasDamage = true) {
+    const safeId = buildCatalogSafeId(itemJson?.name || formData?.name || 'item');
+    return buildLegacyDbCatalogPayload({
+        ...itemJson,
+        system: {
+            ...itemJson.system,
+            level: { value: parseInt(formData.level) },
+            price: { value: { gp: parseFloat(formData.price) } },
+            damage: hasDamage ? itemJson.system.damage : null,
+        },
+    }, {
+        id: safeId,
+        sourceFile: null,
+        isCustom: true,
+    });
+}
+
+export function buildItemOverride(itemRecord, formData, initialItem, options = {}) {
+    const safeId = buildCatalogSafeId(initialItem?.id || initialItem?._id || itemRecord?.id || itemRecord?.name || 'item');
+    return buildCatalogEditorOverride(options.catalogType || 'item', {
+        ...itemRecord,
+        id: safeId,
+        _id: safeId,
+    }, {
+        formData,
+        initialItem,
+        baseEntry: options.baseEntry,
+        editorMode: options.editorMode,
+        id: initialItem?.catalogOverrideId || `item_${safeId}`,
+        label: itemRecord?.name || formData?.name || safeId,
+    });
 }

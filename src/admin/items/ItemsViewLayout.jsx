@@ -457,7 +457,7 @@ export default function ItemsViewLayout({
                             <ItemEditor
                                 initialItem={Object.keys(editingItem).length > 0 ? editingItem : null}
                                 onSave={(result) => {
-                                    if (result?.message === 'Saved to Database') {
+                                    if (String(result?.message || '').toLowerCase().includes('database')) {
                                         setEditingItem(null);
                                     } else {
                                         window.location.reload();
@@ -465,7 +465,10 @@ export default function ItemsViewLayout({
                                 }}
                                 onCancel={() => setEditingItem(null)}
                                 onSaveToDb={(dbItem) => {
-                                    runDataAction(dataActions.globalContent.saveCustomItem(dbItem));
+                                    return dataActions.globalContent.saveCustomItem(dbItem);
+                                }}
+                                onSaveCatalogEntry={(override) => {
+                                    return dataActions.catalogOverride.saveCatalogOverride(override);
                                 }}
                             />
                         </div>

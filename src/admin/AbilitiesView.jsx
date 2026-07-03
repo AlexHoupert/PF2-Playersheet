@@ -9,6 +9,11 @@ import { useCampaign } from '../shared/context/CampaignContext';
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { selectCustomAbilityList } from '../shared/db/selectors/abilitySelectors';
 import { selectCustomCreature, selectCustomCreatures } from '../shared/db/selectors/bestiarySelectors';
+import {
+    buildCatalogEditorOverride,
+    buildCatalogSafeId,
+    CATALOG_EDITOR_MODES,
+} from '../shared/catalog/catalogEditorContract';
 
 const PAGE_SIZE = 100;
 
@@ -253,7 +258,9 @@ export default function AbilitiesView({ db }) {
     // ── Custom Ability CRUD ─────────────────────────────────────────────────
     const saveCustomAbility = (ability) => {
         const saved = { ...ability, isCustom: true };
-        runDataAction(dataActions.globalContent.saveCustomAbility(saved));
+        runDataAction(dataActions.catalogOverride.saveCatalogOverride(buildAbilityOverride(saved, abilityForm, {
+            editorMode: abilityForm?.isCustom ? CATALOG_EDITOR_MODES.EDIT : CATALOG_EDITOR_MODES.CREATE,
+        })));
         setAbilityForm(null);
         setSelected(saved);
     };
@@ -273,7 +280,9 @@ export default function AbilitiesView({ db }) {
 
     const cloneAbility = (ability) => {
         const clone = { ...ability, id: `custom-${Date.now()}`, name: `${ability.name} (Copy)`, isCustom: true };
-        runDataAction(dataActions.globalContent.saveCustomAbility(clone));
+        runDataAction(dataActions.catalogOverride.saveCatalogOverride(buildAbilityOverride(clone, ability, {
+            editorMode: CATALOG_EDITOR_MODES.CLONE,
+        })));
         setSelected(clone);
         setContextMenu(null);
         showToast(`Cloned "${clone.name}"`);
@@ -446,4 +455,20 @@ export default function AbilitiesView({ db }) {
             )}
         </div>
     );
+}
+
+export function buildAbilityOverride(abilityRecord, initialAbility, options = {}) {
+    const safeId = buildCatalogSafeId(abilityRecord?.id || initialAbility?.id || abilityRecord?.name || 'ability');
+    return buildCatalogEditorOverride(options.catalogType || 'ability', {
+        ...abilityRecord,
+        id: safeId,
+        _id: safeId,
+    }, {
+        formData: abilityRecord,
+        initialItem: initialAbility,
+        baseEntry: options.baseEntry,
+        editorMode: options.editorMode,
+        id: initialAbility?.catalogOverrideId || `ability_${safeId}`,
+        label: abilityRecord?.name || initialAbility?.name || safeId,
+    });
 }

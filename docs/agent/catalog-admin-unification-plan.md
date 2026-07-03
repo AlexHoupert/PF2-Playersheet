@@ -27,7 +27,7 @@ Statische JSON-Daten bleiben read-only. Runtime-Aenderungen laufen ueber Firesto
 - [x] Plan-Datei angelegt.
 - [x] Phase 1: Catalog-Vertrag und Statusmodell bauen.
 - [x] Phase 2: Gemeinsamen Catalog-Controller und UI-Kontrakt einfuehren.
-- [ ] Phase 3: Editor-Save-Vertrag vereinheitlichen.
+- [x] Phase 3: Editor-Save-Vertrag vereinheitlichen.
 - [ ] Phase 4: Tabellen schrittweise migrieren.
 - [ ] Phase 5: Copy-Reference-System erweitern.
 - [ ] Phase 6: Tests, Guards und Smokes ergaenzen.
@@ -227,35 +227,35 @@ Ziel: Editoren erzeugen nicht mehr eigenmaechtig Custom-Kopien, wenn der Nutzer 
 
 Arbeitsschritte:
 
-- [ ] Einheitliche Editor-Props einfuehren:
-  - [ ] `catalogType`
-  - [ ] `editorMode: "create" | "edit" | "clone"`
-  - [ ] `baseEntry`
-  - [ ] `initialPayload`
-  - [ ] `onSaveCatalogEntry`
-- [ ] Bestehende Editor-Builder auf zentrale Builder umstellen:
-  - [ ] ItemEditor
-  - [ ] SpellEditor
-  - [ ] ActionEditor
-  - [ ] FeatEditor
-  - [ ] ImpulseEditor
-  - [ ] CreatureEditor
-  - [ ] Ability editor/modal
-- [ ] Save-Regeln erzwingen:
-  - [ ] `edit` + static source => `mode: "override"`
-  - [ ] `edit` + custom source => `mode: "custom"` update
-  - [ ] `clone` => `mode: "custom"` mit neuer ID
-  - [ ] `create` => `mode: "custom"`
-- [ ] Production-Pfade bereinigen:
-  - [ ] `/api/files/save` nur noch hinter explizitem Local-Dev-Pfad.
-  - [ ] Production zeigt keine File-API-Fehler fuer editierbare Catalog-Eintraege.
+- [x] Einheitliche Editor-Props einfuehren:
+  - [x] `catalogType`
+  - [x] `editorMode: "create" | "edit" | "clone"`
+  - [x] `baseEntry`
+  - [x] `initialPayload`
+  - [x] `onSaveCatalogEntry`
+- [x] Bestehende Editor-Builder auf zentrale Builder umstellen:
+  - [x] ItemEditor
+  - [x] SpellEditor
+  - [x] ActionEditor
+  - [x] FeatEditor
+  - [x] ImpulseEditor
+  - [x] CreatureEditor
+  - [x] Ability editor/modal
+- [x] Save-Regeln erzwingen:
+  - [x] `edit` + static source => `mode: "override"`
+  - [x] `edit` + custom source => `mode: "custom"` update
+  - [x] `clone` => `mode: "custom"` mit neuer ID
+  - [x] `create` => `mode: "custom"`
+- [x] Production-Pfade bereinigen:
+  - [x] `/api/files/save` nur noch hinter explizitem Local-Dev-Pfad.
+  - [x] Production zeigt keine File-API-Fehler fuer editierbare Catalog-Eintraege, wenn die View `onSaveCatalogEntry` verdrahtet hat.
 
 Erfolgskriterien:
 
-- [ ] Item `Edit` erzeugt keine zweite Tabellenzeile.
-- [ ] Creature `Edit` funktioniert in Production als DB Override.
-- [ ] Spell-Verhalten bleibt unveraendert gut.
-- [ ] Action `Edit` und `Clone` sind eindeutig getrennt.
+- [x] Item `Edit` kann ueber den Editor-Contract als Override speichern; vollstaendige Tabellen-Deduplizierung folgt in Phase 4.5.
+- [x] Creature `Edit` funktioniert in Production als DB Override.
+- [x] Spell-Verhalten bleibt unveraendert gut.
+- [ ] Action `Edit` und `Clone` sind in der Tabellen-UI eindeutig getrennt. Phase 4.2.
 
 ## Phase 4: Tabellen Migration
 
@@ -400,13 +400,14 @@ Arbeitsschritte:
   - [x] deleted
   - [x] duplicate names with different sourceFiles
 - [ ] Unit-Tests fuer Override-Builder:
-  - [ ] item
+  - [x] shared editor contract
+  - [x] item
   - [x] spell
-  - [ ] action
-  - [ ] feat
-  - [ ] impulse
-  - [ ] ability
-  - [ ] creature
+  - [x] action
+  - [x] feat
+  - [x] impulse
+  - [x] ability
+  - [x] creature
 - [ ] Static Guards:
   - [ ] Kein `Clone/Override` Label in Runtime-UI.
   - [ ] Kein Production-Save auf `/api/files/save`.

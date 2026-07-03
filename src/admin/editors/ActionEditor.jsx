@@ -3,8 +3,11 @@ import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import { ACTION_INDEX_FILTER_OPTIONS, fetchActionDetailBySourceFile } from '../../shared/catalog/actionIndex';
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
+import { buildCatalogEditorOverride, buildCatalogSafeId, getCatalogEditorInitialItem } from '../../shared/catalog/catalogEditorContract';
 
-export default function ActionEditor({ initialItem, onSave, onCancel, onSaveToDb, dbOnly = false }) {
+export default function ActionEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'action', onSave, onCancel, onSaveToDb, onSaveCatalogEntry, dbOnly = false }) {
+    const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
+    const saveCatalogEntry = onSaveCatalogEntry || onSaveToDb;
     const [formData, setFormData] = useState({
         name: '',
         userType: 'Combat',
@@ -122,10 +125,10 @@ export default function ActionEditor({ initialItem, onSave, onCancel, onSaveToDb
                 sourceFile: null,
                 isCustom: true,
             });
-            const actionOverride = buildActionOverride(dbAction, initialItem);
+            const actionOverride = buildActionOverride(dbAction, initialItem, { editorMode, catalogType, baseEntry });
 
-            if ((dbOnly || import.meta.env.PROD) && onSaveToDb) {
-                await onSaveToDb(actionOverride);
+            if ((dbOnly || import.meta.env.PROD) && saveCatalogEntry) {
+                await saveCatalogEntry(actionOverride);
                 onSave({ success: true, message: 'Saved to Database', data: actionOverride });
                 return;
             }
@@ -156,7 +159,7 @@ export default function ActionEditor({ initialItem, onSave, onCancel, onSaveToDb
 
             onSave(data);
         } catch (err) {
-            if (onSaveToDb && !dbOnly) {
+            if (saveCatalogEntry && !dbOnly) {
                 try {
                     const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
                     const fallbackAction = buildDbAction({
@@ -176,8 +179,8 @@ export default function ActionEditor({ initialItem, onSave, onCancel, onSaveToDb
                             },
                         },
                     }, { id: initialItem?.id || safeName, sourceFile: null, isCustom: true });
-                    const fallbackOverride = buildActionOverride(fallbackAction, initialItem);
-                    await onSaveToDb(fallbackOverride);
+                    const fallbackOverride = buildActionOverride(fallbackAction, initialItem, { editorMode, catalogType, baseEntry });
+                    await saveCatalogEntry(fallbackOverride);
                     onSave({ success: true, message: 'Saved to Database', data: fallbackOverride });
                     return;
                 } catch (dbErr) {
@@ -313,25 +316,17 @@ function buildDbAction(actionJson, options = {}) {
     };
 }
 
-export function buildActionOverride(actionRecord, initialItem) {
-    const safeId = String(initialItem?.id || initialItem?._id || actionRecord?.id || actionRecord?.name || 'action')
-        .replace(/[^a-z0-9]/gi, '_')
-        .toLowerCase();
-    const sourceFile = initialItem?.sourceFile || initialItem?.overrideSourceFile || null;
-    return {
+export function buildActionOverride(actionRecord, initialItem, options = {}) {
+    const safeId = buildCatalogSafeId(initialItem?.id || initialItem?._id || actionRecord?.id || actionRecord?.name || 'action');
+    return buildCatalogEditorOverride(options.catalogType || 'action', {
+        ...actionRecord,
+        id: safeId,
+        _id: safeId,
+    }, {
+        initialItem,
+        baseEntry: options.baseEntry,
+        editorMode: options.editorMode,
         id: initialItem?.catalogOverrideId || `action_${safeId}`,
-        catalogType: 'action',
-        baseId: initialItem?.baseId || sourceFile || null,
-        mode: sourceFile ? 'override' : 'custom',
         label: actionRecord?.name || safeId,
-        payload: {
-            ...actionRecord,
-            id: safeId,
-            _id: safeId,
-            sourceFile: null,
-            overrideSourceFile: sourceFile,
-            isCustom: !sourceFile,
-        },
-        sourceFile: null,
-    };
+    });
 }

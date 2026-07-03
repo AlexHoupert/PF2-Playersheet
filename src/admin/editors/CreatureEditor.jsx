@@ -9,6 +9,12 @@ import CreatureCard from '../../shared/components/CreatureCard';
 import { useWindowSize } from '../../shared/hooks/useWindowSize';
 import { deepClone } from '../../shared/utils/deepClone';
 import { CREATURE_INDEX_FILTER_OPTIONS } from '../../shared/catalog/creatureIndex';
+import {
+    buildCatalogEditorOverride,
+    buildCatalogSafeId,
+    getCatalogEditorInitialItem,
+    isStaticCatalogEdit,
+} from '../../shared/catalog/catalogEditorContract';
 
 const AbilityPicker = React.lazy(() => import('../../shared/components/AbilityPicker'));
 
@@ -47,7 +53,8 @@ const SKILL_LIST = [
     'religion', 'society', 'stealth', 'survival', 'thievery'
 ];
 
-export default function CreatureEditor({ initialCreature, onSave, onCancel, onSaveToDb, customAbilities = [] }) {
+export default function CreatureEditor({ initialCreature: initialCreatureProp, initialPayload, baseEntry, editorMode, catalogType = 'creature', onSave, onCancel, onSaveToDb, onSaveCatalogEntry, customAbilities = [] }) {
+    const initialCreature = getCatalogEditorInitialItem({ initialItem: initialCreatureProp, initialPayload, baseEntry });
     const { isMobile } = useWindowSize();
 
     // Form state - basic info
@@ -195,6 +202,7 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
 
         try {
             const creatureJson = buildCreatureJson();
+            const creatureOverride = buildCreatureOverride(creatureJson, { sourceFile, name }, initialCreature, { editorMode, catalogType, baseEntry });
 
             // Determine Path
             let filePath = sourceFile;
@@ -204,8 +212,14 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
                 const safeName = name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
                 filePath = `ressources/bestiary/custom/${safeName}.json`;
             }
-            if (import.meta.env.PROD) {
-                throw new Error('Static creature files can only be edited in the local dev server. Use DB-backed custom creatures in deployed builds.');
+            if (import.meta.env.PROD && onSaveCatalogEntry && isStaticCatalogEdit({ editorMode, initialItem: initialCreature, formData: { sourceFile }, baseEntry })) {
+                await onSaveCatalogEntry(creatureOverride);
+                onSave({ success: true, message: 'Saved creature override to Database', data: creatureOverride });
+                return;
+            }
+
+            if (import.meta.env.PROD && !onSaveToDb) {
+                throw new Error('No database save handler is configured for deployed creature editing.');
             }
 
             // Save File
@@ -235,15 +249,20 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
             } catch (apiErr) {
                 console.warn("API Save failed, attempting DB fallback:", apiErr);
                 // Fallback to DB if provided
-                if (onSaveToDb) {
+                if (onSaveToDb || onSaveCatalogEntry) {
                     const dbCreature = {
                         ...creatureJson,
                         sourceFile: null,
                         isCustom: true
                     };
                     try {
-                        await onSaveToDb(dbCreature);
-                        onSave({ success: true, message: 'Saved to Database', data: dbCreature });
+                        if (onSaveCatalogEntry && isStaticCatalogEdit({ editorMode, initialItem: initialCreature, formData: { sourceFile }, baseEntry })) {
+                            await onSaveCatalogEntry(creatureOverride);
+                            onSave({ success: true, message: 'Saved creature override to Database', data: creatureOverride });
+                        } else {
+                            await onSaveToDb(dbCreature);
+                            onSave({ success: true, message: 'Saved to Database', data: dbCreature });
+                        }
                     } catch (dbErr) {
                         console.error("DB Fallback failed:", dbErr);
                         throw new Error(`Failed to save to Server AND Database. Server: ${apiErr.message}. DB: ${dbErr.message}`);
@@ -806,4 +825,20 @@ export default function CreatureEditor({ initialCreature, onSave, onCancel, onSa
         )}
         </>
     );
+}
+
+export function buildCreatureOverride(creatureJson, formData, initialCreature, options = {}) {
+    const safeId = buildCatalogSafeId(initialCreature?.id || initialCreature?._id || creatureJson?._id || creatureJson?.name || 'creature');
+    return buildCatalogEditorOverride(options.catalogType || 'creature', {
+        ...creatureJson,
+        id: safeId,
+        _id: safeId,
+    }, {
+        formData,
+        initialItem: initialCreature,
+        baseEntry: options.baseEntry,
+        editorMode: options.editorMode,
+        id: initialCreature?.catalogOverrideId || `creature_${safeId}`,
+        label: creatureJson?.name || formData?.name || safeId,
+    });
 }

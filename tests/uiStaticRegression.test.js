@@ -66,7 +66,7 @@ test('admin spells use catalog override fallback instead of deployed-only file w
     assert.equal(viewSource.includes('Static spell files can only be edited'), false);
     assert.match(editorSource, /onSaveToDb/);
     assert.match(editorSource, /buildSpellOverride/);
-    assert.match(editorSource, /catalogType: 'spell'/);
+    assert.match(editorSource, /catalogType = 'spell'/);
     assert.match(editorSource, /import\.meta\.env\.PROD/);
     assert.match(editorSource, /readJsonApiResponse\(res, 'Save spell'\)/);
 });
@@ -112,10 +112,35 @@ test('admin feats and impulses use catalog override production editing', () => {
 
 test('admin item production editing skips file writes and uses database fallback', () => {
     const editorSource = readSource('src/admin/editors/ItemEditor.jsx');
+    const layoutSource = readSource('src/admin/items/ItemsViewLayout.jsx');
 
     assert.match(editorSource, /dbOnly \|\| import\.meta\.env\.PROD/);
     assert.match(editorSource, /onSaveToDb/);
+    assert.match(editorSource, /onSaveCatalogEntry/);
+    assert.match(editorSource, /buildItemOverride/);
+    assert.match(editorSource, /buildCatalogEditorOverride/);
     assert.match(editorSource, /readJsonApiResponse\(res, 'Save item'\)/);
+    assert.match(layoutSource, /onSaveCatalogEntry/);
+    assert.match(layoutSource, /catalogOverride\.saveCatalogOverride/);
+});
+
+test('catalog editors use the shared catalog editor save contract', () => {
+    const sources = {
+        ability: readSource('src/admin/AbilitiesView.jsx'),
+        action: readSource('src/admin/editors/ActionEditor.jsx'),
+        creature: readSource('src/admin/editors/CreatureEditor.jsx'),
+        feat: readSource('src/admin/editors/FeatEditor.jsx'),
+        impulse: readSource('src/admin/editors/ImpulseEditor.jsx'),
+        item: readSource('src/admin/editors/ItemEditor.jsx'),
+        spell: readSource('src/admin/editors/SpellEditor.jsx'),
+    };
+
+    Object.entries(sources).forEach(([name, source]) => {
+        assert.match(source, /buildCatalogEditorOverride/, `${name} should delegate override creation to the shared contract`);
+    });
+    assert.match(sources.creature, /isStaticCatalogEdit/);
+    assert.match(sources.creature, /onSaveCatalogEntry/);
+    assert.match(readSource('src/admin/BestiaryView.jsx'), /onSaveCatalogEntry/);
 });
 
 test('item icon previews use deployed static ressources path', () => {

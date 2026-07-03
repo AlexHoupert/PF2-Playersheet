@@ -405,6 +405,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                 onSaveToDb={(creatureData) => {
                     return dataActions.bestiary.saveCustomCreature(creatureData);
                 }}
+                onSaveCatalogEntry={(override) => dataActions.catalogOverride.saveCatalogOverride(override)}
             />
         );
     }
