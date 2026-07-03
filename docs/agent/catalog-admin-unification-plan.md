@@ -26,7 +26,7 @@ Statische JSON-Daten bleiben read-only. Runtime-Aenderungen laufen ueber Firesto
 
 - [x] Plan-Datei angelegt.
 - [x] Phase 1: Catalog-Vertrag und Statusmodell bauen.
-- [ ] Phase 2: Gemeinsamen Catalog-Controller und UI-Kontrakt einfuehren.
+- [x] Phase 2: Gemeinsamen Catalog-Controller und UI-Kontrakt einfuehren.
 - [ ] Phase 3: Editor-Save-Vertrag vereinheitlichen.
 - [ ] Phase 4: Tabellen schrittweise migrieren.
 - [ ] Phase 5: Copy-Reference-System erweitern.
@@ -181,45 +181,45 @@ Ziel: Tabellenverhalten wird zentral statt pro View neu implementiert.
 
 Arbeitsschritte:
 
-- [ ] Neuen Hook anlegen: `src/admin/catalog/useCatalogAdminTable.js`.
-- [ ] Hook-State standardisieren:
-  - [ ] search
-  - [ ] filters
-  - [ ] sort
-  - [ ] page
-  - [ ] selected row(s)
-  - [ ] preview item
-  - [ ] editing item
-  - [ ] context menu
-- [ ] Standardaktionen bereitstellen:
-  - [ ] `editEntry(entry)`
-  - [ ] `cloneEntry(entry)`
-  - [ ] `deleteEntry(entry)`
-  - [ ] `copyEntryReference(entry)`
-  - [ ] `previewEntry(entry)`
-- [ ] Statusfilter standardisieren:
-  - [ ] Show original
-  - [ ] Show edited
-  - [ ] Show custom
-  - [ ] Show deleted
-- [ ] Standard-Kontextmenue definieren:
-  - [ ] `Edit`
-  - [ ] `Clone`
-  - [ ] `Delete`
-  - [ ] `Copy Reference`
-  - [ ] optional `Preview`
-- [ ] Nach Save/Deletion Kontext erhalten:
-  - [ ] Suche bleibt erhalten.
-  - [ ] Filter bleiben erhalten.
-  - [ ] Sortierung bleibt erhalten.
-  - [ ] Seite bleibt erhalten, sofern noch gueltig.
-  - [ ] Geaenderter Eintrag wird wieder selektiert, sofern sichtbar.
+- [x] Neuen Hook anlegen: `src/admin/catalog/useCatalogAdminTable.js`.
+- [x] Hook-State standardisieren:
+  - [x] search
+  - [x] filters
+  - [x] sort
+  - [x] page
+  - [x] selected row(s)
+  - [x] preview item
+  - [x] editing item
+  - [x] context menu
+- [x] Standardaktionen bereitstellen:
+  - [x] `editEntry(entry)`
+  - [x] `cloneEntry(entry)`
+  - [x] `deleteEntry(entry)`
+  - [x] `copyEntryReference(entry)`
+  - [x] `previewEntry(entry)`
+- [x] Statusfilter standardisieren:
+  - [x] Show original
+  - [x] Show edited
+  - [x] Show custom
+  - [x] Show deleted
+- [x] Standard-Kontextmenue definieren:
+  - [x] `Edit`
+  - [x] `Clone`
+  - [x] `Delete`
+  - [x] `Copy Reference`
+  - [x] optional `Preview`
+- [x] Nach Save/Deletion Kontext erhalten:
+  - [x] Suche bleibt erhalten.
+  - [x] Filter bleiben erhalten.
+  - [x] Sortierung bleibt erhalten.
+  - [x] Seite bleibt erhalten, sofern noch gueltig.
+  - [x] Geaenderter Eintrag wird wieder selektiert, sofern sichtbar.
 
 Erfolgskriterien:
 
 - [ ] Kein Catalog-View hat eigene widerspruechliche Labels wie `Clone/Override`.
 - [ ] Erfolgreicher DB-Save fuehrt nicht zu `window.location.reload()`.
-- [ ] Alle Tabellen nutzen dieselbe Statusfilter-Semantik.
+- [x] Der Catalog-Controller stellt dieselbe Statusfilter-Semantik zentral bereit; Tabellen-Cutover folgt in Phase 4.
 
 ## Phase 3: Editor-Save-Vertrag Vereinheitlichen
 
