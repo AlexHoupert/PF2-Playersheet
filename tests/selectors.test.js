@@ -42,6 +42,7 @@ import {
     selectPactUsageByAbility,
     selectPendingPactOffer,
 } from '../src/shared/db/selectors/pactSelectors.js';
+import { summarizeBacklashTier } from '../src/pacts/pactsData.js';
 import {
     selectAvailableFormulaNames,
     selectAvailableItemNames,
@@ -264,6 +265,18 @@ test('pact selectors derive offers, ability options, usage, and dedication refer
         id: 'ember-dedication',
         name: 'Ember Dedication',
     });
+});
+
+test('pact backlash summaries use defined descriptions before narrative fallback', () => {
+    assert.equal(
+        summarizeBacklashTier({ description: '<p>You become fatigued until you rest.</p>', effects: [] }),
+        'You become fatigued until you rest.'
+    );
+    assert.equal(
+        summarizeBacklashTier({ description: '<p>You become sickened.</p>', effects: [{ conditionName: 'fatigued' }] }),
+        'fatigued - You become sickened.'
+    );
+    assert.equal(summarizeBacklashTier({}), 'Narrative backlash');
 });
 
 test('actor and effect selectors expose v2 actor viewmodels', () => {

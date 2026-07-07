@@ -5,7 +5,7 @@ import { MagicView } from '../../player/views/MagicView';
 import { FeatsView } from '../../player/views/FeatsView';
 import { ImpulsesView } from '../../player/views/ImpulsesView';
 import { ModalManager } from '../../player/ModalManager';
-import { ELEMENTS, BACKLASH_TIERS, BACKLASH_LABELS, BACKLASH_COLORS, buildBacklashEffectInputs } from '../../pacts/pactsData';
+import { ELEMENTS, BACKLASH_TIERS, BACKLASH_LABELS, BACKLASH_COLORS, buildBacklashEffectInputs, summarizeBacklashTier } from '../../pacts/pactsData';
 import { useCampaign } from '../context/CampaignContext';
 import { useAppFeedback } from '../feedback/AppFeedback';
 import { selectDeviantAbility } from '../db/selectors/abilitySelectors';
@@ -297,7 +297,7 @@ function BacklashOverlay({ assignedPact, el, character, onApply, onClose }) {
                 {BACKLASH_TIERS.map(tier => {
                     const tierData = assignedPact.backlash?.[tier] || {};
                     const tierColor = BACKLASH_COLORS[tier];
-                    const effects = tierData.effects || [];
+                    const summary = summarizeBacklashTier(tierData, 'No backlash details defined');
                     return (
                         <button
                             key={tier}
@@ -309,15 +309,7 @@ function BacklashOverlay({ assignedPact, el, character, onApply, onClose }) {
                             }}
                         >
                             <div style={{ fontWeight: 'bold', marginBottom: 2 }}>{BACKLASH_LABELS[tier]}</div>
-                            {effects.length > 0 ? (
-                                <div style={{ fontSize: '0.75em', opacity: 0.8 }}>
-                                    {effects.map((effect, index) => (
-                                        <span key={index}>{index > 0 ? ', ' : ''}{effect.conditionName}{effect.value ? ` ${effect.value}` : ''}</span>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div style={{ fontSize: '0.75em', opacity: 0.5 }}>No conditions defined</div>
-                            )}
+                            <div style={{ fontSize: '0.75em', opacity: 0.8 }}>{summary}</div>
                         </button>
                     );
                 })}

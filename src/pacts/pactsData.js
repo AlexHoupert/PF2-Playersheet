@@ -3,8 +3,8 @@
  * Pact and deviant ability helpers read through the selector layer.
  */
 
-import { selectDeviantAbility, selectDeviantAbilityList } from '../shared/db/selectors/abilitySelectors';
-import { selectPact, selectPactList } from '../shared/db/selectors/pactSelectors';
+import { selectDeviantAbility, selectDeviantAbilityList } from '../shared/db/selectors/abilitySelectors.js';
+import { selectPact, selectPactList } from '../shared/db/selectors/pactSelectors.js';
 
 export const ELEMENTS = {
     Fire:  { color: '#f44336', dim: '#c62828', bg: '#2a0a0a', icon: '🔥', label: 'Fire'  },
@@ -34,6 +34,34 @@ export const BACKLASH_CONDITIONS = [
     { name: 'stunned',    valued: true  },
     { name: 'slowed',     valued: true  },
 ];
+
+export function formatBacklashEffectSummary(effects) {
+    return (effects || [])
+        .filter(Boolean)
+        .map(effect => `${effect.conditionName || 'condition'}${effect.value ? ` ${effect.value}` : ''}`)
+        .join(', ');
+}
+
+export function summarizeBacklashTier(tierData, fallback = 'Narrative backlash') {
+    const effectSummary = formatBacklashEffectSummary(tierData?.effects);
+    const descriptionSummary = stripHtml(tierData?.description);
+    if (effectSummary && descriptionSummary) return `${effectSummary} - ${descriptionSummary}`;
+    return effectSummary || descriptionSummary || fallback;
+}
+
+function stripHtml(value) {
+    if (typeof value !== 'string') return '';
+    return value
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
 
 /** Get all deviant abilities from DB as a sorted array. */
 export function getDeviantAbilities(db) {

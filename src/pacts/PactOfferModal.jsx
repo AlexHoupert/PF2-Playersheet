@@ -7,10 +7,12 @@ import {
     selectPendingPactOffer,
 } from '../shared/db/selectors/pactSelectors';
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
-import { BACKLASH_COLORS, BACKLASH_LABELS, BACKLASH_TIERS, ELEMENTS } from './pactsData';
+import { useWindowSize } from '../shared/hooks/useWindowSize';
+import { BACKLASH_COLORS, BACKLASH_LABELS, BACKLASH_TIERS, ELEMENTS, summarizeBacklashTier } from './pactsData';
 
 export default function PactOfferModal({ character, db, activeCampaignId, dataActions, runDataAction }) {
     const { notifyError } = useAppFeedback();
+    const { isMobile } = useWindowSize();
     const offer = useMemo(() => selectPendingPactOffer(character, db), [character, db]);
     const pact = offer?.pact || null;
     const el = pact ? (ELEMENTS[pact.element] || ELEMENTS.Fire) : ELEMENTS.Fire;
@@ -28,6 +30,7 @@ export default function PactOfferModal({ character, db, activeCampaignId, dataAc
     const [selectedAbilityId, setSelectedAbilityId] = useState('');
     const [detailAbility, setDetailAbility] = useState(null);
     const [confirmAbility, setConfirmAbility] = useState(null);
+    const [dismissedOfferId, setDismissedOfferId] = useState(null);
 
     useEffect(() => {
         setStep('offer');
@@ -36,10 +39,14 @@ export default function PactOfferModal({ character, db, activeCampaignId, dataAc
         setConfirmAbility(null);
     }, [offer?.id]);
 
-    if (!offer || !pact) return null;
+    if (!offer || !pact || dismissedOfferId === offer.id) return null;
 
     const rejectOffer = () => {
-        if (!activeCampaignId || !character?.id) return;
+        if (!activeCampaignId || !character?.id) {
+            notifyError('No active actor is available for this pact offer.');
+            return;
+        }
+        setDismissedOfferId(offer.id);
         runDataAction(dataActions.pact.rejectPactOffer(activeCampaignId, character.id, offer.id));
     };
 
@@ -54,12 +61,16 @@ export default function PactOfferModal({ character, db, activeCampaignId, dataAc
 
     const acceptOffer = () => {
         if (!activeCampaignId || !character?.id || !confirmAbility?.id) return;
+        setDismissedOfferId(offer.id);
         runDataAction(dataActions.pact.acceptPactOffer(activeCampaignId, character.id, offer.id, confirmAbility.id));
         setConfirmAbility(null);
     };
 
+    const showMainDialog = !(isMobile && detailAbility);
+
     return (
         <div style={overlayStyle}>
+            {showMainDialog && (
             <div role="dialog" aria-modal="true" style={{ ...modalStyle, borderColor: el.color }}>
                 {step === 'offer' ? (
                     <>
@@ -158,8 +169,14 @@ export default function PactOfferModal({ character, db, activeCampaignId, dataAc
                     </>
                 )}
             </div>
+            )}
             {detailAbility && (
-                <DeviantAbilityDetailModal ability={detailAbility} pact={pact} onClose={() => setDetailAbility(null)} />
+                <DeviantAbilityDetailModal
+                    ability={detailAbility}
+                    pact={pact}
+                    isMobile={isMobile}
+                    onClose={() => setDetailAbility(null)}
+                />
             )}
             {confirmAbility && (
                 <div role="dialog" aria-modal="true" style={{ ...modalStyle, maxWidth: 460, borderColor: el.color, zIndex: 12060 }}>
@@ -192,7 +209,7 @@ function BacklashSummary({ pact }) {
                             {BACKLASH_LABELS[tier]}
                         </div>
                         <div style={{ color: '#aaa', fontSize: '0.78em' }}>
-                            {(tierData.effects || []).map(effect => `${effect.conditionName}${effect.value ? ` ${effect.value}` : ''}`).join(', ') || 'Narrative backlash'}
+                            {summarizeBacklashTier(tierData)}
                         </div>
                     </div>
                 );
@@ -201,10 +218,20 @@ function BacklashSummary({ pact }) {
     );
 }
 
-function DeviantAbilityDetailModal({ ability, pact, onClose }) {
+function DeviantAbilityDetailModal({ ability, pact, isMobile = false, onClose }) {
     const el = ELEMENTS[pact.element] || ELEMENTS.Fire;
     return (
-        <div role="dialog" aria-modal="true" style={{ ...modalStyle, maxWidth: 620, borderColor: el.color, zIndex: 12050 }}>
+        <div
+            role="dialog"
+            aria-modal="true"
+            style={{
+                ...modalStyle,
+                width: isMobile ? '100%' : modalStyle.width,
+                maxWidth: isMobile ? '100%' : 620,
+                borderColor: el.color,
+                zIndex: 12050,
+            }}
+        >
             <h2 style={{ margin: 0, color: el.color, fontFamily: 'Cinzel, serif' }}>{ability.name}</h2>
             <div style={{ color: '#888', fontSize: '0.85em', marginBottom: 12 }}>
                 Deviant Ability - Level {ability.level} - {pact.name}
