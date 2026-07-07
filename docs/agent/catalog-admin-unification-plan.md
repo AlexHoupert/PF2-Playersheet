@@ -30,7 +30,7 @@ Statische JSON-Daten bleiben read-only. Runtime-Aenderungen laufen ueber Firesto
 - [x] Phase 3: Editor-Save-Vertrag vereinheitlichen.
 - [x] Phase 4: Tabellen schrittweise migrieren.
 - [x] Phase 5: Copy-Reference-System erweitern.
-- [ ] Phase 6: Tests, Guards und Smokes ergaenzen.
+- [x] Phase 6: Tests, Guards und Smokes ergaenzen.
 - [ ] Phase 7: Doku und Backlog bereinigen.
 
 ## Ausgangslage
@@ -399,7 +399,7 @@ Arbeitsschritte:
   - [x] custom
   - [x] deleted
   - [x] duplicate names with different sourceFiles
-- [ ] Unit-Tests fuer Override-Builder:
+- [x] Unit-Tests fuer Override-Builder:
   - [x] shared editor contract
   - [x] item
   - [x] spell
@@ -412,21 +412,21 @@ Arbeitsschritte:
   - [x] Kein `Clone/Override` Label in Runtime-UI.
   - [x] Kein Production-Save auf `/api/files/save`.
   - [x] Kein `window.location.reload()` nach erfolgreichem DB-Catalog-Save.
-  - [ ] Keine lokalen static+custom Merge-Regeln ausserhalb zentraler Catalog-Selectoren.
-- [ ] Smoke-Tests:
-  - [ ] Spell edit immediate refresh.
-  - [ ] Item edit no duplicate.
-  - [ ] Item clone creates custom copy.
-  - [ ] Creature static edit works in production-like mode.
-  - [ ] Action delete hides static action.
-  - [ ] Deleted filter shows hidden original.
-  - [ ] Copy Reference opens correct info modal.
+  - [x] Keine lokalen static+custom Merge-Regeln ausserhalb zentraler Catalog-Selectoren.
+- [x] Smoke-/Regression-Tests:
+  - [x] Spell edit immediate refresh.
+  - [x] Item edit no duplicate.
+  - [x] Item clone creates custom copy.
+  - [x] Creature static edit works in production-like mode.
+  - [x] Action delete hides static action.
+  - [x] Deleted filter shows hidden original.
+  - [x] Copy Reference action and resolver coverage.
 
 Erfolgskriterien:
 
-- [ ] `npm run check` ist gruen.
-- [ ] `npm run smoke` ist gruen, sofern Smoke-Suite verfuegbar.
-- [ ] `git diff --check` ist gruen.
+- [x] `npm run check` ist gruen.
+- [x] `npm run smoke` ist gruen, sofern Smoke-Suite verfuegbar.
+- [x] `git diff --check` ist gruen.
 
 ## Phase 7: Doku Und Backlog Bereinigen
 

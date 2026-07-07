@@ -184,10 +184,15 @@ export default function CatalogAdminTableView({
     ) : null;
 
     return (
-        <div className="admin-layout" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+        <div
+            className="admin-layout"
+            data-testid={`catalog-admin-${catalogType}`}
+            style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
+        >
             <div style={{ padding: 10, background: '#222', borderBottom: '1px solid #444', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                 <input
                     className="modal-input"
+                    data-testid={`catalog-search-${catalogType}`}
                     placeholder={searchPlaceholder}
                     value={table.search}
                     onChange={(event) => {
@@ -216,6 +221,7 @@ export default function CatalogAdminTableView({
                         <label key={status} style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#ccc', fontSize: '0.85rem' }}>
                             <input
                                 type="checkbox"
+                                data-testid={`catalog-status-${catalogType}-${status}`}
                                 checked={Boolean(table.statusFilters[status])}
                                 onChange={(event) => table.setStatusFilter(status, event.target.checked)}
                             />
@@ -280,9 +286,11 @@ export default function CatalogAdminTableView({
                         <tbody>
                             {table.paginatedStates.map((state, idx) => {
                                 const entry = getCatalogTableEntry(state);
+                                const rowTestId = toTestId(state.key || entry?.catalogEntryKey || entry?.sourceFile || entry?.overrideSourceFile || entry?.id || entry?._id || entry?.name || idx);
                                 return (
                                     <tr
                                         key={state.key || entry?.catalogEntryKey || entry?.id || entry?.name || idx}
+                                        data-testid={`catalog-row-${catalogType}-${rowTestId}`}
                                         style={{
                                             borderBottom: '1px solid #444',
                                             background: previewItem?.catalogEntryKey === entry?.catalogEntryKey || previewItem?.name === entry?.name
@@ -302,7 +310,11 @@ export default function CatalogAdminTableView({
                                         onContextMenu={(event) => table.openContextMenu(event, state)}
                                     >
                                         {columns.filter((column) => visibleColumns.includes(column.key)).map((column) => (
-                                            <td key={column.key} style={{ padding: 8 }}>
+                                            <td
+                                                key={column.key}
+                                                data-testid={`catalog-cell-${catalogType}-${rowTestId}-${column.key}`}
+                                                style={{ padding: 8 }}
+                                            >
                                                 {renderCell({ entry, state, column })}
                                             </td>
                                         ))}
@@ -360,6 +372,7 @@ export default function CatalogAdminTableView({
                         <div
                             key={action.id}
                             className="ctx-item"
+                            data-testid={`catalog-action-${catalogType}-${action.id}`}
                             style={{
                                 padding: '8px 12px',
                                 cursor: 'pointer',
@@ -396,4 +409,12 @@ function defaultPrepareEditorItem(entry, editorMode) {
         isCustom: true,
         name: `${entry.name || 'Entry'} (Copy)`,
     };
+}
+
+function toTestId(value) {
+    return String(value || 'entry')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'entry';
 }

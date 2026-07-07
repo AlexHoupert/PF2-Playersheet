@@ -191,11 +191,11 @@ export default function SpellEditor({ initialItem: initialItemProp, initialPaylo
             <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 20 }}>
                 <div className="form-group">
                     <label>Name</label>
-                    <input className="modal-input" value={formData.name} onChange={e => handleChange('name', e.target.value)} />
+                    <input data-testid="spell-editor-name" className="modal-input" value={formData.name} onChange={e => handleChange('name', e.target.value)} />
                 </div>
                 <div className="form-group">
                     <label>Rank (Level)</label>
-                    <input type="number" className="modal-input" value={formData.level} onChange={e => handleChange('level', e.target.value)} />
+                    <input data-testid="spell-editor-level" type="number" className="modal-input" value={formData.level} onChange={e => handleChange('level', e.target.value)} />
                 </div>
                 <div className="form-group">
                     <label>Rarity</label>
@@ -259,7 +259,7 @@ export default function SpellEditor({ initialItem: initialItemProp, initialPaylo
 
             <div className="form-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #444', paddingTop: 20 }}>
                 <button className="set-btn" style={{ background: '#555' }} onClick={onCancel} disabled={isSaving}>Cancel</button>
-                <button className="set-btn" onClick={handleSave} disabled={isSaving}>
+                <button data-testid="spell-editor-save" className="set-btn" onClick={handleSave} disabled={isSaving}>
                     {isSaving ? 'Saving...' : 'Save Spell'}
                 </button>
             </div>

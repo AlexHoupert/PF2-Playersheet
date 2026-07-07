@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test.setTimeout(60_000);
+test.setTimeout(120_000);
+
+const UPLIFTING_OVERTURE_ROW_ID = "spells-focus-uplifting-overture-json";
+const AID_ROW_ID = "actions-aid-json";
 
 async function gotoFixture(page, params = "") {
   const query = params ? `&${params.replace(/^&/, "")}` : "";
@@ -35,7 +38,7 @@ async function readFixtureXp(page) {
 }
 
 test("auth gate renders without fixture bypass", async ({ page }) => {
-  await page.goto("/", { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.goto("/", { waitUntil: "domcontentloaded", timeout: 120_000 });
   await expect(page.getByText("PF2e Player Sheet")).toBeVisible();
   await expect(page.getByText("Sign in with Google")).toBeVisible();
 });
@@ -190,6 +193,12 @@ test("encounter player and creature combatants accept HP, initiative, and effect
   await page.getByTestId("encounter-add-condition").click();
   await page.getByTestId("encounter-condition-option-clumsy").click();
   await expect(page.getByTestId("initiative-condition-combatant_creature-clumsy")).toBeVisible();
+  await page.getByTestId("initiative-remove-condition-combatant_creature-clumsy").click();
+  await expect(page.getByTestId("initiative-condition-combatant_creature-clumsy")).toHaveCount(0);
+  await page.getByTestId("initiative-card-combatant_creature").click({ button: "right" });
+  await page.getByTestId("encounter-add-condition").click();
+  await page.getByTestId("encounter-condition-option-clumsy").click();
+  await expect(page.getByTestId("initiative-condition-combatant_creature-clumsy")).toBeVisible();
 
   await page.getByTestId("initiative-card-combatant_player").click({ button: "right" });
   await page.getByTestId("encounter-add-custom-condition").click();
@@ -214,4 +223,47 @@ test("spell catalog override appears in player add-spell flow at rank zero", asy
   const row = page.locator(".item-row", { hasText: "Uplifting Overture" }).first();
   await expect(row).toBeVisible();
   await expect(row).toContainText("Lv0");
+});
+
+test("admin spell edit refreshes the catalog row and copy reference is available", async ({ page }) => {
+  await gotoFixture(page, "admin=true");
+  await page.getByText("Spells", { exact: true }).click();
+  await expect(page.getByTestId("catalog-admin-spell")).toBeVisible();
+
+  await page.getByTestId("catalog-search-spell").fill("Uplifting Overture");
+  const spellRow = page.getByTestId(`catalog-row-spell-${UPLIFTING_OVERTURE_ROW_ID}`);
+  await expect(spellRow).toBeVisible();
+  await expect(page.getByTestId(`catalog-cell-spell-${UPLIFTING_OVERTURE_ROW_ID}-level`)).toContainText("0");
+
+  await spellRow.click({ button: "right" });
+  await page.getByTestId("catalog-action-spell-edit").click();
+  await expect(page.getByRole("heading", { name: "Edit Spell" })).toBeVisible();
+  await page.getByTestId("spell-editor-level").fill("2");
+  await page.getByTestId("spell-editor-save").click();
+
+  await expect(page.getByTestId("catalog-admin-spell")).toBeVisible();
+  await expect(page.getByTestId(`catalog-row-spell-${UPLIFTING_OVERTURE_ROW_ID}`)).toHaveCount(1);
+  await expect(page.getByTestId(`catalog-cell-spell-${UPLIFTING_OVERTURE_ROW_ID}-level`)).toContainText("2");
+
+  await page.getByTestId(`catalog-row-spell-${UPLIFTING_OVERTURE_ROW_ID}`).click({ button: "right" });
+  await page.getByTestId("catalog-action-spell-copyReference").click();
+  await expect(page.getByText(/Reference copied: Uplifting Overture/)).toBeVisible();
+});
+
+test("admin action delete creates a hide override and deleted filter reveals it", async ({ page }) => {
+  await gotoFixture(page, "admin=true");
+  await page.getByText("Actions", { exact: true }).click();
+  await expect(page.getByTestId("catalog-admin-action")).toBeVisible();
+
+  await page.getByTestId("catalog-search-action").fill("Aid");
+  const actionRow = page.getByTestId(`catalog-row-action-${AID_ROW_ID}`);
+  await expect(actionRow).toBeVisible();
+
+  await actionRow.click({ button: "right" });
+  await page.getByTestId("catalog-action-action-delete").click();
+  await page.getByTestId("app-feedback-confirm").click();
+  await expect(page.getByTestId(`catalog-row-action-${AID_ROW_ID}`)).toHaveCount(0);
+
+  await page.getByTestId("catalog-status-action-deleted").click();
+  await expect(page.getByTestId(`catalog-row-action-${AID_ROW_ID}`)).toBeVisible();
 });

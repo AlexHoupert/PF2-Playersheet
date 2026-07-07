@@ -149,3 +149,32 @@ test('catalog entry keys normalize resource prefixes and source paths', () => {
         'spells/fireball.json'
     );
 });
+
+test('catalog mutation semantics cover edit clone hide and deleted filter cases', () => {
+    const staticItems = [
+        { id: 'aid', name: 'Aid', sourceFile: 'actions/aid.json', level: 0 },
+        { id: 'shove', name: 'Shove', sourceFile: 'actions/shove.json', level: 0 },
+    ];
+    const edit = buildEditOverride('action', staticItems[0], { ...staticItems[0], name: 'Aid Updated', level: 1 });
+    const clone = buildCloneOverride('action', staticItems[0], { id: 'aid-copy', name: 'Aid Copy', level: 0 }, { id: 'action_aid_copy' });
+    const hide = buildHideOverride('action', staticItems[1]);
+    const db = { catalogOverrides: { [edit.id]: edit, [clone.id]: clone, [hide.id]: hide } };
+
+    const states = selectCatalogEntryStates(staticItems, db, 'action');
+    const visible = selectVisibleCatalogEntries(staticItems, db, 'action');
+    const deleted = selectDeletedCatalogEntries(staticItems, db, 'action');
+
+    assert.deepEqual(visible.map((entry) => [entry.name, entry.catalogEntryStatus]), [
+        ['Aid Updated', CATALOG_ENTRY_STATUS.EDITED],
+        ['Aid Copy', CATALOG_ENTRY_STATUS.CUSTOM],
+    ]);
+    assert.equal(visible.filter((entry) => entry.overrideSourceFile === 'actions/aid.json').length, 1);
+    assert.deepEqual(deleted.map((entry) => [entry.name, entry.catalogEntryStatus]), [
+        ['Shove', CATALOG_ENTRY_STATUS.DELETED],
+    ]);
+    assert.deepEqual(states.map((state) => state.status), [
+        CATALOG_ENTRY_STATUS.EDITED,
+        CATALOG_ENTRY_STATUS.DELETED,
+        CATALOG_ENTRY_STATUS.CUSTOM,
+    ]);
+});

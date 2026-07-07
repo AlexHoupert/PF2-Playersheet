@@ -21,6 +21,37 @@ test('static editor save builds an override for the original source entry', () =
     assert.equal(override.payload.level, 0);
 });
 
+test('catalog editor override contract supports every editable catalog type', () => {
+    const catalogTypes = ['item', 'spell', 'action', 'feat', 'impulse', 'ability', 'creature'];
+
+    catalogTypes.forEach((catalogType) => {
+        const sourceFile = `${catalogType}s/source-entry.json`;
+        const source = { id: `${catalogType}-source`, name: `${catalogType} Source`, sourceFile };
+        const edit = buildCatalogEditorOverride(catalogType, { name: source.name, level: 2 }, {
+            initialItem: source,
+            editorMode: CATALOG_EDITOR_MODES.EDIT,
+        });
+        const clone = buildCatalogEditorOverride(catalogType, { name: `${source.name} Copy`, level: 2 }, {
+            initialItem: source,
+            editorMode: CATALOG_EDITOR_MODES.CLONE,
+            id: `${catalogType}_copy`,
+        });
+
+        assert.equal(edit.catalogType, catalogType);
+        assert.equal(edit.mode, 'override');
+        assert.equal(edit.baseId, sourceFile);
+        assert.equal(edit.payload.overrideSourceFile, sourceFile);
+        assert.equal(edit.payload.isCustom, false);
+
+        assert.equal(clone.catalogType, catalogType);
+        assert.equal(clone.mode, 'custom');
+        assert.equal(clone.id, `${catalogType}_copy`);
+        assert.equal(clone.baseId, null);
+        assert.equal(clone.payload.sourceFile, null);
+        assert.equal(clone.payload.isCustom, true);
+    });
+});
+
 test('custom editor save keeps a custom override id instead of creating a static override', () => {
     const customItem = { id: 'custom-bomb', name: 'Custom Bomb', isCustom: true, catalogOverrideId: 'item_custom-bomb' };
     const override = buildCatalogEditorOverride('item', { id: 'custom-bomb', name: 'Custom Bomb', level: 3 }, {

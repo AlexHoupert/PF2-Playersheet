@@ -319,6 +319,12 @@ export default function EncounterView({ db }) {
         );
     };
 
+    const removeEffectFromCombatant = (effectId) => {
+        const campaignId = requireCampaignId();
+        if (!campaignId || !effectId) return;
+        runEncounterAction(dataActions.effect.deleteEffect(campaignId, effectId));
+    };
+
     // ── Info panel data ──
     const selectedCombatant = activeEncounter?.combatants?.find(c => c.id === selectedEntityId);
     const infoCreatureData = selectedCombatant?.type === 'creature' ? creatureDataCache[selectedCombatant.creatureId] : null;
@@ -420,6 +426,7 @@ export default function EncounterView({ db }) {
                                     onContextMenu={handleCardContext}
                                     onInitiativeChange={setInitiative}
                                     onHpChange={setHp}
+                                    onEffectRemove={removeEffectFromCombatant}
                                     creatureData={combatant.type === 'creature' ? creatureDataCache[combatant.creatureId] : null}
                                     characterData={combatant.type === 'player' ? characters.find(c => c.id === combatant.playerId) : null}
                                     combatantEffects={selectCombatantEffects(activeCampaign, activeEncounter.id, combatant)}

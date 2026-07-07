@@ -20,6 +20,7 @@ const InitiativeCard = forwardRef(function InitiativeCard({
     onContextMenu,
     onInitiativeChange,
     onHpChange,
+    onEffectRemove,
     creatureData,        // full creature stats from catalog (for creatures)
     characterData,       // character object from campaign (for players)
     combatantEffects = [],
@@ -217,19 +218,39 @@ const InitiativeCard = forwardRef(function InitiativeCard({
                 {/* Row 4: Conditions */}
                 {conditionBadges.length > 0 && (
                     <div className="init-card__conditions">
-                        {conditionBadges.map((badge) => (
-                            <span
-                                key={badge.id || badge.label}
-                                data-testid={`initiative-condition-${combatant.id}-${String(badge.label || badge.id).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                                className={[
-                                    'init-card__condition-pill',
-                                    badge.category === 'damage_effect' && 'init-card__condition-pill--damage',
-                                    badge.category === 'custom' && 'init-card__condition-pill--custom',
-                                ].filter(Boolean).join(' ')}
-                            >
-                                {badge.label}
-                            </span>
-                        ))}
+                        {conditionBadges.map((badge) => {
+                            const badgeSlug = toBadgeSlug(badge.label || badge.id);
+                            const canRemove = isGM && badge.category !== 'legacy' && badge.id && onEffectRemove;
+                            return (
+                                <span
+                                    key={badge.id || badge.label}
+                                    data-testid={`initiative-condition-${combatant.id}-${badgeSlug}`}
+                                    className={[
+                                        'init-card__condition-pill',
+                                        canRemove && 'init-card__condition-pill--closable',
+                                        badge.category === 'damage_effect' && 'init-card__condition-pill--damage',
+                                        badge.category === 'custom' && 'init-card__condition-pill--custom',
+                                    ].filter(Boolean).join(' ')}
+                                >
+                                    <span className="init-card__condition-label">{badge.label}</span>
+                                    {canRemove && (
+                                        <button
+                                            type="button"
+                                            className="init-card__condition-remove"
+                                            data-testid={`initiative-remove-condition-${combatant.id}-${badgeSlug}`}
+                                            aria-label={`Remove ${badge.label}`}
+                                            title={`Remove ${badge.label}`}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                onEffectRemove(badge.id);
+                                            }}
+                                        >
+                                            x
+                                        </button>
+                                    )}
+                                </span>
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -238,3 +259,10 @@ const InitiativeCard = forwardRef(function InitiativeCard({
 });
 
 export default InitiativeCard;
+
+function toBadgeSlug(value) {
+    return String(value || 'effect')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'effect';
+}

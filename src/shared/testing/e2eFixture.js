@@ -5,6 +5,7 @@ export const E2E_CAMPAIGN_ID = "e2e_campaign";
 export const E2E_ACTOR_ID = "e2e_actor_nimwe";
 export const E2E_CUSTOM_SPELL_ID = "spell_uplifting_overture_e2e";
 export const E2E_CUSTOM_ITEM_ID = "item_smoke_custom_charm";
+const E2E_UPLIFTING_OVERTURE_SOURCE = "spells/focus/uplifting-overture.json";
 
 export function isE2eFixtureEnabled() {
   if (!import.meta.env.DEV) return false;
@@ -146,7 +147,7 @@ export function createE2eV2Store() {
       [E2E_CUSTOM_SPELL_ID]: {
         id: E2E_CUSTOM_SPELL_ID,
         catalogType: "spell",
-        baseId: "spells/uplifting-overture.json",
+        baseId: E2E_UPLIFTING_OVERTURE_SOURCE,
         mode: "override",
         payload: {
           name: "Uplifting Overture",
@@ -155,7 +156,7 @@ export function createE2eV2Store() {
           type: "Spell",
           description: "E2E override spell.",
           sourceFile: null,
-          overrideSourceFile: "spells/uplifting-overture.json",
+          overrideSourceFile: E2E_UPLIFTING_OVERTURE_SOURCE,
         },
       },
     },

@@ -153,6 +153,34 @@ test('catalog editors use the shared catalog editor save contract', () => {
     assert.match(readSource('src/admin/BestiaryView.jsx'), /onSaveCatalogEntry/);
 });
 
+test('catalog admin views keep legacy custom merges inside catalog selectors', () => {
+    const adminFiles = listSourceFiles('src/admin');
+    const allowed = new Set([
+        'src/admin/catalog/CatalogAdminTableView.jsx',
+        'src/admin/catalog/useCatalogAdminTable.js',
+    ]);
+    const forbiddenPatterns = [
+        /db\??\.shop\??\.customItems/,
+        /db\??\.bestiary\??\.customCreatures/,
+        /db\??\.actions\b/,
+        /db\??\.spells\b/,
+        /db\??\.abilities\??\.custom/,
+        /Object\.values\([^)]*customItems/,
+        /Object\.values\([^)]*customCreatures/,
+        /window\.location\.reload/,
+        /Clone\/Override/,
+    ];
+
+    adminFiles
+        .filter((file) => !allowed.has(file))
+        .forEach((file) => {
+            const source = readSource(file);
+            forbiddenPatterns.forEach((pattern) => {
+                assert.equal(pattern.test(source), false, `${file} should not reintroduce ${pattern}`);
+            });
+        });
+});
+
 test('item icon previews use deployed static ressources path', () => {
     const pickerSource = readSource('src/shared/components/ImagePicker.jsx');
     const editorSource = readSource('src/admin/editors/ItemEditor.jsx');
