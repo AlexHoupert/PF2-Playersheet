@@ -132,6 +132,14 @@ export function useCatalogAdminTable({
         return createCatalogActionResult('preview', entryOrState);
     }, [closeContextMenu]);
 
+    const createEntry = useCallback(() => {
+        setEditingEntry(null);
+        setEditorMode('create');
+        setPreviewEntry(null);
+        closeContextMenu();
+        return createCatalogActionResult('create', null);
+    }, [closeContextMenu]);
+
     const editEntry = useCallback((entryOrState) => {
         const entry = getCatalogTableEntry(entryOrState);
         setEditingEntry(entry);
@@ -206,6 +214,7 @@ export function useCatalogAdminTable({
         closeContextMenu,
         previewEntryAction: preview,
         preview,
+        createEntry,
         editEntry,
         cloneEntry,
         deleteEntry,

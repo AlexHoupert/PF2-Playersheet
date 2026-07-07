@@ -212,7 +212,7 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
                 const safeName = name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
                 filePath = `ressources/bestiary/custom/${safeName}.json`;
             }
-            if (import.meta.env.PROD && onSaveCatalogEntry && isStaticCatalogEdit({ editorMode, initialItem: initialCreature, formData: { sourceFile }, baseEntry })) {
+            if (onSaveCatalogEntry) {
                 await onSaveCatalogEntry(creatureOverride);
                 onSave({ success: true, message: 'Saved creature override to Database', data: creatureOverride });
                 return;

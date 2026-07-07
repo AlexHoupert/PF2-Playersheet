@@ -5,11 +5,11 @@ import CreatureAbilityModal from '../../shared/components/CreatureAbilityModal';
 import CreatureSkillDetailDialog from '../../shared/components/CreatureSkillDetailDialog';
 import {
     selectBestiaryCreatureMetadata,
-    selectCustomCreatures,
     selectCustomCreatureData,
 } from '../../shared/db/selectors/bestiarySelectors';
 import { selectLoreArticles } from '../../shared/db/selectors/loreSelectors';
 import { buildBestiaryCreatureEntries, selectVisibleCreatureFields } from '../../shared/bestiary/creaturePresentation';
+import { selectCatalogEntryStates } from '../../shared/db/selectors/catalogOverrideSelectors';
 
 const LORE_CATEGORIES = ['History', 'Locations', 'NPCs', 'Bestiary'];
 
@@ -175,8 +175,7 @@ export default function LoreView({ db, lore, bestiary }) {
     // Merge INDEX data + custom creatures with db metadata - show only creatures with bestiary=true
     const bestiaryCreatures = useMemo(() => {
         return buildBestiaryCreatureEntries({
-            indexItems: catalogCreatures,
-            customCreatures: selectCustomCreatures(selectorDb),
+            entryStates: selectCatalogEntryStates(catalogCreatures, selectorDb, 'creature'),
             metadata: selectBestiaryCreatureMetadata(selectorDb),
             includeUnpublished: false,
         });
@@ -211,6 +210,10 @@ export default function LoreView({ db, lore, bestiary }) {
             setLoadedCreatureData(null);
             return;
         }
+        if (selectedCreature?.data) {
+            setLoadedCreatureData(selectedCreature.data);
+            return;
+        }
         const customData = selectCustomCreatureData(selectorDb, selectedCreatureId);
         if (customData) {
             setLoadedCreatureData(customData);
@@ -226,7 +229,7 @@ export default function LoreView({ db, lore, bestiary }) {
         return () => {
             cancelled = true;
         };
-    }, [selectedCreatureId, selectorDb]);
+    }, [selectedCreatureId, selectedCreature, selectorDb]);
 
     // Ability modal state
     const [selectedAbility, setSelectedAbility] = useState(null);

@@ -7,8 +7,9 @@ import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { copyRef } from '../shared/clipboard/refClipboard';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
-import { selectCustomAbilityList } from '../shared/db/selectors/abilitySelectors';
 import { selectCustomCreature, selectCustomCreatures } from '../shared/db/selectors/bestiarySelectors';
+import { buildHideOverride, CATALOG_ENTRY_STATUS } from '../shared/catalog/catalogEntryModel';
+import { selectCatalogEntryStates } from '../shared/db/selectors/catalogOverrideSelectors';
 import {
     buildCatalogEditorOverride,
     buildCatalogSafeId,
@@ -67,7 +68,7 @@ function buildFoundryItem(ability) {
 }
 
 function newBlankAbility() {
-    return { id: `custom-${Date.now()}`, name: '', typeCode: 'P', traits: [], category: '', description: '', isCustom: true };
+    return { id: `custom-${Date.now()}`, name: '', typeCode: 'P', traits: [], category: '', description: '', isCustom: true, editorMode: CATALOG_EDITOR_MODES.CREATE };
 }
 
 // ── Ability Form Modal ────────────────────────────────────────────────────────
@@ -82,7 +83,7 @@ function AbilityFormModal({ initial, onSave, onClose }) {
             <div style={{ background: '#1e1e21', border: '1px solid #c9a86c', borderRadius: 8, width: 'min(560px, 95vw)', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
                 onClick={e => e.stopPropagation()}>
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, color: '#f5deb3' }}>{initial.isCustom && initial.name ? 'Edit Ability' : 'New Ability'}</h3>
+                    <h3 style={{ margin: 0, color: '#f5deb3' }}>{initial.editorMode === CATALOG_EDITOR_MODES.CREATE || !initial.name ? 'New Ability' : 'Edit Ability'}</h3>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', fontSize: '1.4em', cursor: 'pointer' }}>×</button>
                 </div>
                 <div style={{ padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -177,10 +178,8 @@ function AbilityPreviewContent({ selected, setAbilityForm, copyRef, showToast, s
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                 <h4 style={{ color: '#f5deb3', margin: 0 }}>{selected.name}</h4>
                 <div style={{ display: 'flex', gap: 6 }}>
-                    {selected.isCustom && (
-                        <button onClick={() => setAbilityForm({ ...selected })} title="Edit"
-                            style={{ background: 'none', border: 'none', color: '#c9a86c', cursor: 'pointer', fontSize: '1.1em' }}>✏️</button>
-                    )}
+                    <button onClick={() => setAbilityForm({ ...selected, editorMode: CATALOG_EDITOR_MODES.EDIT })} title="Edit"
+                        style={{ background: 'none', border: 'none', color: '#c9a86c', cursor: 'pointer', fontSize: '1.1em' }}>✏️</button>
                     <button onClick={() => { copyRef('ability', selected); showToast('Reference copied'); }} title="Copy Reference"
                         style={{ background: 'none', border: 'none', color: '#c9a86c', cursor: 'pointer', fontSize: '1.1em' }}>📎</button>
                     <button onClick={() => setCreaturePicker(selected)} title="Give to Creature"
@@ -210,17 +209,17 @@ export default function AbilitiesView({ db }) {
     const { confirm, notifyError } = useAppFeedback();
     const { isMobile } = useWindowSize();
 
-    // Merge indexed abilities with custom db abilities (custom takes priority by name)
+    // Merge indexed abilities with catalog overrides and legacy custom abilities.
     const allAbilities = useMemo(() => {
-        const indexed = getAllAbilities();
-        const custom  = selectCustomAbilityList(db);
-        const customNames = new Set(custom.map(a => a.name));
-        return [...custom, ...indexed.filter(a => !customNames.has(a.name))];
+        return selectCatalogEntryStates(getAllAbilities(), db, 'ability')
+            .map((state) => normalizeAbilityEntry(state.effective || state.entry, state))
+            .filter(Boolean);
     }, [db]);
 
     const [search, setSearch]           = useState('');
     const [typeFilter, setTypeFilter]   = useState(null);
     const [traitFilter, setTraitFilter] = useState([]);
+    const [statusFilter, setStatusFilter] = useState([]);
     const [selected, setSelected]       = useState(null);
     const [page, setPage]               = useState(1);
     const [contextMenu, setContextMenu] = useState(null); // { x, y, ability }
@@ -239,10 +238,15 @@ export default function AbilitiesView({ db }) {
         return allAbilities.filter(a => {
             if (typeFilter && a.typeCode !== typeFilter) return false;
             if (traitFilter.length && !traitFilter.every(t => a.traits.includes(t))) return false;
+            if (statusFilter.length) {
+                if (!statusFilter.includes(a.catalogStatusLabel)) return false;
+            } else if (a.catalogEntryStatus === CATALOG_ENTRY_STATUS.DELETED) {
+                return false;
+            }
             if (q && !a.name.toLowerCase().includes(q)) return false;
             return true;
         });
-    }, [allAbilities, typeFilter, traitFilter, search]);
+    }, [allAbilities, typeFilter, traitFilter, statusFilter, search]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     const safePage   = Math.min(page, totalPages);
@@ -257,23 +261,34 @@ export default function AbilitiesView({ db }) {
 
     // ── Custom Ability CRUD ─────────────────────────────────────────────────
     const saveCustomAbility = (ability) => {
-        const saved = { ...ability, isCustom: true };
+        const editorMode = abilityForm?.editorMode || (abilityForm?.isCustom ? CATALOG_EDITOR_MODES.EDIT : CATALOG_EDITOR_MODES.CREATE);
+        const saved = { ...ability, isCustom: editorMode !== CATALOG_EDITOR_MODES.EDIT || Boolean(abilityForm?.isCustom) };
         runDataAction(dataActions.catalogOverride.saveCatalogOverride(buildAbilityOverride(saved, abilityForm, {
-            editorMode: abilityForm?.isCustom ? CATALOG_EDITOR_MODES.EDIT : CATALOG_EDITOR_MODES.CREATE,
+            editorMode,
+            baseEntry: abilityForm,
         })));
         setAbilityForm(null);
         setSelected(saved);
     };
 
-    const deleteCustomAbility = async (ability) => {
+    const deleteAbility = async (ability) => {
+        const isCustom = ability.catalogEntryStatus === CATALOG_ENTRY_STATUS.CUSTOM || (ability.isCustom && !ability.overrideSourceFile && !ability.sourceFile);
         const confirmed = await confirm({
             title: 'Delete ability',
-            message: `Delete "${ability.name}"? This cannot be undone.`,
+            message: isCustom
+                ? `Delete custom ability "${ability.name}"?`
+                : `Hide static ability "${ability.name}" from default catalog lists?`,
             confirmLabel: 'Delete',
             danger: true,
         });
         if (!confirmed) return;
-        runDataAction(dataActions.globalContent.deleteCustomAbility(ability));
+        if (isCustom && ability.catalogOverrideId) {
+            runDataAction(dataActions.catalogOverride.deleteCatalogOverride(ability.catalogOverrideId));
+        } else if (isCustom) {
+            runDataAction(dataActions.globalContent.deleteCustomAbility(ability));
+        } else {
+            runDataAction(dataActions.catalogOverride.saveCatalogOverride(buildHideOverride('ability', ability)));
+        }
         if (selected?.id === ability.id) setSelected(null);
         setContextMenu(null);
     };
@@ -330,6 +345,7 @@ export default function AbilitiesView({ db }) {
                     ))}
                 </div>
                 <MultiSelectDropdown label="Traits" options={ABILITY_INDEX_FILTER_OPTIONS.traits} selected={traitFilter} onChange={v => { setTraitFilter(v); setPage(1); }} />
+                <MultiSelectDropdown label="Status" options={['Original', 'Edited', 'Custom', 'Deleted']} selected={statusFilter} onChange={v => { setStatusFilter(v); setPage(1); }} />
                 <span style={{ color: '#555', fontSize: '0.8em', whiteSpace: 'nowrap' }}>{filtered.length} abilities</span>
                 <button className="set-btn" onClick={() => setAbilityForm(newBlankAbility())}
                     style={{ padding: '5px 12px', fontSize: '0.85em', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
@@ -347,6 +363,7 @@ export default function AbilitiesView({ db }) {
                                 <th style={{ padding: '6px 12px', textAlign: 'center', color: '#888', width: 50 }}>Type</th>
                                 <th style={{ padding: '6px 12px', textAlign: 'left', color: '#888' }}>Name</th>
                                 <th style={{ padding: '6px 12px', textAlign: 'left', color: '#888' }}>Traits</th>
+                                <th style={{ padding: '6px 12px', textAlign: 'left', color: '#888' }}>Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -363,6 +380,7 @@ export default function AbilitiesView({ db }) {
                                     <td style={{ padding: '5px 12px', color: '#666', fontSize: '0.8em' }}>
                                         {(a.traits || []).slice(0, 4).join(', ')}{(a.traits || []).length > 4 ? '…' : ''}
                                     </td>
+                                    <td style={{ padding: '5px 12px', color: '#888', fontSize: '0.8em' }}>{a.catalogStatusLabel}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -420,16 +438,14 @@ export default function AbilitiesView({ db }) {
                         onClick={() => cloneAbility(contextMenu.ability)}>
                         📋 Clone
                     </div>
-                    {contextMenu.ability.isCustom && (<>
-                        <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #333' }}
-                            onClick={() => { setAbilityForm({ ...contextMenu.ability }); closeContextMenu(); }}>
-                            ✏️ Edit
-                        </div>
-                        <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer', color: '#e57373' }}
-                            onClick={() => deleteCustomAbility(contextMenu.ability)}>
-                            🗑️ Delete
-                        </div>
-                    </>)}
+                    <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #333' }}
+                        onClick={() => { setAbilityForm({ ...contextMenu.ability, editorMode: CATALOG_EDITOR_MODES.EDIT }); closeContextMenu(); }}>
+                        ✏️ Edit
+                    </div>
+                    <div className="ctx-item" style={{ padding: '8px 12px', cursor: 'pointer', color: '#e57373' }}
+                        onClick={() => deleteAbility(contextMenu.ability)}>
+                        🗑️ Delete
+                    </div>
                     {/* Backdrop */}
                     <div style={{ position: 'fixed', inset: 0, zIndex: -1 }} onClick={closeContextMenu} />
                 </div>
@@ -455,6 +471,27 @@ export default function AbilitiesView({ db }) {
             )}
         </div>
     );
+}
+
+function normalizeAbilityEntry(ability, state) {
+    if (!ability?.name) return null;
+    const status = state?.status || ability.catalogEntryStatus || CATALOG_ENTRY_STATUS.ORIGINAL;
+    return {
+        ...ability,
+        id: ability.id || ability._id || ability.name,
+        _id: ability._id || ability.id || ability.name,
+        typeCode: ability.typeCode || 'P',
+        traits: ability.traits || [],
+        category: ability.category || '',
+        description: ability.description || '',
+        catalogEntryStatus: status,
+        catalogStatusLabel: status.charAt(0).toUpperCase() + status.slice(1),
+        catalogOverrideId: ability.catalogOverrideId || state?.overrideId || null,
+        catalogEntryKey: ability.catalogEntryKey || state?.key || null,
+        isCustom: status === CATALOG_ENTRY_STATUS.CUSTOM || Boolean(ability.isCustom),
+        isOverride: status === CATALOG_ENTRY_STATUS.EDITED || Boolean(ability.isOverride),
+        isDeleted: status === CATALOG_ENTRY_STATUS.DELETED || Boolean(ability.isDeleted),
+    };
 }
 
 export function buildAbilityOverride(abilityRecord, initialAbility, options = {}) {

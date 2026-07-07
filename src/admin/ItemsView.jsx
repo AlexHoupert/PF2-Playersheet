@@ -8,6 +8,9 @@ import { selectLootBagLists } from '../shared/db/selectors/campaignSelectors';
 import { actorToCharacterView, selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
 import { getItemIdentityKey } from '../shared/utils/itemIdentity';
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
+import { buildHideOverride, CATALOG_ENTRY_STATUS } from '../shared/catalog/catalogEntryModel';
+import { selectCatalogEntryStates } from '../shared/db/selectors/catalogOverrideSelectors';
+import { copyRef } from '../shared/clipboard/refClipboard';
 
 const uniqueTypes = SHOP_INDEX_FILTER_OPTIONS.types;
 const uniqueCategories = SHOP_INDEX_FILTER_OPTIONS.categories;
@@ -25,7 +28,8 @@ const COLUMNS_CONFIG = {
     traits: { label: 'Traits', type: 'text' },
     damage: { label: 'Damage', type: 'text' },
     range: { label: 'Range', type: 'text' },
-    bulk: { label: 'Bulk', type: 'text' }
+    bulk: { label: 'Bulk', type: 'text' },
+    CatalogStatus: { label: 'Catalog Status', type: 'select', options: ['Original', 'Edited', 'Custom', 'Deleted'] },
 };
 
 const FILTER_OPTIONS = {
@@ -35,6 +39,7 @@ const FILTER_OPTIONS = {
     rarity: uniqueRarities,
     traits: SHOP_INDEX_FILTER_OPTIONS.traits,
     bulk: ['L', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+    CatalogStatus: ['Original', 'Edited', 'Custom', 'Deleted'],
     Available: true,
     Formula: true,
 };
@@ -52,7 +57,7 @@ const sameId = (a, b) => a != null && b != null && String(a) === String(b);
 export default function ItemsView({ db, onInspectItem }) {
     const { activeCampaign, pcActors, dataActions } = useCampaign();
     const { isMobile } = useWindowSize();
-    const { notifyError, prompt } = useAppFeedback();
+    const { confirm, notifyError, notifySuccess, prompt } = useAppFeedback();
     const runDataAction = (action) => {
         Promise.resolve(action).catch(err => {
             console.error(err);
@@ -114,25 +119,10 @@ export default function ItemsView({ db, onInspectItem }) {
 
     // --- DATA PREP ---
     const globalItems = useMemo(() => {
-        const customItemsRaw = Object.values(shopState.customItems);
-        const flatCustomItems = customItemsRaw.map(i => ({
-            name: i.name,
-            level: i.system?.level?.value ?? 0,
-            price: i.system?.price?.value?.gp ?? 0,
-            type: i.type ? (i.type.charAt(0).toUpperCase() + i.type.slice(1)) : 'Item',
-            category: i.system?.category || '',
-            group: i.system?.group || '',
-            rarity: i.system?.traits?.rarity || 'common',
-            traits: { value: i.system?.traits?.value || [] },
-            description: i.system?.description?.value,
-            bulk: i.system?.bulk?.value,
-            img: i.img,
-            sourceFile: null,
-            isCustom: true,
-            data: i
-        }));
-        return [...flatCustomItems, ...SHOP_INDEX_ITEMS];
-    }, [shopState.customItems]);
+        return selectCatalogEntryStates(SHOP_INDEX_ITEMS, db, 'item')
+            .map((state) => normalizeCatalogShopItem(state.effective || state.entry, state))
+            .filter(Boolean);
+    }, [db]);
 
     const filterItem = (item, filters, searchTerm) => {
         if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
@@ -143,8 +133,15 @@ export default function ItemsView({ db, onInspectItem }) {
         if (filters.Formula === true && !shopState.availableFormulas.includes(item.name)) return false;
         if (filters.Formula === false && shopState.availableFormulas.includes(item.name)) return false;
 
+        const statusFilter = filters.CatalogStatus;
+        if (Array.isArray(statusFilter) && statusFilter.length) {
+            if (!statusFilter.includes(item.catalogStatusLabel)) return false;
+        } else if (item.catalogEntryStatus === CATALOG_ENTRY_STATUS.DELETED) {
+            return false;
+        }
+
         for (const [key, val] of Object.entries(filters)) {
-            if (key === 'Available' || key === 'Formula') continue;
+            if (key === 'Available' || key === 'Formula' || key === 'CatalogStatus') continue;
             if (!val || (Array.isArray(val) && val.length === 0)) continue;
 
             // traits is stored as { rarity, value: [...] } — needs special handling
@@ -223,7 +220,7 @@ export default function ItemsView({ db, onInspectItem }) {
         if (sideMode === 'trader' && activeTrader) {
             items = activeTrader.inventory.map(entry => {
                 const name = typeof entry === 'string' ? entry : entry.name;
-                const base = globalItems.find(i => i.name === name) || { name, type: 'Unknown', level: 0, price: 0 };
+                const base = globalItems.find(i => i.name === name && i.catalogEntryStatus !== CATALOG_ENTRY_STATUS.DELETED) || { name, type: 'Unknown', level: 0, price: 0 };
                 return { ...base, ...entry, _isRef: typeof entry === 'string' };
             });
         } else if (sideMode === 'loot' && activeLoot) {
@@ -382,8 +379,33 @@ export default function ItemsView({ db, onInspectItem }) {
             if (action === 'addFormula') runDataAction(dataActions.shop.setFormulaAvailable(t.name, true));
             if (action === 'removeFormula') runDataAction(dataActions.shop.setFormulaAvailable(t.name, false));
             if (action === 'addToTrader' && arg) runDataAction(dataActions.shop.addItemsToTrader(arg, [t]));
-            if (action === 'delete' && t.isCustom) runDataAction(dataActions.globalContent.deleteCustomItem(t));
+            if (action === 'delete') runDataAction(deleteCatalogItem(t));
         });
+    };
+
+    const deleteCatalogItem = async (item) => {
+        const isCustom = item.catalogEntryStatus === CATALOG_ENTRY_STATUS.CUSTOM || (item.isCustom && !item.sourceFile && !item.overrideSourceFile);
+        const confirmed = await confirm({
+            title: 'Delete item',
+            message: isCustom
+                ? `Delete custom item "${item.name}"?`
+                : `Hide static item "${item.name}" from default catalog lists?`,
+            confirmLabel: 'Delete',
+            danger: true,
+        });
+        if (!confirmed) return;
+        if (isCustom && item.catalogOverrideId) {
+            await dataActions.catalogOverride.deleteCatalogOverride(item.catalogOverrideId);
+            notifySuccess(`${item.name} deleted.`);
+            return;
+        }
+        if (isCustom) {
+            await dataActions.globalContent.deleteCustomItem(item);
+            notifySuccess(`${item.name} deleted.`);
+            return;
+        }
+        await dataActions.catalogOverride.saveCatalogOverride(buildHideOverride('item', item));
+        notifySuccess(`${item.name} hidden.`);
     };
 
     const performAction = async (action, arg) => {
@@ -393,10 +415,19 @@ export default function ItemsView({ db, onInspectItem }) {
             ? (selectedItems.length > 0 ? selectedItems : [contextMenu?.item].filter(Boolean))
             : (selectedSideItems.length > 0 ? selectedSideItems : [contextMenu?.item].filter(Boolean));
 
-        if (action === 'edit') { setEditingItem(targets[0]); return; }
+        if (action === 'edit') { setEditingItem({ ...targets[0], editorMode: 'edit' }); return; }
         if (action === 'clone') {
             const base = targets[0];
-            const openClone = (extra = {}) => setEditingItem({ ...base, ...extra, sourceFile: null, name: `${base.name} (Copy)`, isCustom: true });
+            const openClone = (extra = {}) => setEditingItem({
+                ...base,
+                ...extra,
+                id: null,
+                _id: null,
+                catalogOverrideId: null,
+                editorMode: 'clone',
+                name: `${base.name} (Copy)`,
+                isCustom: true,
+            });
             if (base.sourceFile) {
                 fetchShopItemDetailBySourceFile(base.sourceFile)
                     .then(details => openClone(details || {}))
@@ -406,7 +437,15 @@ export default function ItemsView({ db, onInspectItem }) {
             }
             return;
         }
-        if (action === 'newItem') { setEditingItem({ name: '', isCustom: true }); return; }
+        if (action === 'copyReference') {
+            const target = targets[0];
+            if (target) {
+                copyRef('item', target);
+                notifySuccess(`Reference copied: ${target.name}`);
+            }
+            return;
+        }
+        if (action === 'newItem') { setEditingItem({ name: '', isCustom: true, editorMode: 'create' }); return; }
         if (action === 'inspect' && onInspectItem) { onInspectItem(targets[0]); return; }
 
         // Side panel specific actions
@@ -594,4 +633,40 @@ export default function ItemsView({ db, onInspectItem }) {
             visibleColumns={visibleColumns}
         />
     );
+}
+
+function normalizeCatalogShopItem(item, state) {
+    if (!item?.name) return null;
+    const data = item.data || item;
+    const system = item.system || data.system || {};
+    const type = item.type || data.type || 'item';
+    const status = state?.status || item.catalogEntryStatus || CATALOG_ENTRY_STATUS.ORIGINAL;
+    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+    return {
+        ...item,
+        data,
+        id: item.id || item._id || data.id || data._id || item.name,
+        _id: item._id || item.id || data._id || data.id || item.name,
+        name: item.name,
+        level: item.level ?? system.level?.value ?? 0,
+        price: item.price ?? system.price?.value?.gp ?? 0,
+        type: type ? (String(type).charAt(0).toUpperCase() + String(type).slice(1)) : 'Item',
+        category: item.category ?? system.category ?? '',
+        group: item.group ?? system.group ?? '',
+        rarity: item.rarity ?? system.traits?.rarity ?? 'common',
+        traits: item.traits ?? { value: system.traits?.value || [] },
+        description: item.description ?? system.description?.value ?? '',
+        bulk: item.bulk ?? system.bulk?.value ?? '',
+        img: item.img || data.img || null,
+        sourceFile: item.sourceFile || null,
+        overrideSourceFile: item.overrideSourceFile || null,
+        catalogEntryStatus: status,
+        catalogStatusLabel: statusLabel,
+        CatalogStatus: statusLabel,
+        catalogOverrideId: item.catalogOverrideId || state?.overrideId || null,
+        catalogEntryKey: item.catalogEntryKey || state?.key || null,
+        isCustom: status === CATALOG_ENTRY_STATUS.CUSTOM || Boolean(item.isCustom),
+        isOverride: status === CATALOG_ENTRY_STATUS.EDITED || Boolean(item.isOverride),
+        isDeleted: status === CATALOG_ENTRY_STATUS.DELETED || Boolean(item.isDeleted),
+    };
 }

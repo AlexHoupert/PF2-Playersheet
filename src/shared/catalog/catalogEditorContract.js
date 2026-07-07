@@ -42,12 +42,20 @@ export function buildCatalogEditorOverride(catalogType, payload = {}, {
     const sourceFile = getCatalogEditorSourceFile({ formData, initialItem, baseEntry });
     const mode = resolveCatalogEditorMode({ editorMode, initialItem, sourceFile });
     const base = baseEntry || initialItem || {};
+    const baseId = getCatalogEntryBaseId(base);
     const recordLabel = label || payload?.name || formData?.name || base?.name || catalogType;
 
     if (mode === CATALOG_EDITOR_MODES.EDIT && sourceFile) {
         return buildEditOverride(catalogType, { ...base, sourceFile }, payload, {
             id: initialItem?.catalogOverrideId || id || buildCatalogOverrideId(catalogType, sourceFile),
             baseId: sourceFile,
+        });
+    }
+
+    if (mode === CATALOG_EDITOR_MODES.EDIT && baseId && !base?.isCustom) {
+        return buildEditOverride(catalogType, base, payload, {
+            id: initialItem?.catalogOverrideId || id || buildCatalogOverrideId(catalogType, baseId),
+            baseId,
         });
     }
 

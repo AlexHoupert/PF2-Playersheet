@@ -1,3 +1,5 @@
+import { CATALOG_ENTRY_STATUS } from '../catalog/catalogEntryModel.js';
+
 export const DEFAULT_CREATURE_REVEAL_STATE = {
     name: 'hidden',
     level: 'hidden',
@@ -33,6 +35,11 @@ export function buildCreatureViewModel(creature, metadata = {}, options = {}) {
     return {
         id,
         sourceFile: creature?.sourceFile || null,
+        overrideSourceFile: creature?.overrideSourceFile || null,
+        catalogOverrideId: creature?.catalogOverrideId || null,
+        catalogEntryStatus: creature?.catalogEntryStatus || CATALOG_ENTRY_STATUS.ORIGINAL,
+        catalogStatusLabel: creature?.catalogStatusLabel || 'Original',
+        isDeleted: Boolean(creature?.isDeleted),
         type: options.type || creature?.type || data.type || 'npc',
         name: creature?.name || data.name || 'Unknown',
         unknownName: creature?.unknownName || data.unknownName || metadata.unknownName || '???',
@@ -88,7 +95,11 @@ export function buildCreatureSkillViewModel(name, skillData = {}, context = {}) 
     };
 }
 
-export function buildBestiaryCreatureEntries({ indexItems = [], customCreatures = {}, metadata = {}, includeUnpublished = true } = {}) {
+export function buildBestiaryCreatureEntries({ indexItems = [], customCreatures = {}, metadata = {}, includeUnpublished = true, entryStates = null } = {}) {
+    if (Array.isArray(entryStates)) {
+        return buildCreatureEntriesFromCatalogStates(entryStates, metadata, includeUnpublished);
+    }
+
     const customEntries = Object.values(customCreatures || {}).map(record => {
         const viewModel = buildCreatureViewModel(record, metadata?.[record.id] || {}, {
             id: record.id,
@@ -110,6 +121,44 @@ export function buildBestiaryCreatureEntries({ indexItems = [], customCreatures 
         .filter(entry => {
             if (!entry?.id || seenIds.has(entry.id)) return false;
             seenIds.add(entry.id);
+            return includeUnpublished || entry.bestiary;
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function buildCreatureEntriesFromCatalogStates(entryStates, metadata = {}, includeUnpublished = true) {
+    return (entryStates || [])
+        .map(state => {
+            const entry = state.effective || state.entry;
+            if (!entry?.name) return null;
+            const id = entry.id || entry._id || state.baseId || entry.name;
+            const status = state.status || entry.catalogEntryStatus || CATALOG_ENTRY_STATUS.ORIGINAL;
+            const data = entry.data || (entry.system ? entry : null);
+            const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+            const viewModel = buildCreatureViewModel({
+                ...entry,
+                id,
+                data,
+                isCustom: status === CATALOG_ENTRY_STATUS.CUSTOM || Boolean(entry.isCustom),
+                isDeleted: status === CATALOG_ENTRY_STATUS.DELETED,
+                catalogEntryStatus: status,
+                catalogStatusLabel: statusLabel,
+                catalogOverrideId: entry.catalogOverrideId || state.overrideId || null,
+            }, metadata?.[id] || metadata?.[state.baseId] || {}, {
+                id,
+                type: entry.type || data?.type || 'npc',
+                isCustom: status === CATALOG_ENTRY_STATUS.CUSTOM || Boolean(entry.isCustom),
+                data,
+            });
+            return {
+                ...viewModel,
+                baseId: state.baseId || null,
+                catalogEntryKey: state.key || entry.catalogEntryKey || null,
+            };
+        })
+        .filter(entry => {
+            if (!entry?.id) return false;
+            if (entry.isDeleted) return includeUnpublished;
             return includeUnpublished || entry.bestiary;
         })
         .sort((a, b) => a.name.localeCompare(b.name));

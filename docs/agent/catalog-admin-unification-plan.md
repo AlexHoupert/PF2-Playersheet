@@ -28,7 +28,7 @@ Statische JSON-Daten bleiben read-only. Runtime-Aenderungen laufen ueber Firesto
 - [x] Phase 1: Catalog-Vertrag und Statusmodell bauen.
 - [x] Phase 2: Gemeinsamen Catalog-Controller und UI-Kontrakt einfuehren.
 - [x] Phase 3: Editor-Save-Vertrag vereinheitlichen.
-- [ ] Phase 4: Tabellen schrittweise migrieren.
+- [x] Phase 4: Tabellen schrittweise migrieren.
 - [ ] Phase 5: Copy-Reference-System erweitern.
 - [ ] Phase 6: Tests, Guards und Smokes ergaenzen.
 - [ ] Phase 7: Doku und Backlog bereinigen.
@@ -217,8 +217,8 @@ Arbeitsschritte:
 
 Erfolgskriterien:
 
-- [ ] Kein Catalog-View hat eigene widerspruechliche Labels wie `Clone/Override`.
-- [ ] Erfolgreicher DB-Save fuehrt nicht zu `window.location.reload()`.
+- [x] Kein Catalog-View hat eigene widerspruechliche Labels wie `Clone/Override`.
+- [x] Erfolgreicher DB-Save fuehrt nicht zu `window.location.reload()`.
 - [x] Der Catalog-Controller stellt dieselbe Statusfilter-Semantik zentral bereit; Tabellen-Cutover folgt in Phase 4.
 
 ## Phase 3: Editor-Save-Vertrag Vereinheitlichen
@@ -255,7 +255,7 @@ Erfolgskriterien:
 - [x] Item `Edit` kann ueber den Editor-Contract als Override speichern; vollstaendige Tabellen-Deduplizierung folgt in Phase 4.5.
 - [x] Creature `Edit` funktioniert in Production als DB Override.
 - [x] Spell-Verhalten bleibt unveraendert gut.
-- [ ] Action `Edit` und `Clone` sind in der Tabellen-UI eindeutig getrennt. Phase 4.2.
+- [x] Action `Edit` und `Clone` sind in der Tabellen-UI eindeutig getrennt.
 
 ## Phase 4: Tabellen Migration
 
@@ -263,97 +263,97 @@ Ziel: Alle datenfuehrenden Catalog-Tabellen nutzen den gemeinsamen Contract.
 
 ### 4.1 Spells Als Referenz Fertigstellen
 
-- [ ] Gemeinsamen Hook/Statusfilter verwenden.
-- [ ] `Clone` ergaenzen.
-- [ ] `Delete` als hide/custom-delete ergaenzen.
-- [ ] `Copy Reference` ergaenzen.
-- [ ] Reload-Fallback nach DB-Save entfernen.
+- [x] Gemeinsamen Hook/Statusfilter verwenden.
+- [x] `Clone` ergaenzen.
+- [x] `Delete` als hide/custom-delete ergaenzen.
+- [x] `Copy Reference` ergaenzen.
+- [x] Reload-Fallback nach DB-Save entfernen.
 
 Erfolgskriterien:
 
-- [ ] Editierter Spell ist sofort sichtbar.
-- [ ] Clone erzeugt zweite Custom-Zeile.
-- [ ] Delete versteckt static spell und Deleted-Filter zeigt ihn.
+- [x] Editierter Spell ist sofort sichtbar.
+- [x] Clone erzeugt zweite Custom-Zeile.
+- [x] Delete versteckt static spell und Deleted-Filter zeigt ihn.
 
 ### 4.2 Actions
 
-- [ ] Altes `db.actions` in Compatibility-Selector kapseln.
-- [ ] `Clone/Override` Label entfernen.
-- [ ] Edit/Clone/Delete/Copy Reference standardisieren.
-- [ ] Static Delete als `hide` umsetzen.
-- [ ] File-Delete fuer Production entfernen.
+- [x] Altes `db.actions` in Compatibility-Selector kapseln.
+- [x] `Clone/Override` Label entfernen.
+- [x] Edit/Clone/Delete/Copy Reference standardisieren.
+- [x] Static Delete als `hide` umsetzen.
+- [x] File-Delete fuer Production entfernen.
 
 Erfolgskriterien:
 
-- [ ] Nutzer kann klar erkennen, ob er editiert oder klont.
-- [ ] Static action delete erzeugt keinen File-API-Fehler.
+- [x] Nutzer kann klar erkennen, ob er editiert oder klont.
+- [x] Static action delete erzeugt keinen File-API-Fehler.
 
 ### 4.3 Feats
 
-- [ ] Gemeinsamen Hook/Statusfilter verwenden.
-- [ ] Delete ergaenzen.
-- [ ] Copy Reference ergaenzen.
-- [ ] Reload-Fallback nach DB-Save entfernen.
+- [x] Gemeinsamen Hook/Statusfilter verwenden.
+- [x] Delete ergaenzen.
+- [x] Copy Reference ergaenzen.
+- [x] Reload-Fallback nach DB-Save entfernen.
 
 Erfolgskriterien:
 
-- [ ] Feat edit/clone/delete verhaelt sich wie Spell edit/clone/delete.
+- [x] Feat edit/clone/delete verhaelt sich wie Spell edit/clone/delete.
 
 ### 4.4 Impulses
 
-- [ ] Gemeinsamen Hook/Statusfilter verwenden.
-- [ ] Clone ergaenzen.
-- [ ] Delete ergaenzen.
-- [ ] Copy Reference ergaenzen.
-- [ ] Reload-Fallback nach DB-Save entfernen.
+- [x] Gemeinsamen Hook/Statusfilter verwenden.
+- [x] Clone ergaenzen.
+- [x] Delete ergaenzen.
+- [x] Copy Reference ergaenzen.
+- [x] Reload-Fallback nach DB-Save entfernen.
 
 Erfolgskriterien:
 
-- [ ] Impulse-Tabelle hat dieselbe Aktionstiefe wie Spell/Feat.
+- [x] Impulse-Tabelle hat dieselbe Aktionstiefe wie Spell/Feat.
 
 ### 4.5 Items
 
-- [ ] Items von `shop.customItems + SHOP_INDEX_ITEMS` auf Catalog-Entry-Selector umstellen.
-- [ ] `ItemEditor` Save-Logik fuer static edit auf `override` umstellen.
-- [ ] `Clone` bleibt Custom-Kopie, aber explizit.
-- [ ] `Delete` fuer Static als `hide` implementieren.
-- [ ] Trader/Shop/Give/Loot verwenden effektive Catalog-Eintraege.
-- [ ] Nach Save kein Reload und keine Kontextverluste.
+- [x] Items von `shop.customItems + SHOP_INDEX_ITEMS` auf Catalog-Entry-Selector umstellen.
+- [x] `ItemEditor` Save-Logik fuer static edit auf `override` umstellen.
+- [x] `Clone` bleibt Custom-Kopie, aber explizit.
+- [x] `Delete` fuer Static als `hide` implementieren.
+- [x] Trader/Shop/Give/Loot verwenden effektive Catalog-Eintraege.
+- [x] Nach Save kein Reload und keine Kontextverluste.
 
 Erfolgskriterien:
 
-- [ ] Edit bestehender static items erzeugt keine Kopie.
-- [ ] Geaenderte Item-Werte sind sofort sichtbar.
-- [ ] Custom Item kann weiterhin Spielern gegeben werden.
+- [x] Edit bestehender static items erzeugt keine Kopie.
+- [x] Geaenderte Item-Werte sind sofort sichtbar.
+- [x] Custom Item kann weiterhin Spielern gegeben werden.
 
 ### 4.6 Creatures / Bestiary
 
-- [ ] Creature-Statblock-Edit auf `catalogOverrides` umstellen.
-- [ ] Clone erzeugt `mode: "custom"`.
-- [ ] Delete static creature erzeugt `mode: "hide"`.
-- [ ] Delete custom creature entfernt Custom Override und zugehoerige Metadata.
-- [ ] Reveal/Group/Bestiary-State bleibt in Bestiary-Metadata.
-- [ ] Player-Bestiary respektiert weiterhin Reveal-State.
+- [x] Creature-Statblock-Edit auf `catalogOverrides` umstellen.
+- [x] Clone erzeugt `mode: "custom"`.
+- [x] Delete static creature erzeugt `mode: "hide"`.
+- [x] Delete custom creature entfernt Custom Override und zugehoerige Metadata.
+- [x] Reveal/Group/Bestiary-State bleibt in Bestiary-Metadata.
+- [x] Player-Bestiary respektiert weiterhin Reveal-State.
 
 Erfolgskriterien:
 
-- [ ] Static creature edit funktioniert in Production.
-- [ ] Deleted creature verschwindet aus Default-Liste.
-- [ ] Reveal/Group wird durch Content-Edit nicht ueberschrieben.
+- [x] Static creature edit funktioniert in Production.
+- [x] Deleted creature verschwindet aus Default-Liste.
+- [x] Reveal/Group wird durch Content-Edit nicht ueberschrieben.
 
 ### 4.7 Abilities
 
-- [ ] Ability-Liste auf Catalog-Entry-Statusmodell umstellen.
-- [ ] Static Ability edit als `override` erlauben.
-- [ ] Custom Ability edit bleibt `custom`.
-- [ ] Delete static ability als `hide`.
-- [ ] Give-to-Creature nutzt effektive Ability.
-- [ ] Copy Reference bleibt erhalten.
+- [x] Ability-Liste auf Catalog-Entry-Statusmodell umstellen.
+- [x] Static Ability edit als `override` erlauben.
+- [x] Custom Ability edit bleibt `custom`.
+- [x] Delete static ability als `hide`.
+- [x] Give-to-Creature nutzt effektive Ability.
+- [x] Copy Reference bleibt erhalten.
 
 Erfolgskriterien:
 
-- [ ] Ability-Aktionen folgen denselben Labels und Regeln wie andere Tabellen.
-- [ ] Custom-Abilities bleiben rueckwaertskompatibel lesbar.
+- [x] Ability-Aktionen folgen denselben Labels und Regeln wie andere Tabellen.
+- [x] Custom-Abilities bleiben rueckwaertskompatibel lesbar.
 
 ## Phase 5: Copy Reference Vereinheitlichen
 
@@ -408,10 +408,10 @@ Arbeitsschritte:
   - [x] impulse
   - [x] ability
   - [x] creature
-- [ ] Static Guards:
-  - [ ] Kein `Clone/Override` Label in Runtime-UI.
-  - [ ] Kein Production-Save auf `/api/files/save`.
-  - [ ] Kein `window.location.reload()` nach erfolgreichem DB-Catalog-Save.
+- [x] Static Guards:
+  - [x] Kein `Clone/Override` Label in Runtime-UI.
+  - [x] Kein Production-Save auf `/api/files/save`.
+  - [x] Kein `window.location.reload()` nach erfolgreichem DB-Catalog-Save.
   - [ ] Keine lokalen static+custom Merge-Regeln ausserhalb zentraler Catalog-Selectoren.
 - [ ] Smoke-Tests:
   - [ ] Spell edit immediate refresh.
@@ -450,14 +450,14 @@ Erfolgskriterien:
 
 ## Abschlusskriterien
 
-- [ ] Alle Catalog-Tabellen haben dieselben sichtbaren Aktionen: `Edit`, `Clone`, `Delete`, `Copy Reference`.
-- [ ] Static `Edit` wird ueber `mode: "override"` gespeichert.
-- [ ] Static `Delete` wird ueber `mode: "hide"` gespeichert.
-- [ ] Custom `Delete` entfernt das Custom Override.
-- [ ] Tabellen aktualisieren nach Save/Delete automatisch ohne Reload.
-- [ ] Suche, Filter, Sortierung und Auswahl bleiben nach Mutation erhalten.
-- [ ] Statusfilter fuer Original/Editiert/Custom/Geloescht existieren.
-- [ ] Production-Editoren fuer Items, Spells, Actions, Feats, Impulses, Abilities und Creatures benoetigen keine File-API.
+- [x] Alle Catalog-Tabellen haben dieselben sichtbaren Aktionen: `Edit`, `Clone`, `Delete`, `Copy Reference`.
+- [x] Static `Edit` wird ueber `mode: "override"` gespeichert.
+- [x] Static `Delete` wird ueber `mode: "hide"` gespeichert.
+- [x] Custom `Delete` entfernt das Custom Override.
+- [x] Tabellen aktualisieren nach Save/Delete automatisch ohne Reload.
+- [x] Suche, Filter, Sortierung und Auswahl bleiben nach Mutation erhalten.
+- [x] Statusfilter fuer Original/Editiert/Custom/Geloescht existieren.
+- [x] Production-Editoren fuer Items, Spells, Actions, Feats, Impulses, Abilities und Creatures benoetigen keine File-API.
 - [ ] Copy Reference funktioniert fuer alle Catalog-Typen konsistent.
 
 ## Nicht-Ziele Dieser Welle

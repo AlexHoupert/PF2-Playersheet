@@ -46,10 +46,17 @@ test('items layout receives lootbag selection state from ItemsView', () => {
 test('admin actions use database fallback instead of deployed file writes', () => {
     const viewSource = readSource('src/admin/ActionsView.jsx');
     const editorSource = readSource('src/admin/editors/ActionEditor.jsx');
+    const tableSource = readSource('src/admin/catalog/CatalogAdminTableView.jsx');
+    const selectorSource = readSource('src/shared/db/selectors/catalogOverrideSelectors.js');
 
-    assert.match(viewSource, /catalogOverride\.saveCatalogOverride/);
-    assert.match(viewSource, /mergeCatalogIndexWithOverrides/);
-    assert.match(viewSource, /normalizeCustomActionRecord/);
+    assert.match(viewSource, /CatalogAdminTableView/);
+    assert.match(viewSource, /getAllActionIndexItems/);
+    assert.equal(viewSource.includes('Clone/Override'), false);
+    assert.match(tableSource, /catalogOverride\.saveCatalogOverride/);
+    assert.match(tableSource, /buildHideOverride/);
+    assert.match(tableSource, /deleteCatalogOverride/);
+    assert.match(tableSource, /copyRef/);
+    assert.match(selectorSource, /actionToCatalogOverride/);
     assert.match(editorSource, /onSaveToDb/);
     assert.match(editorSource, /buildActionOverride/);
     assert.match(editorSource, /import\.meta\.env\.PROD/);
@@ -60,10 +67,12 @@ test('admin actions use database fallback instead of deployed file writes', () =
 test('admin spells use catalog override fallback instead of deployed-only file writes', () => {
     const viewSource = readSource('src/admin/SpellsView.jsx');
     const editorSource = readSource('src/admin/editors/SpellEditor.jsx');
+    const tableSource = readSource('src/admin/catalog/CatalogAdminTableView.jsx');
 
-    assert.match(viewSource, /catalogOverride\.saveCatalogOverride/);
+    assert.match(viewSource, /CatalogAdminTableView/);
     assert.match(viewSource, /spellJsonToEditorFormData/);
     assert.equal(viewSource.includes('Static spell files can only be edited'), false);
+    assert.match(tableSource, /catalogOverride\.saveCatalogOverride/);
     assert.match(editorSource, /onSaveToDb/);
     assert.match(editorSource, /buildSpellOverride/);
     assert.match(editorSource, /catalogType = 'spell'/);
@@ -94,16 +103,17 @@ test('admin feats and impulses use catalog override production editing', () => {
     const featEditorSource = readSource('src/admin/editors/FeatEditor.jsx');
     const impulseViewSource = readSource('src/admin/ImpulsesView.jsx');
     const impulseEditorSource = readSource('src/admin/editors/ImpulseEditor.jsx');
+    const tableSource = readSource('src/admin/catalog/CatalogAdminTableView.jsx');
 
-    assert.match(featViewSource, /catalogOverride\.saveCatalogOverride/);
-    assert.match(featViewSource, /mergeCatalogIndexWithOverrides/);
+    assert.match(featViewSource, /CatalogAdminTableView/);
+    assert.match(tableSource, /catalogOverride\.saveCatalogOverride/);
+    assert.match(tableSource, /buildHideOverride/);
     assert.match(featEditorSource, /onSaveToDb/);
     assert.match(featEditorSource, /buildFeatOverride/);
     assert.match(featEditorSource, /readJsonApiResponse\(res, 'Save feat'\)/);
     assert.equal(featEditorSource.includes('Deployed feat overrides are not enabled yet'), false);
 
-    assert.match(impulseViewSource, /catalogOverride\.saveCatalogOverride/);
-    assert.match(impulseViewSource, /mergeCatalogIndexWithOverrides/);
+    assert.match(impulseViewSource, /CatalogAdminTableView/);
     assert.match(impulseEditorSource, /onSaveToDb/);
     assert.match(impulseEditorSource, /buildImpulseOverride/);
     assert.match(impulseEditorSource, /readJsonApiResponse\(res, 'Save impulse'\)/);

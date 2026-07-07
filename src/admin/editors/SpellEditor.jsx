@@ -116,7 +116,7 @@ export default function SpellEditor({ initialItem: initialItemProp, initialPaylo
 
             const spellOverride = buildSpellOverride(spellJson, formData, initialItem, { editorMode, catalogType, baseEntry });
 
-            if (import.meta.env.PROD && saveCatalogEntry) {
+            if (saveCatalogEntry) {
                 await saveCatalogEntry(spellOverride);
                 onSave({ success: true, message: 'Saved spell override to database', data: spellOverride });
                 return;

@@ -111,7 +111,7 @@ export default function ImpulseEditor({ initialItem: initialItemProp, initialPay
             const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
             const impulseOverride = buildImpulseOverride(impulseJson, formData, initialItem, { editorMode, catalogType, baseEntry });
 
-            if (import.meta.env.PROD && saveCatalogEntry) {
+            if (saveCatalogEntry) {
                 await saveCatalogEntry(impulseOverride);
                 onSave({ success: true, message: 'Saved impulse override to database', data: impulseOverride });
                 return;

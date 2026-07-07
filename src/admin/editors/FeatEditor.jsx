@@ -95,7 +95,7 @@ export default function FeatEditor({ initialItem: initialItemProp, initialPayloa
             const safeName = formData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
             const featOverride = buildFeatOverride(featJson, formData, initialItem, { editorMode, catalogType, baseEntry });
 
-            if (import.meta.env.PROD && saveCatalogEntry) {
+            if (saveCatalogEntry) {
                 await saveCatalogEntry(featOverride);
                 onSave({ success: true, message: 'Saved feat override to database', data: featOverride });
                 return;

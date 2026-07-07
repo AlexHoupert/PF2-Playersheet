@@ -21,6 +21,8 @@ import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIn
 import { selectCustomAbilityList } from '../shared/db/selectors/abilitySelectors';
 import { selectBestiaryCreatureMetadata, selectCustomCreatures } from '../shared/db/selectors/bestiarySelectors';
 import { DEFAULT_CREATURE_REVEAL_STATE, buildBestiaryCreatureEntries } from '../shared/bestiary/creaturePresentation';
+import { buildHideOverride } from '../shared/catalog/catalogEntryModel';
+import { selectCatalogEntryStates } from '../shared/db/selectors/catalogOverrideSelectors';
 
 // Column priority map for responsive hiding
 const COL_PRIORITY = {
@@ -29,6 +31,7 @@ const COL_PRIORITY = {
     type: 2,              // tablet+
     traits: 2,
     bestiary: 2,
+    catalogStatusLabel: 3,
     rarity: 3,            // desktop only
     group: 3,
 };
@@ -140,8 +143,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     // ── Data: merge index + custom creatures ─────────────────────────────────
     const creatures = useMemo(() => {
         return buildBestiaryCreatureEntries({
-            indexItems: getAllCreatures(),
-            customCreatures: selectCustomCreatures(db),
+            entryStates: selectCatalogEntryStates(getAllCreatures(), db, 'creature'),
             metadata: selectBestiaryCreatureMetadata(db),
             includeUnpublished: true,
         });
@@ -162,6 +164,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         rarity:   uniqueRarities,
         traits:   uniqueTraits,
         group:    uniqueGroups,
+        CatalogStatus: ['Original', 'Edited', 'Custom', 'Deleted'],
         bestiary: true,
     }), [uniqueTypes, uniqueRarities, uniqueTraits, uniqueGroups]);
 
@@ -169,11 +172,16 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     const filteredCreatures = useMemo(() => {
         const q = search.trim().toLowerCase();
         return creatures.filter(c => {
-            const { type, rarity, traits, group, bestiary } = activeFilters;
+            const { type, rarity, traits, group, bestiary, CatalogStatus } = activeFilters;
             if (type?.length && !type.includes(c.type)) return false;
             if (rarity?.length && !rarity.includes(c.rarity)) return false;
             if (traits?.length && !traits.every(t => c.traits?.includes(t))) return false;
             if (group?.length && !group.includes(c.group)) return false;
+            if (CatalogStatus?.length) {
+                if (!CatalogStatus.includes(c.catalogStatusLabel)) return false;
+            } else if (c.isDeleted) {
+                return false;
+            }
             if (bestiary === true && !c.bestiary) return false;
             if (bestiary === false && c.bestiary) return false;
             return !q || c.name.toLowerCase().includes(q);
@@ -254,20 +262,36 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         setJsonImportText('');
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (creature) => {
         const confirmed = await confirm({
             title: 'Delete creature',
-            message: 'Delete this creature?',
+            message: creature?.isCustom
+                ? `Delete custom creature "${creature.name}"?`
+                : `Hide static creature "${creature?.name}" from default catalog lists?`,
             confirmLabel: 'Delete',
             danger: true,
         });
         if (!confirmed) return;
-        runDataAction(dataActions.bestiary.deleteCreature(id));
+        const id = creature?.id;
+        if (creature?.isCustom) {
+            runDataAction(Promise.all([
+                dataActions.bestiary.deleteCreature(id),
+                creature.catalogOverrideId ? dataActions.catalogOverride.deleteCatalogOverride(creature.catalogOverrideId) : Promise.resolve(),
+            ]));
+        } else {
+            runDataAction(dataActions.catalogOverride.saveCatalogOverride(buildHideOverride('creature', creature)));
+        }
         setContextMenu(null);
         if (previewCreature?.id === id) setPreviewCreature(null);
     };
 
     const handleEdit = async (creature) => {
+        if (creature.data) {
+            setEditingCreature({ ...creature, editorMode: 'edit' });
+            setContextMenu(null);
+            setPreviewCreature(null);
+            return;
+        }
         if (creature.isCustom) {
             const data = selectCustomCreatures(db)[creature.id]?.data;
             if (!data) {
@@ -275,7 +299,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                 setContextMenu(null);
                 return;
             }
-            setEditingCreature({ ...creature, data });
+            setEditingCreature({ ...creature, data, editorMode: 'edit' });
             setContextMenu(null);
             setPreviewCreature(null);
             return;
@@ -286,7 +310,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
             setContextMenu(null);
             return;
         }
-        setEditingCreature({ ...creature, data });
+        setEditingCreature({ ...creature, data, editorMode: 'edit' });
         setContextMenu(null);
         setPreviewCreature(null);
     };
@@ -303,7 +327,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         // Deep-copy so the clone shares no nested object references with the original
         const data = deepClone(rawData);
         setEditingCreature({
-            ...creature, id: null, sourceFile: null,
+            ...creature, id: null, _id: null, catalogOverrideId: null, editorMode: 'clone',
             data: { ...data, _id: null, name: (data.name || creature.name) + ' (Copy)' }
         });
         setContextMenu(null);
@@ -365,7 +389,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         try {
             const parsed = JSON.parse(jsonImportText);
             if (!parsed.name) throw new Error('JSON must have a name field');
-            setEditingCreature({ id: null, type: parsed.type === 'hazard' ? 'hazard' : 'npc', data: parsed, bestiary: false, revealState: { ...DEFAULT_CREATURE_REVEAL_STATE } });
+            setEditingCreature({ id: null, type: parsed.type === 'hazard' ? 'hazard' : 'npc', data: parsed, bestiary: false, revealState: { ...DEFAULT_CREATURE_REVEAL_STATE }, editorMode: 'create' });
             setImportError('');
         } catch (err) { setImportError('Invalid JSON: ' + err.message); }
     };
@@ -389,17 +413,19 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         setImportingCatalog(false);
     };
 
-    const allColumns = ['name', 'level', 'type', 'group', 'rarity', 'traits', 'bestiary'];
+    const allColumns = ['name', 'level', 'type', 'group', 'rarity', 'traits', 'catalogStatusLabel', 'bestiary'];
 
     // ── Render editor ─────────────────────────────────────────────────────────
     if (editingCreature) {
         return (
             <CreatureEditor
                 initialCreature={editingCreature}
+                catalogType="creature"
+                editorMode={editingCreature.editorMode || (editingCreature.sourceFile || editingCreature.catalogOverrideId ? 'edit' : 'create')}
+                baseEntry={editingCreature.editorMode === 'create' ? null : editingCreature}
                 customAbilities={selectCustomAbilityList(db)}
-                onSave={(data) => {
+                onSave={() => {
                     setEditingCreature(null);
-                    if (!data?.message?.includes('Database')) window.location.reload();
                 }}
                 onCancel={() => setEditingCreature(null)}
                 onSaveToDb={(creatureData) => {
@@ -434,15 +460,13 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                 >
                     📎 Copy Ref
                 </button>
-                {previewCreature.isCustom && (
-                    <button
-                        className="nav-btn"
-                        style={{ color: '#e57373' }}
-                        onClick={() => handleDelete(previewCreature.id)}
-                    >
-                        🗑️ Delete
-                    </button>
-                )}
+                <button
+                    className="nav-btn"
+                    style={{ color: '#e57373' }}
+                    onClick={() => handleDelete(previewCreature)}
+                >
+                    🗑️ Delete
+                </button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '8px 16px' : 0 }}>
                 {loadedCreatureData ? (
@@ -473,15 +497,15 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                     searchPlaceholder="Search creatures..."
                     activeFilters={activeFilters}
                     onFiltersChange={(f) => { setActiveFilters(f); setPage(1); }}
-                    columns={['type', 'rarity', 'traits', 'group', 'bestiary']}
+                    columns={['type', 'rarity', 'traits', 'group', 'CatalogStatus', 'bestiary']}
                     optionsMap={filterOptionsMap}
-                    columnLabels={{ bestiary: 'In Bestiary', type: 'Type', rarity: 'Rarity', traits: 'Traits', group: 'Group' }}
+                    columnLabels={{ bestiary: 'In Bestiary', type: 'Type', rarity: 'Rarity', traits: 'Traits', group: 'Group', CatalogStatus: 'Catalog Status' }}
                     extraRight={
                         <div style={{ display: 'flex', gap: 6 }}>
                             <button
                                 className="btn-add-condition"
                                 style={{ margin: 0, width: 'auto', background: '#4caf50' }}
-                                onClick={() => setEditingCreature({ type: 'npc', data: {}, bestiary: false, revealState: { ...DEFAULT_CREATURE_REVEAL_STATE } })}
+                                onClick={() => setEditingCreature({ type: 'npc', data: {}, bestiary: false, revealState: { ...DEFAULT_CREATURE_REVEAL_STATE }, editorMode: 'create' })}
                             >
                                 + New
                             </button>
@@ -647,7 +671,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                         { label: '✏️ Edit', onClick: () => handleEdit(contextMenu.creature) },
                         { label: '📋 Clone', onClick: () => handleClone(contextMenu.creature) },
                         { label: '👁️ Preview', onClick: () => { setPreviewCreature(contextMenu.creature); setContextMenu(null); } },
-                        { label: '🗑️ Delete', color: '#e57373', onClick: () => handleDelete(contextMenu.creature.id) },
+                        { label: '🗑️ Delete', color: '#e57373', onClick: () => handleDelete(contextMenu.creature) },
                     ].filter(Boolean).map((item, i, arr) => (
                         <div
                             key={i}

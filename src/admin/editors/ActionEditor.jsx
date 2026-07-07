@@ -127,7 +127,7 @@ export default function ActionEditor({ initialItem: initialItemProp, initialPayl
             });
             const actionOverride = buildActionOverride(dbAction, initialItem, { editorMode, catalogType, baseEntry });
 
-            if ((dbOnly || import.meta.env.PROD) && saveCatalogEntry) {
+            if ((dbOnly || saveCatalogEntry || import.meta.env.PROD) && saveCatalogEntry) {
                 await saveCatalogEntry(actionOverride);
                 onSave({ success: true, message: 'Saved to Database', data: actionOverride });
                 return;

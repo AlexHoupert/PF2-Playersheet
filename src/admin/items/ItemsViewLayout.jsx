@@ -455,14 +455,11 @@ export default function ItemsViewLayout({
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000, padding: 20 }}>
                         <div className="items-view-scroll" style={{ maxHeight: 'calc(100vh - 40px)', overflow: 'auto', borderRadius: 8 }}>
                             <ItemEditor
-                                initialItem={Object.keys(editingItem).length > 0 ? editingItem : null}
-                                onSave={(result) => {
-                                    if (String(result?.message || '').toLowerCase().includes('database')) {
-                                        setEditingItem(null);
-                                    } else {
-                                        window.location.reload();
-                                    }
-                                }}
+                                catalogType="item"
+                                editorMode={editingItem.editorMode || (editingItem.sourceFile || editingItem.catalogOverrideId ? 'edit' : 'create')}
+                                baseEntry={editingItem.editorMode === 'create' ? null : editingItem}
+                                initialItem={editingItem.editorMode === 'create' || Object.keys(editingItem).length === 0 ? null : editingItem}
+                                onSave={() => setEditingItem(null)}
                                 onCancel={() => setEditingItem(null)}
                                 onSaveToDb={(dbItem) => {
                                     return dataActions.globalContent.saveCustomItem(dbItem);
@@ -470,6 +467,7 @@ export default function ItemsViewLayout({
                                 onSaveCatalogEntry={(override) => {
                                     return dataActions.catalogOverride.saveCatalogOverride(override);
                                 }}
+                                dbOnly
                             />
                         </div>
                     </div>
@@ -504,6 +502,7 @@ export default function ItemsViewLayout({
                                     <CtxItem icon="✏️" label="Edit Item" onClick={() => performAction('edit')} />
                                     <CtxItem icon="📋" label="Clone Item" onClick={() => performAction('clone')} />
                                     <CtxItem icon="🗑️" label="Delete Item" onClick={() => performAction('delete')} danger />
+                                    <CtxItem icon="🔗" label="Copy Reference" onClick={() => performAction('copyReference')} />
                                     <CtxDivider />
                                     <div style={{ position: 'relative' }} onMouseEnter={() => setContextSubMenu('trader')} onMouseLeave={() => contextSubMenu === 'trader' && setContextSubMenu(null)}>
                                         <CtxItem icon="🏪" label="Assign to Trader" hasSubmenu />
