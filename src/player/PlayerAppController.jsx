@@ -18,6 +18,7 @@ import MapsView from './views/MapsView';
 import ProgressView from './views/ProgressView';
 import CampScreen from '../camping/CampScreen';
 import PactView from '../pacts/PactView';
+import PactOfferModal from '../pacts/PactOfferModal';
 import { ModalManager } from './ModalManager';
 import { usePlayerCatalogInspection } from './hooks/usePlayerCatalogInspection';
 import { usePlayerCharacterActions } from './hooks/usePlayerCharacterActions';
@@ -393,6 +394,13 @@ export default function PlayerAppController() {
             </div>
 
             {/* MODALS / FULL PAGE VIEWS */}
+            <PactOfferModal
+                character={character}
+                db={db}
+                activeCampaignId={activeCampaign?.id}
+                dataActions={dataActions}
+                runDataAction={runDataAction}
+            />
 
             {
                 activeTab === 'items' && (

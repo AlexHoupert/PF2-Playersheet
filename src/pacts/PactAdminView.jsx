@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import RichTextEditor from '../shared/components/RichTextEditor';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
+import { FEAT_INDEX_ITEMS } from '../shared/catalog/featIndex';
 import { selectPactList } from '../shared/db/selectors/pactSelectors';
 import {
     ELEMENTS, ELEMENT_NAMES, BACKLASH_TIERS, BACKLASH_LABELS, BACKLASH_COLORS,
@@ -10,6 +11,7 @@ import {
 
 const EMPTY_PACT = {
     id: '', name: '', element: 'Fire', description: '',
+    dedication: null,
     abilityGroups: [],
     backlash: {
         mild:     { description: '', effects: [] },
@@ -19,14 +21,21 @@ const EMPTY_PACT = {
 };
 
 export default function PactAdminView({ db }) {
-    const { dataActions } = useCampaign();
-    const { confirm, notifyError } = useAppFeedback();
+    const { activeCampaignId, dataActions, pcActors } = useCampaign();
+    const { confirm, notifyError, notifySuccess } = useAppFeedback();
     const pacts = useMemo(() => selectPactList(db), [db]);
 
     const deviantAbilities = useMemo(() => getDeviantAbilities(db), [db]);
+    const dedicationFeats = useMemo(
+        () => FEAT_INDEX_ITEMS
+            .filter(feat => String(feat.name || '').toLowerCase().includes('dedication'))
+            .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))),
+        []
+    );
 
     const [editing, setEditing] = useState(null);
     const [isNew, setIsNew] = useState(false);
+    const [offerMenuId, setOfferMenuId] = useState(null);
     const runDataAction = (action) => {
         Promise.resolve(action).catch(err => {
             console.error(err);
@@ -42,6 +51,12 @@ export default function PactAdminView({ db }) {
         runDataAction(dataActions.pact.savePact(record));
         setEditing(prev => ({ ...prev, id }));
         setIsNew(false);
+    };
+
+    const startNewPact = () => {
+        setEditing(createEmptyPact());
+        setIsNew(true);
+        setOfferMenuId(null);
     };
 
     const del = async (id) => {
@@ -89,6 +104,46 @@ export default function PactAdminView({ db }) {
             });
             return { ...prev, abilityGroups: groups };
         });
+    };
+
+    const setDedication = (dedicationId) => {
+        const feat = dedicationFeats.find(item => (item.sourceFile || item.name) === dedicationId);
+        setEditing(prev => ({
+            ...prev,
+            dedication: feat
+                ? { type: 'feat', id: feat.sourceFile || feat.name, name: feat.name }
+                : null
+        }));
+    };
+
+    const activePcActors = useMemo(
+        () => (pcActors || []).filter(actor => actor?.kind === 'pc' && !actor.deletedAt),
+        [pcActors]
+    );
+
+    const actorHasPact = (actor) => Boolean(actor?.sheet?.pact?.pactId || actor?.pact?.pactId);
+    const actorLabel = (actor) => actor?.sheet?.name || actor?.name || actor?.id || 'Unnamed';
+
+    const offerPact = (pact, targetActors) => {
+        if (!activeCampaignId) {
+            notifyError('No active campaign selected.');
+            return;
+        }
+        const eligible = (targetActors || []).filter(actor => actor?.id && !actorHasPact(actor));
+        if (!eligible.length) {
+            notifyError('No eligible characters for this pact offer.');
+            return;
+        }
+        const skipped = (targetActors || []).length - eligible.length;
+        runDataAction(
+            dataActions.pact.offerPactToActors(activeCampaignId, eligible.map(actor => actor.id), pact.id)
+                .then(() => notifySuccess(
+                    skipped > 0
+                        ? `Offered ${pact.name} to ${eligible.length} character(s); skipped ${skipped}.`
+                        : `Offered ${pact.name} to ${eligible.length} character(s).`
+                ))
+        );
+        setOfferMenuId(null);
     };
 
     // Backlash helpers
@@ -153,7 +208,7 @@ export default function PactAdminView({ db }) {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                     <h2 style={{ margin: 0, fontFamily: 'Cinzel, serif', color: '#c5a059' }}>Elemental Pacts</h2>
                     <button
-                        onClick={() => { setEditing({ ...EMPTY_PACT, backlash: { mild: { description: '', effects: [] }, moderate: { description: '', effects: [] }, severe: { description: '', effects: [] } } }); setIsNew(true); }}
+                        onClick={startNewPact}
                         style={{ padding: '6px 14px', background: '#1a2a1a', border: '1px solid #4caf50', color: '#81c784', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold' }}
                     >
                         + New Pact
@@ -171,12 +226,17 @@ export default function PactAdminView({ db }) {
                         return (
                             <div
                                 key={p.id}
-                                onClick={() => { setEditing({ ...p, backlash: { mild: { description: '', effects: [] }, moderate: { description: '', effects: [] }, severe: { description: '', effects: [] }, ...p.backlash } }); setIsNew(false); }}
+                                onClick={() => { setEditing(normalizeEditablePact(p)); setIsNew(false); setOfferMenuId(null); }}
+                                onContextMenu={(event) => {
+                                    event.preventDefault();
+                                    setOfferMenuId(current => current === p.id ? null : p.id);
+                                }}
                                 style={{
                                     padding: '10px 12px', borderRadius: 6, cursor: 'pointer',
                                     background: isActive ? pel.bg : '#1a1a1d',
                                     border: `1px solid ${isActive ? pel.color : '#2a2a2a'}`,
-                                    display: 'flex', alignItems: 'center', gap: 10
+                                    display: 'flex', alignItems: 'center', gap: 10,
+                                    position: 'relative'
                                 }}
                             >
                                 <span style={{ fontSize: '1.2em' }}>{pel.icon}</span>
@@ -184,6 +244,61 @@ export default function PactAdminView({ db }) {
                                     <div style={{ fontWeight: 'bold', color: isActive ? pel.color : '#e0e0e0', fontSize: '0.9em' }}>{p.name}</div>
                                     <div style={{ fontSize: '0.75em', color: '#666' }}>{p.element} • {p.abilityGroups?.length || 0} groups</div>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        setOfferMenuId(current => current === p.id ? null : p.id);
+                                    }}
+                                    style={{ padding: '4px 7px', background: '#252525', border: '1px solid #555', color: '#ddd', borderRadius: 4, cursor: 'pointer', fontSize: '0.75em' }}
+                                >
+                                    Offer
+                                </button>
+                                {offerMenuId === p.id && (
+                                    <div
+                                        onClick={(event) => event.stopPropagation()}
+                                        style={{
+                                            position: 'absolute',
+                                            right: 8,
+                                            top: 38,
+                                            zIndex: 20,
+                                            minWidth: 220,
+                                            background: '#202020',
+                                            border: '1px solid #c5a059',
+                                            borderRadius: 6,
+                                            boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
+                                            padding: 8,
+                                        }}
+                                    >
+                                        <div style={{ fontSize: '0.72em', color: '#c5a059', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>Offer Pact</div>
+                                        <button
+                                            type="button"
+                                            onClick={() => offerPact(p, activePcActors)}
+                                            disabled={!activePcActors.some(actor => !actorHasPact(actor))}
+                                            style={offerButtonStyle(!activePcActors.some(actor => !actorHasPact(actor)))}
+                                        >
+                                            Whole Party
+                                        </button>
+                                        <div style={{ height: 1, background: '#333', margin: '6px 0' }} />
+                                        {activePcActors.length === 0 && (
+                                            <div style={{ color: '#777', fontSize: '0.8em', padding: 6 }}>No active player characters.</div>
+                                        )}
+                                        {activePcActors.map(actor => {
+                                            const disabled = actorHasPact(actor);
+                                            return (
+                                                <button
+                                                    key={actor.id}
+                                                    type="button"
+                                                    onClick={() => offerPact(p, [actor])}
+                                                    disabled={disabled}
+                                                    style={offerButtonStyle(disabled)}
+                                                >
+                                                    {actorLabel(actor)}{disabled ? ' (already bound)' : ''}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
@@ -243,6 +358,21 @@ export default function PactAdminView({ db }) {
                                 placeholder="Describe this pact's nature, origin, and lore..."
                                 style={{ minHeight: 100, background: '#111' }}
                             />
+                        </Field>
+
+                        <Field label="Free Dedication">
+                            <select
+                                value={editing.dedication?.id || ''}
+                                onChange={e => setDedication(e.target.value)}
+                                style={inputStyle}
+                            >
+                                <option value="">No dedication selected</option>
+                                {dedicationFeats.map(feat => (
+                                    <option key={feat.sourceFile || feat.name} value={feat.sourceFile || feat.name}>
+                                        {feat.name} {typeof feat.level === 'number' ? `(Lv ${feat.level})` : ''}
+                                    </option>
+                                ))}
+                            </select>
                         </Field>
 
                         {/* Ability Groups */}
@@ -404,6 +534,53 @@ function Field({ label, children }) {
             {children}
         </div>
     );
+}
+
+function createEmptyPact() {
+    return {
+        ...EMPTY_PACT,
+        dedication: null,
+        abilityGroups: [
+            { label: 'Initial', abilityIds: [] },
+            { label: 'Level 6', abilityIds: [] },
+            { label: 'Level 11', abilityIds: [] },
+        ],
+        backlash: {
+            mild: { description: '', effects: [] },
+            moderate: { description: '', effects: [] },
+            severe: { description: '', effects: [] },
+        },
+    };
+}
+
+function normalizeEditablePact(pact) {
+    return {
+        ...pact,
+        dedication: pact.dedication || null,
+        abilityGroups: Array.isArray(pact.abilityGroups) ? pact.abilityGroups : [],
+        backlash: {
+            mild: { description: '', effects: [] },
+            moderate: { description: '', effects: [] },
+            severe: { description: '', effects: [] },
+            ...pact.backlash,
+        },
+    };
+}
+
+function offerButtonStyle(disabled) {
+    return {
+        width: '100%',
+        display: 'block',
+        padding: '6px 8px',
+        marginBottom: 4,
+        textAlign: 'left',
+        background: disabled ? '#171717' : '#2a2a2a',
+        border: '1px solid #444',
+        color: disabled ? '#666' : '#eee',
+        borderRadius: 4,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        fontSize: '0.82em',
+    };
 }
 
 const inputStyle = {

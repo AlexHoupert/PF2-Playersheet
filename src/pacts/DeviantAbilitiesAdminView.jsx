@@ -3,6 +3,7 @@ import RichTextEditor from '../shared/components/RichTextEditor';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { selectDeviantAbilityList } from '../shared/db/selectors/abilitySelectors';
+import { selectPactUsageByAbility } from '../shared/db/selectors/pactSelectors';
 import { ELEMENTS, ELEMENT_NAMES, generateId } from './pactsData';
 
 const EMPTY_ABILITY = {
@@ -16,6 +17,7 @@ export default function DeviantAbilitiesAdminView({ db }) {
     const { dataActions } = useCampaign();
     const { confirm, notifyError } = useAppFeedback();
     const abilities = useMemo(() => selectDeviantAbilityList(db), [db]);
+    const pactUsageByAbility = useMemo(() => selectPactUsageByAbility(db), [db]);
 
     const [search, setSearch] = useState('');
     const [filterEl, setFilterEl] = useState('');
@@ -140,14 +142,14 @@ export default function DeviantAbilitiesAdminView({ db }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
                     <thead>
                         <tr style={{ background: '#333', textAlign: 'left' }}>
-                            {['Name', 'Element', 'Level', 'Awakenings'].map(h => (
+                            {['Name', 'Element', 'Level', 'Pact(s)', 'Awakenings'].map(h => (
                                 <th key={h} style={{ padding: '8px 10px' }}>{h}</th>
                             ))}
                         </tr>
                     </thead>
                     <tbody>
                         {visible.length === 0 && (
-                            <tr><td colSpan={4} style={{ padding: 20, textAlign: 'center', color: '#555' }}>No deviant abilities yet. Create one above.</td></tr>
+                            <tr><td colSpan={5} style={{ padding: 20, textAlign: 'center', color: '#555' }}>No deviant abilities yet. Create one above.</td></tr>
                         )}
                         {visible.map((a, i) => {
                             const el = ELEMENTS[a.element] || ELEMENTS.Fire;
@@ -162,6 +164,9 @@ export default function DeviantAbilitiesAdminView({ db }) {
                                         <span style={{ color: el.color }}>{el.icon} {a.element}</span>
                                     </td>
                                     <td style={{ padding: '8px 10px', color: '#aaa' }}>{a.level}</td>
+                                    <td style={{ padding: '8px 10px', color: '#999' }}>
+                                        {(pactUsageByAbility[a.id] || []).join(', ') || '-'}
+                                    </td>
                                     <td style={{ padding: '8px 10px', color: '#888' }}>{awCount}/2 defined</td>
                                 </tr>
                             );

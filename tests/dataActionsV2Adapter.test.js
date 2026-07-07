@@ -20,7 +20,7 @@ function createActionHarness(db = {}) {
                 calls.push(['actor.createActor', campaignId, actor.id, actor.kind]);
             },
             async updateActor(_firestore, campaignId, actorId, updater) {
-                const result = updater({ id: actorId, kind: 'pc', name: 'Hero', level: 1 });
+                const result = updater(db.__actorDocs?.[actorId] || { id: actorId, kind: 'pc', name: 'Hero', level: 1 });
                 calls.push(['actor.updateActor', campaignId, actorId, result]);
             },
             async updateActors(_firestore, campaignId, actorIds, updater) {
@@ -386,4 +386,79 @@ test('v2 adapter uses catalog overrides for custom content and global repositori
         'global.updateGlobalConfig',
         'global.updateGlobalConfig',
     ]);
+});
+
+test('v2 adapter uses targeted actor updates for pact offers and awakening points', async () => {
+    const { actions, calls } = createActionHarness({
+        abilities: {
+            deviant: {
+                spark: {
+                    id: 'spark',
+                    name: 'Spark',
+                    level: 1,
+                    awakening1: { name: 'Bright Spark' },
+                },
+            },
+        },
+        pacts: {
+            ember: {
+                id: 'ember',
+                name: 'Ember Pact',
+                dedication: { id: 'ember-dedication', name: 'Ember Dedication' },
+                abilityGroups: [{ label: 'Initial', abilityIds: ['spark'] }],
+            },
+        },
+        __actorDocs: {
+            actor1: {
+                id: 'actor1',
+                kind: 'pc',
+                name: 'Hero',
+                level: 1,
+                sheet: {
+                    id: 'actor1',
+                    name: 'Hero',
+                    level: 1,
+                    pactOffer: { id: 'offer1', pactId: 'ember', status: 'pending' },
+                },
+            },
+        },
+    });
+
+    await actions.pact.offerPactToActors('camp1', ['actor2'], 'ember');
+    await actions.pact.acceptPactOffer('camp1', 'actor1', 'offer1', 'spark');
+    assert.deepEqual(calls.map(call => call[0]), ['actor.updateActor', 'actor.updateActor']);
+    assert.equal(calls[1][3].sheet.pact.pactId, 'ember');
+    assert.equal(calls[1][3].sheet.pact.choices[0], 'spark');
+
+    const { actions: pointActions, calls: pointCalls } = createActionHarness({
+        abilities: {
+            deviant: {
+                spark: {
+                    id: 'spark',
+                    name: 'Spark',
+                    level: 1,
+                    awakening1: { name: 'Bright Spark' },
+                },
+            },
+        },
+        pacts: { ember: { id: 'ember', name: 'Ember Pact' } },
+        __actorDocs: {
+            actor1: {
+                id: 'actor1',
+                kind: 'pc',
+                name: 'Hero',
+                level: 1,
+                sheet: {
+                    id: 'actor1',
+                    name: 'Hero',
+                    level: 1,
+                    pact: { pactId: 'ember', choices: { 0: 'spark' }, awakeningPoints: 1, unlockedAwakenings: {} },
+                },
+            },
+        },
+    });
+    await pointActions.pact.spendAwakeningPoint('camp1', 'actor1', 'spark', 1);
+
+    assert.deepEqual(pointCalls.map(call => call[0]), ['actor.updateActor']);
+    assert.equal(pointCalls[0][3].sheet.pact.unlockedAwakenings.spark, 1);
 });

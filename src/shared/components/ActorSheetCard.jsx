@@ -235,6 +235,8 @@ export function ActorSheetCard({
                         allPacts={allPacts}
                         assignedPact={assignedPact}
                         editable={resolvedCapabilities.editable}
+                        activeCampaignId={activeCampaignId}
+                        dataActions={dataActions}
                     />
                 )}
             </div>
@@ -330,14 +332,26 @@ function BacklashOverlay({ assignedPact, el, character, onApply, onClose }) {
     );
 }
 
-function PactTab({ character, updateCharacter, db, allPacts, assignedPact, editable }) {
+function PactTab({ character, updateCharacter, db, allPacts, assignedPact, editable, activeCampaignId, dataActions }) {
     const pactData = character.pact || {};
     const el = assignedPact ? (ELEMENTS[assignedPact.element] || ELEMENTS.Fire) : null;
 
     const setPactId = (pactId) => {
         if (!editable) return;
+        const selectedPact = allPacts.find(pact => pact.id === pactId);
+        const rawDedication = selectedPact?.dedication || null;
+        const dedication = typeof rawDedication === 'string'
+            ? { id: rawDedication, name: rawDedication }
+            : rawDedication;
         updateCharacter(c => {
-            c.pact = pactId ? { pactId, choices: {}, unlockedAwakenings: {} } : null;
+            c.pact = pactId ? {
+                pactId,
+                dedicationId: dedication?.id || null,
+                dedicationName: dedication?.name || null,
+                choices: {},
+                unlockedAwakenings: {},
+                awakeningPoints: 0,
+            } : null;
         });
     };
 
@@ -358,6 +372,11 @@ function PactTab({ character, updateCharacter, db, allPacts, assignedPact, edita
             c.pact.unlockedAwakenings = { ...(c.pact.unlockedAwakenings || {}), [abilityId]: next || undefined };
             if (!next) delete c.pact.unlockedAwakenings[abilityId];
         });
+    };
+
+    const grantAwakeningPoint = () => {
+        if (!editable || !activeCampaignId || !character?.id || !dataActions?.pact?.grantAwakeningPoints) return;
+        Promise.resolve(dataActions.pact.grantAwakeningPoints(activeCampaignId, character.id, 1)).catch(console.error);
     };
 
     const inputStyle = {
@@ -390,6 +409,21 @@ function PactTab({ character, updateCharacter, db, allPacts, assignedPact, edita
                             {el.icon} {assignedPact.name}
                         </div>
                         <div style={{ fontSize: '0.75em', color: '#888' }}>{assignedPact.element} Element</div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: '#111', border: '1px solid #333', borderRadius: 4, padding: '7px 9px' }}>
+                        <span style={{ color: '#aaa', fontSize: '0.8em' }}>
+                            Awakening Points: {Number(pactData.awakeningPoints) || 0}
+                        </span>
+                        {editable && (
+                            <button
+                                type="button"
+                                onClick={grantAwakeningPoint}
+                                style={{ padding: '4px 8px', background: '#1a3a1a', border: '1px solid #4caf50', color: '#c8e6c9', borderRadius: 4, cursor: 'pointer', fontSize: '0.75em' }}
+                            >
+                                +1 Point
+                            </button>
+                        )}
                     </div>
 
                     {(assignedPact.abilityGroups || []).length > 0 && (

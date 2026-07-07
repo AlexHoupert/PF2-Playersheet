@@ -122,3 +122,62 @@ test('legacy global actions update shop, custom content, bestiary, lore, and pac
     assert.deepEqual(harness.state.shop.availableItems, ['Widget']);
     assert.equal(harness.state.bestiary.creatures.goblin.revealState.hp, 'public');
 });
+
+test('legacy pact offer flow sets offers, accepts valid abilities, and spends awakening points', async () => {
+    const harness = legacyHarness({
+        abilities: {
+            custom: {},
+            deviant: {
+                spark: {
+                    id: 'spark',
+                    name: 'Spark',
+                    element: 'Fire',
+                    level: 1,
+                    awakening1: { name: 'Bright Spark' },
+                },
+                inferno: { id: 'inferno', name: 'Inferno', element: 'Fire', level: 6 },
+            },
+        },
+        pacts: {
+            ember: {
+                id: 'ember',
+                name: 'Ember Pact',
+                dedication: { type: 'feat', id: 'ember-dedication', name: 'Ember Dedication' },
+                abilityGroups: [
+                    { label: 'Initial', abilityIds: ['spark'] },
+                    { label: 'Level 6', abilityIds: ['inferno'] },
+                ],
+            },
+        },
+        campaigns: {
+            camp1: {
+                id: 'camp1',
+                name: 'Campaign',
+                characters: [
+                    { id: 'char1', name: 'Hero', level: 1 },
+                    { id: 'char2', name: 'Bound', level: 1, pact: { pactId: 'other' } },
+                ],
+            },
+        },
+    });
+
+    await harness.actions.pact.offerPactToActors('camp1', ['char1', 'char2'], 'ember');
+    assert.equal(harness.state.campaigns.camp1.characters[0].pactOffer.pactId, 'ember');
+    assert.equal(harness.state.campaigns.camp1.characters[1].pactOffer, undefined);
+
+    await harness.actions.pact.rejectPactOffer('camp1', 'char1', harness.state.campaigns.camp1.characters[0].pactOffer.id);
+    assert.equal(harness.state.campaigns.camp1.characters[0].pactOffer, undefined);
+
+    await harness.actions.pact.offerPactToActors('camp1', ['char1'], 'ember');
+    await harness.actions.pact.acceptPactOffer('camp1', 'char1', harness.state.campaigns.camp1.characters[0].pactOffer.id, 'spark');
+    const character = harness.state.campaigns.camp1.characters[0];
+    assert.equal(character.pact.pactId, 'ember');
+    assert.equal(character.pact.dedicationId, 'ember-dedication');
+    assert.equal(character.pact.choices[0], 'spark');
+    assert.equal(character.pactOffer, undefined);
+
+    await harness.actions.pact.grantAwakeningPoints('camp1', 'char1', 1);
+    await harness.actions.pact.spendAwakeningPoint('camp1', 'char1', 'spark', 1);
+    assert.equal(harness.state.campaigns.camp1.characters[0].pact.awakeningPoints, 0);
+    assert.equal(harness.state.campaigns.camp1.characters[0].pact.unlockedAwakenings.spark, 1);
+});

@@ -221,6 +221,11 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `s
 - `deletePact(pactOrId)`
 - `saveDeviantAbility(ability)`
 - `deleteDeviantAbility(abilityOrId)`
+- `offerPactToActors(campaignId, actorIds, pactId)`
+- `rejectPactOffer(campaignId, actorId, offerId)`
+- `acceptPactOffer(campaignId, actorId, offerId, abilityId)`
+- `grantAwakeningPoints(campaignId, actorId, amount)`
+- `spendAwakeningPoint(campaignId, actorId, abilityId, awakeningIndex)`
 
 `dataActions.shop`:
 

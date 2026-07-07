@@ -1,5 +1,7 @@
 import { createCatalogOverrideRecord } from "./actorReducers.js";
 import { cloneValue } from "./inventoryReducers.js";
+import { selectDeviantAbility, selectDeviantAbilityList } from "../selectors/abilitySelectors.js";
+import { selectPact, selectPactAbilityOptions } from "../selectors/pactSelectors.js";
 import {
   addItemsToTraderInDb,
   clearRootNotificationInDb,
@@ -32,7 +34,7 @@ import {
 } from "./globalContentReducers.js";
 
 export function createGlobalContentActions(actionContext) {
-  const { createDomainId, db, firestore, repos, updateDbLegacy, useFirestoreV2 } = actionContext;
+  const { actor, createDomainId, db, firestore, nowIso, repos, updateDbLegacy, updatePcActorAsCharacter, useFirestoreV2 } = actionContext;
 
   const updateGlobalConfig = (updater) => {
     if (useFirestoreV2) {
@@ -115,6 +117,111 @@ export function createGlobalContentActions(actionContext) {
   const saveDeviantAbility = (ability) => updateGlobalConfig((current) => saveDeviantAbilityInDb(current, ability));
   const deleteDeviantAbility = (abilityOrId) =>
     updateGlobalConfig((current) => deleteDeviantAbilityInDb(current, abilityOrId));
+
+  const offerPactToActors = (campaignId, actorIds, pactId) => {
+    const pact = selectPact(db, pactId);
+    if (!campaignId || !pact?.id) return Promise.reject(new Error("Cannot offer unknown pact."));
+    const uniqueActorIds = [...new Set((Array.isArray(actorIds) ? actorIds : [actorIds]).filter(Boolean))];
+    const offeredAt = nowIso();
+    return Promise.all(uniqueActorIds.map((actorId) =>
+      updatePcActorAsCharacter(campaignId, actorId, (character) => {
+        if (!character || character.deletedAt || character.pact?.pactId || character.pactOffer?.status === "pending") {
+          return character;
+        }
+        const next = cloneValue(character);
+        next.pactOffer = {
+          id: createDomainId("pact_offer"),
+          pactId: pact.id,
+          offeredAt,
+          offeredBy: actor || null,
+          status: "pending",
+        };
+        return next;
+      })
+    ));
+  };
+
+  const rejectPactOffer = (campaignId, actorId, offerId = null) =>
+    updatePcActorAsCharacter(campaignId, actorId, (character) => {
+      if (!character?.pactOffer || (offerId && character.pactOffer.id !== offerId)) return character;
+      const next = cloneValue(character);
+      delete next.pactOffer;
+      return next;
+    });
+
+  const acceptPactOffer = (campaignId, actorId, offerId, abilityId) =>
+    updatePcActorAsCharacter(campaignId, actorId, (character) => {
+      const offer = character?.pactOffer;
+      if (!offer || offer.status !== "pending" || (offerId && offer.id !== offerId)) {
+        throw new Error("This pact offer is no longer available.");
+      }
+      if (character.pact?.pactId) {
+        throw new Error("This character already has a pact.");
+      }
+      const pact = selectPact(db, offer.pactId);
+      if (!pact) throw new Error("The offered pact no longer exists.");
+      const ability = selectDeviantAbility(db, abilityId);
+      const option = selectPactAbilityOptions({
+        pact,
+        abilities: selectDeviantAbilityList(db),
+        characterLevel: character.level,
+        currentChoices: {},
+        slotIndex: 0,
+      }).find((entry) => entry.ability.id === ability?.id);
+      if (!option?.selectable) {
+        throw new Error(option?.disabledReason || "This ability cannot be learned from this pact.");
+      }
+      const dedication = normalizePactDedication(pact);
+      const next = cloneValue(character);
+      next.pact = {
+        pactId: pact.id,
+        dedicationId: dedication?.id || null,
+        dedicationName: dedication?.name || null,
+        choices: { 0: ability.id },
+        unlockedAwakenings: {},
+        awakeningPoints: Number(next.pact?.awakeningPoints) || 0,
+        acceptedAt: nowIso(),
+        acceptedBy: actor || null,
+      };
+      delete next.pactOffer;
+      return next;
+    });
+
+  const grantAwakeningPoints = (campaignId, actorId, amount) =>
+    updatePcActorAsCharacter(campaignId, actorId, (character) => {
+      if (!character?.pact?.pactId) return character;
+      const next = cloneValue(character);
+      const current = Number(next.pact.awakeningPoints) || 0;
+      next.pact = {
+        ...next.pact,
+        awakeningPoints: Math.max(0, current + (Number(amount) || 0)),
+      };
+      return next;
+    });
+
+  const spendAwakeningPoint = (campaignId, actorId, abilityId, awakeningIndex) =>
+    updatePcActorAsCharacter(campaignId, actorId, (character) => {
+      if (!character?.pact?.pactId) throw new Error("This character has no pact.");
+      const ability = selectDeviantAbility(db, abilityId);
+      const level = Number(awakeningIndex) === 2 ? 2 : 1;
+      if (!ability?.[`awakening${level}`]?.name) throw new Error("This awakening is not defined.");
+      const learnedIds = new Set(Object.values(character.pact.choices || {}).filter(Boolean));
+      if (!learnedIds.has(ability.id)) throw new Error("This ability has not been learned.");
+      const points = Number(character.pact.awakeningPoints) || 0;
+      if (points <= 0) throw new Error("No awakening points available.");
+      const currentLevel = Number(character.pact.unlockedAwakenings?.[ability.id]) || 0;
+      if (currentLevel >= level) throw new Error("This awakening is already unlocked.");
+      const next = cloneValue(character);
+      next.pact = {
+        ...next.pact,
+        awakeningPoints: points - 1,
+        unlockedAwakenings: {
+          ...(next.pact.unlockedAwakenings || {}),
+          [ability.id]: level,
+        },
+      };
+      return next;
+    });
 
   const saveLoreArticle = (article) => {
     if (useFirestoreV2) {
@@ -261,6 +368,11 @@ export function createGlobalContentActions(actionContext) {
       deletePact,
       saveDeviantAbility,
       deleteDeviantAbility,
+      offerPactToActors,
+      rejectPactOffer,
+      acceptPactOffer,
+      grantAwakeningPoints,
+      spendAwakeningPoint,
     },
     shop: {
       createTrader,
@@ -290,4 +402,17 @@ function buildCatalogOverrideId(catalogType, value) {
     .replace(/^_+|_+$/g, "")
     .toLowerCase();
   return `${catalogType}_${normalized || "override"}`;
+}
+
+function normalizePactDedication(pact) {
+  const dedication = pact?.dedication;
+  if (!dedication) return null;
+  if (typeof dedication === "string") {
+    return { type: "feat", id: dedication, name: dedication };
+  }
+  return {
+    type: dedication.type || "feat",
+    id: dedication.id || dedication.name || null,
+    name: dedication.name || dedication.id || null,
+  };
 }

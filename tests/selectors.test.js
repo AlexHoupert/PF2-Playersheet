@@ -34,7 +34,14 @@ import {
     selectCustomCreatureList,
 } from '../src/shared/db/selectors/bestiarySelectors.js';
 import { selectLoreArticle, selectLoreArticlesByCategory } from '../src/shared/db/selectors/loreSelectors.js';
-import { selectPact, selectPactList } from '../src/shared/db/selectors/pactSelectors.js';
+import {
+    resolvePactDedication,
+    selectPact,
+    selectPactAbilityOptions,
+    selectPactList,
+    selectPactUsageByAbility,
+    selectPendingPactOffer,
+} from '../src/shared/db/selectors/pactSelectors.js';
 import {
     selectAvailableFormulaNames,
     selectAvailableItemNames,
@@ -214,6 +221,49 @@ test('selectors read v2 projection with campaign subcollections and global confi
     assert.equal(selectPactList(db)[0].name, 'Ember Pact');
     assert.equal(selectLoreArticle(db, 'article1').title, 'Lore');
     assert.equal(selectLoreArticlesByCategory(db, 'history')[0].id, 'article1');
+});
+
+test('pact selectors derive offers, ability options, usage, and dedication references', () => {
+    const db = {
+        abilities: {
+            deviant: {
+                spark: { id: 'spark', name: 'Spark', level: 1 },
+                inferno: { id: 'inferno', name: 'Inferno', level: 6 },
+                ash: { id: 'ash', name: 'Ash', level: 1 },
+            },
+        },
+        pacts: {
+            ember: {
+                id: 'ember',
+                name: 'Ember Pact',
+                dedication: { type: 'feat', id: 'ember-dedication', name: 'Ember Dedication' },
+                abilityGroups: [
+                    { label: 'Initial', abilityIds: ['spark'] },
+                    { label: 'Level 6', abilityIds: ['inferno'] },
+                ],
+            },
+        },
+    };
+
+    const offer = selectPendingPactOffer({ pactOffer: { id: 'offer1', pactId: 'ember', status: 'pending' } }, db);
+    assert.equal(offer.pact.name, 'Ember Pact');
+
+    const options = selectPactAbilityOptions({
+        pact: db.pacts.ember,
+        abilities: db.abilities.deviant,
+        characterLevel: 1,
+        slotIndex: 0,
+    });
+    assert.equal(options.find(option => option.ability.id === 'spark').selectable, true);
+    assert.equal(options.find(option => option.ability.id === 'inferno').selectable, false);
+    assert.equal(options.find(option => option.ability.id === 'inferno').disabledReason, 'Requires level 6');
+
+    assert.deepEqual(selectPactUsageByAbility(db).spark, ['Ember Pact']);
+    assert.deepEqual(resolvePactDedication(db.pacts.ember, [{ id: 'ember-dedication', name: 'Ember Dedication' }]), {
+        type: 'feat',
+        id: 'ember-dedication',
+        name: 'Ember Dedication',
+    });
 });
 
 test('actor and effect selectors expose v2 actor viewmodels', () => {

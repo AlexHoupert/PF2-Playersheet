@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
+import { useCampaign } from '../shared/context/CampaignContext';
 import { ELEMENTS, BACKLASH_TIERS, BACKLASH_LABELS, BACKLASH_COLORS } from './pactsData';
 import { selectDeviantAbility } from '../shared/db/selectors/abilitySelectors';
 import { selectPact } from '../shared/db/selectors/pactSelectors';
+import { useAppFeedback } from '../shared/feedback/AppFeedback';
 
 /**
  * Player-facing pact view.
@@ -13,6 +15,8 @@ import { selectPact } from '../shared/db/selectors/pactSelectors';
  *   db         — full db for selector-backed pact and deviant ability reads
  */
 export default function PactView({ character, db }) {
+    const { activeCampaignId, dataActions } = useCampaign();
+    const { notifyError } = useAppFeedback();
     const pactData = character?.pact || {};
     const [expandedAbility, setExpandedAbility] = useState(null);
 
@@ -29,8 +33,19 @@ export default function PactView({ character, db }) {
     }
 
     const el = ELEMENTS[assignedPact.element] || ELEMENTS.Fire;
+    const awakeningPoints = Number(pactData.awakeningPoints) || 0;
 
     const resolveAbility = (id) => selectDeviantAbility(db, id);
+    const runPactAction = (action) => {
+        Promise.resolve(action).catch(err => {
+            console.error(err);
+            notifyError(err);
+        });
+    };
+    const spendAwakeningPoint = (abilityId, awakeningIndex) => {
+        if (!activeCampaignId || !character?.id || awakeningPoints <= 0) return;
+        runPactAction(dataActions.pact.spendAwakeningPoint(activeCampaignId, character.id, abilityId, awakeningIndex));
+    };
 
     return (
         <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -51,6 +66,14 @@ export default function PactView({ character, db }) {
                         dangerouslySetInnerHTML={{ __html: assignedPact.description }}
                     />
                 )}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                    {(pactData.dedicationName || assignedPact.dedication?.name) && (
+                        <span style={pillStyle(el)}>
+                            Dedication: {pactData.dedicationName || assignedPact.dedication.name}
+                        </span>
+                    )}
+                    <span style={pillStyle(el)}>Awakening Points: {awakeningPoints}</span>
+                </div>
             </div>
 
             {/* Ability Groups */}
@@ -147,7 +170,18 @@ export default function PactView({ character, db }) {
                                                                             />
                                                                         )}
                                                                         {!isUnlocked && (
-                                                                            <div style={{ fontSize: '0.72em', color: '#444', marginTop: 4 }}>🔒 Not yet unlocked</div>
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                                                                                <span style={{ fontSize: '0.72em', color: '#444' }}>Locked</span>
+                                                                                {isChosen && awakeningPoints > 0 && (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => spendAwakeningPoint(ab.id, awLevel)}
+                                                                                        style={{ padding: '3px 8px', background: '#1a3a1a', border: '1px solid #4caf50', color: '#c8e6c9', borderRadius: 4, cursor: 'pointer', fontSize: '0.72em' }}
+                                                                                    >
+                                                                                        Spend Point
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
                                                                         )}
                                                                     </div>
                                                                 );
@@ -200,4 +234,15 @@ export default function PactView({ character, db }) {
             </div>
         </div>
     );
+}
+
+function pillStyle(el) {
+    return {
+        fontSize: '0.74em',
+        color: el.color,
+        background: '#111',
+        border: `1px solid ${el.dim}`,
+        borderRadius: 999,
+        padding: '3px 8px',
+    };
 }
