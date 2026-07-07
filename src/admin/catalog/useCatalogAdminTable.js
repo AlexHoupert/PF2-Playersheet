@@ -4,6 +4,7 @@ import {
     getCatalogEntryBaseId,
     getCatalogEntryKey,
 } from '../../shared/catalog/catalogEntryModel.js';
+import { createCatalogReference } from '../../shared/clipboard/refClipboard.js';
 
 export const DEFAULT_CATALOG_STATUS_FILTERS = Object.freeze({
     [CATALOG_ENTRY_STATUS.ORIGINAL]: true,
@@ -265,14 +266,13 @@ export function paginateCatalogEntryStates(entryStates = [], { page = 1, itemsPe
 
 export function createCatalogEntryReference(entryOrState) {
     const entry = getCatalogTableEntry(entryOrState) || {};
-    return {
-        refType: 'catalog',
-        catalogType: entry.catalogType || normalizeCatalogTableState(entryOrState)?.catalogType || null,
-        id: entry.id || entry._id || null,
-        baseId: getCatalogEntryBaseId(entry) || normalizeCatalogTableState(entryOrState)?.baseId || null,
-        sourceFile: entry.sourceFile || entry.overrideSourceFile || null,
-        label: entry.name || entry.label || '',
-    };
+    const state = normalizeCatalogTableState(entryOrState);
+    return createCatalogReference(entry.catalogType || state?.catalogType, {
+        ...entry,
+        baseId: getCatalogEntryBaseId(entry) || state?.baseId || null,
+        catalogOverrideId: entry.catalogOverrideId || state?.overrideId || null,
+        catalogEntryStatus: state?.status || entry.catalogEntryStatus || null,
+    });
 }
 
 export function createCatalogActionResult(action, entryOrState, extra = {}) {

@@ -130,10 +130,12 @@ test('catalog admin table references are stable catalog refs', () => {
     assert.deepEqual(ref, {
         refType: 'catalog',
         catalogType: 'spell',
-        id: 'uplifting-overture',
+        id: 'spell_uplifting_overture',
         baseId: 'spells/uplifting-overture.json',
         sourceFile: 'spells/uplifting-overture.json',
         label: 'Uplifting Overture',
+        catalogOverrideId: 'spell_uplifting_overture',
+        status: CATALOG_ENTRY_STATUS.EDITED,
     });
 });
 

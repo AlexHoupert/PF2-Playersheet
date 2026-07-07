@@ -106,6 +106,7 @@ export default function PlayerAppController() {
         shopItemDetailError,
         shopItemDetailLoading,
     } = usePlayerCatalogInspection({
+        db,
         modalData,
         modalMode,
         setModalData,

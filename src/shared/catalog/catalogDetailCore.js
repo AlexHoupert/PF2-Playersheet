@@ -1,8 +1,11 @@
-export const CATALOG_TYPES = ["action", "feat", "impulse", "item", "spell"];
+export const CATALOG_TYPES = ["ability", "action", "creature", "feat", "impulse", "item", "spell"];
 
 export function inferCatalogEntityType(entity, modalMode = null) {
   if (entity?._entityType) return normalizeCatalogType(entity._entityType);
+  if (entity?.catalogType) return normalizeCatalogType(entity.catalogType);
   if (modalMode === "spell" || modalMode === "feat" || modalMode === "impulse") return modalMode;
+  if (entity?.type === "Ability") return "ability";
+  if (entity?.type === "Creature" || entity?.type === "NPC" || entity?.type === "Hazard") return "creature";
   if (entity?.type === "Impulse") return "impulse";
   if (entity?.type === "Spell" || entity?.rank != null) return "spell";
   if (entity?.type === "Feat") return "feat";
@@ -14,6 +17,12 @@ export function normalizeCatalogType(type) {
   const normalized = String(type || "").trim().toLowerCase();
   if (normalized === "shop" || normalized === "equipment") return "item";
   if (normalized === "condition") return "condition";
+  if (normalized === "abilities") return "ability";
+  if (normalized === "actions") return "action";
+  if (normalized === "bestiary" || normalized === "creatures") return "creature";
+  if (normalized === "spells") return "spell";
+  if (normalized === "feats") return "feat";
+  if (normalized === "impulses") return "impulse";
   return CATALOG_TYPES.includes(normalized) ? normalized : "item";
 }
 

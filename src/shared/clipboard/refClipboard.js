@@ -1,17 +1,20 @@
+import {
+    getCatalogEntryBaseId,
+    getCatalogEntryKey,
+} from '../catalog/catalogEntryModel.js';
+
 /**
- * refClipboard — Cross-context "Copy Reference" system.
+ * Cross-context Copy Reference system.
  *
- * A reference is: { type: 'ability'|'creature'|'spell'|'item', name, data }
+ * Canonical catalog reference:
+ * { refType: 'catalog', catalogType, id, baseId, sourceFile, label }
  *
- * copyRef() writes to both the module's in-memory slot AND the system clipboard
- * as a JSON string so references survive cross-window paste (Ctrl+V).
- *
- * readRef() tries the system clipboard first (enables cross-window),
- * falls back to the in-memory slot (same-tab fallback).
- *
- * Consumers can subscribe to in-memory changes via onRefChange().
+ * Stored references also keep the legacy shape:
+ * { type, name, data }
+ * so older consumers like Bestiary ability paste continue to work.
  */
 
+export const CATALOG_REF_TYPE = 'catalog';
 const MARKER = '_pf2ref';
 
 let _inMemory = null;
@@ -21,56 +24,123 @@ function notify() {
     _listeners.forEach(fn => fn(_inMemory));
 }
 
-/**
- * Store a reference and write it to the system clipboard.
- * @param {'ability'|'creature'|'spell'|'item'} type
- * @param {object} data  — the full object (ability, creature index item, etc.)
- */
-export function copyRef(type, data) {
-    _inMemory = { type, name: data.name || '', data };
+export function copyRef(type, data = {}) {
+    _inMemory = buildStoredCatalogReference(type, data);
     notify();
-    const json = JSON.stringify({ [MARKER]: 1, type, name: data.name || '', data });
-    navigator.clipboard.writeText(json).catch(() => {
-        // Clipboard API unavailable (non-HTTPS, permissions denied) — in-memory only
+    const json = JSON.stringify({ [MARKER]: 1, ..._inMemory });
+    globalThis.navigator?.clipboard?.writeText?.(json)?.catch?.(() => {
+        // Clipboard API unavailable - in-memory copy still works in this tab.
     });
+    return _inMemory;
 }
 
-/** Synchronously return the in-memory reference (same tab). */
 export function getInMemoryRef() {
     return _inMemory;
 }
 
-/**
- * Async read: tries system clipboard first (cross-window), falls back to in-memory.
- * Returns null if clipboard is empty or not a pf2 reference.
- */
 export async function readRef() {
     try {
-        const text = await navigator.clipboard.readText();
+        const text = await globalThis.navigator?.clipboard?.readText?.();
         if (text && text.includes(`"${MARKER}"`)) {
-            const parsed = JSON.parse(text);
-            if (parsed[MARKER] && parsed.type && parsed.data) {
-                return { type: parsed.type, name: parsed.name || '', data: parsed.data };
-            }
+            return normalizeStoredReference(JSON.parse(text));
         }
     } catch {
-        // readText requires user gesture permission or HTTPS; fall through
+        // readText requires user gesture permission or HTTPS; fall through.
     }
     return _inMemory;
 }
 
-/**
- * Subscribe to in-memory reference changes (same tab only).
- * Returns an unsubscribe function.
- */
 export function onRefChange(fn) {
     _listeners.add(fn);
     return () => _listeners.delete(fn);
 }
 
-/** Clear both in-memory and (best-effort) clipboard. */
 export function clearRef() {
     _inMemory = null;
     notify();
-    navigator.clipboard.writeText('').catch(() => {});
+    globalThis.navigator?.clipboard?.writeText?.('')?.catch?.(() => {});
+}
+
+export function createCatalogReference(catalogType, data = {}) {
+    const existing = data?.catalogRef && data.catalogRef.refType === CATALOG_REF_TYPE ? data.catalogRef : {};
+    const type = normalizeRefCatalogType(catalogType || existing.catalogType || data.catalogType || data.type);
+    const label = firstString([existing.label, data.name, data.label, data.id, data._id, type]);
+    const sourceFile = firstString([
+        existing.sourceFile,
+        data.sourceFile,
+        data.overrideSourceFile,
+    ]);
+    const baseId = firstString([
+        existing.baseId,
+        data.baseId,
+        getCatalogEntryBaseId(data),
+        sourceFile,
+        label,
+    ]);
+    return {
+        refType: CATALOG_REF_TYPE,
+        catalogType: type,
+        id: firstString([
+            existing.id,
+            data.catalogOverrideId,
+            data.id,
+            data._id,
+            data.catalogEntryKey,
+            getCatalogEntryKey(data, type),
+        ]),
+        baseId,
+        sourceFile: sourceFile || null,
+        label,
+        catalogOverrideId: existing.catalogOverrideId || data.catalogOverrideId || null,
+        status: existing.status || data.catalogEntryStatus || null,
+    };
+}
+
+export function isCatalogReference(ref) {
+    return ref?.refType === CATALOG_REF_TYPE || ref?.catalogRef?.refType === CATALOG_REF_TYPE;
+}
+
+export function normalizeStoredReference(raw) {
+    if (!raw) return null;
+    const data = raw.data || {};
+    const catalogRef = raw.refType === CATALOG_REF_TYPE
+        ? createCatalogReference(raw.catalogType, raw)
+        : createCatalogReference(raw.type || raw.catalogType, data.catalogRef || data);
+    return buildStoredCatalogReference(catalogRef.catalogType, {
+        ...data,
+        catalogRef,
+        name: raw.name || data.name || catalogRef.label,
+    });
+}
+
+function buildStoredCatalogReference(type, data = {}) {
+    const catalogRef = createCatalogReference(type, data);
+    const storedData = {
+        ...(data || {}),
+        catalogRef,
+    };
+    return {
+        ...catalogRef,
+        type: catalogRef.catalogType,
+        name: catalogRef.label || storedData.name || '',
+        data: storedData,
+    };
+}
+
+function normalizeRefCatalogType(type) {
+    const normalized = String(type || 'item').trim().toLowerCase();
+    if (normalized === 'shop' || normalized === 'equipment') return 'item';
+    if (normalized === 'actions') return 'action';
+    if (normalized === 'spells') return 'spell';
+    if (normalized === 'feats') return 'feat';
+    if (normalized === 'impulses') return 'impulse';
+    if (normalized === 'abilities') return 'ability';
+    if (normalized === 'creatures' || normalized === 'bestiary') return 'creature';
+    return normalized || 'item';
+}
+
+function firstString(values) {
+    return values
+        .map((value) => String(value || '').trim())
+        .find(Boolean) || '';
 }

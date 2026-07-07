@@ -9,6 +9,7 @@ import {
 } from "../catalog/catalogDetailController.js";
 
 export function useCatalogDetailController({
+  db = null,
   modalData,
   modalMode,
   setModalData,
@@ -26,10 +27,10 @@ export function useCatalogDetailController({
       return;
     }
 
-    if (!shouldFetchCatalogDetail(modalData, modalMode)) return;
+    if (!shouldFetchCatalogDetail(modalData, modalMode, db)) return;
 
     const type = inferCatalogEntityType(modalData, modalMode);
-    const sourceFile = resolveCatalogSourceFile(modalData, modalMode);
+    const sourceFile = resolveCatalogSourceFile(modalData, modalMode, db);
     const cacheKey = `${type}:${sourceFile}`;
     const cached = detailCacheRef.current.get(cacheKey);
     if (cached) {
@@ -57,7 +58,7 @@ export function useCatalogDetailController({
     return () => {
       cancelled = true;
     };
-  }, [modalData, modalMode, setModalData]);
+  }, [db, modalData, modalMode, setModalData]);
 
   const handleContentLinkClick = async (e) => {
     const link = e.target.closest(".content-link");
@@ -68,7 +69,7 @@ export function useCatalogDetailController({
 
     const type = link.dataset.type;
     const name = link.dataset.name;
-    const resolved = resolveContentLink(type, name);
+    const resolved = resolveContentLink(type, name, db);
 
     try {
       if (resolved.type === "condition") {
@@ -81,8 +82,16 @@ export function useCatalogDetailController({
         return;
       }
 
-      if (!resolved.sourceFile || !resolved.fetchDetail) return;
-      const data = await resolved.fetchDetail(resolved.sourceFile);
+      if (resolved.isDeleted) {
+        pushModal(setModalHistory, modalMode, modalData);
+        setModalData?.({ ...(resolved.entry || {}), name: resolved.name, _entityType: resolved.type, _catalogDeleted: true });
+        setModalMode?.(resolved.modalMode);
+        return;
+      }
+
+      if (!resolved.entry && (!resolved.sourceFile || !resolved.fetchDetail)) return;
+      const fetched = resolved.sourceFile && resolved.fetchDetail ? await resolved.fetchDetail(resolved.sourceFile) : null;
+      const data = { ...(fetched || {}), ...(resolved.entry || {}) };
       pushModal(setModalHistory, modalMode, modalData);
       setModalData?.({ ...data, _entityType: resolved.type });
       setModalMode?.(resolved.modalMode);

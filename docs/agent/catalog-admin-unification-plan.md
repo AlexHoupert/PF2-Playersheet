@@ -29,7 +29,7 @@ Statische JSON-Daten bleiben read-only. Runtime-Aenderungen laufen ueber Firesto
 - [x] Phase 2: Gemeinsamen Catalog-Controller und UI-Kontrakt einfuehren.
 - [x] Phase 3: Editor-Save-Vertrag vereinheitlichen.
 - [x] Phase 4: Tabellen schrittweise migrieren.
-- [ ] Phase 5: Copy-Reference-System erweitern.
+- [x] Phase 5: Copy-Reference-System erweitern.
 - [ ] Phase 6: Tests, Guards und Smokes ergaenzen.
 - [ ] Phase 7: Doku und Backlog bereinigen.
 
@@ -361,8 +361,8 @@ Ziel: Jede Catalog-Tabelle erzeugt stabile Referenzen, die in anderen Kontexten 
 
 Arbeitsschritte:
 
-- [ ] `refClipboard` auf generische Catalog-Refs erweitern.
-- [ ] Neuer Ref-Shape:
+- [x] `refClipboard` auf generische Catalog-Refs erweitern.
+- [x] Neuer Ref-Shape:
 
 ```js
 {
@@ -375,17 +375,17 @@ Arbeitsschritte:
 }
 ```
 
-- [ ] Resolver ergaenzen:
-  - [ ] `resolveCatalogReference(ref, catalogStore)`
-  - [ ] Fallback: sourceFile/baseId/id/name in dieser Reihenfolge.
-- [ ] Copy Reference in allen Tabellen gleich anzeigen.
-- [ ] Info-Modals nutzen Resolver statt eingebettete Vollkopien, wenn moeglich.
+- [x] Resolver ergaenzen:
+  - [x] `resolveCatalogReference(ref, catalogStore)`
+  - [x] Fallback: sourceFile/baseId/id/name in dieser Reihenfolge.
+- [x] Copy Reference in allen Tabellen gleich anzeigen.
+- [x] Info-Modals nutzen Resolver statt eingebettete Vollkopien, wenn moeglich.
 
 Erfolgskriterien:
 
-- [ ] Referenz auf edited static entry oeffnet den effektiven Override.
-- [ ] Referenz auf deleted entry zeigt sinnvolle Meldung oder Deleted-Status.
-- [ ] Referenz auf custom entry ueberlebt Reload.
+- [x] Referenz auf edited static entry oeffnet den effektiven Override.
+- [x] Referenz auf deleted entry zeigt sinnvolle Meldung oder Deleted-Status.
+- [x] Referenz auf custom entry ueberlebt Reload.
 
 ## Phase 6: Tests, Guards Und Smokes
 
@@ -458,7 +458,7 @@ Erfolgskriterien:
 - [x] Suche, Filter, Sortierung und Auswahl bleiben nach Mutation erhalten.
 - [x] Statusfilter fuer Original/Editiert/Custom/Geloescht existieren.
 - [x] Production-Editoren fuer Items, Spells, Actions, Feats, Impulses, Abilities und Creatures benoetigen keine File-API.
-- [ ] Copy Reference funktioniert fuer alle Catalog-Typen konsistent.
+- [x] Copy Reference funktioniert fuer alle Catalog-Typen konsistent.
 
 ## Nicht-Ziele Dieser Welle
 

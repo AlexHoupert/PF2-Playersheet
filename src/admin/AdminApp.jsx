@@ -27,6 +27,7 @@ export default function AdminApp() {
     const [modalData, setModalData] = useState(null);
 
     const { handleContentLinkClick, shopItemDetailError, shopItemDetailLoading } = useCatalogDetailController({
+        db,
         modalData,
         modalMode,
         setModalData,
