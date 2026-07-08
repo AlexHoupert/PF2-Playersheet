@@ -4,7 +4,7 @@ import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import ItemDetailContent from '../../shared/components/ItemDetailContent';
 import ImagePicker from '../../shared/components/ImagePicker';
 import { useWindowSize } from '../../shared/hooks/useWindowSize';
-import { SHOP_INDEX_FILTER_OPTIONS } from '../../shared/catalog/shopIndex';
+import { SHOP_INDEX_FILTER_OPTIONS, fetchShopItemDetailBySourceFile } from '../../shared/catalog/shopIndex';
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 import {
     buildCatalogEditorOverride,
@@ -12,6 +12,7 @@ import {
     buildLegacyDbCatalogPayload,
     getCatalogEditorInitialItem,
 } from '../../shared/catalog/catalogEditorContract';
+import { mergeCatalogDetailIntoEntry } from '../../shared/catalog/catalogDetailMerge';
 
 const STATIC_RESOURCE_BASE_URL = import.meta.env.PROD ? '/ressources' : '/api/static';
 
@@ -36,41 +37,44 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
     });
 
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showImagePicker, setShowImagePicker] = useState(false);
 
     // Load initial data
     useEffect(() => {
         if (initialItem) {
-            // Parse damage - handle both single object and array formats
-            // Parse damage - handle both single object and array formats
-            let damages = [];
-            const itemDamage = initialItem.system?.damage || initialItem.damage;
-            if (itemDamage) {
-                if (Array.isArray(itemDamage)) {
-                    damages = itemDamage;
-                } else if (typeof itemDamage === 'object') {
-                    damages = [itemDamage];
-                }
+            setFormData(buildItemEditorFormData(initialItem));
+
+            const sourceFile = initialItem.sourceFile;
+            if (!sourceFile) {
+                setIsLoading(false);
+                return;
             }
 
-            setFormData({
-                name: initialItem.name || '',
-                level: initialItem.level || initialItem.system?.level?.value || 0,
-                price: parseFloat(initialItem.price) || initialItem.system?.price?.value?.gp || 0,
-                type: initialItem.type || 'Weapon',
-                category: initialItem.category || initialItem.system?.category || '',
-                group: initialItem.group || initialItem.system?.group || '',
-                rarity: initialItem.rarity || initialItem.system?.traits?.rarity || 'common',
-                bulk: initialItem.bulk || initialItem.system?.bulk?.value || '',
-                usage: initialItem.usage || initialItem.system?.usage?.value || '',
-                traits: initialItem.traits?.value || initialItem.system?.traits?.value || initialItem.traits || [],
-                damages: damages,
-                range: initialItem.range || initialItem.system?.range || '',
-                description: initialItem.system?.description?.value || initialItem.description?.value || initialItem.description || '',
-                sourceFile: initialItem.sourceFile || initialItem.overrideSourceFile || null,
-                img: initialItem.img || null
-            });
+            let cancelled = false;
+            setIsLoading(true);
+            fetchShopItemDetailBySourceFile(sourceFile)
+                .then(details => {
+                    if (cancelled || !details) return;
+                    setFormData(prev => {
+                        const merged = mergeCatalogDetailIntoEntry(details, { ...initialItem, ...prev });
+                        return buildItemEditorFormData(merged);
+                    });
+                })
+                .catch(err => {
+                    if (!cancelled) {
+                        console.error("Failed to load item details", err);
+                        setError("Failed to load item details.");
+                    }
+                })
+                .finally(() => {
+                    if (!cancelled) setIsLoading(false);
+                });
+
+            return () => {
+                cancelled = true;
+            };
         }
     }, [initialItem]);
 
@@ -241,6 +245,7 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
                 <h2>{initialItem?.name ? 'Edit Item' : 'Create Item'}</h2>
 
                 {error && <div style={{ background: '#d32f2f', color: '#fff', padding: 10, marginBottom: 10, borderRadius: 4 }}>{error}</div>}
+                {isLoading && <div style={{ color: '#aaa', fontSize: '0.85em', marginBottom: 10 }}>Loading item details...</div>}
 
                 {/* Basic Info Grid */}
                 <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10, marginBottom: 20 }}>
@@ -478,6 +483,37 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
             />
         </div>
     );
+}
+
+export function buildItemEditorFormData(item = {}) {
+    const system = item.system || {};
+    let damages = [];
+    const itemDamage = system.damage || item.damage;
+    if (itemDamage) {
+        if (Array.isArray(itemDamage)) {
+            damages = itemDamage;
+        } else if (typeof itemDamage === 'object') {
+            damages = [itemDamage];
+        }
+    }
+
+    return {
+        name: item.name || '',
+        level: item.level || system.level?.value || 0,
+        price: parseFloat(item.price) || system.price?.value?.gp || 0,
+        type: item.type || 'Weapon',
+        category: item.category || system.category || '',
+        group: item.group || system.group || '',
+        rarity: item.rarity || system.traits?.rarity || 'common',
+        bulk: item.bulk || system.bulk?.value || '',
+        usage: item.usage || system.usage?.value || '',
+        traits: item.traits?.value || system.traits?.value || item.traits || [],
+        damages,
+        range: item.range || system.range || '',
+        description: system.description?.value || item.description?.value || item.description || '',
+        sourceFile: item.sourceFile || item.overrideSourceFile || null,
+        img: item.img || null
+    };
 }
 
 export function buildItemDbPayload(itemJson, formData, hasDamage = true) {

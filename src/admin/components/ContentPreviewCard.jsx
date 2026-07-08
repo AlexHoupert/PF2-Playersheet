@@ -41,7 +41,7 @@ function DetailRow({ label, value }) {
     );
 }
 
-export default function ContentPreviewCard({ item, entityType, onEdit, onClose }) {
+export default function ContentPreviewCard({ item, entityType, isLoading = false, onEdit, onClose }) {
     if (!item) return null;
 
     const rarityColor = RARITY_COLORS[item.rarity] || RARITY_COLORS.common;
@@ -170,6 +170,10 @@ export default function ContentPreviewCard({ item, entityType, onEdit, onClose }
                         lineHeight: 1.6,
                     }}>
                         <div dangerouslySetInnerHTML={{ __html: item.description }} />
+                    </div>
+                ) : isLoading ? (
+                    <div style={{ padding: 12, color: '#888', fontStyle: 'italic', fontSize: '0.85em' }}>
+                        Loading description...
                     </div>
                 ) : (
                     <div style={{ padding: 12, color: '#666', fontStyle: 'italic', fontSize: '0.85em' }}>

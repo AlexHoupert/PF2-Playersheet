@@ -35,6 +35,7 @@ const DEFAULT_VISIBLE_STATUSES = Object.freeze([
     CATALOG_ENTRY_STATUS.EDITED,
     CATALOG_ENTRY_STATUS.CUSTOM,
 ]);
+const DEFAULT_DETAIL_SOURCE_FILE = (entry) => entry?.sourceFile;
 
 const CATALOG_STATUS_OPTIONS = Object.values(CATALOG_ENTRY_STATUS).map((status) => ({
     value: status,
@@ -51,7 +52,7 @@ export default function CatalogAdminTableView({
     filters = [],
     EditorComponent,
     fetchDetailBySourceFile = null,
-    detailSourceFile = (entry) => entry?.sourceFile,
+    detailSourceFile = DEFAULT_DETAIL_SOURCE_FILE,
     searchPlaceholder = 'Search...',
     newLabel = '+ New Entry',
     itemsPerPageOptions = DEFAULT_PAGE_SIZES,
@@ -69,6 +70,7 @@ export default function CatalogAdminTableView({
     const [focusedFilterId, setFocusedFilterId] = useState(null);
     const [filterValues, setFilterValues] = useState(() => createDefaultDomainFilterValues(filters));
     const [loadedDetail, setLoadedDetail] = useState(null);
+    const [detailLoading, setDetailLoading] = useState(false);
 
     const allEntryStates = useMemo(
         () => selectCatalogEntryStates(staticItems, db, catalogType),
@@ -133,15 +135,18 @@ export default function CatalogAdminTableView({
     }, [columns, filterDefinitions, visibleColumns]);
 
     const previewItem = table.previewEntry;
+    const previewSourceFile = previewItem ? detailSourceFile(previewItem) : null;
 
     useEffect(() => {
-        const sourceFile = detailSourceFile(previewItem);
+        const sourceFile = previewSourceFile;
         if (!fetchDetailBySourceFile || !sourceFile) {
             setLoadedDetail(null);
+            setDetailLoading(false);
             return;
         }
         let cancelled = false;
         setLoadedDetail(null);
+        setDetailLoading(true);
         fetchDetailBySourceFile(sourceFile)
             .then((detail) => {
                 if (!cancelled) setLoadedDetail(detail);
@@ -151,11 +156,14 @@ export default function CatalogAdminTableView({
                     console.error(`Failed to load ${catalogType} detail`, err);
                     setLoadedDetail(null);
                 }
+            })
+            .finally(() => {
+                if (!cancelled) setDetailLoading(false);
             });
         return () => {
             cancelled = true;
         };
-    }, [catalogType, detailSourceFile, fetchDetailBySourceFile, previewItem]);
+    }, [catalogType, fetchDetailBySourceFile, previewSourceFile]);
 
     const handleFilterValuesChange = (nextValues) => {
         const selectedStatuses = Array.isArray(nextValues?.[CATALOG_STATUS_FILTER_ID])
@@ -242,6 +250,7 @@ export default function CatalogAdminTableView({
         <ContentPreviewCard
             item={loadedDetail ? mergeCatalogDetailIntoEntry(loadedDetail, previewItem) : previewItem}
             entityType={entityType}
+            isLoading={detailLoading}
             onEdit={() => table.editEntry(previewItem)}
             onClose={() => table.closePreview()}
         />

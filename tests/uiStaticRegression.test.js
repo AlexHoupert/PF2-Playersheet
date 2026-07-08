@@ -528,13 +528,21 @@ test('catalog details and item rows use shared reusable controllers', () => {
     const itemsLayoutSource = readSource('src/admin/items/ItemsViewLayout.jsx');
     const detailControllerSource = readSource('src/shared/hooks/useCatalogDetailController.js');
     const catalogTableSource = readSource('src/admin/catalog/CatalogAdminTableView.jsx');
+    const itemEditorSource = readSource('src/admin/editors/ItemEditor.jsx');
 
     assert.match(adminSource, /useCatalogDetailController/);
     assert.match(playerCatalogSource, /useCatalogDetailController/);
     assert.match(detailControllerSource, /mergeCatalogDetailIntoEntry/);
     assert.match(catalogTableSource, /mergeCatalogDetailIntoEntry/);
+    assert.match(catalogTableSource, /DEFAULT_DETAIL_SOURCE_FILE/);
+    assert.match(catalogTableSource, /previewSourceFile/);
+    assert.match(catalogTableSource, /isLoading=\{detailLoading\}/);
+    assert.doesNotMatch(catalogTableSource, /\[catalogType, detailSourceFile, fetchDetailBySourceFile, previewItem\]/);
     assert.equal(adminSource.includes('fetchShopItemDetailBySourceFile'), false);
     assert.equal(playerCatalogSource.includes('fetchShopItemDetailBySourceFile'), false);
+    assert.match(itemEditorSource, /fetchShopItemDetailBySourceFile/);
+    assert.match(itemEditorSource, /mergeCatalogDetailIntoEntry/);
+    assert.match(itemEditorSource, /buildItemEditorFormData\(merged\)/);
     assert.match(inventorySource, /ItemRow/);
     assert.match(shopSource, /ItemRow/);
     assert.match(itemsLayoutSource, /ItemRow/);
