@@ -45,6 +45,7 @@ The dev command runs `server/index.js`, not plain `vite`. Use it when testing ca
 ## Coding Style
 
 - The app uses React 18, Vite, ES modules, plain CSS, and local helper modules.
+- Use the context7 skill when possible, especially for react and shadcn
 - Match existing folder boundaries: `player`, `admin`, `shared`, `utils`, `camping`, `pacts`.
 - Keep new shared logic in `src/shared/*` only when it is actually used by both player and admin flows.
 - Use existing catalog helpers from `src/shared/catalog/` instead of fetching resource JSON directly in UI components.
@@ -68,3 +69,19 @@ When adding docs:
 - Link to concrete source files and commands.
 - Distinguish current behavior from desired future architecture.
 - Add risks and follow-up decisions to `docs/agent/known-risks.md`.
+
+## Context7-Fehlerbehandlung
+
+Wenn `ctx7`/Context7 bei einem Dokumentationsabruf mit `HTTP error 403`,
+`Session may be expired`, abgelaufener Session oder vergleichbarer
+Authentifizierungs-/Autorisierungsmeldung scheitert:
+
+- keine weiteren Analyse-, Implementierungs- oder Refactoring-Passes ausführen,
+  die aktuelle externe Dokumentation voraussetzen.
+- nicht still auf Trainingswissen, Websuche oder alte lokale Annahmen ausweichen.
+- sofort anhalten und den Nutzer bitten, Context7 neu zu authentifizieren
+  (`npx ctx7@latest login`) oder den API-Key zu prüfen.
+- erst nach erfolgreichem `ctx7 library ...` / `ctx7 docs ...` fortfahren.
+
+Ziel: 403-Fehler sollen sichtbar blockieren, statt zu veralteten oder
+ungeprüften Implementierungsentscheidungen zu führen.

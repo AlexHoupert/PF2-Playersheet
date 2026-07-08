@@ -2,9 +2,12 @@ import React, { useState, useMemo } from 'react';
 import RichTextEditor from '../shared/components/RichTextEditor';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
+import { copyRef } from '../shared/clipboard/refClipboard';
 import { selectDeviantAbilityList } from '../shared/db/selectors/abilitySelectors';
 import { selectPactUsageByAbility } from '../shared/db/selectors/pactSelectors';
-import { ELEMENTS, ELEMENT_NAMES, generateId } from './pactsData';
+import { buildDeviantAbilityClone, ELEMENTS, ELEMENT_NAMES, generateId } from './pactsData';
+import { Button } from '@/components/ui/button';
+import { AdminTableSurface, AdminTableToolbar } from '../admin/components/table';
 
 const EMPTY_ABILITY = {
     id: '', name: '', element: 'Fire', level: 1,
@@ -15,7 +18,7 @@ const EMPTY_ABILITY = {
 
 export default function DeviantAbilitiesAdminView({ db }) {
     const { dataActions } = useCampaign();
-    const { confirm, notifyError } = useAppFeedback();
+    const { confirm, notifyError, notifySuccess } = useAppFeedback();
     const abilities = useMemo(() => selectDeviantAbilityList(db), [db]);
     const pactUsageByAbility = useMemo(() => selectPactUsageByAbility(db), [db]);
 
@@ -23,6 +26,7 @@ export default function DeviantAbilitiesAdminView({ db }) {
     const [filterEl, setFilterEl] = useState('');
     const [editing, setEditing] = useState(null);
     const [isNew, setIsNew] = useState(false);
+    const [visibleColumnKeys, setVisibleColumnKeys] = useState(['name', 'element', 'level', 'pacts', 'awakenings', 'actions']);
     const runDataAction = (action) => {
         Promise.resolve(action).catch(err => {
             console.error(err);
@@ -56,8 +60,58 @@ export default function DeviantAbilitiesAdminView({ db }) {
         if (editing?.id === id) setEditing(null);
     };
 
+    const editAbility = (ability) => {
+        setIsNew(false);
+        setEditing(cloneAbilityForEditor(ability));
+    };
+
+    const cloneAbility = (ability) => {
+        setIsNew(true);
+        setEditing(cloneAbilityForEditor(buildDeviantAbilityClone(ability)));
+    };
+
+    const copyAbilityReference = (ability) => {
+        copyRef('deviantAbility', {
+            ...ability,
+            catalogType: 'deviantAbility',
+            label: ability.name,
+        });
+        notifySuccess(`Reference copied: ${ability.name}`);
+    };
+
     const setAwakening = (key, field, val) =>
-        setEditing(prev => ({ ...prev, [key]: { ...prev[key], [field]: val } }));
+        setEditing(prev => ({ ...prev, [key]: { ...(prev[key] || {}), [field]: val } }));
+
+    const tableColumns = useMemo(() => [
+        { key: 'name', label: 'Name' },
+        { key: 'element', label: 'Element' },
+        { key: 'level', label: 'Level' },
+        { key: 'pacts', label: 'Pact(s)', sortable: false },
+        { key: 'awakenings', label: 'Awakenings', sortable: false },
+        { key: 'actions', label: 'Actions', sortable: false, filterable: false },
+    ], []);
+
+    const tableFilters = useMemo(() => [
+        {
+            id: 'element',
+            label: 'Element',
+            type: 'multi',
+            options: ELEMENT_NAMES.map((element) => ({
+                value: element,
+                label: `${ELEMENTS[element]?.icon || ''} ${element}`.trim(),
+            })),
+            defaultValue: [],
+        },
+    ], []);
+
+    const toolbarFilterValues = useMemo(() => ({
+        element: filterEl ? [filterEl] : [],
+    }), [filterEl]);
+
+    const setToolbarFilterValues = (next) => {
+        const elements = Array.isArray(next?.element) ? next.element : [];
+        setFilterEl(elements[0] || '');
+    };
 
     if (editing) {
         const el = ELEMENTS[editing.element] || ELEMENTS.Fire;
@@ -124,58 +178,89 @@ export default function DeviantAbilitiesAdminView({ db }) {
     }
 
     return (
-        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-            {/* Toolbar */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                <input className="modal-input" placeholder="Search deviant abilities..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: 220 }} />
-                <select className="modal-input" value={filterEl} onChange={e => setFilterEl(e.target.value)} style={{ width: 'auto' }}>
-                    <option value="">All Elements</option>
-                    {ELEMENT_NAMES.map(el => <option key={el} value={el}>{ELEMENTS[el].icon} {el}</option>)}
-                </select>
-                <button className="btn-add-condition" style={{ margin: 0, width: 'auto', background: '#4caf50' }} onClick={() => { setIsNew(true); setEditing({ ...EMPTY_ABILITY }); }}>
-                    + New Deviant Ability
-                </button>
-            </div>
-
-            {/* Table */}
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
-                    <thead>
-                        <tr style={{ background: '#333', textAlign: 'left' }}>
-                            {['Name', 'Element', 'Level', 'Pact(s)', 'Awakenings'].map(h => (
-                                <th key={h} style={{ padding: '8px 10px' }}>{h}</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {visible.length === 0 && (
-                            <tr><td colSpan={5} style={{ padding: 20, textAlign: 'center', color: '#555' }}>No deviant abilities yet. Create one above.</td></tr>
-                        )}
-                        {visible.map((a, i) => {
-                            const el = ELEMENTS[a.element] || ELEMENTS.Fire;
-                            const awCount = [a.awakening1?.name, a.awakening2?.name].filter(Boolean).length;
-                            return (
-                                <tr key={a.id} style={{ borderBottom: '1px solid #333', background: i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent', cursor: 'pointer' }}
-                                    onDoubleClick={() => { setIsNew(false); setEditing({ ...a, awakening1: { ...a.awakening1 }, awakening2: { ...a.awakening2 } }); }}
-                                    onClick={() => { setIsNew(false); setEditing({ ...a, awakening1: { ...a.awakening1 }, awakening2: { ...a.awakening2 } }); }}
-                                >
-                                    <td style={{ padding: '8px 10px', fontWeight: 'bold', color: '#e0e0e0' }}>{a.name}</td>
-                                    <td style={{ padding: '8px 10px' }}>
-                                        <span style={{ color: el.color }}>{el.icon} {a.element}</span>
-                                    </td>
-                                    <td style={{ padding: '8px 10px', color: '#aaa' }}>{a.level}</td>
-                                    <td style={{ padding: '8px 10px', color: '#999' }}>
-                                        {(pactUsageByAbility[a.id] || []).join(', ') || '-'}
-                                    </td>
-                                    <td style={{ padding: '8px 10px', color: '#888' }}>{awCount}/2 defined</td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </div>
+        <div className="flex h-full flex-col gap-3 overflow-hidden p-4">
+            <AdminTableToolbar
+                search={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="Search deviant abilities..."
+                filters={tableFilters}
+                filterValues={toolbarFilterValues}
+                onFilterValuesChange={setToolbarFilterValues}
+                columns={tableColumns}
+                visibleColumns={visibleColumnKeys}
+                onVisibleColumnsChange={setVisibleColumnKeys}
+                resultMeta={`${visible.length} deviant abilities`}
+                primaryActions={(
+                    <Button type="button" size="sm" onClick={() => { setIsNew(true); setEditing(cloneAbilityForEditor(EMPTY_ABILITY)); }}>
+                        + New Deviant Ability
+                    </Button>
+                )}
+            />
+            <AdminTableSurface
+                columns={tableColumns.filter((column) => visibleColumnKeys.includes(column.key))}
+                rows={visible}
+                getRowKey={(ability) => ability.id || ability.name}
+                getRowTestId={(ability) => `deviant-ability-row-${toTestId(ability.id || ability.name)}`}
+                onRowDoubleClick={(_event, ability) => editAbility(ability)}
+                renderCell={({ row: ability, column }) => renderDeviantAbilityCell({
+                    ability,
+                    column,
+                    pactUsageByAbility,
+                    editAbility,
+                    cloneAbility,
+                    copyAbilityReference,
+                    del,
+                })}
+            />
         </div>
     );
+}
+
+function renderDeviantAbilityCell({
+    ability,
+    column,
+    pactUsageByAbility,
+    editAbility,
+    cloneAbility,
+    copyAbilityReference,
+    del,
+}) {
+    if (column.key === 'element') {
+        const element = ELEMENTS[ability.element] || ELEMENTS.Fire;
+        return <span style={{ color: element.color }}>{element.icon} {ability.element}</span>;
+    }
+    if (column.key === 'pacts') return (pactUsageByAbility[ability.id] || []).join(', ') || '-';
+    if (column.key === 'awakenings') {
+        return `${[ability.awakening1?.name, ability.awakening2?.name].filter(Boolean).length}/2 defined`;
+    }
+    if (column.key === 'actions') {
+        return (
+            <div className="flex flex-wrap gap-1">
+                <Button type="button" size="xs" variant="outline" onClick={(event) => { event.stopPropagation(); editAbility(ability); }}>Edit</Button>
+                <Button type="button" size="xs" variant="outline" onClick={(event) => { event.stopPropagation(); cloneAbility(ability); }}>Clone</Button>
+                <Button type="button" size="xs" variant="outline" onClick={(event) => { event.stopPropagation(); copyAbilityReference(ability); }}>Copy Reference</Button>
+                <Button type="button" size="xs" variant="destructive" onClick={(event) => { event.stopPropagation(); del(ability.id); }}>Delete</Button>
+            </div>
+        );
+    }
+    return ability[column.key] ?? '-';
+}
+
+function cloneAbilityForEditor(ability = {}) {
+    return {
+        ...EMPTY_ABILITY,
+        ...ability,
+        awakening1: { ...(ability.awakening1 || {}) },
+        awakening2: { ...(ability.awakening2 || {}) },
+    };
+}
+
+function toTestId(value) {
+    return String(value || 'entry')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'entry';
 }
 
 function Field({ label, children }) {
@@ -188,3 +273,12 @@ function Field({ label, children }) {
 }
 
 const inputStyle = { width: '100%', padding: '7px 10px', background: '#111', border: '1px solid #444', color: '#fff', borderRadius: 4, fontSize: '0.9em', boxSizing: 'border-box' };
+const actionButtonStyle = {
+    padding: '4px 8px',
+    background: '#222',
+    border: '1px solid #555',
+    color: '#ddd',
+    borderRadius: 4,
+    cursor: 'pointer',
+    fontSize: '0.8em',
+};

@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import ItemEditor from '../editors/ItemEditor';
-import FilterBar from '../components/FilterBar';
 import BottomSheet from '../../shared/components/BottomSheet';
 import ItemRow from '../../shared/components/ItemRow';
 import { SHOP_CATEGORIES } from '../../shared/constants/shop';
 import SpellScrollSelectorModal from '../../player/modals/SpellScrollSelectorModal';
 import { deepClone } from '../../shared/utils/deepClone';
 import { getItemIdentityKey } from '../../shared/utils/itemIdentity';
+import { Button } from '@/components/ui/button';
+import { AdminPagination, AdminTableToolbar } from '../components/table';
 
 const Card = ({ children, style, className, ...rest }) => (
     <div className={className} style={{
@@ -107,6 +108,20 @@ export default function ItemsViewLayout({
     const sameId = (a, b) => a != null && b != null && String(a) === String(b);
     const isSelected = (item) => selectedItems.some(i => i.name === item.name);
     const isSideSelected = (item) => selectedSideItems.some(i => getItemIdentityKey(i) === getItemIdentityKey(item));
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [focusedFilterId, setFocusedFilterId] = useState(null);
+    const itemColumns = useMemo(
+        () => Object.entries(COLUMNS_CONFIG).map(([key, config]) => ({ key, label: config.label || key })),
+        [COLUMNS_CONFIG]
+    );
+    const itemFilters = useMemo(
+        () => buildItemFilterDefinitions(filterOptions, COLUMNS_CONFIG),
+        [COLUMNS_CONFIG, filterOptions]
+    );
+    const contextMenuPlacement = contextMenu ? getClampedContextMenuPlacement(contextMenu) : null;
+    const submenuPlacementStyle = contextMenuPlacement?.openLeft
+        ? { right: '100%', left: 'auto' }
+        : { left: '100%' };
 
     // Context menu item component
     const CtxItem = ({ icon, label, onClick, danger, hasSubmenu, onMouseEnter, testId }) => (
@@ -134,64 +149,44 @@ export default function ItemsViewLayout({
         ? 'auto 1fr / 3fr 2fr'
         : 'auto 1fr / 1fr';
 
-    // Button style for consistency
-    const toolbarBtnStyle = {
-        margin: 0,
-        padding: '6px 12px',
-        background: '#333',
-        border: '1px solid #444',
-        color: '#ddd',
-        borderRadius: 4,
-        cursor: 'pointer',
-        fontSize: '0.9em',
-        whiteSpace: 'nowrap',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6
-    };
-
     return (
         <>
             <style>{scrollbarStyles}</style>
             <div style={{ display: 'grid', gridTemplate, gap: 10, height: '100%', overflow: 'hidden' }}>
                 {/* TOOLBAR CARD - spans full width */}
-                <Card style={{ gridColumn: '1 / -1', padding: '8px 12px', gap: 8 }}>
-                    <FilterBar
+                <Card style={{ gridColumn: '1 / -1' }}>
+                    <AdminTableToolbar
                         search={search}
-                        onSearch={setSearch}
+                        onSearchChange={(value) => {
+                            setSearch(value);
+                            setPage(1);
+                        }}
                         searchPlaceholder="Search items..."
-                        activeFilters={activeFilters}
-                        onFiltersChange={setActiveFilters}
-                        columns={Object.keys(COLUMNS_CONFIG)}
-                        optionsMap={filterOptions}
-                        columnLabels={{ Available: 'Available', Formula: 'Formula' }}
-                        extraLeft={
-                            <div style={{ display: 'flex', gap: 0, border: '1px solid #444', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
-                                <button data-testid="gm-items-side-items" style={{ padding: '5px 12px', background: sideMode === 'none' ? '#c5a059' : '#222', color: sideMode === 'none' ? '#000' : '#888', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('none'); setSelectedSideItems([]); }}>Items</button>
-                                <button data-testid="gm-items-side-trader" style={{ padding: '5px 12px', background: sideMode === 'trader' ? '#c5a059' : '#222', color: sideMode === 'trader' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('trader'); setSelectedLootId(null); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Trader</button>
-                                <button data-testid="gm-items-side-loot" style={{ padding: '5px 12px', background: sideMode === 'loot' ? '#c5a059' : '#222', color: sideMode === 'loot' ? '#000' : '#888', border: 'none', cursor: 'pointer', borderLeft: '1px solid #444', fontWeight: 500, fontSize: '0.85em' }} onClick={() => { setSideMode('loot'); setSelectedTraderId(null); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Loot</button>
+                        filters={itemFilters}
+                        filterValues={activeFilters}
+                        onFilterValuesChange={(next) => {
+                            setActiveFilters(next);
+                            setPage(1);
+                        }}
+                        filterOpen={filterOpen}
+                        onFilterOpenChange={setFilterOpen}
+                        focusFilterId={focusedFilterId}
+                        columns={itemColumns}
+                        visibleColumns={visibleColumns}
+                        onVisibleColumnsChange={setVisibleColumns}
+                        leftControls={
+                            <div className="inline-flex overflow-hidden rounded-lg border border-border/70">
+                                <Button data-testid="gm-items-side-items" type="button" size="sm" variant={sideMode === 'none' ? 'default' : 'outline'} onClick={() => { setSideMode('none'); setSelectedSideItems([]); }}>Items</Button>
+                                <Button data-testid="gm-items-side-trader" type="button" size="sm" variant={sideMode === 'trader' ? 'default' : 'outline'} onClick={() => { setSideMode('trader'); setSelectedLootId(null); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Trader</Button>
+                                <Button data-testid="gm-items-side-loot" type="button" size="sm" variant={sideMode === 'loot' ? 'default' : 'outline'} onClick={() => { setSideMode('loot'); setSelectedTraderId(null); setSelectedSideItems([]); if (isMobile) setMobileSideOpen(true); }}>Loot</Button>
                             </div>
                         }
-                        extraRight={
-                            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                <button style={toolbarBtnStyle} onClick={() => performAction('newItem')}>+ Item</button>
-                                <div style={{ position: 'relative' }}>
-                                    <button style={toolbarBtnStyle} onClick={() => setShowColSelector(!showColSelector)}>
-                                        Cols <span style={{ opacity: 0.6 }}>▾</span>
-                                    </button>
-                                    {showColSelector && (
-                                        <div style={{ position: 'absolute', top: '100%', right: 0, background: '#1a1a1a', border: '1px solid #444', padding: 8, zIndex: 1000, minWidth: 160, boxShadow: '0 4px 12px rgba(0,0,0,0.5)', borderRadius: 6, marginTop: 4 }}>
-                                            {Object.keys(COLUMNS_CONFIG).map(colKey => (
-                                                <label key={colKey} style={{ display: 'flex', gap: 8, padding: '4px 6px', cursor: 'pointer', color: '#ddd', fontSize: '0.9em' }}>
-                                                    <input type="checkbox" checked={visibleColumns.includes(colKey)} onChange={() => setVisibleColumns(prev => prev.includes(colKey) ? prev.filter(c => c !== colKey) : [...prev, colKey])} />
-                                                    {COLUMNS_CONFIG[colKey].label}
-                                                </label>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        }
+                        resultMeta={`${sortedGlobalItems.length} items`}
+                        primaryActions={(
+                            <Button type="button" size="sm" onClick={() => performAction('newItem')}>
+                                + Item
+                            </Button>
+                        )}
                     />
                 </Card>
 
@@ -199,14 +194,14 @@ export default function ItemsViewLayout({
                 <Card style={{ minHeight: 0 }} onDrop={e => handleDrop(e, 'global')} onDragOver={e => e.preventDefault()}>
                     <div className="items-view-scroll" style={{ flex: 1, overflow: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
-                            <thead style={{ position: 'sticky', top: 0, background: '#222', zIndex: 10 }}>
+                            <thead style={{ position: 'sticky', top: 0, background: '#242424', zIndex: 10 }}>
                                 <tr>
                                     {tableColumns.map(col => {
                                         const isMeta = col === 'Available' || col === 'Formula';
                                         // Hide less important columns on smaller screens
                                         const priority = { category: 3, group: 3, rarity: 2, traits: 2, damage: 2, range: 2, bulk: 3 }[col];
                                         return (
-                                            <th key={col} data-priority={priority} style={{ padding: 8, textAlign: 'left', cursor: !isMeta ? 'pointer' : 'default', color: '#aaa', borderBottom: '1px solid #444', whiteSpace: 'nowrap' }} onClick={() => !isMeta && handleSort(col)}>
+                                            <th key={col} data-priority={priority} style={{ padding: 8, textAlign: 'left', cursor: !isMeta ? 'pointer' : 'default', color: '#aaa', whiteSpace: 'nowrap' }} onClick={() => !isMeta && handleSort(col)}>
                                                 {col === 'Available' ? 'Av' : col === 'Formula' ? 'Fm' : COLUMNS_CONFIG[col]?.label || col}
                                                 {!isMeta && sortConfig.key === col && (sortConfig.direction === 'asc' ? ' ▲' : ' ▼')}
                                             </th>
@@ -225,8 +220,7 @@ export default function ItemsViewLayout({
                                         onClick={e => handleSelect(e, item, idx)}
                                         onDoubleClick={() => handleDoubleClick(item)}
                                         style={{
-                                            borderBottom: '1px solid #333',
-                                            background: isSelected(item) ? 'rgba(197, 160, 89, 0.25)' : (idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
+                                            background: isSelected(item) ? 'rgba(59, 130, 246, 0.24)' : '#1a1a1a',
                                             cursor: 'pointer'
                                         }}
                                     >
@@ -242,7 +236,20 @@ export default function ItemsViewLayout({
                         </table>
                     </div>
                     {/* Pagination */}
-                    <div style={{ padding: 8, borderTop: '1px solid #333', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, background: '#1a1a1a' }}>
+                    <AdminPagination
+                        page={page}
+                        totalPages={totalPages}
+                        total={sortedGlobalItems.length}
+                        pageSize={itemsPerPage}
+                        pageSizeOptions={[25, 50, 100]}
+                        onPageChange={setPage}
+                        onPageSizeChange={(nextSize) => {
+                            setItemsPerPage(nextSize);
+                            setPage(1);
+                        }}
+                        label="items"
+                    />
+                    {/* Legacy inline pagination retired after shared AdminPagination cutover.
                         <button disabled={page === 1} onClick={() => setPage(p => p - 1)}>◀</button>
                         <span style={{ fontSize: '0.85em' }}>Page {page} / {totalPages}</span>
                         <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>▶</button>
@@ -251,7 +258,7 @@ export default function ItemsViewLayout({
                             <option value={50}>50</option>
                             <option value={100}>100</option>
                         </select>
-                    </div>
+                    </div> */}
                 </Card>
 
                 {/* SIDE PANEL (Trader/Loot List + Inventory) — desktop only inline */}
@@ -476,7 +483,7 @@ export default function ItemsViewLayout({
                 {/* CONTEXT MENU */}
                 {contextMenu && (
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 2000 }} onClick={closeContextMenu} onContextMenu={e => { e.preventDefault(); closeContextMenu(); }}>
-                        <div data-testid="gm-items-context-menu" style={{ position: 'absolute', top: contextMenu.y, left: contextMenu.x, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,0.6)', overflow: 'visible' }} onClick={e => e.stopPropagation()}>
+                        <div data-testid="gm-items-context-menu" style={{ position: 'absolute', top: contextMenuPlacement.top, left: contextMenuPlacement.left, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,0.6)', overflow: 'visible' }} onClick={e => e.stopPropagation()}>
                             {/* Side panel context menu */}
                             {(contextMenu.source === 'trader' || contextMenu.source === 'loot') ? (
                                 <>
@@ -507,7 +514,7 @@ export default function ItemsViewLayout({
                                     <div style={{ position: 'relative' }} onMouseEnter={() => setContextSubMenu('trader')} onMouseLeave={() => contextSubMenu === 'trader' && setContextSubMenu(null)}>
                                         <CtxItem icon="🏪" label="Assign to Trader" hasSubmenu />
                                         {contextSubMenu === 'trader' && (
-                                            <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
+                                            <div style={{ position: 'absolute', ...submenuPlacementStyle, top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
                                                 {traders.map(t => <CtxItem key={t.id} label={t.name} onClick={() => performAction('addToTrader', t.id)} />)}
                                             </div>
                                         )}
@@ -515,7 +522,7 @@ export default function ItemsViewLayout({
                                     <div style={{ position: 'relative' }} onMouseEnter={() => setContextSubMenu('loot')} onMouseLeave={() => contextSubMenu === 'loot' && setContextSubMenu(null)}>
                                         <CtxItem icon="💰" label="Add to Loot Bag" hasSubmenu />
                                         {contextSubMenu === 'loot' && (
-                                            <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
+                                            <div style={{ position: 'absolute', ...submenuPlacementStyle, top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
                                                 {campaignLootBags.map(b => <CtxItem key={b.id} label={b.name} onClick={() => performAction('addToLoot', b.id)} />)}
                                             </div>
                                         )}
@@ -523,7 +530,7 @@ export default function ItemsViewLayout({
                                     <div style={{ position: 'relative' }} onMouseEnter={() => setContextSubMenu('player')} onMouseLeave={() => contextSubMenu === 'player' && setContextSubMenu(null)}>
                                         <CtxItem icon="🎁" label="Give to Player" hasSubmenu testId="gm-items-give-to-player" />
                                         {contextSubMenu === 'player' && (
-                                            <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
+                                            <div style={{ position: 'absolute', ...submenuPlacementStyle, top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
                                                 {playerTargets.map(p => <CtxItem key={p.id} label={p.name} testId={`gm-items-give-player-${p.id}`} onClick={() => performAction('giveToPlayer', p.id)} />)}
                                             </div>
                                         )}
@@ -531,7 +538,7 @@ export default function ItemsViewLayout({
                                     <div style={{ position: 'relative' }} onMouseEnter={() => setContextSubMenu('formula')} onMouseLeave={() => contextSubMenu === 'formula' && setContextSubMenu(null)}>
                                         <CtxItem icon="📜" label="Give Formula to Player" hasSubmenu />
                                         {contextSubMenu === 'formula' && (
-                                            <div style={{ position: 'absolute', left: '100%', top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
+                                            <div style={{ position: 'absolute', ...submenuPlacementStyle, top: 0, background: '#1a1a1a', border: '1px solid #444', borderRadius: 6, minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
                                                 {playerTargets.map(p => <CtxItem key={p.id} label={p.name} onClick={() => performAction('giveFormulaToPlayer', p.id)} />)}
                                             </div>
                                         )}
@@ -632,4 +639,47 @@ export default function ItemsViewLayout({
             )}
         </>
     );
+}
+
+function buildItemFilterDefinitions(filterOptions = {}, columnsConfig = {}) {
+    return Object.entries(filterOptions).map(([id, options]) => {
+        const label = id === 'Available' ? 'Available'
+            : id === 'Formula' ? 'Formula'
+                : columnsConfig[id]?.label || id;
+        if (options === true) {
+            return {
+                id,
+                label,
+                type: 'boolean',
+                defaultValue: null,
+            };
+        }
+        return {
+            id,
+            label,
+            type: 'multi',
+            defaultValue: [],
+            options: (options || []).map((option) => ({
+                value: option,
+                label: String(option),
+            })),
+        };
+    });
+}
+
+function getClampedContextMenuPlacement(contextMenu) {
+    const fallback = { top: contextMenu?.y || 0, left: contextMenu?.x || 0, openLeft: false };
+    if (!contextMenu || typeof window === 'undefined') return fallback;
+    const margin = 8;
+    const estimatedWidth = 230;
+    const estimatedHeight = contextMenu.source === 'global' ? 430 : 150;
+    const viewportWidth = window.innerWidth || estimatedWidth + margin * 2;
+    const viewportHeight = window.innerHeight || estimatedHeight + margin * 2;
+    const left = Math.max(margin, Math.min(contextMenu.x, viewportWidth - estimatedWidth - margin));
+    const top = Math.max(margin, Math.min(contextMenu.y, viewportHeight - estimatedHeight - margin));
+    return {
+        left,
+        top,
+        openLeft: contextMenu.x + estimatedWidth + 180 > viewportWidth,
+    };
 }

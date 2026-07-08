@@ -4,6 +4,7 @@ import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import { ACTION_INDEX_FILTER_OPTIONS, fetchActionDetailBySourceFile } from '../../shared/catalog/actionIndex';
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 import { buildCatalogEditorOverride, buildCatalogSafeId, getCatalogEditorInitialItem } from '../../shared/catalog/catalogEditorContract';
+import { mergeCatalogDetailIntoEntry } from '../../shared/catalog/catalogDetailMerge';
 
 export default function ActionEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'action', onSave, onCancel, onSaveToDb, onSaveCatalogEntry, dbOnly = false }) {
     const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
@@ -46,13 +47,16 @@ export default function ActionEditor({ initialItem: initialItemProp, initialPayl
                 setIsLoading(true);
                 fetchActionDetailBySourceFile(initialItem.sourceFile)
                     .then(details => {
-                        setFormData(prev => ({
-                            ...prev,
-                            description: details.description || '',
-                            // Ensure we capture specific fields that might be more detailed in file
-                            feat: details.feat || details.classification?.feat || initialItem.feat || '',
-                            skill: details.skill || initialItem.skill || '',
-                        }));
+                        setFormData(prev => {
+                            const merged = mergeCatalogDetailIntoEntry(details, prev);
+                            return {
+                                ...prev,
+                                description: merged.description || prev.description || '',
+                                // Ensure we capture specific fields that might be more detailed in file.
+                                feat: merged.feat || merged.classification?.feat || prev.feat || initialItem.feat || '',
+                                skill: merged.skill || prev.skill || initialItem.skill || '',
+                            };
+                        });
                         setIsLoading(false);
                     })
                     .catch(err => {

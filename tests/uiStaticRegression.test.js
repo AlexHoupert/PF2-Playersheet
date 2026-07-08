@@ -31,7 +31,9 @@ test('items layout does not reference split module globals', () => {
     staleGlobals.forEach((name) => {
         assert.equal(source.includes(name), false, `${name} should be passed from ItemsView, not referenced globally`);
     });
-    assert.match(source, /optionsMap=\{filterOptions\}/);
+    assert.match(source, /AdminTableToolbar/);
+    assert.match(source, /filters=\{itemFilters\}/);
+    assert.equal(source.includes('FilterBar'), false);
 });
 
 test('items layout receives lootbag selection state from ItemsView', () => {
@@ -524,14 +526,70 @@ test('catalog details and item rows use shared reusable controllers', () => {
     const inventorySource = readSource('src/player/views/InventoryView.jsx');
     const shopSource = readSource('src/player/ShopView.jsx');
     const itemsLayoutSource = readSource('src/admin/items/ItemsViewLayout.jsx');
+    const detailControllerSource = readSource('src/shared/hooks/useCatalogDetailController.js');
+    const catalogTableSource = readSource('src/admin/catalog/CatalogAdminTableView.jsx');
 
     assert.match(adminSource, /useCatalogDetailController/);
     assert.match(playerCatalogSource, /useCatalogDetailController/);
+    assert.match(detailControllerSource, /mergeCatalogDetailIntoEntry/);
+    assert.match(catalogTableSource, /mergeCatalogDetailIntoEntry/);
     assert.equal(adminSource.includes('fetchShopItemDetailBySourceFile'), false);
     assert.equal(playerCatalogSource.includes('fetchShopItemDetailBySourceFile'), false);
     assert.match(inventorySource, /ItemRow/);
     assert.match(shopSource, /ItemRow/);
     assert.match(itemsLayoutSource, /ItemRow/);
+});
+
+test('creature and deviant ability admin surfaces keep catalog and pact semantics separate', () => {
+    const bestiarySource = readSource('src/admin/BestiaryView.jsx');
+    const creatureEditorSource = readSource('src/admin/editors/CreatureEditor.jsx');
+    const deviantSource = readSource('src/pacts/DeviantAbilitiesAdminView.jsx');
+
+    assert.match(bestiarySource, /mergeCreatureDetailIntoEntry/);
+    assert.match(creatureEditorSource, /mergeCreatureDetailIntoEntry/);
+    assert.match(bestiarySource, /updateCreatureMetadata/);
+    assert.match(bestiarySource, /catalogOverride\.saveCatalogOverride/);
+    assert.match(deviantSource, /saveDeviantAbility/);
+    assert.match(deviantSource, /deleteDeviantAbility/);
+    assert.match(deviantSource, /buildDeviantAbilityClone/);
+    assert.match(deviantSource, /copyRef\('deviantAbility'/);
+    assert.match(deviantSource, />Edit</);
+    assert.match(deviantSource, />Clone</);
+    assert.match(deviantSource, />Delete</);
+    assert.match(deviantSource, />Copy Reference</);
+});
+
+test('gm catalog tables use shared admin table UI primitives', () => {
+    const catalogTableSource = readSource('src/admin/catalog/CatalogAdminTableView.jsx');
+    const itemsLayoutSource = readSource('src/admin/items/ItemsViewLayout.jsx');
+    const bestiarySource = readSource('src/admin/BestiaryView.jsx');
+    const abilitiesSource = readSource('src/admin/AbilitiesView.jsx');
+    const deviantSource = readSource('src/pacts/DeviantAbilitiesAdminView.jsx');
+    const toolbarSource = readSource('src/admin/components/table/AdminTableToolbar.jsx');
+    const paginationSource = readSource('src/admin/components/table/AdminPagination.jsx');
+    const filterDrawerSource = readSource('src/admin/components/table/AdminFilterDrawer.jsx');
+
+    [catalogTableSource, bestiarySource, abilitiesSource, deviantSource].forEach((source) => {
+        assert.match(source, /AdminTableToolbar/);
+        assert.match(source, /AdminTableSurface/);
+    });
+    assert.match(itemsLayoutSource, /AdminTableToolbar/);
+    assert.match(itemsLayoutSource, /AdminPagination/);
+
+    [catalogTableSource, bestiarySource, abilitiesSource, deviantSource].forEach((source) => {
+        assert.equal(source.includes('FilterBar'), false);
+        assert.equal(source.includes('<table'), false);
+        assert.equal(source.includes("position: 'fixed', top:"), false);
+        assert.equal(source.includes('Desktop context menu'), false);
+    });
+
+    assert.match(toolbarSource, /AdminActiveFilterChips/);
+    assert.match(toolbarSource, /countActiveFilters/);
+    assert.match(filterDrawerSource, /DrawerContent/);
+    assert.match(filterDrawerSource, /md:grid-cols-\[minmax\(13rem,1fr\)_minmax\(0,2fr\)\]/);
+    assert.match(paginationSource, /ChevronsLeft/);
+    assert.match(paginationSource, /ChevronsRight/);
+    assert.match(paginationSource, /PaginationEllipsis/);
 });
 
 test('runtime feedback and debug logging use shared helpers in migrated surfaces', () => {

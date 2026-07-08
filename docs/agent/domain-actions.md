@@ -1,6 +1,6 @@
 # Domain Actions
 
-Last updated: 2026-06-20.
+Last updated: 2026-07-08.
 
 ## Purpose
 
@@ -238,6 +238,49 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `s
 - `setItemAvailable(itemName, available)`
 - `setFormulaAvailable(itemName, available)`
 
+## Catalog Admin Override Semantics
+
+Admin catalog tables are intentionally thin clients around
+`dataActions.catalogOverride`. Static resource files are read-only in deployed
+builds; production edits are represented as override documents and merged into
+the effective catalog view.
+
+High-level table actions:
+
+- `Edit` on a static entry builds `mode: "override"` and calls `saveCatalogOverride`.
+- `Clone` and `New` build `mode: "custom"` and call `saveCatalogOverride`.
+- `Delete` on a static entry builds `mode: "hide"` and calls `saveCatalogOverride`.
+- `Delete` on a custom or override entry calls `deleteCatalogOverride`.
+- `Copy Reference` creates a generic catalog reference resolved through the effective catalog entry selectors.
+
+Covered catalog families:
+
+- Items
+- Spells
+- Actions
+- Feats
+- Impulses
+- Abilities
+- Creatures
+
+Older high-level helpers such as
+`dataActions.globalContent.saveCustomItem`,
+`dataActions.globalContent.saveCustomAction`,
+`dataActions.globalContent.saveCustomAbility`, and
+`dataActions.bestiary.saveCustomCreature` remain compatibility/convenience
+paths for older surfaces. New admin catalog table work should use
+`dataActions.catalogOverride` directly.
+
+Creatures are split intentionally:
+
+- Creature content edits use `catalogOverrides`.
+- Bestiary metadata such as reveal state, groups, published/bestiary flags, and false data remains in global config through `dataActions.bestiary`.
+
+Deviant Abilities are Pact-domain content, not general catalog abilities. They
+continue to use `dataActions.pact.saveDeviantAbility/deleteDeviantAbility`, but
+their admin UI mirrors catalog-table actions for Edit, Clone, Delete, and Copy
+Reference.
+
 ## Adapter Behavior
 
 Legacy mode:
@@ -259,7 +302,7 @@ Firestore V2 mode:
 - Uses targeted campaign document updates for camping settings, custom activities, assignments, rolls, and reset/archive/restore behavior.
 - Uses targeted global config/document writes for shop/trader state, pacts, deviant abilities, lore, bestiary reveal-state, bestiary metadata, and root-notification compatibility.
 - Uses targeted actor/effect/effect-template writes for the V2 actor/effects foundation.
-- Custom item/action/ability/creature saves write `catalogOverrides` in V2; deployed item, spell, action, feat, impulse, ability, and creature editing writes `catalogOverrides` directly.
+- Canonical admin catalog table saves write `catalogOverrides` in V2; deployed item, spell, action, feat, impulse, ability, and creature editing writes `catalogOverrides` directly.
 - Does not route migrated writes through `writeLegacyDbDiffToV2`.
 
 If Firestore config is missing, the adapter falls back to legacy mode.
@@ -367,9 +410,10 @@ Global/Shop/Bestiary:
 
 - GM ItemsView trader create/update/category/hide and trader inventory edits.
 - GM ItemsView available item/formula toggles.
-- GM/player custom item saves and custom action saves.
-- GM AbilitiesView custom ability saves/deletes/clones and custom-creature ability assignment.
-- GM BestiaryView custom creature saves/updates/deletes.
+- GM catalog content edits for items, actions, spells, feats, impulses, abilities, and creatures use shared `catalogOverrides`.
+- GM/player custom item/action/ability compatibility helpers remain available where old surfaces still call them.
+- GM AbilitiesView custom-creature ability assignment uses effective ability entries from the shared catalog state.
+- GM BestiaryView creature content saves/updates/deletes use `catalogOverrides`; reveal/group/bestiary metadata remains separate.
 - GM BestiaryView catalog metadata, bestiary toggles, group edits, reveal-state, and metadata initialization.
 - Encounter creature reveal-state updates.
 

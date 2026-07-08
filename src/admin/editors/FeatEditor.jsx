@@ -4,6 +4,7 @@ import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import { FEAT_INDEX_FILTER_OPTIONS, fetchFeatDetailBySourceFile } from '../../shared/catalog/featIndex';
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 import { buildCatalogEditorOverride, buildCatalogSafeId, getCatalogEditorInitialItem } from '../../shared/catalog/catalogEditorContract';
+import { mergeCatalogDetailIntoEntry } from '../../shared/catalog/catalogDetailMerge';
 
 export default function FeatEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'feat', onSave, onCancel, onSaveToDb, onSaveCatalogEntry }) {
     const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
@@ -47,14 +48,17 @@ export default function FeatEditor({ initialItem: initialItemProp, initialPayloa
                 setIsLoading(true);
                 fetchFeatDetailBySourceFile(initialItem.sourceFile)
                     .then(details => {
-                        setFormData(prev => ({
-                            ...prev,
-                            description: details.description || prev.description || '',
-                            prerequisites: details.prerequisites
-                                ? (Array.isArray(details.prerequisites) ? details.prerequisites.join(', ') : details.prerequisites)
-                                : prev.prerequisites || '',
-                            actionType: details.actionType || prev.actionType || '',
-                        }));
+                        setFormData(prev => {
+                            const merged = mergeCatalogDetailIntoEntry(details, prev);
+                            return {
+                                ...prev,
+                                description: merged.description || prev.description || '',
+                                prerequisites: merged.prerequisites
+                                    ? (Array.isArray(merged.prerequisites) ? merged.prerequisites.join(', ') : merged.prerequisites)
+                                    : prev.prerequisites || '',
+                                actionType: merged.actionType || prev.actionType || '',
+                            };
+                        });
                         setIsLoading(false);
                     })
                     .catch(err => {

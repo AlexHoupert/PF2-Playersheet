@@ -3,7 +3,7 @@
 Status: in progress
 Owner: Codex / project maintainers
 Scope: Admin data tables for static and DB-backed catalog content
-Last updated: 2026-07-03
+Last updated: 2026-07-08
 
 ## Ziel
 
@@ -31,7 +31,7 @@ Statische JSON-Daten bleiben read-only. Runtime-Aenderungen laufen ueber Firesto
 - [x] Phase 4: Tabellen schrittweise migrieren.
 - [x] Phase 5: Copy-Reference-System erweitern.
 - [x] Phase 6: Tests, Guards und Smokes ergaenzen.
-- [ ] Phase 7: Doku und Backlog bereinigen.
+- [x] Phase 7: Doku und Backlog bereinigen.
 
 ## Ausgangslage
 
@@ -434,19 +434,19 @@ Ziel: Die Architekturentscheidung ist dauerhaft nachvollziehbar.
 
 Arbeitsschritte:
 
-- [ ] `docs/agent/catalog-pipeline.md` aktualisieren.
-- [ ] `docs/agent/domain-actions.md` um Catalog-Override-High-Level-Actions ergaenzen.
-- [ ] `docs/agent/migration-backlog.md` aktualisieren:
-  - [ ] Items Catalog-Migration erledigt.
-  - [ ] Actions Altpfad erledigt.
-  - [ ] Creatures Production Edit erledigt.
-  - [ ] Restliche Fallbacks benennen oder entfernen.
-- [ ] `docs/agent/smoke-results.md` nach Production-Smoke aktualisieren.
+- [x] `docs/agent/catalog-pipeline.md` aktualisieren.
+- [x] `docs/agent/domain-actions.md` um Catalog-Override-High-Level-Actions ergaenzen.
+- [x] `docs/agent/migration-backlog.md` aktualisieren:
+  - [x] Items Catalog-Migration erledigt.
+  - [x] Actions Altpfad erledigt.
+  - [x] Creatures Production Edit erledigt.
+  - [x] Restliche Fallbacks benennen oder entfernen.
+- [x] `docs/agent/smoke-results.md` aktualisieren. Automatisierte Fixture-Smokes sind dokumentiert; deployed Firestore Catalog-Smoke bleibt separat als manuelle Matrix-Zeile markiert.
 
 Erfolgskriterien:
 
-- [ ] Neue Entwickler koennen anhand der Doku nachvollziehen, warum static JSON nicht direkt editiert wird.
-- [ ] Backlog enthaelt keine erledigten Catalog-Altlasten mehr.
+- [x] Neue Entwickler koennen anhand der Doku nachvollziehen, warum static JSON nicht direkt editiert wird.
+- [x] Backlog enthaelt keine erledigten Catalog-Altlasten mehr.
 
 ## Abschlusskriterien
 
@@ -459,6 +459,9 @@ Erfolgskriterien:
 - [x] Statusfilter fuer Original/Editiert/Custom/Geloescht existieren.
 - [x] Production-Editoren fuer Items, Spells, Actions, Feats, Impulses, Abilities und Creatures benoetigen keine File-API.
 - [x] Copy Reference funktioniert fuer alle Catalog-Typen konsistent.
+- [x] Compact row data and fetched catalog details are merged centrally so empty row fields do not hide static descriptions.
+- [x] Creature full-data merge follows the same rule while Bestiary metadata remains separate.
+- [x] Deviant Abilities remain Pact-domain content but expose explicit Edit, Clone, Delete, and Copy Reference admin actions.
 
 ## Nicht-Ziele Dieser Welle
 

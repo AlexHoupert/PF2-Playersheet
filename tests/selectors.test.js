@@ -42,7 +42,7 @@ import {
     selectPactUsageByAbility,
     selectPendingPactOffer,
 } from '../src/shared/db/selectors/pactSelectors.js';
-import { summarizeBacklashTier } from '../src/pacts/pactsData.js';
+import { buildDeviantAbilityClone, summarizeBacklashTier } from '../src/pacts/pactsData.js';
 import {
     selectAvailableFormulaNames,
     selectAvailableItemNames,
@@ -277,6 +277,28 @@ test('pact backlash summaries use defined descriptions before narrative fallback
         'fatigued - You become sickened.'
     );
     assert.equal(summarizeBacklashTier({}), 'Narrative backlash');
+});
+
+test('deviant ability clone receives a stable new id and preserves source data', () => {
+    const source = {
+        id: 'spark',
+        name: 'Spark',
+        element: 'Fire',
+        level: 1,
+        description: '<p>Original.</p>',
+        awakening1: { name: 'Bright Spark', description: '<p>Awake.</p>' },
+    };
+
+    const clone = buildDeviantAbilityClone(source, {
+        createId: (name) => `${name}-id`,
+    });
+
+    assert.equal(clone.id, 'Spark-copy-id');
+    assert.equal(clone.name, 'Spark (Copy)');
+    assert.equal(clone.element, 'Fire');
+    assert.equal(clone.description, '<p>Original.</p>');
+    assert.deepEqual(clone.awakening1, source.awakening1);
+    assert.notEqual(clone.awakening1, source.awakening1);
 });
 
 test('actor and effect selectors expose v2 actor viewmodels', () => {

@@ -9,6 +9,7 @@ import CreatureCard from '../../shared/components/CreatureCard';
 import { useWindowSize } from '../../shared/hooks/useWindowSize';
 import { deepClone } from '../../shared/utils/deepClone';
 import { CREATURE_INDEX_FILTER_OPTIONS } from '../../shared/catalog/creatureIndex';
+import { mergeCreatureDetailIntoEntry } from '../../shared/catalog/catalogDetailMerge';
 import {
     buildCatalogEditorOverride,
     buildCatalogSafeId,
@@ -117,7 +118,8 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
     // Load initial data
     useEffect(() => {
         if (initialCreature?.data) {
-            const data = initialCreature.data;
+            const mergedCreature = mergeCreatureDetailIntoEntry(initialCreature.data, initialCreature);
+            const data = mergedCreature.data;
             const sys = data.system || {};
 
             setName(data.name || '');
@@ -146,7 +148,7 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
             setRawItemsJson(JSON.stringify(itemsCopy, null, 2));
 
             setDescription(sys.details?.publicNotes || sys.description?.value || '');
-            setSourceFile(initialCreature.sourceFile || null);
+            setSourceFile(mergedCreature.sourceFile || mergedCreature.overrideSourceFile || null);
         }
     }, [initialCreature]);
 

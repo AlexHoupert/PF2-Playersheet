@@ -1,6 +1,6 @@
 # Catalog Pipeline
 
-Last updated: 2026-06-20.
+Last updated: 2026-07-08.
 
 ## Purpose
 
@@ -87,6 +87,49 @@ Typical pattern:
 4. Export `fetch*DetailBySourceFile` helpers for on-demand JSON fetch.
 
 In dev, detail fetches use `/api/static`. In production, they use `/ressources`.
+
+## Production Catalog Editing
+
+Static JSON files under `ressources/` are source resources and remain read-only
+in deployed builds. Admin editors must not try to mutate those files in
+production. Production catalog changes are stored in Firestore
+`catalogOverrides` and merged over the generated static indexes at runtime.
+
+Canonical override fields:
+
+- `catalogType`: `item`, `spell`, `action`, `feat`, `impulse`, `ability`, or `creature`.
+- `baseId`: stable source key for the static entry, or `null` for a new custom entry.
+- `mode`: `override`, `custom`, or `hide`.
+- `payload`: sanitized effective entry data.
+- `sourceFile`: `null` for DB-backed overrides; static origin is kept in `baseId` and/or `payload.overrideSourceFile`.
+
+Admin mutation semantics:
+
+- `Edit` on a static entry stores `mode: "override"`.
+- `Clone` and `New` store `mode: "custom"`.
+- `Delete` on a static entry stores `mode: "hide"`.
+- `Delete` on a custom/override entry removes the override document.
+- `Copy Reference` stores a generic catalog reference that resolves through the effective catalog view.
+
+The shared admin table path is `CatalogAdminTableView` plus
+`useCatalogAdminTable` and `selectCatalogEntryStates`. Status filters for
+Original, Edited, Custom, and Deleted entries are shared across Items, Spells,
+Actions, Feats, Impulses, Abilities, and Creatures.
+
+Successful catalog DB saves must refresh through context/selectors and must not
+call `window.location.reload()`. The `/api/files/*` endpoints remain local-dev
+helpers only; production UX must not depend on them.
+
+Catalog detail views merge compact index rows, fetched static details, and
+override payloads through a shared detail-merge helper. Empty row fields such as
+`description: ""` must not hide fetched static descriptions. Creature content
+uses this same merge rule for full Foundry JSON, while Bestiary metadata
+(`revealState`, groups, published/bestiary flags, and false data) remains a
+separate global-config concern.
+
+Deviant Abilities are not part of the general static ability catalog. They are
+Pact-domain content managed through `dataActions.pact`, but their admin UI
+follows the same user-facing semantics: Edit, Clone, Delete, and Copy Reference.
 
 ## Bundle And Lazy-Loading Notes
 
@@ -254,4 +297,6 @@ The current `AdminApp.jsx` has a placeholder-ish `handleRebuild` that logs the r
 - If a runtime list/filter field is missing, update both builder and decoder.
 - If detail display is missing data, update the relevant `fetch*DetailBySourceFile` helper.
 - If a resource path changes, update dev and production fetch assumptions.
+- For production catalog edits, write a `catalogOverride`; do not patch static JSON directly.
+- New admin catalog tables should consume catalog entry selectors instead of local static/custom merge rules.
 - Rebuild the narrow catalog and inspect generated diffs before broad `build:data`.

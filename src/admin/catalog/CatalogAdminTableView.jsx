@@ -1,5 +1,4 @@
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
-import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import BottomSheet from '../../shared/components/BottomSheet';
 import ContentPreviewCard from '../components/ContentPreviewCard';
 import { useWindowSize } from '../../shared/hooks/useWindowSize';
@@ -7,7 +6,15 @@ import { useCampaign } from '../../shared/context/CampaignContext';
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 import { copyRef } from '../../shared/clipboard/refClipboard';
 import { buildHideOverride, CATALOG_ENTRY_STATUS } from '../../shared/catalog/catalogEntryModel';
+import { mergeCatalogDetailIntoEntry } from '../../shared/catalog/catalogDetailMerge';
 import { selectCatalogEntryStates } from '../../shared/db/selectors/catalogOverrideSelectors';
+import { Button } from '@/components/ui/button';
+import {
+    AdminPagination,
+    AdminTableSurface,
+    AdminTableToolbar,
+    optionValue,
+} from '../components/table';
 import {
     getCatalogTableEntry,
     getStandardCatalogContextActions,
@@ -21,7 +28,18 @@ const STATUS_LABELS = Object.freeze({
     [CATALOG_ENTRY_STATUS.DELETED]: 'Deleted',
 });
 
+const CATALOG_STATUS_FILTER_ID = 'catalogStatus';
 const DEFAULT_PAGE_SIZES = Object.freeze([25, 50, 100]);
+const DEFAULT_VISIBLE_STATUSES = Object.freeze([
+    CATALOG_ENTRY_STATUS.ORIGINAL,
+    CATALOG_ENTRY_STATUS.EDITED,
+    CATALOG_ENTRY_STATUS.CUSTOM,
+]);
+
+const CATALOG_STATUS_OPTIONS = Object.values(CATALOG_ENTRY_STATUS).map((status) => ({
+    value: status,
+    label: STATUS_LABELS[status] || status,
+}));
 
 export default function CatalogAdminTableView({
     catalogType,
@@ -47,8 +65,9 @@ export default function CatalogAdminTableView({
 
     const [itemsPerPage, setItemsPerPage] = useState(defaultItemsPerPage);
     const [visibleColumns, setVisibleColumns] = useState(defaultColumns.length ? defaultColumns : columns.map((column) => column.key));
-    const [showColSelector, setShowColSelector] = useState(false);
-    const [filterValues, setFilterValues] = useState(() => Object.fromEntries(filters.map((filter) => [filter.id, []])));
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [focusedFilterId, setFocusedFilterId] = useState(null);
+    const [filterValues, setFilterValues] = useState(() => createDefaultDomainFilterValues(filters));
     const [loadedDetail, setLoadedDetail] = useState(null);
 
     const allEntryStates = useMemo(
@@ -56,19 +75,30 @@ export default function CatalogAdminTableView({
         [catalogType, db, staticItems]
     );
 
+    const filterDefinitions = useMemo(
+        () => [
+            ...filters.map((filter) => normalizeFilterDefinition(filter)),
+            {
+                id: CATALOG_STATUS_FILTER_ID,
+                label: 'Catalog Status',
+                type: 'multi',
+                options: CATALOG_STATUS_OPTIONS.map((option) => ({
+                    ...option,
+                    testId: `catalog-status-${catalogType}-${option.value}`,
+                })),
+                defaultValue: DEFAULT_VISIBLE_STATUSES,
+                valueLabel: (value) => Array.isArray(value)
+                    ? value.map((status) => STATUS_LABELS[status] || status).join(', ')
+                    : STATUS_LABELS[value] || value,
+            },
+        ],
+        [catalogType, filters]
+    );
+
     const domainFilteredStates = useMemo(() => {
         return allEntryStates.filter((state) => {
             const entry = getCatalogTableEntry(state);
-            return filters.every((filter) => {
-                const selected = filterValues[filter.id] || [];
-                if (!selected.length) return true;
-                if (filter.predicate) return filter.predicate(entry, selected, state);
-                const value = entry?.[filter.field || filter.id];
-                if (Array.isArray(value)) return filter.matchAll
-                    ? selected.every((option) => value.includes(option))
-                    : selected.some((option) => value.includes(option));
-                return selected.includes(value);
-            });
+            return filters.every((filter) => matchesDomainFilter(entry, state, filter, filterValues[filter.id]));
         });
     }, [allEntryStates, filters, filterValues]);
 
@@ -82,6 +112,25 @@ export default function CatalogAdminTableView({
             notifySuccess(`Reference copied: ${ref.label || entry?.name || title || catalogType}`);
         },
     });
+
+    const statusValue = useMemo(
+        () => Object.values(CATALOG_ENTRY_STATUS).filter((status) => table.statusFilters[status]),
+        [table.statusFilters]
+    );
+
+    const toolbarFilterValues = useMemo(
+        () => ({ ...filterValues, [CATALOG_STATUS_FILTER_ID]: statusValue }),
+        [filterValues, statusValue]
+    );
+
+    const displayedColumns = useMemo(() => {
+        return columns
+            .filter((column) => visibleColumns.includes(column.key))
+            .map((column) => ({
+                ...column,
+                filterable: Boolean(resolveFilterForColumn(column, filterDefinitions)),
+            }));
+    }, [columns, filterDefinitions, visibleColumns]);
 
     const previewItem = table.previewEntry;
 
@@ -108,9 +157,24 @@ export default function CatalogAdminTableView({
         };
     }, [catalogType, detailSourceFile, fetchDetailBySourceFile, previewItem]);
 
-    const setFilter = (filterId, next) => {
-        setFilterValues((prev) => ({ ...prev, [filterId]: next }));
+    const handleFilterValuesChange = (nextValues) => {
+        const selectedStatuses = Array.isArray(nextValues?.[CATALOG_STATUS_FILTER_ID])
+            ? nextValues[CATALOG_STATUS_FILTER_ID]
+            : DEFAULT_VISIBLE_STATUSES;
+        table.setStatusFilters(
+            Object.fromEntries(
+                Object.values(CATALOG_ENTRY_STATUS).map((status) => [status, selectedStatuses.includes(status)])
+            )
+        );
+        setFilterValues(createDomainFilterValues(filters, nextValues || {}));
         table.setPage(1);
+    };
+
+    const handleHeaderFilter = (column) => {
+        const filter = resolveFilterForColumn(column, filterDefinitions);
+        if (!filter) return;
+        setFocusedFilterId(filter.id);
+        setFilterOpen(true);
     };
 
     const handleSaveCatalogEntry = async (override) => {
@@ -118,10 +182,11 @@ export default function CatalogAdminTableView({
     };
 
     const handleDelete = async (entryOrState) => {
-        const state = entryOrState?.status ? entryOrState : table.contextMenu?.state;
+        const state = entryOrState?.status ? entryOrState : null;
         const entry = getCatalogTableEntry(entryOrState) || getCatalogTableEntry(state);
         if (!entry) return;
         const isCustom = state?.status === CATALOG_ENTRY_STATUS.CUSTOM || (entry.isCustom && !entry.overrideSourceFile && !entry.sourceFile);
+        const overrideId = entry.catalogOverrideId || state?.overrideId;
         const confirmed = await confirm({
             title: `Delete ${title || catalogType}`,
             message: isCustom
@@ -132,12 +197,11 @@ export default function CatalogAdminTableView({
         });
         if (!confirmed) return;
         try {
-            if (isCustom && entry.catalogOverrideId) {
-                await dataActions.catalogOverride.deleteCatalogOverride(entry.catalogOverrideId);
+            if (isCustom && overrideId) {
+                await dataActions.catalogOverride.deleteCatalogOverride(overrideId);
             } else {
                 await dataActions.catalogOverride.saveCatalogOverride(buildHideOverride(catalogType, entry));
             }
-            table.closeContextMenu();
             notifySuccess(isCustom ? `${entry.name} deleted.` : `${entry.name} hidden.`);
         } catch (err) {
             console.error(err);
@@ -176,7 +240,7 @@ export default function CatalogAdminTableView({
 
     const previewContent = previewItem ? (
         <ContentPreviewCard
-            item={loadedDetail || previewItem}
+            item={loadedDetail ? mergeCatalogDetailIntoEntry(loadedDetail, previewItem) : previewItem}
             entityType={entityType}
             onEdit={() => table.editEntry(previewItem)}
             onClose={() => table.closePreview()}
@@ -185,159 +249,90 @@ export default function CatalogAdminTableView({
 
     return (
         <div
-            className="admin-layout"
+            className="admin-layout flex h-full flex-col gap-3 overflow-hidden p-2"
             data-testid={`catalog-admin-${catalogType}`}
-            style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
         >
-            <div style={{ padding: 10, background: '#222', borderBottom: '1px solid #444', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                <input
-                    className="modal-input"
-                    data-testid={`catalog-search-${catalogType}`}
-                    placeholder={searchPlaceholder}
-                    value={table.search}
-                    onChange={(event) => {
-                        table.setSearch(event.target.value);
-                        table.setPage(1);
-                    }}
-                    style={{ width: 200 }}
-                />
+            <AdminTableToolbar
+                search={table.search}
+                searchTestId={`catalog-search-${catalogType}`}
+                onSearchChange={(value) => {
+                    table.setSearch(value);
+                    table.setPage(1);
+                }}
+                searchPlaceholder={searchPlaceholder}
+                filters={filterDefinitions}
+                filterValues={toolbarFilterValues}
+                onFilterValuesChange={handleFilterValuesChange}
+                filterOpen={filterOpen}
+                onFilterOpenChange={setFilterOpen}
+                focusFilterId={focusedFilterId}
+                columns={columns}
+                visibleColumns={visibleColumns}
+                onVisibleColumnsChange={setVisibleColumns}
+                resultMeta={`${table.sortedStates.length}/${domainFilteredStates.length} ${title || catalogType}${table.sortedStates.length === 1 ? '' : 's'}`}
+                primaryActions={(
+                    <Button type="button" size="sm" onClick={() => table.createEntry()}>
+                        {newLabel}
+                    </Button>
+                )}
+            />
 
-                <button className="btn-add-condition" style={{ margin: 0, width: 'auto', background: '#4caf50' }} onClick={() => table.createEntry()}>
-                    {newLabel}
-                </button>
-
-                {filters.map((filter) => (
-                    <MultiSelectDropdown
-                        key={filter.id}
-                        label={filter.label}
-                        options={filter.options || []}
-                        selected={filterValues[filter.id] || []}
-                        onChange={(next) => setFilter(filter.id, next)}
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+                <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                    <AdminTableSurface
+                        tableTestId={`catalog-table-${catalogType}`}
+                        columns={displayedColumns}
+                        rows={table.paginatedStates}
+                        sortConfig={table.sortConfig}
+                        onSort={table.setSort}
+                        onHeaderFilter={handleHeaderFilter}
+                        actionTestIdPrefix={`catalog-action-${catalogType}`}
+                        getRowKey={(state, index) => getStateRowKey(state, index)}
+                        getRowTestId={(state, index) => `catalog-row-${catalogType}-${getStateTestId(state, index)}`}
+                        getCellTestId={(state, column, index) => `catalog-cell-${catalogType}-${getStateTestId(state, index)}-${column.key}`}
+                        getRowActions={(state) => getStandardCatalogContextActions().map((action) => ({
+                            ...action,
+                            onSelect: () => handleContextAction(action, state),
+                        }))}
+                        isRowSelected={(state) => isSameCatalogEntry(previewItem, getCatalogTableEntry(state))}
+                        rowClassName={(state) => getCatalogTableEntry(state)?.catalogEntryStatus === CATALOG_ENTRY_STATUS.DELETED ? 'opacity-[0.65]' : ''}
+                        onRowClick={(_event, state) => {
+                            table.selectEntry(state);
+                            if (!isMobile) table.preview(state);
+                        }}
+                        onRowDoubleClick={(_event, state) => {
+                            if (isMobile) table.preview(state);
+                            else table.editEntry(state);
+                        }}
+                        renderCell={({ row: state, column }) => {
+                            const entry = getCatalogTableEntry(state);
+                            return renderCell({ entry, state, column });
+                        }}
                     />
-                ))}
-
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                    {Object.entries(STATUS_LABELS).map(([status, label]) => (
-                        <label key={status} style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#ccc', fontSize: '0.85rem' }}>
-                            <input
-                                type="checkbox"
-                                data-testid={`catalog-status-${catalogType}-${status}`}
-                                checked={Boolean(table.statusFilters[status])}
-                                onChange={(event) => table.setStatusFilter(status, event.target.checked)}
-                            />
-                            {label}
-                        </label>
-                    ))}
-                </div>
-
-                <div style={{ position: 'relative' }}>
-                    <button className="btn-add-condition" style={{ margin: 0, width: 'auto' }} onClick={() => setShowColSelector(!showColSelector)}>
-                        Columns
-                    </button>
-                    {showColSelector && (
-                        <div style={{ position: 'absolute', top: '100%', left: 0, background: '#333', border: '1px solid #555', padding: 10, zIndex: 10, minWidth: 150 }}>
-                            {columns.map((column) => (
-                                <div key={column.key} style={{ display: 'flex', gap: 5, marginBottom: 5 }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={visibleColumns.includes(column.key)}
-                                        onChange={() => {
-                                            setVisibleColumns((prev) => prev.includes(column.key) ? prev.filter((key) => key !== column.key) : [...prev, column.key]);
-                                        }}
-                                    />
-                                    <span>{column.label || column.key}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                <select
-                    className="modal-input"
-                    style={{ width: 'auto' }}
-                    value={itemsPerPage}
-                    onChange={(event) => {
-                        setItemsPerPage(Number(event.target.value));
-                        table.setPage(1);
-                    }}
-                >
-                    {itemsPerPageOptions.map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                    ))}
-                </select>
-            </div>
-
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                <div style={{ flex: 1, overflow: 'auto', padding: 10 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
-                        <thead>
-                            <tr style={{ background: '#333', textAlign: 'left' }}>
-                                {columns.filter((column) => visibleColumns.includes(column.key)).map((column) => (
-                                    <th
-                                        key={column.key}
-                                        style={{ padding: 8, cursor: 'pointer', userSelect: 'none' }}
-                                        onClick={() => table.setSort(column.key)}
-                                    >
-                                        {column.label || column.key} {table.sortConfig.key === column.key ? (table.sortConfig.direction === 'asc' ? '▲' : '▼') : ''}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {table.paginatedStates.map((state, idx) => {
-                                const entry = getCatalogTableEntry(state);
-                                const rowTestId = toTestId(state.key || entry?.catalogEntryKey || entry?.sourceFile || entry?.overrideSourceFile || entry?.id || entry?._id || entry?.name || idx);
-                                return (
-                                    <tr
-                                        key={state.key || entry?.catalogEntryKey || entry?.id || entry?.name || idx}
-                                        data-testid={`catalog-row-${catalogType}-${rowTestId}`}
-                                        style={{
-                                            borderBottom: '1px solid #444',
-                                            background: previewItem?.catalogEntryKey === entry?.catalogEntryKey || previewItem?.name === entry?.name
-                                                ? 'rgba(197,160,89,0.1)'
-                                                : (idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'),
-                                            cursor: 'pointer',
-                                            opacity: state.status === CATALOG_ENTRY_STATUS.DELETED ? 0.65 : 1,
-                                        }}
-                                        onClick={() => {
-                                            table.selectEntry(state);
-                                            if (!isMobile) table.preview(state);
-                                        }}
-                                        onDoubleClick={() => {
-                                            if (isMobile) table.preview(state);
-                                            else table.editEntry(state);
-                                        }}
-                                        onContextMenu={(event) => table.openContextMenu(event, state)}
-                                    >
-                                        {columns.filter((column) => visibleColumns.includes(column.key)).map((column) => (
-                                            <td
-                                                key={column.key}
-                                                data-testid={`catalog-cell-${catalogType}-${rowTestId}-${column.key}`}
-                                                style={{ padding: 8 }}
-                                            >
-                                                {renderCell({ entry, state, column })}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-
-                    <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center' }}>
-                        <button disabled={table.page === 1} onClick={() => table.setPage((page) => Math.max(1, page - 1))}>Prev</button>
-                        <span>Page {table.page} of {table.totalPages}</span>
-                        <button disabled={table.page === table.totalPages} onClick={() => table.setPage((page) => Math.min(table.totalPages, page + 1))}>Next</button>
-                    </div>
+                    <AdminPagination
+                        page={table.page}
+                        totalPages={table.totalPages}
+                        total={table.sortedStates.length}
+                        pageSize={itemsPerPage}
+                        pageSizeOptions={itemsPerPageOptions}
+                        onPageChange={table.setPage}
+                        onPageSizeChange={(nextSize) => {
+                            setItemsPerPage(nextSize);
+                            table.setPage(1);
+                        }}
+                        label={`${title || catalogType}${table.sortedStates.length === 1 ? '' : 's'}`}
+                    />
                 </div>
 
                 {!isMobile && previewItem && (
-                    <div style={{ width: 420, borderLeft: '1px solid #444', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 16 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <h4 style={{ margin: 0, color: '#aaa' }}>Preview</h4>
-                            <button onClick={() => table.closePreview()} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>x</button>
+                    <div className="ml-3 flex w-[26rem] min-w-[26rem] flex-col overflow-hidden rounded-lg border border-border/70 bg-card p-4">
+                        <div className="mb-2 flex items-center justify-between">
+                            <h4 className="m-0 text-sm font-medium text-muted-foreground">Preview</h4>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => table.closePreview()}>Close</Button>
                         </div>
-                        {previewContent}
+                        <div className="min-h-0 overflow-auto">
+                            {previewContent}
+                        </div>
                     </div>
                 )}
             </div>
@@ -351,41 +346,6 @@ export default function CatalogAdminTableView({
                 >
                     {previewContent}
                 </BottomSheet>
-            )}
-
-            {table.contextMenu && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: table.contextMenu.y,
-                        left: table.contextMenu.x,
-                        background: '#2b2b2e',
-                        border: '1px solid #c5a059',
-                        borderRadius: 4,
-                        zIndex: 2000,
-                        minWidth: 170,
-                        boxShadow: '0 2px 10px rgba(0,0,0,0.5)',
-                    }}
-                    onClick={(event) => event.stopPropagation()}
-                >
-                    {getStandardCatalogContextActions().map((action) => (
-                        <div
-                            key={action.id}
-                            className="ctx-item"
-                            data-testid={`catalog-action-${catalogType}-${action.id}`}
-                            style={{
-                                padding: '8px 12px',
-                                cursor: 'pointer',
-                                color: action.danger ? '#ff8a80' : undefined,
-                                borderBottom: action.id === 'preview' ? '1px solid #444' : undefined,
-                            }}
-                            onClick={() => handleContextAction(action, table.contextMenu.state)}
-                        >
-                            {action.label}
-                        </div>
-                    ))}
-                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }} onClick={() => table.closeContextMenu()} />
-                </div>
             )}
         </div>
     );
@@ -409,6 +369,83 @@ function defaultPrepareEditorItem(entry, editorMode) {
         isCustom: true,
         name: `${entry.name || 'Entry'} (Copy)`,
     };
+}
+
+function createDefaultDomainFilterValues(filters) {
+    return Object.fromEntries(filters.map((filter) => [filter.id, cloneDefaultFilterValue(filter)]));
+}
+
+function createDomainFilterValues(filters, values) {
+    return Object.fromEntries(filters.map((filter) => [filter.id, values[filter.id] ?? cloneDefaultFilterValue(filter)]));
+}
+
+function cloneDefaultFilterValue(filter) {
+    if (filter.defaultValue !== undefined) {
+        return Array.isArray(filter.defaultValue) ? [...filter.defaultValue] : filter.defaultValue;
+    }
+    return filter.type === 'boolean' ? null : [];
+}
+
+function normalizeFilterDefinition(filter) {
+    return {
+        ...filter,
+        type: filter.type || 'multi',
+        defaultValue: filter.defaultValue ?? (filter.type === 'boolean' ? null : []),
+    };
+}
+
+function matchesDomainFilter(entry, state, filter, rawSelected) {
+    if (filter.type === 'text') {
+        const value = String(rawSelected || '').trim().toLowerCase();
+        if (!value) return true;
+        const target = getFilterValue(entry, filter);
+        return String(target || '').toLowerCase().includes(value);
+    }
+    if (filter.type === 'boolean') {
+        if (rawSelected !== true && rawSelected !== false) return true;
+        const target = Boolean(getFilterValue(entry, filter));
+        return target === rawSelected;
+    }
+    const selected = Array.isArray(rawSelected) ? rawSelected : [];
+    if (!selected.length) return true;
+    if (filter.predicate) return filter.predicate(entry, selected, state);
+    const value = getFilterValue(entry, filter);
+    if (Array.isArray(value)) {
+        return filter.matchAll
+            ? selected.every((option) => value.includes(option))
+            : selected.some((option) => value.includes(option));
+    }
+    return selected.includes(value);
+}
+
+function getFilterValue(entry, filter) {
+    return filter.valueGetter ? filter.valueGetter(entry) : entry?.[filter.field || filter.id];
+}
+
+function resolveFilterForColumn(column, filters) {
+    return filters.find((filter) => (
+        filter.columnKey === column.key
+        || filter.field === column.key
+        || filter.id === column.key
+        || (filter.options || []).some((option) => optionValue(option) === column.key)
+    ));
+}
+
+function getStateRowKey(state, index) {
+    const entry = getCatalogTableEntry(state);
+    return state?.key || entry?.catalogEntryKey || entry?.sourceFile || entry?.overrideSourceFile || entry?.id || entry?._id || entry?.name || index;
+}
+
+function getStateTestId(state, index) {
+    const entry = getCatalogTableEntry(state);
+    return toTestId(state?.key || entry?.catalogEntryKey || entry?.sourceFile || entry?.overrideSourceFile || entry?.id || entry?._id || entry?.name || index);
+}
+
+function isSameCatalogEntry(left, right) {
+    if (!left || !right) return false;
+    const leftKey = left.catalogEntryKey || left.sourceFile || left.overrideSourceFile || left.id || left._id || left.name;
+    const rightKey = right.catalogEntryKey || right.sourceFile || right.overrideSourceFile || right.id || right._id || right.name;
+    return leftKey && rightKey && leftKey === rightKey;
 }
 
 function toTestId(value) {

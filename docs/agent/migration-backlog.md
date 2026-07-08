@@ -1,5 +1,7 @@
 # Migration Backlog
 
+Last updated: 2026-07-08.
+
 This file tracks remaining broad legacy writes after the Character/Inventory/Loot,
 Campaign/Session, Quests/Rewards, Encounters, Maps, Progress, Camping,
 Global Admin Content, Player Edit Stability, and V2 Convergence foundation waves.
@@ -103,6 +105,21 @@ Remaining presentation cleanup:
 - Player Loot, Shop, and GM Items side lists now use shared `ItemRow` primitives. Complex Player equipment rows remain local because wand/staff/ammo/equipment interactions need a dedicated pass.
 - Admin catalog previews for Spells, Actions, Feats, and Impulses already share `ContentPreviewCard`; harden editor/list reuse in a future catalog UI wave.
 
+## Completed In Catalog Admin Unification Wave
+
+- Items, Spells, Actions, Feats, Impulses, Abilities, and Creatures now use the shared admin catalog table/controller contract.
+- Static `Edit` writes a `catalogOverrides` document with `mode: "override"` instead of creating a duplicate custom entry.
+- `Clone` and `New` write `mode: "custom"`.
+- Static `Delete` writes `mode: "hide"` and is visible through the Deleted status filter.
+- Custom/override `Delete` removes the override document.
+- `Copy Reference` is visible across catalog tables and resolves through the generic catalog reference resolver.
+- Tables refresh through context/selectors after mutation and no longer use catalog-save `window.location.reload()` fallbacks.
+- The old Actions `Clone/Override` menu label is removed; `Edit` and `Clone` are separate actions.
+- Creature production editing now writes DB-backed content overrides. Bestiary reveal/group/published metadata remains separate from creature content overrides.
+- Creature full-data reads now use the shared catalog detail-merge helper so compact index rows, fetched Foundry JSON, and overrides do not drop descriptions, items, or stats.
+- Deviant Abilities remain Pact-domain content, but the admin table now exposes explicit Edit, Clone, Delete, and Copy Reference actions with stable ID-based row behavior.
+- Smoke and guard coverage checks immediate refresh, item edit without duplicates, item clone, creature production-style edit, action hide/delete, Deleted filter behavior, and Copy Reference.
+
 ## Remaining By Domain
 
 ## Post-Migration Hardening
@@ -140,12 +157,15 @@ Deferred follow-ups:
 
 - `ItemsView` trader create/update/hide/inventory writes use `dataActions.shop`.
 - Available items and formulas use `dataActions.shop`.
-- GM custom items use `dataActions.globalContent.saveCustomItem/deleteCustomItem`.
+- GM item catalog content writes use `dataActions.catalogOverride` through the shared catalog editor contract.
+- Legacy custom item helpers remain compatibility/convenience paths for older non-table surfaces.
 - Shop reads in `ShopView`, `ItemsView`, and `InventoryView` are selector-backed through `shopSelectors`.
 
-Remaining:
+Compatibility note:
 
-- Shop still depends on the legacy-shaped projection as the view-model input, but component-local root fallback logic has been removed.
+- Old `shop.customItems`, `db.actions`, `abilities.custom`, and bestiary custom creature shapes remain readable through centralized compatibility selectors so old data does not disappear.
+- New catalog-table writes must not target those legacy shapes.
+- Remaining catalog work is performance/lazy-loading and optional UI polish, not data-model migration debt.
 
 ### Legacy V2 Compatibility
 

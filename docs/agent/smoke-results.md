@@ -1,6 +1,6 @@
 # Smoke Results
 
-Last updated: 2026-07-02.
+Last updated: 2026-07-08.
 
 ## Scope
 
@@ -13,9 +13,9 @@ environment before treating a build as production-verified.
 
 ## Automated Fixture Smokes
 
-Command: `npx playwright test tests/e2e/playnight-smoke.spec.js --reporter=line --workers=1`
+Command: `npm run smoke`
 
-Result on 2026-06-28: `verified`.
+Result on 2026-07-08: `verified`.
 
 | Flow | Result | Notes |
 | --- | --- | --- |
@@ -28,6 +28,11 @@ Result on 2026-06-28: `verified`.
 | Quest reward idempotency | verified | Objective reward applies once across repeated toggles/reload. |
 | Encounter HP, initiative, condition effects | verified | Creature HP/initiative and player/creature effects persist across reload. |
 | Spell catalog override in player add flow | verified | `Uplifting Overture` override appears as rank/level 0 in Add Spell. |
+| Admin spell edit immediate refresh and Copy Reference | verified | Static spell edit writes an override, table context is retained, and Copy Reference resolves the effective entry. |
+| Admin action hide/delete and Deleted filter | verified | Static action delete writes a hide override and the Deleted status filter reveals the hidden original. |
+| Admin item edit/clone semantics | verified | Static item edit updates the effective row without a duplicate; clone creates a custom copy. |
+| Admin creature production-style edit | verified | Creature editor writes a DB override in production-like mode instead of requiring file writes. |
+| Encounter effect removal via closable badge | verified | Effect-backed combatant condition badges can be removed and re-added through the encounter UI. |
 
 ## Manual Firebase Smokes
 
@@ -38,7 +43,7 @@ Result on 2026-06-28: `verified`.
 | Shop Item Row: buy price, quantity, give/buy | not tested | Needs manual preview smoke. |
 | Loot Item Row: claim, partial claim, gold split | partial | Production smoke verified isolated lootbag creation, item claim, and single-character gold split. Partial claim still manual. |
 | GM Items side lists: trader/lootbag selection, icons, actions | verified | Production smoke verified selecting `Test V2`, creating lootbags, setting gold after commit, adding an item to a lootbag, and giving an item to player `test`. |
-| Production catalog edit and player visibility | not tested | Automated fixture covers override visibility; deployed Firestore write still manual. |
+| Production catalog edit and player visibility | not tested | Automated fixture covers override visibility and table refresh; deployed Firestore catalog edit still manual. |
 
 ## Production Smoke Attempts
 

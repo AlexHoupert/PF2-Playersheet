@@ -8,6 +8,7 @@ import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import { IMPULSE_INDEX_FILTER_OPTIONS, fetchImpulseDetailBySourceFile } from '../../shared/catalog/impulseIndex';
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 import { buildCatalogEditorOverride, buildCatalogSafeId, getCatalogEditorInitialItem } from '../../shared/catalog/catalogEditorContract';
+import { mergeCatalogDetailIntoEntry } from '../../shared/catalog/catalogDetailMerge';
 
 export default function ImpulseEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'impulse', onSave, onCancel, onSaveToDb, onSaveCatalogEntry }) {
     const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
@@ -57,16 +58,19 @@ export default function ImpulseEditor({ initialItem: initialItemProp, initialPay
                 setIsLoading(true);
                 fetchImpulseDetailBySourceFile(initialItem.sourceFile)
                     .then(details => {
-                        setFormData(prev => ({
-                            ...prev,
-                            description: details.description || prev.description || '',
-                            target: details.target || prev.target || '',
-                            area: details.area || prev.area || '',
-                            duration: details.duration || prev.duration || '',
-                            defense: details.defense || prev.defense || '',
-                            range: details.range || prev.range || '',
-                            time: details.time || prev.time || '',
-                        }));
+                        setFormData(prev => {
+                            const merged = mergeCatalogDetailIntoEntry(details, prev);
+                            return {
+                                ...prev,
+                                description: merged.description || prev.description || '',
+                                target: merged.target || prev.target || '',
+                                area: merged.area || prev.area || '',
+                                duration: merged.duration || prev.duration || '',
+                                defense: merged.defense || prev.defense || '',
+                                range: merged.range || prev.range || '',
+                                time: merged.time || prev.time || '',
+                            };
+                        });
                         setIsLoading(false);
                     })
                     .catch(err => {

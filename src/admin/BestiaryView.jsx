@@ -6,9 +6,9 @@
  * while db only stores METADATA (group, bestiary visibility, revealState, falseData)
  */
 import React, { useMemo, useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
-import FilterBar from './components/FilterBar';
 import BottomSheet from '../shared/components/BottomSheet';
 import CreatureCard from '../shared/components/CreatureCard';
 import CreatureAbilityModal from '../shared/components/CreatureAbilityModal';
@@ -18,23 +18,13 @@ import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { getRecallKnowledgeDC, generateFalseData } from '../utils/bestiaryUtils';
 import { deepClone } from '../shared/utils/deepClone';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
+import { mergeCreatureDetailIntoEntry } from '../shared/catalog/catalogDetailMerge';
 import { selectCustomAbilityList } from '../shared/db/selectors/abilitySelectors';
 import { selectBestiaryCreatureMetadata, selectCustomCreatures } from '../shared/db/selectors/bestiarySelectors';
 import { DEFAULT_CREATURE_REVEAL_STATE, buildBestiaryCreatureEntries } from '../shared/bestiary/creaturePresentation';
 import { buildHideOverride } from '../shared/catalog/catalogEntryModel';
 import { selectCatalogEntryStates } from '../shared/db/selectors/catalogOverrideSelectors';
-
-// Column priority map for responsive hiding
-const COL_PRIORITY = {
-    name: undefined,      // always visible
-    level: undefined,
-    type: 2,              // tablet+
-    traits: 2,
-    bestiary: 2,
-    catalogStatusLabel: 3,
-    rarity: 3,            // desktop only
-    group: 3,
-};
+import { AdminPagination, AdminTableSurface, AdminTableToolbar } from './components/table';
 
 export default function BestiaryView({ db, initialFilterType, onContentLinkClick }) {
     const { dataActions } = useCampaign();
@@ -60,10 +50,11 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
     const [visibleColumns, setVisibleColumns] = useState(['name', 'level', 'type', 'group', 'bestiary']);
-    const [showColSelector, setShowColSelector] = useState(false);
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [focusFilterId, setFocusFilterId] = useState(null);
 
     // ── Selection / context menu / toast ────────────────────────────────────
-    const [contextMenu, setContextMenu] = useState(null);
+    const [, setContextMenu] = useState(null);
     const [toast, setToast] = useState(null);
 
     const showToast = (msg) => {
@@ -113,8 +104,6 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     const [editingCreature, setEditingCreature] = useState(null);
     const [previewCreature, setPreviewCreature] = useState(null);
     const [loadedCreatureData, setLoadedCreatureData] = useState(null);
-    const [jsonImportText, setJsonImportText] = useState('');
-    const [importError, setImportError] = useState('');
     const [selectedAbility, setSelectedAbility] = useState(null);
     const [selectedSkill, setSelectedSkill] = useState(null);
 
@@ -123,9 +112,18 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         if (!previewCreature?.id) { setLoadedCreatureData(null); return; }
         if (previewCreature.isCustom) {
             const customData = selectCustomCreatures(db)[previewCreature.id]?.data;
-            if (customData) { setLoadedCreatureData(customData); return; }
+            if (customData) {
+                setLoadedCreatureData(mergeCreatureDetailIntoEntry(customData, previewCreature).data);
+                return;
+            }
+            if (previewCreature.data) {
+                setLoadedCreatureData(mergeCreatureDetailIntoEntry(previewCreature.data, previewCreature).data);
+                return;
+            }
         }
-        fetchCreatureData(previewCreature.id).then(data => { if (data) setLoadedCreatureData(data); });
+        fetchCreatureData(previewCreature.id).then(data => {
+            if (data) setLoadedCreatureData(mergeCreatureDetailIntoEntry(data, previewCreature).data);
+        });
     }, [previewCreature?.id, db]);
 
     // Fetch full creature data when editing creature changes
@@ -133,10 +131,13 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         if (!editingCreature?.id || editingCreature.data) return;
         if (editingCreature.isCustom) {
             const customData = selectCustomCreatures(db)[editingCreature.id]?.data;
-            if (customData) { setEditingCreature(prev => ({ ...prev, data: customData })); return; }
+            if (customData) {
+                setEditingCreature(prev => mergeCreatureDetailIntoEntry(customData, prev));
+                return;
+            }
         }
         fetchCreatureData(editingCreature.id).then(data => {
-            if (data) setEditingCreature(prev => ({ ...prev, data }));
+            if (data) setEditingCreature(prev => mergeCreatureDetailIntoEntry(data, prev));
         });
     }, [editingCreature?.id, db]);
 
@@ -159,14 +160,14 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         const s = new Set(); creatures.forEach(c => s.add(c.group || 'Uncategorized')); return [...s].sort();
     }, [creatures]);
 
-    const filterOptionsMap = useMemo(() => ({
-        type:     uniqueTypes,
-        rarity:   uniqueRarities,
-        traits:   uniqueTraits,
-        group:    uniqueGroups,
-        CatalogStatus: ['Original', 'Edited', 'Custom', 'Deleted'],
-        bestiary: true,
-    }), [uniqueTypes, uniqueRarities, uniqueTraits, uniqueGroups]);
+    const tableFilters = useMemo(() => ([
+        { id: 'type', label: 'Type', options: uniqueTypes },
+        { id: 'rarity', label: 'Rarity', options: uniqueRarities },
+        { id: 'traits', label: 'Traits', options: uniqueTraits },
+        { id: 'group', label: 'Group', options: uniqueGroups },
+        { id: 'CatalogStatus', label: 'Catalog Status', options: ['Original', 'Edited', 'Custom', 'Deleted'] },
+        { id: 'bestiary', label: 'In Bestiary', type: 'boolean' },
+    ]), [uniqueTypes, uniqueRarities, uniqueTraits, uniqueGroups]);
 
     // ── Filtering ────────────────────────────────────────────────────────────
     const filteredCreatures = useMemo(() => {
@@ -217,11 +218,6 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
     };
 
-    const handleContextMenu = (e, creature) => {
-        e.preventDefault();
-        setContextMenu({ x: e.clientX, y: e.clientY, creature });
-    };
-
     const handleRowClick = (creature) => {
         // Single click: open preview (desktop side panel)
         if (!isMobile) setPreviewCreature(creature);
@@ -235,31 +231,6 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
             // Desktop: double-click opens edit dialog
             handleEdit(creature);
         }
-    };
-
-    const handleSave = (creatureData) => {
-        const id = creatureData.id;
-        if (!id) {
-            notifyError('Cannot save: creature must have an ID from the catalog');
-            return;
-        }
-        const level = creatureData.data?.system?.details?.level?.value ?? 0;
-        runDataAction(dataActions.bestiary.updateCreatureMetadata(id, {
-            id,
-            group: creatureData.group || 'Uncategorized',
-            bestiary: creatureData.bestiary || false,
-            revealState: creatureData.revealState || { ...DEFAULT_CREATURE_REVEAL_STATE },
-            falseData: creatureData.falseData || generateFalseData({
-                hp: creatureData.data?.system?.attributes?.hp?.max ?? 0,
-                fortitude: creatureData.data?.system?.saves?.fortitude?.value ?? 0,
-                reflex: creatureData.data?.system?.saves?.reflex?.value ?? 0,
-                will: creatureData.data?.system?.saves?.will?.value ?? 0,
-                ac: creatureData.data?.system?.attributes?.ac?.value ?? 10,
-                perception: creatureData.data?.system?.perception?.mod ?? 0
-            }, level)
-        }));
-        setEditingCreature(null);
-        setJsonImportText('');
     };
 
     const handleDelete = async (creature) => {
@@ -287,7 +258,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
 
     const handleEdit = async (creature) => {
         if (creature.data) {
-            setEditingCreature({ ...creature, editorMode: 'edit' });
+            setEditingCreature(mergeCreatureDetailIntoEntry(creature.data, { ...creature, editorMode: 'edit' }));
             setContextMenu(null);
             setPreviewCreature(null);
             return;
@@ -299,7 +270,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                 setContextMenu(null);
                 return;
             }
-            setEditingCreature({ ...creature, data, editorMode: 'edit' });
+            setEditingCreature(mergeCreatureDetailIntoEntry(data, { ...creature, editorMode: 'edit' }));
             setContextMenu(null);
             setPreviewCreature(null);
             return;
@@ -310,22 +281,22 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
             setContextMenu(null);
             return;
         }
-        setEditingCreature({ ...creature, data, editorMode: 'edit' });
+        setEditingCreature(mergeCreatureDetailIntoEntry(data, { ...creature, editorMode: 'edit' }));
         setContextMenu(null);
         setPreviewCreature(null);
     };
 
     const handleClone = async (creature) => {
-        const rawData = creature.isCustom
+        const rawData = creature.data || (creature.isCustom
             ? selectCustomCreatures(db)[creature.id]?.data
-            : await fetchCreatureData(creature.id);
+            : await fetchCreatureData(creature.id));
         if (!rawData) {
             notifyError('Failed to load creature data');
             setContextMenu(null);
             return;
         }
         // Deep-copy so the clone shares no nested object references with the original
-        const data = deepClone(rawData);
+        const data = deepClone(mergeCreatureDetailIntoEntry(rawData, creature).data);
         setEditingCreature({
             ...creature, id: null, _id: null, catalogOverrideId: null, editorMode: 'clone',
             data: { ...data, _id: null, name: (data.name || creature.name) + ' (Copy)' }
@@ -385,15 +356,6 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         runDataAction(dataActions.bestiary.updateRevealState(id, field, state));
     };
 
-    const handleImportJSON = () => {
-        try {
-            const parsed = JSON.parse(jsonImportText);
-            if (!parsed.name) throw new Error('JSON must have a name field');
-            setEditingCreature({ id: null, type: parsed.type === 'hazard' ? 'hazard' : 'npc', data: parsed, bestiary: false, revealState: { ...DEFAULT_CREATURE_REVEAL_STATE }, editorMode: 'create' });
-            setImportError('');
-        } catch (err) { setImportError('Invalid JSON: ' + err.message); }
-    };
-
     const [importingCatalog, setImportingCatalog] = useState(false);
     const handleInitMetadataFromCatalog = () => {
         setImportingCatalog(true);
@@ -413,7 +375,33 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         setImportingCatalog(false);
     };
 
-    const allColumns = ['name', 'level', 'type', 'group', 'rarity', 'traits', 'catalogStatusLabel', 'bestiary'];
+    const tableColumns = useMemo(() => ([
+        { key: 'name', label: 'Name' },
+        { key: 'level', label: 'Level' },
+        { key: 'type', label: 'Type' },
+        { key: 'group', label: 'Group' },
+        { key: 'rarity', label: 'Rarity' },
+        { key: 'traits', label: 'Traits' },
+        { key: 'catalogStatusLabel', label: 'Catalog Status' },
+        { key: 'bestiary', label: 'Bestiary' },
+    ]), []);
+    const visibleTableColumns = useMemo(
+        () => tableColumns.filter(column => visibleColumns.includes(column.key)),
+        [tableColumns, visibleColumns]
+    );
+    const getCreatureRowActions = (creature) => ([
+        { id: 'copy-reference', label: 'Copy Reference', onSelect: () => copyCreatureRef(creature) },
+        { id: 'set-group', label: 'Set Group', onSelect: () => handleSetGroup(creature) },
+        creature.isCustom ? {
+            id: 'paste-ability',
+            label: 'Paste Referenced Ability',
+            onSelect: () => pasteAbilityToCreature(creature),
+        } : null,
+        { id: 'edit', label: 'Edit', onSelect: () => handleEdit(creature) },
+        { id: 'clone', label: 'Clone', onSelect: () => handleClone(creature) },
+        { id: 'preview', label: 'Preview', onSelect: () => setPreviewCreature(creature) },
+        { id: 'delete', label: 'Delete', danger: true, onSelect: () => handleDelete(creature) },
+    ].filter(Boolean));
 
     // ── Render editor ─────────────────────────────────────────────────────────
     if (editingCreature) {
@@ -489,142 +477,74 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     // ── Render list view ──────────────────────────────────────────────────────
     return (
         <div className="admin-layout" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-            {/* ── Toolbar ── */}
-            <div style={{ padding: 10, background: '#222', borderBottom: '1px solid #444', flexShrink: 0 }}>
-                <FilterBar
-                    search={search}
-                    onSearch={(v) => { setSearch(v); setPage(1); }}
-                    searchPlaceholder="Search creatures..."
-                    activeFilters={activeFilters}
-                    onFiltersChange={(f) => { setActiveFilters(f); setPage(1); }}
-                    columns={['type', 'rarity', 'traits', 'group', 'CatalogStatus', 'bestiary']}
-                    optionsMap={filterOptionsMap}
-                    columnLabels={{ bestiary: 'In Bestiary', type: 'Type', rarity: 'Rarity', traits: 'Traits', group: 'Group', CatalogStatus: 'Catalog Status' }}
-                    extraRight={
-                        <div style={{ display: 'flex', gap: 6 }}>
-                            <button
-                                className="btn-add-condition"
-                                style={{ margin: 0, width: 'auto', background: '#4caf50' }}
-                                onClick={() => setEditingCreature({ type: 'npc', data: {}, bestiary: false, revealState: { ...DEFAULT_CREATURE_REVEAL_STATE }, editorMode: 'create' })}
-                            >
-                                + New
-                            </button>
-                            <button
-                                className="btn-add-condition"
-                                style={{ margin: 0, width: 'auto', background: '#2196f3' }}
-                                onClick={handleInitMetadataFromCatalog}
-                                disabled={importingCatalog}
-                                title="Initialize metadata from catalog"
-                            >
-                                📥
-                            </button>
-                        </div>
-                    }
-                />
-
-                {/* Secondary toolbar row: columns selector + page size */}
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
-                    <span style={{ color: '#888', fontSize: '0.85em' }}>{sortedCreatures.length} creatures</span>
-
-                    <div style={{ position: 'relative' }}>
-                        <button
-                            className="btn-add-condition"
-                            style={{ margin: 0, width: 'auto', fontSize: '0.8em', padding: '4px 8px' }}
-                            onClick={() => setShowColSelector(!showColSelector)}
+            <AdminTableToolbar
+                search={search}
+                onSearchChange={(value) => { setSearch(value); setPage(1); }}
+                searchPlaceholder="Search creatures..."
+                filters={tableFilters}
+                filterValues={activeFilters}
+                onFilterValuesChange={(values) => { setActiveFilters(values); setPage(1); }}
+                filterOpen={filterOpen}
+                onFilterOpenChange={setFilterOpen}
+                focusFilterId={focusFilterId}
+                columns={tableColumns}
+                visibleColumns={visibleColumns}
+                onVisibleColumnsChange={setVisibleColumns}
+                resultMeta={`${sortedCreatures.length} creatures`}
+                primaryActions={(
+                    <>
+                        <Button
+                            type="button"
+                            onClick={() => setEditingCreature({ type: 'npc', data: {}, bestiary: false, revealState: { ...DEFAULT_CREATURE_REVEAL_STATE }, editorMode: 'create' })}
                         >
-                            Columns ▾
-                        </button>
-                        {showColSelector && (
-                            <div style={{ position: 'absolute', top: '100%', left: 0, background: '#333', border: '1px solid #555', padding: 10, zIndex: 10, minWidth: 150 }}>
-                                {allColumns.map(col => (
-                                    <div key={col} style={{ display: 'flex', gap: 5, marginBottom: 5 }}>
-                                        <input type="checkbox"
-                                            checked={visibleColumns.includes(col)}
-                                            onChange={() => setVisibleColumns(prev => prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col])}
-                                        />
-                                        <span style={{ textTransform: 'capitalize', color: '#ccc', fontSize: '0.9em' }}>{col}</span>
-                                    </div>
-                                ))}
-                                <button onClick={() => setShowColSelector(false)} style={{ marginTop: 6, width: '100%', background: '#444', border: 'none', color: '#ccc', padding: '4px', cursor: 'pointer', borderRadius: 3 }}>Close</button>
-                            </div>
-                        )}
-                    </div>
-
-                    <select
-                        className="modal-input"
-                        style={{ width: 'auto', fontSize: '0.85em' }}
-                        value={itemsPerPage}
-                        onChange={e => { setItemsPerPage(Number(e.target.value)); setPage(1); }}
-                    >
-                        <option value={25}>25/page</option>
-                        <option value={50}>50/page</option>
-                        <option value={100}>100/page</option>
-                    </select>
-                </div>
-            </div>
+                            + New
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={handleInitMetadataFromCatalog}
+                            disabled={importingCatalog}
+                            title="Initialize metadata from catalog"
+                        >
+                            Import Metadata
+                        </Button>
+                    </>
+                )}
+            />
 
             {/* ── Table + Side panel ── */}
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                <div style={{ flex: 1, overflow: 'auto', padding: 10 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
-                        <thead>
-                            <tr style={{ background: '#333', textAlign: 'left' }}>
-                                {visibleColumns.map(c => (
-                                    <th
-                                        key={c}
-                                        data-priority={COL_PRIORITY[c]}
-                                        style={{ padding: 8, textTransform: 'capitalize', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
-                                        onClick={() => handleSort(c)}
-                                    >
-                                        {c} {sortConfig.key === c ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {paginatedCreatures.map((creature, idx) => (
-                                <tr
-                                    key={creature.id}
-                                    style={{
-                                        borderBottom: '1px solid #444',
-                                        background: previewCreature?.id === creature.id
-                                            ? 'rgba(197,160,89,0.1)'
-                                            : idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
-                                        cursor: 'pointer'
-                                    }}
-                                    onClick={() => handleRowClick(creature)}
-                                    onDoubleClick={() => handleRowDoubleClick(creature)}
-                                    onContextMenu={e => handleContextMenu(e, creature)}
-                                >
-                                    {visibleColumns.map(c => (
-                                        <td key={c} data-priority={COL_PRIORITY[c]} style={{ padding: '8px' }}>
-                                            {c === 'bestiary' ? (
-                                                <input
-                                                    type="checkbox"
-                                                    checked={creature.bestiary || false}
-                                                    onChange={() => toggleBestiary(creature)}
-                                                    onClick={e => e.stopPropagation()}
-                                                />
-                                            ) : c === 'traits' ? (
-                                                creature.traits?.slice(0, 3).join(', ') + (creature.traits?.length > 3 ? '…' : '') || '-'
-                                            ) : (
-                                                creature[c] ?? '-'
-                                            )}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-
-                    {/* Pagination */}
-                    <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button className="page-btn" disabled={currentPage === 1} onClick={() => setPage(1)}>«</button>
-                        <button className="page-btn" disabled={currentPage === 1} onClick={() => setPage(p => p - 1)}>‹ Prev</button>
-                        <span style={{ color: '#aaa', fontSize: '0.9em' }}>Page {currentPage} / {totalPages}</span>
-                        <button className="page-btn" disabled={currentPage === totalPages} onClick={() => setPage(p => p + 1)}>Next ›</button>
-                        <button className="page-btn" disabled={currentPage === totalPages} onClick={() => setPage(totalPages)}>»</button>
-                    </div>
+                <div style={{ flex: 1, display: 'flex', minWidth: 0, flexDirection: 'column', overflow: 'hidden', padding: 10 }}>
+                    <AdminTableSurface
+                        columns={visibleTableColumns}
+                        rows={paginatedCreatures}
+                        getRowKey={(creature) => creature.id}
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                        onHeaderFilter={(column) => {
+                            const filterId = column.key === 'catalogStatusLabel' ? 'CatalogStatus' : column.key;
+                            if (tableFilters.some(filter => filter.id === filterId)) {
+                                setFocusFilterId(filterId);
+                                setFilterOpen(true);
+                            }
+                        }}
+                        isRowSelected={(creature) => previewCreature?.id === creature.id}
+                        onRowClick={(_event, creature) => handleRowClick(creature)}
+                        onRowDoubleClick={(_event, creature) => handleRowDoubleClick(creature)}
+                        getRowActions={getCreatureRowActions}
+                        renderCell={({ row, column }) => renderCreatureTableCell(row, column, toggleBestiary)}
+                        emptyLabel="No creatures found."
+                    />
+                    <AdminPagination
+                        page={currentPage}
+                        totalPages={totalPages}
+                        total={sortedCreatures.length}
+                        pageSize={itemsPerPage}
+                        pageSizeOptions={[25, 50, 100]}
+                        label="creatures"
+                        onPageChange={setPage}
+                        onPageSizeChange={(nextSize) => { setItemsPerPage(nextSize); setPage(1); }}
+                    />
                 </div>
 
                 {/* ── Desktop side preview panel ── */}
@@ -651,45 +571,6 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                 </BottomSheet>
             )}
 
-            {/* ── Desktop context menu ── */}
-            {contextMenu && (
-                <div
-                    style={{
-                        position: 'fixed', top: contextMenu.y, left: contextMenu.x,
-                        background: '#2b2b2e', border: '1px solid #c5a059', borderRadius: 4,
-                        zIndex: 2000, minWidth: 160, boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
-                    }}
-                    onClick={e => e.stopPropagation()}
-                >
-                    {[
-                        { label: '📎 Copy Reference', onClick: () => { copyCreatureRef(contextMenu.creature); setContextMenu(null); } },
-                        { label: '📁 Set Group', onClick: () => handleSetGroup(contextMenu.creature) },
-                        contextMenu.creature.isCustom && {
-                            label: '📥 Paste Referenced Ability',
-                            onClick: () => pasteAbilityToCreature(contextMenu.creature)
-                        },
-                        { label: '✏️ Edit', onClick: () => handleEdit(contextMenu.creature) },
-                        { label: '📋 Clone', onClick: () => handleClone(contextMenu.creature) },
-                        { label: '👁️ Preview', onClick: () => { setPreviewCreature(contextMenu.creature); setContextMenu(null); } },
-                        { label: '🗑️ Delete', color: '#e57373', onClick: () => handleDelete(contextMenu.creature) },
-                    ].filter(Boolean).map((item, i, arr) => (
-                        <div
-                            key={i}
-                            className="ctx-item"
-                            style={{
-                                padding: '8px 12px', cursor: item.disabled ? 'default' : 'pointer',
-                                borderBottom: i < arr.length - 1 ? '1px solid #444' : 'none',
-                                color: item.disabled ? '#555' : item.color || '#ddd',
-                            }}
-                            onClick={item.disabled ? undefined : item.onClick}
-                        >
-                            {item.label}
-                        </div>
-                    ))}
-                    <div style={{ position: 'fixed', inset: 0, zIndex: -1 }} onClick={() => setContextMenu(null)} />
-                </div>
-            )}
-
             {/* Ability Modal */}
             {selectedAbility && (
                 <CreatureAbilityModal
@@ -714,4 +595,25 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
             )}
         </div>
     );
+}
+
+function renderCreatureTableCell(creature, column, toggleBestiary) {
+    if (column.key === 'bestiary') {
+        return (
+            <input
+                type="checkbox"
+                checked={creature.bestiary || false}
+                onChange={() => toggleBestiary(creature)}
+                onClick={event => event.stopPropagation()}
+            />
+        );
+    }
+    if (column.key === 'traits') {
+        const traits = creature.traits || [];
+        return <span className="text-muted-foreground">{traits.slice(0, 3).join(', ')}{traits.length > 3 ? '...' : ''}</span>;
+    }
+    if (column.key === 'catalogStatusLabel') {
+        return <span className="text-muted-foreground">{creature.catalogStatusLabel || 'Original'}</span>;
+    }
+    return creature[column.key] ?? '-';
 }

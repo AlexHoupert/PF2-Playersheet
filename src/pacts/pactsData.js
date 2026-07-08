@@ -94,6 +94,19 @@ export function generateId(name, suffix = '') {
     return base + (suffix ? '_' + suffix : '') + '_' + Date.now();
 }
 
+export function buildDeviantAbilityClone(ability = {}, options = {}) {
+    const createId = options.createId || ((name) => generateId(name));
+    const baseName = ability.name || 'Deviant Ability';
+    const cloneName = options.name || `${baseName} (Copy)`;
+    return {
+        ...ability,
+        id: options.id || createId(`${baseName}-copy`),
+        name: cloneName,
+        awakening1: { ...(ability.awakening1 || {}) },
+        awakening2: { ...(ability.awakening2 || {}) },
+    };
+}
+
 /** Build actorEffect records for pact backlash conditions. */
 export function buildBacklashEffectInputs({ effects, tier, pactId, actorId }) {
     return (effects || []).map(eff => {

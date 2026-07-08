@@ -7,6 +7,7 @@ import {
   resolveContentLink,
   shouldFetchCatalogDetail,
 } from "../catalog/catalogDetailController.js";
+import { mergeCatalogDetailIntoEntry } from "../catalog/catalogDetailMerge.js";
 
 export function useCatalogDetailController({
   db = null,
@@ -34,7 +35,7 @@ export function useCatalogDetailController({
     const cacheKey = `${type}:${sourceFile}`;
     const cached = detailCacheRef.current.get(cacheKey);
     if (cached) {
-      setModalData?.((prev) => (prev && prev.name === modalData.name ? { ...cached, ...prev } : prev));
+      setModalData?.((prev) => (prev && prev.name === modalData.name ? mergeCatalogDetailIntoEntry(cached, prev) : prev));
       return;
     }
 
@@ -46,7 +47,7 @@ export function useCatalogDetailController({
       .then((detail) => {
         detailCacheRef.current.set(cacheKey, detail);
         if (cancelled) return;
-        setModalData?.((prev) => (prev && prev.name === modalData.name ? { ...detail, ...prev } : prev));
+        setModalData?.((prev) => (prev && prev.name === modalData.name ? mergeCatalogDetailIntoEntry(detail, prev) : prev));
         setDetailLoading(false);
       })
       .catch((err) => {
@@ -91,7 +92,7 @@ export function useCatalogDetailController({
 
       if (!resolved.entry && (!resolved.sourceFile || !resolved.fetchDetail)) return;
       const fetched = resolved.sourceFile && resolved.fetchDetail ? await resolved.fetchDetail(resolved.sourceFile) : null;
-      const data = { ...(fetched || {}), ...(resolved.entry || {}) };
+      const data = mergeCatalogDetailIntoEntry(fetched || {}, resolved.entry || {});
       pushModal(setModalHistory, modalMode, modalData);
       setModalData?.({ ...data, _entityType: resolved.type });
       setModalMode?.(resolved.modalMode);
