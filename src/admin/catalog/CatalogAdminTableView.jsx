@@ -249,7 +249,7 @@ export default function CatalogAdminTableView({
 
     return (
         <div
-            className="admin-layout flex h-full flex-col gap-3 overflow-hidden p-2"
+            className="flex h-[calc(100vh-100px)] min-h-0 flex-col gap-3 overflow-hidden p-2"
             data-testid={`catalog-admin-${catalogType}`}
         >
             <AdminTableToolbar

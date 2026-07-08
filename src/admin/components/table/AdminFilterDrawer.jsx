@@ -77,8 +77,8 @@ export default function AdminFilterDrawer({
 
     return (
         <Drawer open={open} onOpenChange={onOpenChange} direction="right">
-            <DrawerContent className="!w-[min(56rem,calc(100vw-2rem))] !max-w-[56rem]">
-                <DrawerHeader className="border-b border-border/70">
+            <DrawerContent className="!w-[min(56rem,calc(100vw-2rem))] !max-w-[56rem] border-border/70 bg-card text-card-foreground">
+                <DrawerHeader className="border-b border-border/70 bg-background/80">
                     <DrawerTitle className="flex items-center gap-2">
                         <SlidersHorizontal data-icon="inline-start" />
                         Filters{activeCount ? ` (${activeCount})` : ''}
@@ -89,7 +89,7 @@ export default function AdminFilterDrawer({
                 </DrawerHeader>
 
                 <div className="grid min-h-[24rem] flex-1 overflow-hidden md:grid-cols-[minmax(13rem,1fr)_minmax(0,2fr)]">
-                    <div className="flex min-h-0 flex-col gap-1 overflow-auto border-b border-border/70 bg-sidebar p-3 text-sidebar-foreground md:border-b-0 md:border-r">
+                    <div className="flex min-h-0 flex-col gap-1 overflow-auto border-b border-border/70 bg-background/70 p-3 text-foreground md:border-b-0 md:border-r">
                         {filters.map((filter) => {
                             const selected = filter.id === activeFilter?.id;
                             const count = isFilterValueActive(draft[filter.id], filter.defaultValue) ? 1 : 0;
@@ -100,8 +100,8 @@ export default function AdminFilterDrawer({
                                     className={cn(
                                         'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors',
                                         selected
-                                            ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
-                                            : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground'
+                                            ? 'bg-primary/15 text-foreground ring-1 ring-primary/40'
+                                            : 'text-muted-foreground hover:bg-accent/70 hover:text-accent-foreground'
                                     )}
                                     onClick={() => setActiveFilterId(filter.id)}
                                 >
@@ -112,7 +112,7 @@ export default function AdminFilterDrawer({
                         })}
                     </div>
 
-                    <div className="min-h-0 overflow-auto bg-sidebar p-4 text-sidebar-foreground">
+                    <div className="min-h-0 overflow-auto bg-card p-4 text-card-foreground">
                         {activeFilter ? (
                             <FieldGroup className="gap-4">
                                 <Field>
@@ -145,7 +145,7 @@ export default function AdminFilterDrawer({
                     </div>
                 </div>
 
-                <DrawerFooter className="border-t border-border/70">
+                <DrawerFooter className="border-t border-border/70 bg-background/80">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-2">
                             <Button type="button" size="sm" onClick={apply}>Apply</Button>
@@ -172,7 +172,7 @@ function FilterEditor({ filter, value, onChange, onClear }) {
                     { label: 'Yes', value: true },
                     { label: 'No', value: false },
                 ].map((option) => (
-                    <Field key={option.label} orientation="horizontal" className="rounded-md px-2 py-1 hover:bg-accent/50">
+            <Field key={option.label} orientation="horizontal" className="rounded-md px-2 py-1 hover:bg-accent/50">
                         <Checkbox
                             checked={value === option.value}
                             onCheckedChange={() => onChange(option.value)}
@@ -205,7 +205,7 @@ function FilterEditor({ filter, value, onChange, onClear }) {
 
     const selected = Array.isArray(value) ? value : [];
     return (
-        <FieldGroup className="max-h-[22rem] gap-1 overflow-auto rounded-md border border-border/70 bg-background/50 p-2">
+        <FieldGroup className="max-h-[22rem] gap-1 overflow-auto rounded-md border border-border/70 bg-background/60 p-2">
             {(filter.options || []).map((option) => {
                 const raw = optionValue(option);
                 const checked = selected.includes(raw);
@@ -214,7 +214,7 @@ function FilterEditor({ filter, value, onChange, onClear }) {
                     <Field
                         key={String(raw)}
                         orientation="horizontal"
-                        className={cn('rounded-md px-2 py-1 hover:bg-accent/50', checked && 'bg-primary/10')}
+                        className={cn('rounded-md px-2 py-1 hover:bg-accent/50', checked && 'bg-primary/15 text-foreground')}
                     >
                         <Checkbox
                             data-testid={testId}

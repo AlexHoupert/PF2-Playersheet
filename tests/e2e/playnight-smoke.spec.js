@@ -250,6 +250,37 @@ test("admin spell edit refreshes the catalog row and copy reference is available
   await expect(page.getByText(/Reference copied: Uplifting Overture/)).toBeVisible();
 });
 
+test("admin catalog table toolbar, drawer, and context menu keep stable layout", async ({ page }) => {
+  await gotoFixture(page, "admin=true");
+  await page.getByText("Spells", { exact: true }).click();
+  await expect(page.getByTestId("catalog-admin-spell")).toBeVisible();
+
+  const toolbar = page.locator("[data-admin-table-toolbar]");
+  const tableSurface = page.locator("[data-admin-table-surface]");
+  await expect(toolbar).toBeVisible();
+  await expect(tableSurface).toBeVisible();
+
+  const toolbarBox = await toolbar.boundingBox();
+  const tableBox = await tableSurface.boundingBox();
+  expect(toolbarBox).not.toBeNull();
+  expect(tableBox).not.toBeNull();
+  expect(toolbarBox.y + toolbarBox.height).toBeLessThanOrEqual(tableBox.y);
+
+  await page.getByRole("button", { name: /Filters/i }).click();
+  const drawerContent = page.locator('[data-slot="drawer-content"]');
+  await expect(drawerContent).toBeVisible();
+  const drawerBackground = await drawerContent.evaluate((node) => getComputedStyle(node).backgroundColor);
+  expect(drawerBackground).not.toBe("rgb(255, 255, 255)");
+  expect(drawerBackground).not.toBe("rgba(0, 0, 0, 0)");
+  await page.getByRole("button", { name: "Cancel" }).click();
+
+  const spellRow = page.locator('[data-testid^="catalog-row-spell-"]').first();
+  await spellRow.click({ button: "right" });
+  const menuContent = page.locator('[data-slot="context-menu-content"]');
+  await expect(menuContent).toBeVisible();
+  await expect(menuContent).toHaveClass(/zoom-in-100/);
+});
+
 test("admin action delete creates a hide override and deleted filter reveals it", async ({ page }) => {
   await gotoFixture(page, "admin=true");
   await page.getByText("Actions", { exact: true }).click();

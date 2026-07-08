@@ -6,6 +6,7 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { cn } from '@/lib/utils';
 
 export default function AdminContextMenu({
     children,
@@ -17,7 +18,12 @@ export default function AdminContextMenu({
     return (
         <ContextMenu>
             <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-            <ContextMenuContent className={contentClassName}>
+            <ContextMenuContent
+                className={cn(
+                    'data-open:zoom-in-100 data-closed:zoom-out-100',
+                    contentClassName
+                )}
+            >
                 {actions.filter(Boolean).map((action, index) => (
                     <React.Fragment key={action.id || action.label || index}>
                         {action.separatorBefore ? <ContextMenuSeparator /> : null}

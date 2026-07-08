@@ -568,6 +568,7 @@ test('gm catalog tables use shared admin table UI primitives', () => {
     const toolbarSource = readSource('src/admin/components/table/AdminTableToolbar.jsx');
     const paginationSource = readSource('src/admin/components/table/AdminPagination.jsx');
     const filterDrawerSource = readSource('src/admin/components/table/AdminFilterDrawer.jsx');
+    const contextMenuSource = readSource('src/admin/components/table/AdminContextMenu.jsx');
 
     [catalogTableSource, bestiarySource, abilitiesSource, deviantSource].forEach((source) => {
         assert.match(source, /AdminTableToolbar/);
@@ -586,10 +587,15 @@ test('gm catalog tables use shared admin table UI primitives', () => {
     assert.match(toolbarSource, /AdminActiveFilterChips/);
     assert.match(toolbarSource, /countActiveFilters/);
     assert.match(filterDrawerSource, /DrawerContent/);
+    assert.match(filterDrawerSource, /bg-card/);
+    assert.equal(filterDrawerSource.includes('bg-sidebar'), false);
     assert.match(filterDrawerSource, /md:grid-cols-\[minmax\(13rem,1fr\)_minmax\(0,2fr\)\]/);
     assert.match(paginationSource, /ChevronsLeft/);
     assert.match(paginationSource, /ChevronsRight/);
     assert.match(paginationSource, /PaginationEllipsis/);
+    assert.equal(catalogTableSource.includes('className="admin-layout'), false);
+    assert.match(contextMenuSource, /zoom-in-100/);
+    assert.match(contextMenuSource, /zoom-out-100/);
 });
 
 test('runtime feedback and debug logging use shared helpers in migrated surfaces', () => {
