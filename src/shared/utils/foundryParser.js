@@ -237,6 +237,68 @@ function evalFormula(formula) {
     }
 }
 
+function stripBalancedOuterParens(value) {
+    let text = String(value || '').trim();
+    while (text.startsWith('(') && text.endsWith(')') && hasBalancedOuterParens(text)) {
+        text = text.slice(1, -1).trim();
+    }
+    return text;
+}
+
+function hasBalancedOuterParens(text) {
+    let depth = 0;
+    for (let i = 0; i < text.length; i += 1) {
+        if (text[i] === '(') depth += 1;
+        if (text[i] === ')') depth -= 1;
+        if (depth === 0 && i < text.length - 1) return false;
+        if (depth < 0) return false;
+    }
+    return depth === 0;
+}
+
+function splitFoundryDamageContent(content) {
+    const withoutOptions = String(content || '').split('|')[0].trim();
+    const match = withoutOptions.match(/^(.*)\[([^\]]+)\]$/s);
+    if (!match) {
+        return {
+            formula: withoutOptions,
+            damageType: '',
+        };
+    }
+    return {
+        formula: match[1].trim(),
+        damageType: match[2].trim(),
+    };
+}
+
+function formatFoundryDamageFormula(formula, context = {}) {
+    let parsed = String(formula || '').trim();
+    if (context.actor?.level != null) {
+        parsed = parsed.replace(/@actor\.level/g, String(context.actor.level));
+    }
+
+    parsed = stripBalancedOuterParens(parsed);
+
+    const diceMatch = parsed.match(/^(.+?)(d\d+)$/i);
+    if (!diceMatch) return parsed;
+
+    const coeffStr = stripBalancedOuterParens(diceMatch[1]);
+    const die = diceMatch[2];
+    const coeff = evalFormula(coeffStr);
+    return `${coeff != null ? coeff : coeffStr}${die}`;
+}
+
+function formatFoundryDamageType(typeRaw = '') {
+    const parts = String(typeRaw)
+        .split(',')
+        .map(part => part.trim())
+        .filter(Boolean);
+    if (!parts.length) return '';
+    const hasPersistent = parts.some(part => /^persistent$/i.test(part));
+    const types = parts.filter(part => !/^persistent$/i.test(part));
+    return [hasPersistent ? 'persistent' : '', ...types].filter(Boolean).join(' ');
+}
+
 // ---------------------------------------------------------------------------
 // Main parser
 // ---------------------------------------------------------------------------
@@ -299,33 +361,12 @@ export function parseFoundry(text, context = {}) {
     //    constant multipliers (e.g. floor(@actor.level / 2)d6), then
     //    renders as gold-coloured text.
     // ------------------------------------------------------------------
-    out = out.replace(/@Damage\[((?:[^\[\]]|\[[^\[\]]*\])+)\]/gi, (match, content) => {
-        let parsed = content;
-
-        // Substitute actor level if available
-        if (context.actor?.level != null) {
-            parsed = parsed.replace(/@actor\.level/g, String(context.actor.level));
-        }
-
-        // Extract leading numeric/formula coefficient, die size, and damage type
-        // Examples: "3d6[fire]", "floor(5/2)d8[bludgeoning|options:area-damage]", "1d4[persistent,acid]"
-        const m = parsed.match(/^([\d\s()+\-*/.,Mathfloorceilroundabsminmax]+)(d\d+)(?:\[([^\]|]+))?/i);
-        if (m) {
-            const coeffStr = m[1].trim();
-            const die      = m[2];
-            const typeRaw  = m[3] ?? '';
-            // Remove "persistent," prefix for display; keep damage type words
-            const typeDisplay = typeRaw.replace(/\bpersistent,?\s*/gi, 'persistent ').trim();
-            const isPersistent = /persistent/i.test(typeRaw);
-
-            const coeff = evalFormula(coeffStr);
-            const numStr = coeff != null ? String(coeff) : coeffStr;
-            const label  = `${numStr}${die}${typeDisplay ? ' ' + typeDisplay : ''}${isPersistent && !typeDisplay.startsWith('persistent') ? ' (persistent)' : ''}`;
-            return `<span class="pf-damage" style="color:var(--text-gold)">${label}</span>`;
-        }
-
-        // Fallback: strip brackets and pipe options
-        return `<span class="pf-damage" style="color:var(--text-gold)">${parsed.replace(/\[[^\]]*\]/g, '').replace(/\|.*/,'').trim()}</span>`;
+    out = out.replace(/@Damage\[((?:[^\[\]]|\[[^\[\]]*\])+)\](?:\{([^}]*)\})?/gi, (match, content, label) => {
+        const { formula, damageType } = splitFoundryDamageContent(content);
+        const formulaDisplay = formatFoundryDamageFormula(formula, context);
+        const typeDisplay = formatFoundryDamageType(damageType);
+        const display = label || [formulaDisplay, typeDisplay].filter(Boolean).join(' ');
+        return `<span class="pf-damage" style="color:var(--text-gold)">${display}</span>`;
     });
 
     // ------------------------------------------------------------------
