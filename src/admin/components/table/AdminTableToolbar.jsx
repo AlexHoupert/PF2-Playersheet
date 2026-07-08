@@ -2,6 +2,7 @@ import React from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import AdminActiveFilterChips from './AdminActiveFilterChips';
 import AdminColumnMenu from './AdminColumnMenu';
 import AdminFilterDrawer from './AdminFilterDrawer';
@@ -40,16 +41,20 @@ export default function AdminTableToolbar({
     return (
         <div
             data-admin-table-toolbar
-            className={`flex min-h-[4.5rem] flex-col gap-2 rounded-lg border border-border/70 bg-card px-3 py-2 ${className}`}
+            className={cn(
+                'flex flex-col rounded-lg border border-border/70 bg-card px-3 py-2',
+                chips.length ? 'gap-2' : 'gap-0',
+                className
+            )}
         >
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex min-w-0 flex-1 flex-col gap-2 lg:flex-row lg:items-center">
+            <div className="flex flex-wrap items-center gap-2">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                     <Input
                         data-testid={searchTestId}
                         value={search}
                         onChange={(event) => onSearchChange?.(event.target.value)}
                         placeholder={searchPlaceholder}
-                        className="h-10 w-full lg:max-w-xl"
+                        className="h-10 min-w-[16rem] flex-1 basis-[22rem] lg:max-w-[42rem]"
                     />
 
                     {leftControls}
@@ -81,7 +86,7 @@ export default function AdminTableToolbar({
                 </div>
 
                 {primaryActions ? (
-                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                    <div className="ml-auto flex flex-wrap items-center gap-2 justify-end">
                         {primaryActions}
                     </div>
                 ) : null}

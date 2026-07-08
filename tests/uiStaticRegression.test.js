@@ -566,6 +566,7 @@ test('gm catalog tables use shared admin table UI primitives', () => {
     const abilitiesSource = readSource('src/admin/AbilitiesView.jsx');
     const deviantSource = readSource('src/pacts/DeviantAbilitiesAdminView.jsx');
     const toolbarSource = readSource('src/admin/components/table/AdminTableToolbar.jsx');
+    const columnMenuSource = readSource('src/admin/components/table/AdminColumnMenu.jsx');
     const paginationSource = readSource('src/admin/components/table/AdminPagination.jsx');
     const filterDrawerSource = readSource('src/admin/components/table/AdminFilterDrawer.jsx');
     const contextMenuSource = readSource('src/admin/components/table/AdminContextMenu.jsx');
@@ -586,14 +587,22 @@ test('gm catalog tables use shared admin table UI primitives', () => {
 
     assert.match(toolbarSource, /AdminActiveFilterChips/);
     assert.match(toolbarSource, /countActiveFilters/);
+    assert.equal(toolbarSource.includes('min-h-[4.5rem]'), false);
     assert.match(filterDrawerSource, /DrawerContent/);
     assert.match(filterDrawerSource, /bg-card/);
+    assert.match(filterDrawerSource, /modal=\{false\}/);
+    assert.match(filterDrawerSource, /noBodyStyles/);
+    assert.match(filterDrawerSource, /shouldScaleBackground=\{false\}/);
     assert.equal(filterDrawerSource.includes('bg-sidebar'), false);
     assert.match(filterDrawerSource, /md:grid-cols-\[minmax\(13rem,1fr\)_minmax\(0,2fr\)\]/);
+    assert.match(columnMenuSource, /DropdownMenu modal=\{false\}/);
+    assert.match(columnMenuSource, /zoom-in-100/);
+    assert.match(columnMenuSource, /zoom-out-100/);
     assert.match(paginationSource, /ChevronsLeft/);
     assert.match(paginationSource, /ChevronsRight/);
     assert.match(paginationSource, /PaginationEllipsis/);
     assert.equal(catalogTableSource.includes('className="admin-layout'), false);
+    assert.match(contextMenuSource, /ContextMenu modal=\{false\}/);
     assert.match(contextMenuSource, /zoom-in-100/);
     assert.match(contextMenuSource, /zoom-out-100/);
 });

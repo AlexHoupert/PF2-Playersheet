@@ -76,7 +76,14 @@ export default function AdminFilterDrawer({
     const resetAll = () => setDraft(resetFilterValues(filters));
 
     return (
-        <Drawer open={open} onOpenChange={onOpenChange} direction="right">
+        <Drawer
+            open={open}
+            onOpenChange={onOpenChange}
+            direction="right"
+            modal={false}
+            shouldScaleBackground={false}
+            noBodyStyles
+        >
             <DrawerContent className="!w-[min(56rem,calc(100vw-2rem))] !max-w-[56rem] border-border/70 bg-card text-card-foreground">
                 <DrawerHeader className="border-b border-border/70 bg-background/80">
                     <DrawerTitle className="flex items-center gap-2">

@@ -265,8 +265,14 @@ test("admin catalog table toolbar, drawer, and context menu keep stable layout",
   expect(toolbarBox).not.toBeNull();
   expect(tableBox).not.toBeNull();
   expect(toolbarBox.y + toolbarBox.height).toBeLessThanOrEqual(tableBox.y);
+  expect(toolbarBox.height).toBeLessThan(70);
+
+  const adminShell = page.locator(".admin-shell");
+  const baseShellBox = await adminShell.boundingBox();
+  expect(baseShellBox).not.toBeNull();
 
   await page.getByRole("button", { name: /Filters/i }).click();
+  await expectShellLayoutStable(adminShell, baseShellBox);
   const drawerContent = page.locator('[data-slot="drawer-content"]');
   await expect(drawerContent).toBeVisible();
   const drawerBackground = await drawerContent.evaluate((node) => getComputedStyle(node).backgroundColor);
@@ -274,12 +280,29 @@ test("admin catalog table toolbar, drawer, and context menu keep stable layout",
   expect(drawerBackground).not.toBe("rgba(0, 0, 0, 0)");
   await page.getByRole("button", { name: "Cancel" }).click();
 
+  await page.getByRole("button", { name: /Columns/i }).click();
+  await expectShellLayoutStable(adminShell, baseShellBox);
+  const dropdownContent = page.locator('[data-slot="dropdown-menu-content"]');
+  await expect(dropdownContent).toBeVisible();
+  await expect(dropdownContent).toHaveClass(/zoom-in-100/);
+  await page.keyboard.press("Escape");
+
   const spellRow = page.locator('[data-testid^="catalog-row-spell-"]').first();
   await spellRow.click({ button: "right" });
+  await expectShellLayoutStable(adminShell, baseShellBox);
   const menuContent = page.locator('[data-slot="context-menu-content"]');
   await expect(menuContent).toBeVisible();
   await expect(menuContent).toHaveClass(/zoom-in-100/);
 });
+
+async function expectShellLayoutStable(shellLocator, beforeBox) {
+  const afterBox = await shellLocator.boundingBox();
+  expect(afterBox).not.toBeNull();
+  expect(Math.abs(afterBox.x - beforeBox.x)).toBeLessThan(1);
+  expect(Math.abs(afterBox.y - beforeBox.y)).toBeLessThan(1);
+  expect(Math.abs(afterBox.width - beforeBox.width)).toBeLessThan(1);
+  expect(Math.abs(afterBox.height - beforeBox.height)).toBeLessThan(1);
+}
 
 test("admin action delete creates a hide override and deleted filter reveals it", async ({ page }) => {
   await gotoFixture(page, "admin=true");

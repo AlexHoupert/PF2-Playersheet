@@ -25,14 +25,14 @@ export default function AdminColumnMenu({
     };
 
     return (
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
                 <Button type="button" variant="outline" size="sm">
                     <Columns3 data-icon="inline-start" />
                     {label}
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-48 data-open:zoom-in-100 data-closed:zoom-out-100">
                 <DropdownMenuLabel>Columns</DropdownMenuLabel>
                 {columns.map((column) => (
                     <DropdownMenuCheckboxItem

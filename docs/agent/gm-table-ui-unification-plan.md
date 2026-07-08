@@ -66,6 +66,7 @@ Follow-up inventory:
 
 - [x] Static tests for filter chips, pagination, and context menu guard.
 - [x] Fix post-cutover polish: Catalog toolbar stays above Spells/Feats/Impulses tables, filter drawer uses dark admin colors, and shared table context menus no longer use a visible zoom animation.
+- [x] Compact toolbars without active filter chips and prevent Filter/Columns/ContextMenu overlays from shifting the admin layout.
 - [ ] Targeted smoke tests for catalog, items, bestiary, abilities, and deviant abilities.
 - [x] `npm run check`
 - [ ] `npm run smoke` if E2E selectors were touched.

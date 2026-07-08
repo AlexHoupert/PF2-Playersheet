@@ -16,7 +16,7 @@ export default function AdminContextMenu({
     actionTestIdPrefix = '',
 }) {
     return (
-        <ContextMenu>
+        <ContextMenu modal={false}>
             <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
             <ContextMenuContent
                 className={cn(
