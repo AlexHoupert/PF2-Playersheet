@@ -51,8 +51,14 @@ export default function PlayerPageCarousel({
     return (
         <Carousel
             key={categoryId}
-            className="player-page-carousel no-swipe"
-            opts={{ align: 'start', loop: pages.length > 1 }}
+            className="player-page-carousel"
+            opts={{
+                align: 'start',
+                containScroll: false,
+                dragFree: false,
+                loop: pages.length > 1,
+                skipSnaps: false,
+            }}
             setApi={setApi}
         >
             <CarouselContent className="player-page-carousel__content">

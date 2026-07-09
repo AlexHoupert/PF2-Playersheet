@@ -5,7 +5,7 @@ import { parseFoundry, ACTION_ICONS } from '../../shared/utils/foundryParser';
 import { LongPressable } from '../../shared/components/LongPressable';
 import CampingView from '../../camping/CampingView';
 
-export function ActionsView({ character, initialTab = 'Combat', onOpenModal, onLongPress }) {
+export function ActionsView({ character, initialTab = 'Combat', onOpenModal, onLongPress, hideTabs = false }) {
     const [activeTab, setActiveTab] = useState(initialTab);
 
     useEffect(() => {
@@ -98,24 +98,25 @@ export function ActionsView({ character, initialTab = 'Combat', onOpenModal, onL
 
     return (
         <div>
-            {/* Tabs */}
-            <div className="sub-tabs">
-                {availableTabs.map(t => (
+            {!hideTabs && (
+                <div className="sub-tabs">
+                    {availableTabs.map(t => (
+                        <button
+                            key={t}
+                            className={`sub-tab-btn ${activeTab === t ? 'active' : ''}`}
+                            onClick={() => setActiveTab(t)}
+                        >
+                            {t === 'Other' ? 'Exploration' : t}
+                        </button>
+                    ))}
                     <button
-                        key={t}
-                        className={`sub-tab-btn ${activeTab === t ? 'active' : ''}`}
-                        onClick={() => setActiveTab(t)}
+                        className={`sub-tab-btn ${activeTab === 'Camping' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('Camping')}
                     >
-                        {t === 'Other' ? 'Exploration' : t}
+                        Camping
                     </button>
-                ))}
-                <button
-                    className={`sub-tab-btn ${activeTab === 'Camping' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('Camping')}
-                >
-                    Camping
-                </button>
-            </div>
+                </div>
+            )}
 
             {/* Camping Tab */}
             {activeTab === 'Camping' && <CampingView character={character} />}

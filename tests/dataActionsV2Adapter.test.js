@@ -431,6 +431,7 @@ test('v2 adapter uses targeted actor updates for pact offers and awakening point
     assert.equal(calls[1][3].sheet.pact.pactId, 'ember');
     assert.equal(calls[1][3].sheet.pact.choices[0], 'spark');
     assert.equal(calls[1][3].pactOffer, undefined);
+    assert.equal(calls[1][3].sheet.pactOffer, undefined);
 
     const { actions: pointActions, calls: pointCalls } = createActionHarness({
         abilities: {
@@ -463,4 +464,26 @@ test('v2 adapter uses targeted actor updates for pact offers and awakening point
 
     assert.deepEqual(pointCalls.map(call => call[0]), ['actor.updateActor']);
     assert.equal(pointCalls[0][3].sheet.pact.unlockedAwakenings.spark, 1);
+});
+
+test('v2 pact reject clears stale sheet-level offers', async () => {
+    const { actions, calls } = createActionHarness({
+        __actorDocs: {
+            actor1: {
+                id: 'actor1',
+                kind: 'pc',
+                sheet: {
+                    id: 'actor1',
+                    name: 'Hero',
+                    pactOffer: { id: 'offer1', pactId: 'ember', status: 'pending' },
+                },
+            },
+        },
+    });
+
+    await actions.pact.rejectPactOffer('camp1', 'actor1', 'offer1');
+
+    assert.equal(calls[0][0], 'actor.updateActor');
+    assert.equal(calls[0][3].pactOffer, undefined);
+    assert.equal(calls[0][3].sheet.pactOffer, undefined);
 });

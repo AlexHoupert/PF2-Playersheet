@@ -45,37 +45,43 @@ export default function PlayerSubpageCarousel({
         <div className="player-subpage-carousel-wrap" data-testid="player-subpage-carousel">
             <Carousel
                 className="player-subpage-carousel"
-                opts={{ align: 'center', loop: pages.length > 1 }}
+                opts={{
+                    align: 'center',
+                    containScroll: false,
+                    dragFree: false,
+                    loop: pages.length > 1,
+                    skipSnaps: false,
+                }}
                 setApi={setApi}
                 aria-label="Current section pages"
             >
                 <CarouselContent className="player-subpage-carousel__content">
                     {pages.map((page, index) => {
-                    const active = page.id === activePageId;
-                    const hasPageLoot = page.alertKey === 'loot' && hasLoot;
-                    const state = getCarouselState(index, activeIndex, pages.length);
-                    return (
-                        <CarouselItem key={page.id} className="player-subpage-carousel__item">
-                            <button
-                                type="button"
-                                className={`player-subpage-carousel__tab ${state} ${page.future ? 'future' : ''}`}
-                                onClick={() => onSelectPage(page)}
-                                aria-current={active ? 'page' : undefined}
-                                data-testid={`player-carousel-page-${page.id}`}
-                            >
-                                <span className="player-subpage-carousel__icon-wrap">
-                                    <img
-                                        src={getPlayerNavIconSrc(page.icon)}
-                                        alt=""
-                                        className="player-subpage-carousel__icon"
-                                    />
-                                </span>
-                                <span className="player-subpage-carousel__label">{page.label}</span>
-                                {hasPageLoot && <span className="player-nav-alert-dot" aria-label="New loot" />}
-                                {page.future && <span className="player-subpage-carousel__note">Soon</span>}
-                            </button>
-                        </CarouselItem>
-                    );
+                        const active = page.id === activePageId;
+                        const hasPageLoot = page.alertKey === 'loot' && hasLoot;
+                        const state = getCarouselState(index, activeIndex, pages.length);
+                        return (
+                            <CarouselItem key={page.id} className="player-subpage-carousel__item">
+                                <button
+                                    type="button"
+                                    className={`player-subpage-carousel__tab ${state} ${page.future ? 'future' : ''}`}
+                                    onClick={() => onSelectPage(page)}
+                                    aria-current={active ? 'page' : undefined}
+                                    data-testid={`player-carousel-page-${page.id}`}
+                                >
+                                    <span className="player-subpage-carousel__icon-wrap">
+                                        <img
+                                            src={getPlayerNavIconSrc(page.icon)}
+                                            alt=""
+                                            className="player-subpage-carousel__icon"
+                                        />
+                                    </span>
+                                    <span className="player-subpage-carousel__label">{page.label}</span>
+                                    {hasPageLoot && <span className="player-nav-alert-dot" aria-label="New loot" />}
+                                    {page.future && <span className="player-subpage-carousel__note">Soon</span>}
+                                </button>
+                            </CarouselItem>
+                        );
                     })}
                 </CarouselContent>
             </Carousel>

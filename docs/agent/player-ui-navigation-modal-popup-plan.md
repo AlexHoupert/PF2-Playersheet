@@ -603,8 +603,18 @@ Success criteria:
   - pinned the mobile bottom nav root to the viewport instead of the scrolling document;
   - moved Item Detail into the modal layer so the bottom nav cannot block dialog buttons;
   - hardened Pact Offer clearing so stale root/sheet `pactOffer` data does not retrigger after accept/reject.
+- Phase 7 Firefox/Chrome polish:
+  - verified Context7 access and Embla Carousel options;
+  - removed the page carousel swipe exclusion so Chrome can use the fallback page-swipe handler;
+  - set explicit carousel `containScroll: false`, `dragFree: false`, and `skipSnaps: false` options for page and tab carousels;
+  - portaled the fixed bottom nav to `document.body` and added fixed-layer containment to reduce Firefox scroll jitter;
+  - hides the bottom nav while modal-layer dialogs are active so it cannot visually or physically cover dialog buttons;
+  - suppresses legacy `ActionsView` and `InventoryView` tabs when those views are rendered through the new carousel page shell;
+  - tightened the mobile carousel spacing below the header and removed the lower tab divider.
 - Verification:
   - `node --test tests/playerNavigationRegistry.test.js tests/uiStaticRegression.test.js`
+  - `node --test tests/playerNavigationRegistry.test.js tests/uiStaticRegression.test.js tests/dataActionsV2Adapter.test.js`
+  - `npm run check`
 
 ## Phase 8: Tests, Smokes, And Static Guards
 

@@ -69,8 +69,27 @@ export function createActionContext({
     dailyCraftingMax: actorDoc?.dailyCraftingMax ?? actorDoc?.sheet?.dailyCraftingMax,
   });
 
-  const characterToPcActorDoc = (actorDoc, character, campaignId, actorId) =>
-    stripLegacyPactRoots(applyActorUpdate({
+  const characterToPcActorDoc = (actorDoc, character, campaignId, actorId) => {
+    const sheet = {
+      ...(actorDoc?.sheet || {}),
+      ...character,
+      id: character.id || actorDoc?.sheet?.id || actorDoc?.id || actorId,
+      stats: character.stats,
+      skills: character.skills,
+      inventory: character.inventory,
+      magic: character.magic,
+      formulaBook: character.formulaBook,
+      languages: character.languages,
+      senses: character.senses,
+      proficiencies: character.proficiencies,
+      gold: character.gold,
+      xp: character.xp,
+      dailyCraftingMax: character.dailyCraftingMax,
+    };
+    if (!character.pact) delete sheet.pact;
+    if (!character.pactOffer) delete sheet.pactOffer;
+
+    return stripLegacyPactRoots(applyActorUpdate({
       ...actorDoc,
       id: actorDoc?.id || actorId,
       kind: actorDoc?.kind || "pc",
@@ -87,26 +106,12 @@ export function createActionContext({
       gold: character.gold,
       xp: character.xp,
       dailyCraftingMax: character.dailyCraftingMax,
-      sheet: {
-        ...(actorDoc?.sheet || {}),
-        ...character,
-        id: character.id || actorDoc?.sheet?.id || actorDoc?.id || actorId,
-        stats: character.stats,
-        skills: character.skills,
-        inventory: character.inventory,
-        magic: character.magic,
-        formulaBook: character.formulaBook,
-        languages: character.languages,
-        senses: character.senses,
-        proficiencies: character.proficiencies,
-        gold: character.gold,
-        xp: character.xp,
-        dailyCraftingMax: character.dailyCraftingMax,
-      },
+      sheet,
     }, (current) => current, {
       createId: () => createDomainId("actor"),
       campaignId,
     }));
+  };
 
   const updatePcActorAsCharacter = (campaignId, actorId, updater) => {
     if (useFirestoreV2) {

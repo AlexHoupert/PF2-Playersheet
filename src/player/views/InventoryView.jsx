@@ -33,7 +33,8 @@ export function InventoryView({
     initialSubTab = 'Equipment',
     readOnly = false,
     allowLoot = true,
-    showUtilityActions = true
+    showUtilityActions = true,
+    hideTabs = false
 }) {
     const [itemSubTab, setItemSubTab] = useState(initialSubTab);
     const [vialActivation, setVialActivation] = useState(null); // item being converted via Versatile Vial
@@ -483,7 +484,7 @@ export function InventoryView({
 
     return (
         <div>
-            {tabButtons}
+            {!hideTabs && tabButtons}
             {/* ... Lists ... */}
             {itemSubTab === 'Equipment' && (
                 <>

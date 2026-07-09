@@ -149,6 +149,7 @@ export default function PlayerPageRenderer({
             <ActionsView
                 character={rulesCharacter}
                 initialTab={ACTION_TAB_BY_PAGE[activePageId]}
+                hideTabs={true}
                 onOpenModal={(mode, data) => {
                     setModalMode(mode);
                     setModalData(data);
@@ -173,6 +174,7 @@ export default function PlayerPageRenderer({
                 character={character}
                 db={db}
                 initialSubTab={INVENTORY_TAB_BY_PAGE[activePageId]}
+                hideTabs={true}
                 onUpdateCharacter={updateCharacter}
                 onSaveCustomItem={(dbItem) => runDataAction(dataActions.globalContent.saveCustomItem(dbItem))}
                 onOpenModal={(mode, data) => {
