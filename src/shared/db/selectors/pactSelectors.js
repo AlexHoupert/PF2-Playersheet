@@ -13,7 +13,9 @@ export function selectPact(db, pactId) {
 }
 
 export function selectPendingPactOffer(actorOrCharacter, db = null) {
-    const offer = actorOrCharacter?.pactOffer || actorOrCharacter?.sheet?.pactOffer || null;
+    const activePact = actorOrCharacter?.sheet?.pact || actorOrCharacter?.pact || null;
+    if (activePact?.pactId) return null;
+    const offer = actorOrCharacter?.sheet?.pactOffer || actorOrCharacter?.pactOffer || null;
     if (!offer || offer.status !== 'pending' || !offer.pactId) return null;
     return {
         ...offer,

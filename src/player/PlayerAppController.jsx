@@ -13,7 +13,7 @@ import { selectActorRulesViewModel } from '../shared/rules/actorRulesViewModel';
 import LazyCatalogOverlay from './components/LazyCatalogOverlay';
 import PlayerBottomNav from './navigation/PlayerBottomNav';
 import PlayerDesktopNav from './navigation/PlayerDesktopNav';
-import PlayerPageRenderer from './navigation/PlayerPageRenderer';
+import PlayerPageCarousel from './navigation/PlayerPageCarousel';
 import { buildPlayerInteractionLockState } from './navigation/playerSubpageSwipe';
 import { usePlayerPageNavigation } from './navigation/usePlayerPageNavigation';
 import PlayerPopupHost from './popups/PlayerPopupHost';
@@ -287,33 +287,36 @@ export default function PlayerAppController() {
 
             {/* VIEW CONTENT */}
             <div className="view-section">
-                <PlayerPageRenderer
+                <PlayerPageCarousel
                     activePageId={activePageId}
-                    activeCampaign={activeCampaign}
-                    actorRules={actorRules}
-                    character={character}
-                    characterActions={characterActions}
-                    characterConditions={characterConditions}
-                    dataActions={dataActions}
-                    db={db}
-                    fireWeapon={fireWeapon}
-                    handleBuyFormula={handleBuyFormula}
-                    handleConsumeItem={handleConsumeItem}
-                    handleLongPress={handleLongPress}
-                    inspectInventoryItem={inspectInventoryItem}
-                    loadWeapon={loadWeapon}
-                    myActor={myActor}
-                    onGoToPage={selectPageId}
-                    ownedCompanionActors={ownedCompanionActors}
-                    playerQuests={playerQuests}
-                    rulesCharacter={rulesCharacter}
-                    runDataAction={runDataAction}
-                    setActionModal={setActionModal}
-                    setCatalogMode={setCatalogMode}
-                    setModalData={setModalData}
-                    setModalMode={setModalMode}
-                    toggleInventoryEquipped={toggleInventoryEquipped}
-                    updateCharacter={updateCharacter}
+                    onSelectPageId={selectPageId}
+                    rendererProps={{
+                        activeCampaign,
+                        actorRules,
+                        character,
+                        characterActions,
+                        characterConditions,
+                        dataActions,
+                        db,
+                        fireWeapon,
+                        handleBuyFormula,
+                        handleConsumeItem,
+                        handleLongPress,
+                        inspectInventoryItem,
+                        loadWeapon,
+                        myActor,
+                        onGoToPage: selectPageId,
+                        ownedCompanionActors,
+                        playerQuests,
+                        rulesCharacter,
+                        runDataAction,
+                        setActionModal,
+                        setCatalogMode,
+                        setModalData,
+                        setModalMode,
+                        toggleInventoryEquipped,
+                        updateCharacter,
+                    }}
                 />
             </div>
 
@@ -326,7 +329,6 @@ export default function PlayerAppController() {
                 db={db}
                 notificationQueue={playerNotificationQueue}
                 onClearNotification={handleClearNotification}
-                runDataAction={runDataAction}
                 xpNotification={activeCampaign?.xpNotification}
             />
 

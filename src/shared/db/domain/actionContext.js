@@ -62,13 +62,15 @@ export function createActionContext({
     languages: actorDoc?.languages || actorDoc?.sheet?.languages || [],
     senses: actorDoc?.senses || actorDoc?.sheet?.senses || [],
     proficiencies: actorDoc?.proficiencies || actorDoc?.sheet?.proficiencies || {},
+    pact: actorDoc?.sheet?.pact || actorDoc?.pact,
+    pactOffer: actorDoc?.sheet?.pactOffer || actorDoc?.pactOffer,
     gold: actorDoc?.gold ?? actorDoc?.sheet?.gold ?? 0,
     xp: actorDoc?.xp || actorDoc?.sheet?.xp,
     dailyCraftingMax: actorDoc?.dailyCraftingMax ?? actorDoc?.sheet?.dailyCraftingMax,
   });
 
   const characterToPcActorDoc = (actorDoc, character, campaignId, actorId) =>
-    applyActorUpdate({
+    stripLegacyPactRoots(applyActorUpdate({
       ...actorDoc,
       id: actorDoc?.id || actorId,
       kind: actorDoc?.kind || "pc",
@@ -104,7 +106,7 @@ export function createActionContext({
     }, (current) => current, {
       createId: () => createDomainId("actor"),
       campaignId,
-    });
+    }));
 
   const updatePcActorAsCharacter = (campaignId, actorId, updater) => {
     if (useFirestoreV2) {
@@ -178,6 +180,13 @@ export function createActionContext({
     getActivePcActorIds,
     stripChildCollections,
   };
+}
+
+function stripLegacyPactRoots(actorDoc) {
+  const next = cloneValue(actorDoc);
+  delete next.pact;
+  delete next.pactOffer;
+  return next;
 }
 
 export function hasFirestoreConfig(firestore) {

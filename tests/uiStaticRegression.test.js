@@ -207,6 +207,7 @@ test('quest fallback reads stay centralized in selectors', () => {
 
 test('player page cutover uses registry renderer instead of header mode switch', () => {
     const playerSource = readSource('src/player/PlayerAppController.jsx');
+    const pageCarouselSource = readSource('src/player/navigation/PlayerPageCarousel.jsx');
     const rendererSource = readSource('src/player/navigation/PlayerPageRenderer.jsx');
     const hookSource = readSource('src/player/navigation/usePlayerPageNavigation.js');
     const bottomNavSource = readSource('src/player/navigation/PlayerBottomNav.jsx');
@@ -216,7 +217,9 @@ test('player page cutover uses registry renderer instead of header mode switch',
     const swipeCoreSource = readSource('src/player/navigation/playerSubpageSwipe.js');
 
     assert.match(playerSource, /usePlayerPageNavigation/);
-    assert.match(playerSource, /PlayerPageRenderer/);
+    assert.match(playerSource, /PlayerPageCarousel/);
+    assert.match(pageCarouselSource, /PlayerPageRenderer/);
+    assert.match(pageCarouselSource, /Carousel/);
     assert.match(playerSource, /PlayerDesktopNav/);
     assert.match(playerSource, /buildPlayerInteractionLockState/);
     assert.match(playerSource, /onDrawerOpenChange=\{setPlayerNavDrawerOpen\}/);
@@ -232,7 +235,8 @@ test('player page cutover uses registry renderer instead of header mode switch',
     assert.equal(bottomNavSource.includes('disabled={Boolean(page.future)}'), false);
     assert.match(bottomNavSource, /getPlayerNavIconSrc\(page\.icon\)/);
     assert.match(bottomNavSource, /onDrawerOpenChange/);
-    assert.match(carouselSource, /getPlayerSubpageCarouselItems/);
+    assert.match(carouselSource, /CarouselContent/);
+    assert.match(carouselSource, /loop: pages\.length > 1/);
     assert.match(carouselSource, /getPlayerNavIconSrc\(page\.icon\)/);
     assert.match(iconSource, /heart-beats/);
     assert.match(iconSource, /rolled-cloth/);
@@ -695,6 +699,7 @@ test('player blocking overlays register with the modal layer', () => {
     const overlaySurfaceSource = readSource('src/shared/overlays/OverlaySurface.jsx');
     const modalManagerSource = readSource('src/player/ModalManager.jsx');
     const itemActionsSource = readSource('src/player/ItemActionsModal.jsx');
+    const itemDetailSource = readSource('src/player/modals/ItemDetailModal.jsx');
     const spellSelectorSource = readSource('src/player/modals/SpellScrollSelectorModal.jsx');
     const pactOfferSource = readSource('src/pacts/PactOfferModal.jsx');
     const feedbackSource = readSource('src/shared/feedback/AppFeedback.jsx');
@@ -712,6 +717,7 @@ test('player blocking overlays register with the modal layer', () => {
     assert.match(overlaySurfaceSource, /modal-layer-scroll-body/);
     assert.match(modalManagerSource, /ModalLayerMount/);
     assert.match(itemActionsSource, /ModalLayerMount/);
+    assert.match(itemDetailSource, /ModalLayerMount/);
     assert.match(spellSelectorSource, /ModalLayerMount/);
     assert.match(pactOfferSource, /ModalLayerMount/);
     assert.match(feedbackSource, /OverlaySurface/);

@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { consumeWandCharge, getWandCharges, getWandMaxCharges, getWandSpell, isWandItem, writeWandCharges } from '../../shared/utils/wandUtils';
 import { getItemIdentityKey, resolveInventoryItemIdentity } from '../../shared/utils/itemIdentity';
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
+import { ModalLayerMount } from '../../shared/overlays/ModalLayerProvider';
 
 export function ItemDetailModal({
     character,
@@ -327,12 +328,15 @@ export function ItemDetailModal({
 
     // --- RENDER ---
 
+    const modalLayerId = `item-detail-${modalData.instanceId || modalData.id || modalData.name || 'unknown'}`;
+
     return (
+        <ModalLayerMount id={modalLayerId}>
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000,
+            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 11020,
             display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
+        }} data-player-interaction-lock="true" onClick={onClose}>
             <div style={{
                 backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
                 padding: '20px', borderRadius: '8px', maxWidth: '500px', width: '100%',
@@ -831,5 +835,6 @@ export function ItemDetailModal({
                 }}>Close</button>
             </div>
         </div>
+        </ModalLayerMount>
     );
 }

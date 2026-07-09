@@ -83,14 +83,23 @@
 }
 
 .player-subpage-carousel {
-    display: grid;
-    grid-template-columns: minmax(42px, 0.42fr) minmax(92px, 1fr) minmax(104px, 1.16fr) minmax(92px, 1fr) minmax(42px, 0.42fr);
-    gap: 4px;
-    align-items: center;
     min-height: 38px;
 }
 
+.player-subpage-carousel__content {
+    align-items: center;
+    gap: 4px;
+    margin-left: 0;
+    touch-action: pan-y pinch-zoom;
+}
+
+.player-subpage-carousel__item {
+    flex: 0 0 31%;
+    padding-left: 0;
+}
+
 .player-subpage-carousel__tab {
+    width: 100%;
     min-width: 0;
     min-height: 34px;
     border: 1px solid rgba(197, 160, 89, 0.24);
@@ -169,6 +178,25 @@
     text-transform: uppercase;
 }
 
+.player-page-carousel {
+    width: 100%;
+}
+
+.player-page-carousel__content {
+    margin-left: 0;
+    touch-action: pan-y pinch-zoom;
+}
+
+.player-page-carousel__item {
+    flex: 0 0 100%;
+    min-width: 0;
+    padding-left: 0;
+}
+
+.player-page-carousel__placeholder {
+    min-height: 45vh;
+}
+
 .player-placeholder-page {
     min-height: 220px;
     display: flex;
@@ -232,9 +260,15 @@
     }
 
     .player-subpage-carousel {
-        grid-template-columns: minmax(28px, 0.34fr) minmax(72px, 0.92fr) minmax(88px, 1.08fr) minmax(72px, 0.92fr) minmax(28px, 0.34fr);
-        gap: 3px;
         min-height: 32px;
+    }
+
+    .player-subpage-carousel__content {
+        gap: 3px;
+    }
+
+    .player-subpage-carousel__item {
+        flex-basis: 34%;
     }
 
     .player-subpage-carousel__tab {
@@ -256,6 +290,13 @@
 
     .player-bottom-nav-root {
         display: block;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: calc(var(--player-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+        pointer-events: none;
+        z-index: 1600;
     }
 
     .player-nav-backdrop {
@@ -268,7 +309,7 @@
         opacity: 0;
         pointer-events: none;
         transition: opacity 180ms ease, background 180ms ease;
-        z-index: 1640;
+        z-index: 1601;
     }
 
     .player-nav-backdrop.open {
@@ -296,7 +337,7 @@
         transform-origin: bottom center;
         transition: transform 230ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 165ms ease;
         pointer-events: none;
-        z-index: 1660;
+        z-index: 1602;
     }
 
     .player-category-drawer.open {
@@ -431,7 +472,7 @@
     }
 
     .player-bottom-nav {
-        position: fixed;
+        position: absolute;
         left: 0;
         right: 0;
         bottom: 0;
@@ -443,7 +484,14 @@
         background: var(--player-bottom-nav-bg);
         border-top: 1px solid var(--player-bottom-nav-border);
         box-shadow: 0 -14px 32px rgba(0, 0, 0, 0.45);
-        z-index: 1680;
+        pointer-events: auto;
+        z-index: 1603;
+    }
+
+    body[data-modal-layer-active="true"] .player-bottom-nav,
+    body[data-modal-layer-active="true"] .player-category-drawer,
+    body[data-modal-layer-active="true"] .player-nav-backdrop {
+        pointer-events: none;
     }
 
     .player-bottom-nav__item {

@@ -16,7 +16,6 @@ export default function PactOfferModal({
     db,
     activeCampaignId,
     dataActions,
-    runDataAction,
     offerOverride = null,
     onSettled,
 }) {
@@ -43,24 +42,34 @@ export default function PactOfferModal({
     const [detailAbility, setDetailAbility] = useState(null);
     const [confirmAbility, setConfirmAbility] = useState(null);
     const [dismissedOfferId, setDismissedOfferId] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         setStep('offer');
         setSelectedAbilityId('');
         setDetailAbility(null);
         setConfirmAbility(null);
+        setIsSubmitting(false);
     }, [offer?.id]);
 
     if (!offer || !pact || dismissedOfferId === offer.id) return null;
 
-    const rejectOffer = () => {
+    const rejectOffer = async () => {
         if (!activeCampaignId || !character?.id) {
             notifyError('No active actor is available for this pact offer.');
             return;
         }
-        setDismissedOfferId(offer.id);
-        runDataAction(dataActions.pact.rejectPactOffer(activeCampaignId, character.id, offer.id));
-        onSettled?.(offer);
+        setIsSubmitting(true);
+        try {
+            await dataActions.pact.rejectPactOffer(activeCampaignId, character.id, offer.id);
+            setDismissedOfferId(offer.id);
+            onSettled?.(offer);
+        } catch (err) {
+            console.error(err);
+            notifyError(err);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const requestAcceptOffer = () => {
@@ -72,12 +81,20 @@ export default function PactOfferModal({
         setConfirmAbility(selected.ability);
     };
 
-    const acceptOffer = () => {
+    const acceptOffer = async () => {
         if (!activeCampaignId || !character?.id || !confirmAbility?.id) return;
-        setDismissedOfferId(offer.id);
-        runDataAction(dataActions.pact.acceptPactOffer(activeCampaignId, character.id, offer.id, confirmAbility.id));
-        setConfirmAbility(null);
-        onSettled?.(offer);
+        setIsSubmitting(true);
+        try {
+            await dataActions.pact.acceptPactOffer(activeCampaignId, character.id, offer.id, confirmAbility.id);
+            setDismissedOfferId(offer.id);
+            setConfirmAbility(null);
+            onSettled?.(offer);
+        } catch (err) {
+            console.error(err);
+            notifyError(err);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const showMainDialog = !(isMobile && detailAbility);
@@ -112,8 +129,8 @@ export default function PactOfferModal({
                         </details>
                         <BacklashSummary pact={pact} />
                         <div style={actionsStyle}>
-                            <button type="button" onClick={rejectOffer} style={secondaryButtonStyle}>No</button>
-                            <button type="button" onClick={() => setStep('ability')} style={{ ...primaryButtonStyle, background: el.color }}>
+                            <button type="button" onClick={rejectOffer} disabled={isSubmitting} style={secondaryButtonStyle}>No</button>
+                            <button type="button" onClick={() => setStep('ability')} disabled={isSubmitting} style={{ ...primaryButtonStyle, background: el.color }}>
                                 Yes, choose an ability
                             </button>
                         </div>
@@ -171,11 +188,11 @@ export default function PactOfferModal({
                             )}
                         </div>
                         <div style={actionsStyle}>
-                            <button type="button" onClick={() => setStep('offer')} style={secondaryButtonStyle}>Back</button>
+                            <button type="button" onClick={() => setStep('offer')} disabled={isSubmitting} style={secondaryButtonStyle}>Back</button>
                             <button
                                 type="button"
                                 onClick={requestAcceptOffer}
-                                disabled={!selectedAbilityId}
+                                disabled={!selectedAbilityId || isSubmitting}
                                 style={{ ...primaryButtonStyle, background: selectedAbilityId ? el.color : '#555', cursor: selectedAbilityId ? 'pointer' : 'not-allowed' }}
                             >
                                 Learn Ability
@@ -202,9 +219,9 @@ export default function PactOfferModal({
                         Are you sure you want to learn this ability? Abilities can be retrained given enough downtime.
                     </p>
                     <div style={actionsStyle}>
-                        <button type="button" onClick={() => setConfirmAbility(null)} style={secondaryButtonStyle}>Cancel</button>
-                        <button type="button" onClick={acceptOffer} style={{ ...primaryButtonStyle, background: el.color }}>
-                            Confirm Choice
+                        <button type="button" onClick={() => setConfirmAbility(null)} disabled={isSubmitting} style={secondaryButtonStyle}>Cancel</button>
+                        <button type="button" onClick={acceptOffer} disabled={isSubmitting} style={{ ...primaryButtonStyle, background: el.color }}>
+                            {isSubmitting ? 'Saving...' : 'Confirm Choice'}
                         </button>
                     </div>
                 </div>

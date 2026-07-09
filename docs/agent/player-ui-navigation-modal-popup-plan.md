@@ -591,9 +591,18 @@ Success criteria:
 - Added page-level icon keys to `src/player/navigation/playerPageRegistry.js`.
 - Added local Game-icons SVG assets under `src/assets/game-icons/` and updated `src/assets/game-icons/ATTRIBUTION.md`.
 - Added `src/player/navigation/playerNavIcons.js` as the shared local icon map for bottom nav, drawer entries, and carousel tabs.
-- Added `src/player/navigation/PlayerSubpageCarousel.jsx` and `getPlayerSubpageCarouselItems(...)` for the centered, wrapping subpage tab projection.
+- Added `src/player/navigation/PlayerSubpageCarousel.jsx` for the centered, wrapping subpage tab carousel.
 - `PlayerDesktopNav` now uses the carousel for active subpages; on mobile the category row is hidden but the carousel remains visible below the header.
 - Drawer entries now display compact per-page icons, retain loot indicators, and use the same local icon assets as the carousel.
+- Phase 7 follow-up:
+  - installed official shadcn `carousel` after Context7 verification;
+  - verified/configured the shadcnstudio `carousel-11` registry for reference, but did not keep its unused demo assets or extra Motion dependency;
+  - replaced the custom tab-grid projection with the shadcn Carousel API;
+  - added a page-level shadcn Carousel wrapper with looped swiping and lazy active/neighbor rendering;
+  - made first/last subpage swipes wrap within the active category;
+  - pinned the mobile bottom nav root to the viewport instead of the scrolling document;
+  - moved Item Detail into the modal layer so the bottom nav cannot block dialog buttons;
+  - hardened Pact Offer clearing so stale root/sheet `pactOffer` data does not retrigger after accept/reject.
 - Verification:
   - `node --test tests/playerNavigationRegistry.test.js tests/uiStaticRegression.test.js`
 
@@ -672,15 +681,15 @@ Success criteria:
 
 ## Final Acceptance Criteria
 
-- [ ] Player mobile navigation uses five bottom category icons.
-- [ ] Each icon opens a drawer above the icons, not over them.
-- [ ] Tapping outside the drawer closes it with animation.
-- [ ] The header character/campaign switch is removed.
-- [ ] Swiping changes subpages within the current category.
+- [x] Player mobile navigation uses five bottom category icons.
+- [x] Each icon opens a drawer above the icons, not over them.
+- [x] Tapping outside the drawer closes it with animation.
+- [x] The header character/campaign switch is removed.
+- [x] Swiping changes subpages within the current category.
 - [ ] Dialogs and sheets scroll reliably on mobile without moving the background page.
-- [ ] Pact, XP, quest/reward, and future player popups go through one queue.
-- [ ] Popups are shown once per stable event and do not retrigger repeatedly.
-- [ ] Existing Player workflows remain reachable:
+- [x] Pact, XP, quest/reward, and future player popups go through one queue.
+- [x] Popups are shown once per stable event and do not retrigger repeatedly.
+- [x] Existing Player workflows remain reachable:
   - Status
   - Feats
   - Magic

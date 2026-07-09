@@ -94,10 +94,10 @@ test('player navigation registry validates subpage compatibility with legacy sta
 test('player subpage swipe stays within the active category', () => {
     assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.STATUS, 'next'), PLAYER_PAGE_IDS.FEATS);
     assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.FEATS, 'previous'), PLAYER_PAGE_IDS.STATUS);
-    assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.PROFICIENCIES, 'next'), null);
-    assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.QUESTS, 'previous'), null);
+    assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.PROFICIENCIES, 'next'), PLAYER_PAGE_IDS.STATUS);
+    assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.QUESTS, 'previous'), PLAYER_PAGE_IDS.CAMP);
     assert.equal(getSwipeTargetPlayerPageId(PLAYER_PAGE_IDS.EQUIPMENT, 80), PLAYER_PAGE_IDS.CONSUMABLES);
-    assert.equal(getSwipeTargetPlayerPageId(PLAYER_PAGE_IDS.EQUIPMENT, -80), null);
+    assert.equal(getSwipeTargetPlayerPageId(PLAYER_PAGE_IDS.EQUIPMENT, -80), PLAYER_PAGE_IDS.LOOT);
 });
 
 test('player subpage swipe distinguishes horizontal navigation from vertical scroll', () => {

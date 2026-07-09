@@ -248,6 +248,13 @@ test('pact selectors derive offers, ability options, usage, and dedication refer
 
     const offer = selectPendingPactOffer({ pactOffer: { id: 'offer1', pactId: 'ember', status: 'pending' } }, db);
     assert.equal(offer.pact.name, 'Ember Pact');
+    assert.equal(
+        selectPendingPactOffer({
+            pactOffer: { id: 'stale-offer', pactId: 'ember', status: 'pending' },
+            sheet: { pact: { pactId: 'ember' } },
+        }, db),
+        null
+    );
 
     const options = selectPactAbilityOptions({
         pact: db.pacts.ember,

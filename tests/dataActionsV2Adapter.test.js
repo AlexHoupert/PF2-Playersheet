@@ -414,6 +414,7 @@ test('v2 adapter uses targeted actor updates for pact offers and awakening point
                 kind: 'pc',
                 name: 'Hero',
                 level: 1,
+                pactOffer: { id: 'legacy-root-offer', pactId: 'ember', status: 'pending' },
                 sheet: {
                     id: 'actor1',
                     name: 'Hero',
@@ -429,6 +430,7 @@ test('v2 adapter uses targeted actor updates for pact offers and awakening point
     assert.deepEqual(calls.map(call => call[0]), ['actor.updateActor', 'actor.updateActor']);
     assert.equal(calls[1][3].sheet.pact.pactId, 'ember');
     assert.equal(calls[1][3].sheet.pact.choices[0], 'spark');
+    assert.equal(calls[1][3].pactOffer, undefined);
 
     const { actions: pointActions, calls: pointCalls } = createActionHarness({
         abilities: {

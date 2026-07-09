@@ -38,9 +38,11 @@ export function getAdjacentPlayerSubpageId(pageId, direction) {
     const pages = getPlayerSubpagesForActivePage(pageId);
     const index = pages.findIndex((page) => page.id === pageId);
     if (index === -1) return null;
+    if (pages.length <= 1) return null;
 
     const nextIndex = direction === 'next' ? index + 1 : index - 1;
-    return pages[nextIndex]?.id || null;
+    const wrappedIndex = ((nextIndex % pages.length) + pages.length) % pages.length;
+    return pages[wrappedIndex]?.id || null;
 }
 
 export function getSwipeTargetPlayerPageId(pageId, distanceX) {

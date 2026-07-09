@@ -13,7 +13,6 @@ export default function PlayerPopupHost({
     db,
     notificationQueue = [],
     onClearNotification,
-    runDataAction,
     xpNotification = null,
 }) {
     const {
@@ -47,7 +46,6 @@ export default function PlayerPopupHost({
                 db={db}
                 activeCampaignId={activeCampaign?.id}
                 dataActions={dataActions}
-                runDataAction={runDataAction}
                 offerOverride={activePopup.payload.offer}
                 onSettled={acknowledgeActionPopup}
             />
