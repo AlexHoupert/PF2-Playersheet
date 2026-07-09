@@ -16,22 +16,27 @@ function markSeen(id) {
     }
 }
 
-export default function XpOverlay({ xpNotification }) {
+export default function XpOverlay({ xpNotification, onDone, disableLocalAck = false }) {
     const [active, setActive] = useState(null); // { amount }
+    const xpNotificationId = xpNotification?.id;
 
     useEffect(() => {
         if (xpNotification && xpNotification.id) {
             // Skip if already seen on this client
-            if (getSeenIds().includes(xpNotification.id)) return;
+            if (!disableLocalAck && getSeenIds().includes(xpNotification.id)) {
+                onDone?.(xpNotification);
+                return;
+            }
 
-            markSeen(xpNotification.id);
+            if (!disableLocalAck) markSeen(xpNotification.id);
             setActive(xpNotification);
             const timer = setTimeout(() => {
                 setActive(null);
+                onDone?.(xpNotification);
             }, 3500); // 3.5s total duration
             return () => clearTimeout(timer);
         }
-    }, [xpNotification?.id]);
+    }, [disableLocalAck, onDone, xpNotificationId]);
 
     if (!active) return null;
 

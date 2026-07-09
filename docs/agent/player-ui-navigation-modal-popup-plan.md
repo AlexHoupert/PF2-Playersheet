@@ -1,6 +1,6 @@
 # Player UI Navigation, Modal Focus, And Popup Hardening Plan
 
-Status: phase 5 complete
+Status: phase 6 complete
 Created: 2026-07-09
 
 ## Summary
@@ -482,7 +482,7 @@ Suggested files:
 
 Implementation steps:
 
-- [ ] Define popup shape:
+- [x] Define popup shape:
   - `id`
   - `type`
   - `sourceId`
@@ -493,37 +493,49 @@ Implementation steps:
   - `payload`
   - `requiresAction`
   - `dedupeKey`
-- [ ] Derive popup candidates from:
+- [x] Derive popup candidates from:
   - pending pact offer on actor
   - campaign notification queue
   - legacy/root notification queue while it still exists
   - campaign XP notification
   - future hooks for loot or downtime notices
-- [ ] Add one dedupe layer:
+- [x] Add one dedupe layer:
   - session-level suppression while the app is open;
   - localStorage ack for informational popups;
   - server/domain action ack for stateful popups such as pact reject/accept.
-- [ ] Show only one popup at a time.
-- [ ] Define priority:
+- [x] Show only one popup at a time.
+- [x] Define priority:
   - blocking pact offer
   - confirm/action popups
   - quest/reward
   - XP/gold/reputation flourish
-- [ ] Replace `NotificationOverlay` and `XpOverlay` with renderers owned by `PlayerPopupHost`.
-- [ ] Move Pact Offer display into the popup host while keeping domain actions unchanged.
-- [ ] Ensure a popup is not shown again after:
+- [x] Replace `NotificationOverlay` and `XpOverlay` with renderers owned by `PlayerPopupHost`.
+- [x] Move Pact Offer display into the popup host while keeping domain actions unchanged.
+- [x] Ensure a popup is not shown again after:
   - it was acknowledged in the same app session;
   - it was acknowledged in localStorage;
   - its server-side state was cleared.
-- [ ] Add tests for popup derivation and dedupe keys.
+- [x] Add tests for popup derivation and dedupe keys.
 
 Success criteria:
 
-- [ ] Pact offer does not retrigger repeatedly while the same pending offer is already displayed or dismissed.
-- [ ] XP notification shows once per notification ID.
-- [ ] Quest/reward notifications show once and clear through the correct data action.
-- [ ] Reload shows only genuinely unacknowledged/new popups.
-- [ ] There is one Player popup host in `PlayerAppController`, not multiple independent overlay components.
+- [x] Pact offer does not retrigger repeatedly while the same pending offer is already displayed or dismissed.
+- [x] XP notification shows once per notification ID.
+- [x] Quest/reward notifications show once and clear through the correct data action.
+- [x] Reload shows only genuinely unacknowledged/new popups.
+- [x] There is one Player popup host in `PlayerAppController`, not multiple independent overlay components.
+
+### Phase 6 Implementation Notes
+
+- Added `src/player/popups/playerPopupQueue.js` with the shared popup shape, candidate derivation, priority sorting, and dedupe keys.
+- Added `src/player/popups/popupAckStore.js` for session acknowledgements, persistent localStorage acknowledgements, and compatibility with existing XP seen IDs.
+- Added `src/player/popups/usePlayerPopupQueue.js` and `src/player/popups/PlayerPopupHost.jsx`.
+- `PlayerPopupHost` now owns Pact offers, notification queue entries, and XP notifications. `PlayerAppController` mounts only this host.
+- `PactOfferModal` accepts an explicit `offerOverride` and calls `onSettled` after reject/accept so the host can acknowledge the displayed offer immediately while the server-side state clears.
+- `NotificationOverlay` and `XpOverlay` remain reusable renderers, but now support `onDone` callbacks for queue-controlled acknowledgement.
+- Static guards prevent `PlayerAppController` from directly importing or mounting `PactOfferModal`, `NotificationOverlay`, or `XpOverlay`.
+- Verification:
+  - `node --test tests/playerPopupQueue.test.js tests/uiStaticRegression.test.js`
 
 ## Phase 7: Visual And Interaction Polish
 

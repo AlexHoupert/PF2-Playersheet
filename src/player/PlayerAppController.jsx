@@ -4,22 +4,19 @@ import { useCampaign } from '../shared/context/CampaignContext';
 import SpellScrollSelectorModal from './modals/SpellScrollSelectorModal';
 import { deepClone } from '../shared/utils/deepClone';
 import ItemActionsModal from './ItemActionsModal';
-import PactOfferModal from '../pacts/PactOfferModal';
 import { ModalManager } from './ModalManager';
 import { usePlayerCatalogInspection } from './hooks/usePlayerCatalogInspection';
 import { usePlayerCharacterActions } from './hooks/usePlayerCharacterActions';
 import { usePlayerInventoryActions } from './hooks/usePlayerInventoryActions';
 import { usePlayerModalState } from './hooks/usePlayerModalState';
 import { selectActorRulesViewModel } from '../shared/rules/actorRulesViewModel';
-// Top of file
-import NotificationOverlay from './components/NotificationOverlay';
-import XpOverlay from './components/XpOverlay';
 import LazyCatalogOverlay from './components/LazyCatalogOverlay';
 import PlayerBottomNav from './navigation/PlayerBottomNav';
 import PlayerDesktopNav from './navigation/PlayerDesktopNav';
 import PlayerPageRenderer from './navigation/PlayerPageRenderer';
 import { buildPlayerInteractionLockState } from './navigation/playerSubpageSwipe';
 import { usePlayerPageNavigation } from './navigation/usePlayerPageNavigation';
+import PlayerPopupHost from './popups/PlayerPopupHost';
 export default function PlayerAppController() {
     const {
         activeCampaign,
@@ -321,12 +318,16 @@ export default function PlayerAppController() {
             </div>
 
             {/* MODALS */}
-            <PactOfferModal
+            <PlayerPopupHost
+                activeCampaign={activeCampaign}
+                actor={myActor}
                 character={character}
-                db={db}
-                activeCampaignId={activeCampaign?.id}
                 dataActions={dataActions}
+                db={db}
+                notificationQueue={playerNotificationQueue}
+                onClearNotification={handleClearNotification}
                 runDataAction={runDataAction}
+                xpNotification={activeCampaign?.xpNotification}
             />
 
             {/* Item Actions Modal */}
@@ -450,15 +451,6 @@ export default function PlayerAppController() {
                 onDailyPrep={performDailyPrep}
             />
 
-
-            {/* Notification Overlay */}
-            <NotificationOverlay
-                queue={playerNotificationQueue}
-                onClear={handleClearNotification}
-            />
-
-            {/* XP Overlay */}
-            <XpOverlay xpNotification={activeCampaign?.xpNotification} />
 
             <PlayerBottomNav
                 activePageId={activePageId}

@@ -11,10 +11,21 @@ import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { BACKLASH_COLORS, BACKLASH_LABELS, BACKLASH_TIERS, ELEMENTS, summarizeBacklashTier } from './pactsData';
 
-export default function PactOfferModal({ character, db, activeCampaignId, dataActions, runDataAction }) {
+export default function PactOfferModal({
+    character,
+    db,
+    activeCampaignId,
+    dataActions,
+    runDataAction,
+    offerOverride = null,
+    onSettled,
+}) {
     const { notifyError } = useAppFeedback();
     const { isMobile } = useWindowSize();
-    const offer = useMemo(() => selectPendingPactOffer(character, db), [character, db]);
+    const offer = useMemo(
+        () => offerOverride || selectPendingPactOffer(character, db),
+        [character, db, offerOverride]
+    );
     const pact = offer?.pact || null;
     const el = pact ? (ELEMENTS[pact.element] || ELEMENTS.Fire) : ELEMENTS.Fire;
     const dedication = useMemo(() => resolvePactDedication(pact, FEAT_INDEX_ITEMS), [pact]);
@@ -49,6 +60,7 @@ export default function PactOfferModal({ character, db, activeCampaignId, dataAc
         }
         setDismissedOfferId(offer.id);
         runDataAction(dataActions.pact.rejectPactOffer(activeCampaignId, character.id, offer.id));
+        onSettled?.(offer);
     };
 
     const requestAcceptOffer = () => {
@@ -65,6 +77,7 @@ export default function PactOfferModal({ character, db, activeCampaignId, dataAc
         setDismissedOfferId(offer.id);
         runDataAction(dataActions.pact.acceptPactOffer(activeCampaignId, character.id, offer.id, confirmAbility.id));
         setConfirmAbility(null);
+        onSettled?.(offer);
     };
 
     const showMainDialog = !(isMobile && detailAbility);

@@ -1,20 +1,14 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { ModalLayerMount } from '../../shared/overlays/ModalLayerProvider';
 
-export default function NotificationOverlay({ queue = [], onClear }) {
+export default function NotificationOverlay({ notification = null, queue = [], onClear, onDone }) {
     const [active, setActive] = useState(null); // The current notification object
     const [isAnimating, setIsAnimating] = useState(false);
     const timeoutRef = useRef(null);
 
-    // Watch queue
-    useEffect(() => {
-        if (!isAnimating && !active && queue.length > 0) {
-            playNext(queue[0]);
-        }
-    }, [queue, isAnimating, active]);
-
-    const playNext = (notification) => {
-        setActive(notification);
+    const playNext = useCallback((entry) => {
+        if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
+        setActive(entry);
         setIsAnimating(true);
 
         const duration = 4000; // 4s total animation
@@ -23,9 +17,25 @@ export default function NotificationOverlay({ queue = [], onClear }) {
             // Animation done
             setIsAnimating(false);
             setActive(null);
-            if (onClear) onClear(notification.id);
+            if (onClear) onClear(entry.id);
+            if (onDone) onDone(entry);
         }, duration);
-    };
+    }, [onClear, onDone]);
+
+    // Watch queue
+    useEffect(() => {
+        if (notification && !isAnimating && !active) {
+            playNext(notification);
+            return;
+        }
+        if (!isAnimating && !active && queue.length > 0) {
+            playNext(queue[0]);
+        }
+    }, [notification, queue, isAnimating, active, playNext]);
+
+    useEffect(() => () => {
+        if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
+    }, []);
 
     if (!active) return null;
 

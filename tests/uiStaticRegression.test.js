@@ -234,6 +234,27 @@ test('player page cutover uses registry renderer instead of header mode switch',
     assert.match(swipeCoreSource, /item-catalog-overlay/);
 });
 
+test('player popup host owns pact, notification, and xp popups', () => {
+    const playerSource = readSource('src/player/PlayerAppController.jsx');
+    const hostSource = readSource('src/player/popups/PlayerPopupHost.jsx');
+    const queueSource = readSource('src/player/popups/playerPopupQueue.js');
+    const ackSource = readSource('src/player/popups/popupAckStore.js');
+
+    assert.match(playerSource, /PlayerPopupHost/);
+    assert.equal(playerSource.includes("PactOfferModal from"), false);
+    assert.equal(playerSource.includes("NotificationOverlay from"), false);
+    assert.equal(playerSource.includes("XpOverlay from"), false);
+    assert.doesNotMatch(playerSource, /<PactOfferModal\b/);
+    assert.doesNotMatch(playerSource, /<NotificationOverlay\b/);
+    assert.doesNotMatch(playerSource, /<XpOverlay\b/);
+    assert.match(hostSource, /usePlayerPopupQueue/);
+    assert.match(hostSource, /PactOfferModal/);
+    assert.match(hostSource, /NotificationOverlay/);
+    assert.match(hostSource, /XpOverlay/);
+    assert.match(queueSource, /PLAYER_POPUP_PRIORITIES/);
+    assert.match(ackSource, /pf2e-player-popup-acks/);
+});
+
 test('player basis edit modals use targeted character actions', () => {
     const sources = [
         'src/player/modals/ACModals.jsx',
