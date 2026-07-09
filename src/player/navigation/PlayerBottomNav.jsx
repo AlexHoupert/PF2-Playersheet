@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import {
     getCategoryIdForPlayerPage,
     PLAYER_NAV_CATEGORIES,
@@ -45,7 +44,7 @@ export default function PlayerBottomNav({
         closeDrawer();
     };
 
-    const nav = (
+    return (
         <div className="player-bottom-nav-root no-swipe" data-testid="player-bottom-nav-root">
             <div
                 className={`player-nav-backdrop ${openCategoryId ? 'open' : ''}`}
@@ -116,7 +115,4 @@ export default function PlayerBottomNav({
             </nav>
         </div>
     );
-
-    if (typeof document === 'undefined') return nav;
-    return createPortal(nav, document.body);
 }

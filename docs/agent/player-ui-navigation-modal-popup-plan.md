@@ -611,6 +611,11 @@ Success criteria:
   - hides the bottom nav while modal-layer dialogs are active so it cannot visually or physically cover dialog buttons;
   - suppresses legacy `ActionsView` and `InventoryView` tabs when those views are rendered through the new carousel page shell;
   - tightened the mobile carousel spacing below the header and removed the lower tab divider.
+- Phase 7 regression correction:
+  - disabled Embla page drag with `watchDrag: false` so the page shell and the app-level swipe hook do not both advance pages;
+  - raised the app-level swipe threshold to make accidental page changes less likely;
+  - moved the bottom nav back into the Player shell after the body portal caused drawer interaction regressions;
+  - removed the fixed-layer transform/containment that did not solve Firefox jitter and could make fixed positioning less predictable.
 - Verification:
   - `node --test tests/playerNavigationRegistry.test.js tests/uiStaticRegression.test.js`
   - `node --test tests/playerNavigationRegistry.test.js tests/uiStaticRegression.test.js tests/dataActionsV2Adapter.test.js`

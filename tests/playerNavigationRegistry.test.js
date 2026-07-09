@@ -101,9 +101,9 @@ test('player subpage swipe stays within the active category', () => {
 });
 
 test('player subpage swipe distinguishes horizontal navigation from vertical scroll', () => {
-    assert.equal(shouldHandlePlayerSubpageSwipe({ distanceX: 88, distanceY: 20 }), true);
-    assert.equal(shouldHandlePlayerSubpageSwipe({ distanceX: 48, distanceY: 2 }), false);
-    assert.equal(shouldHandlePlayerSubpageSwipe({ distanceX: 88, distanceY: 76 }), false);
+    assert.equal(shouldHandlePlayerSubpageSwipe({ distanceX: 118, distanceY: 20 }), true);
+    assert.equal(shouldHandlePlayerSubpageSwipe({ distanceX: 88, distanceY: 2 }), false);
+    assert.equal(shouldHandlePlayerSubpageSwipe({ distanceX: 118, distanceY: 100 }), false);
     assert.equal(shouldCancelPlayerSubpageSwipeForVerticalScroll({ distanceX: 12, distanceY: 52 }), true);
     assert.equal(shouldCancelPlayerSubpageSwipeForVerticalScroll({ distanceX: 70, distanceY: 28 }), false);
 });

@@ -224,6 +224,7 @@ test('player page cutover uses registry renderer instead of header mode switch',
     assert.match(pageCarouselSource, /Carousel/);
     assert.equal(pageCarouselSource.includes('player-page-carousel no-swipe'), false);
     assert.match(pageCarouselSource, /containScroll: false/);
+    assert.match(pageCarouselSource, /watchDrag: false/);
     assert.match(playerSource, /PlayerDesktopNav/);
     assert.match(playerSource, /buildPlayerInteractionLockState/);
     assert.match(playerSource, /onDrawerOpenChange=\{setPlayerNavDrawerOpen\}/);
@@ -237,7 +238,7 @@ test('player page cutover uses registry renderer instead of header mode switch',
     assert.match(hookSource, /playerTab/);
     assert.match(hookSource, /usePlayerSubpageSwipe/);
     assert.equal(bottomNavSource.includes('disabled={Boolean(page.future)}'), false);
-    assert.match(bottomNavSource, /createPortal\(nav, document\.body\)/);
+    assert.equal(bottomNavSource.includes('createPortal'), false);
     assert.match(bottomNavSource, /getPlayerNavIconSrc\(page\.icon\)/);
     assert.match(bottomNavSource, /onDrawerOpenChange/);
     assert.match(carouselSource, /CarouselContent/);

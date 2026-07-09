@@ -4,7 +4,7 @@ import {
     getPlayerPage,
 } from './playerPageRegistry.js';
 
-export const PLAYER_SWIPE_THRESHOLD = 72;
+export const PLAYER_SWIPE_THRESHOLD = 108;
 export const PLAYER_SWIPE_HORIZONTAL_RATIO = 1.35;
 export const PLAYER_SWIPE_VERTICAL_CANCEL_RATIO = 1.1;
 

@@ -58,6 +58,7 @@ export default function PlayerPageCarousel({
                 dragFree: false,
                 loop: pages.length > 1,
                 skipSnaps: false,
+                watchDrag: false,
             }}
             setApi={setApi}
         >

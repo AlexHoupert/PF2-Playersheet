@@ -296,10 +296,6 @@
         bottom: 0;
         height: calc(var(--player-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
         pointer-events: none;
-        transform: translate3d(0, 0, 0);
-        backface-visibility: hidden;
-        contain: layout paint style;
-        isolation: isolate;
         z-index: 1600;
     }
 
