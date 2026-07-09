@@ -15,18 +15,13 @@ async function reloadFixture(page, params = "") {
   await page.goto(`/?e2e=true${query}`, { waitUntil: "domcontentloaded" });
 }
 
-async function showCharacterTabs(page) {
-  if ((await page.getByRole("button", { name: /ITEMS/i }).count()) === 0) {
-    await page.getByTestId("player-mode-toggle").click();
-    await expect(page.getByRole("button", { name: /ITEMS/i })).toBeVisible();
-  }
+async function openPlayerCategory(page, name) {
+  await page.getByRole("button", { name: new RegExp(`^${name}`, "i") }).first().click();
 }
 
-async function showStoryTabs(page) {
-  if ((await page.getByRole("button", { name: /QUESTS/i }).count()) === 0) {
-    await page.getByTestId("player-mode-toggle").click();
-    await expect(page.getByRole("button", { name: /QUESTS/i })).toBeVisible();
-  }
+async function openPlayerPage(page, categoryName, pageId) {
+  await openPlayerCategory(page, categoryName);
+  await page.getByTestId(`player-desktop-page-${pageId}`).click();
 }
 
 async function readFixtureXp(page) {
@@ -48,20 +43,17 @@ test("player fixture route loads character, quests, loot, shop, and spell overri
   await expect(page.getByTestId("player-route")).toBeVisible();
   await expect(page.getByText("Nimwe Smoke")).toBeVisible();
 
-  await showStoryTabs(page);
-  await page.getByRole("button", { name: /QUESTS/i }).click();
+  await openPlayerPage(page, "Campaign", "campaign.quests");
   await expect(page.getByText("Smoke Test Quest")).toBeVisible();
 
-  await showCharacterTabs(page);
-  await page.getByRole("button", { name: /ITEMS/i }).click();
-  await page.getByRole("button", { name: /Loot/i }).click();
+  await openPlayerPage(page, "Items", "items.loot");
   await expect(page.getByText("Smoke Loot")).toBeVisible();
   await expect(page.getByText("Healing Potion (Minor)")).toBeVisible();
 
-  await page.getByRole("button", { name: /MAGIC/i }).click();
+  await openPlayerPage(page, "Character", "character.magic");
   await expect(page.getByText("Uplifting Overture")).toBeVisible();
 
-  await page.getByRole("button", { name: /ITEMS/i }).click();
+  await openPlayerPage(page, "Items", "items.equipment");
   await page.getByRole("button", { name: /\+ Open Shop/i }).click();
   await expect(page.getByText("Show all available Items")).toBeVisible();
 });
@@ -113,8 +105,7 @@ test("player HP, gold, and condition edits survive reload in fixture runtime", a
 
 test("player loot claim and gold split persist without losing remaining state", async ({ page }) => {
   await gotoFixture(page, "playerMode=character&playerTab=items");
-  await page.getByRole("button", { name: /ITEMS/i }).click();
-  await page.getByTestId("inventory-tab-loot").click();
+  await openPlayerPage(page, "Items", "items.loot");
 
   await expect(page.getByTestId("loot-bag-e2e_loot")).toBeVisible();
   await page.getByTestId("loot-claim-item-e2e_loot_item").click();
@@ -125,8 +116,7 @@ test("player loot claim and gold split persist without losing remaining state", 
   await expect(page.getByTestId("loot-gold-e2e_loot")).toHaveCount(0);
 
   await reloadFixture(page, "playerMode=character&playerTab=items");
-  await page.getByRole("button", { name: /ITEMS/i }).click();
-  await page.getByRole("button", { name: /Consumables/i }).click();
+  await openPlayerPage(page, "Items", "items.consumables");
   await expect(page.getByText("Healing Potion (Minor)")).toBeVisible();
   await expect(page.getByTestId("player-gold-display")).toContainText("17.00");
 });
@@ -149,7 +139,7 @@ test("GM creates lootbag and gives custom item that player sees after reload", a
   await page.getByTestId("gm-items-give-player-e2e_actor_nimwe").click();
 
   await reloadFixture(page, "playerMode=character&playerTab=items");
-  await page.getByRole("button", { name: /ITEMS/i }).click();
+  await openPlayerPage(page, "Items", "items.equipment");
   await expect(page.getByText("Smoke Custom Charm")).toBeVisible();
 });
 
@@ -216,7 +206,7 @@ test("encounter player and creature combatants accept HP, initiative, and effect
 
 test("spell catalog override appears in player add-spell flow at rank zero", async ({ page }) => {
   await gotoFixture(page);
-  await page.getByRole("button", { name: /MAGIC/i }).click();
+  await openPlayerPage(page, "Character", "character.magic");
   await page.getByTestId("magic-add-spell").click();
   await page.getByPlaceholder("Search...").fill("Uplifting Overture");
 

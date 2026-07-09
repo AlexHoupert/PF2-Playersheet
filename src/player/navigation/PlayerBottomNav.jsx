@@ -43,7 +43,6 @@ export default function PlayerBottomNav({
     const closeDrawer = () => setOpenCategoryId(null);
 
     const selectPage = (page) => {
-        if (page.future) return;
         onSelectPage(page);
         closeDrawer();
     };
@@ -76,7 +75,6 @@ export default function PlayerBottomNav({
                                 type="button"
                                 className={`player-category-drawer__page ${active ? 'active' : ''}`}
                                 onClick={() => selectPage(page)}
-                                disabled={Boolean(page.future)}
                                 data-testid={`player-nav-page-${page.id}`}
                             >
                                 <span className="player-category-drawer__page-main">

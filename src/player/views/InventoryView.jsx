@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useCampaign } from '../../shared/context/CampaignContext';
 import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
 import ItemEditor from '../../admin/editors/ItemEditor';
@@ -30,11 +30,12 @@ export function InventoryView({
     onConsumeItem,
     onClaimGold,
     onSplitGold,
+    initialSubTab = 'Equipment',
     readOnly = false,
     allowLoot = true,
     showUtilityActions = true
 }) {
-    const [itemSubTab, setItemSubTab] = useState('Equipment');
+    const [itemSubTab, setItemSubTab] = useState(initialSubTab);
     const [vialActivation, setVialActivation] = useState(null); // item being converted via Versatile Vial
     const [showItemCreator, setShowItemCreator] = useState(false);
     const equipTapRef = useRef({ key: null, time: 0 });
@@ -42,6 +43,10 @@ export function InventoryView({
     const { confirm, prompt } = useAppFeedback();
     const { activeCampaign } = useCampaign();
     const { lootBags } = selectLootBagLists(db, activeCampaign, activeCampaign?.id);
+
+    useEffect(() => {
+        setItemSubTab(initialSubTab);
+    }, [initialSubTab]);
 
     // Helper functions from PlayerApp logic (Assuming they are not exported elsewhere yet)
     // We'll need to duplicate them or extract them to a util file if they are large.

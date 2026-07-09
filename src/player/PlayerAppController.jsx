@@ -1,42 +1,24 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
-import ShopView from './ShopView';
 
 import SpellScrollSelectorModal from './modals/SpellScrollSelectorModal';
 import { deepClone } from '../shared/utils/deepClone';
 import ItemActionsModal from './ItemActionsModal';
-import { StatsView } from './views/StatsView';
-import { ActionsView } from './views/ActionsView';
-import { InventoryView } from './views/InventoryView';
-import { MagicView } from './views/MagicView';
-import { FeatsView } from './views/FeatsView';
-import { ImpulsesView } from './views/ImpulsesView';
-import PlayerQuestsView from './views/PlayerQuestsView';
-import LoreView from './views/LoreView';
-import CompanionTab from './views/CompanionTab';
-import MapsView from './views/MapsView';
-import ProgressView from './views/ProgressView';
-import CampScreen from '../camping/CampScreen';
-import PactView from '../pacts/PactView';
 import PactOfferModal from '../pacts/PactOfferModal';
 import { ModalManager } from './ModalManager';
 import { usePlayerCatalogInspection } from './hooks/usePlayerCatalogInspection';
 import { usePlayerCharacterActions } from './hooks/usePlayerCharacterActions';
 import { usePlayerInventoryActions } from './hooks/usePlayerInventoryActions';
 import { usePlayerModalState } from './hooks/usePlayerModalState';
-import { usePlayerNavigation } from './hooks/usePlayerNavigation';
 import { selectActorRulesViewModel } from '../shared/rules/actorRulesViewModel';
 // Top of file
 import NotificationOverlay from './components/NotificationOverlay';
 import XpOverlay from './components/XpOverlay';
 import LazyCatalogOverlay from './components/LazyCatalogOverlay';
 import PlayerBottomNav from './navigation/PlayerBottomNav';
-import {
-    getLegacyNavigationForPlayerPage,
-    getPlayerPageForLegacyNavigation,
-    isPlayerPageCompatibleWithLegacyNavigation,
-    PLAYER_PAGE_IDS,
-} from './navigation/playerPageRegistry';
+import PlayerDesktopNav from './navigation/PlayerDesktopNav';
+import PlayerPageRenderer from './navigation/PlayerPageRenderer';
+import { usePlayerPageNavigation } from './navigation/usePlayerPageNavigation';
 export default function PlayerAppController() {
     const {
         activeCampaign,
@@ -72,28 +54,18 @@ export default function PlayerAppController() {
 
     const {
         activeCharIndex,
-        activeTab,
-        appMode,
+        activePageId,
         character,
         characters,
-        mainTabs,
+        selectPage,
+        selectPageId,
         setActiveCharIndex,
-        setActiveTab,
-        setAppMode,
         swipeHandlers,
         swipeRef,
-    } = usePlayerNavigation({
+    } = usePlayerPageNavigation({
         activeCampaign,
-        db,
-        hasCompanionActors: ownedCompanionActors.length > 0,
-        modalMode,
         myCharacter,
     });
-
-    const [selectedPlayerPageId, setSelectedPlayerPageId] = useState(null);
-    const activePlayerPageId = selectedPlayerPageId && isPlayerPageCompatibleWithLegacyNavigation(selectedPlayerPageId, activeTab, appMode)
-        ? selectedPlayerPageId
-        : getPlayerPageForLegacyNavigation(activeTab, appMode);
 
     const actorRules = selectActorRulesViewModel(activeCampaign, myActor?.id || character?.id);
     const rulesCharacter = actorRules.character || character;
@@ -164,14 +136,6 @@ export default function PlayerAppController() {
         character?.inventory?.some(i => i.isLoot) ||
         playerLootBags.some(b => !b.isLocked && (b.items || []).some(i => !i.claimedBy))
     );
-
-    const handleSelectPlayerPage = (page) => {
-        const legacyTarget = getLegacyNavigationForPlayerPage(page.id);
-        if (!legacyTarget) return;
-        setSelectedPlayerPageId(page.id);
-        if (legacyTarget.appMode !== appMode) setAppMode(legacyTarget.appMode);
-        if (legacyTarget.activeTab !== activeTab) setActiveTab(legacyTarget.activeTab);
-    };
 
     // If no character found (e.g. empty campaign), guard against crash
     if (!character) {
@@ -293,23 +257,6 @@ export default function PlayerAppController() {
                     <small>Level {character.level} | XP: {character.xp.current}</small>
                 </div>
                 <div className="header-controls" style={{ flexShrink: 0, gap: 5, marginRight: -5 }}>
-                    {/* MODE TOGGLE */}
-                    <button
-                        className="btn-char-switch"
-                        data-testid="player-mode-toggle"
-                        onClick={() => {
-                            const newMode = appMode === 'character' ? 'story' : 'character';
-                            setAppMode(newMode);
-                            // Default tabs
-                            if (newMode === 'story') setActiveTab('quests');
-                            else setActiveTab('stats');
-                        }}
-                        title={appMode === 'character' ? 'Switch to Story' : 'Switch to Character'}
-                        style={{ border: '1px solid var(--border-color)', color: 'var(--text-light)' }}
-                    >
-                        {appMode === 'character' ? '📖' : '👤'}
-                    </button>
-
                     {isGM && <button className="btn-char-switch" onClick={() => {
                         setActiveCharIndex((prev) => (prev + 1) % characters.length);
                     }}>👥</button>}
@@ -321,102 +268,45 @@ export default function PlayerAppController() {
             </div>
 
 
-            {/* TABS */}
-            <div className="tabs no-swipe">
-                {mainTabs.map(tab => {
-                    const hasLoot = tab === 'items' && hasPlayerLoot;
-                    return (
-                        <button
-                            key={tab}
-                            className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
-                            onClick={() => setActiveTab(tab)}
-                        >
-                            {tab === 'magic' ? 'Magic' : tab === 'impulses' ? 'Impulses' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                            {hasLoot && <span style={{ color: '#d32f2f', marginLeft: 5, fontWeight: 'bold' }}>!</span>}
-                        </button>
-                    );
-                })}
-            </div>
+            <PlayerDesktopNav
+                activePageId={activePageId}
+                onSelectPage={selectPage}
+                hasLoot={hasPlayerLoot}
+            />
 
             {/* VIEW CONTENT */}
             <div className="view-section">
-                {activeTab === 'stats' && (
-                    <StatsView
-                        character={rulesCharacter}
-                        rulesViewModel={actorRules}
-                        conditions={characterConditions}
-                        characterActions={characterActions}
-                        onOpenModal={(mode, data) => {
-                            setModalMode(mode);
-                            if (data) setModalData(data);
-                        }}
-                        onLongPress={handleLongPress}
-                    />
-                )}
-
-                {activeTab === 'quests' && (
-                    <PlayerQuestsView quests={playerQuests} />
-                )}
-
-                {activeTab === 'lore' && (
-                    <LoreView db={db} />
-                )}
-
-                {activeTab === 'actions' && (
-                    <ActionsView
-                        character={rulesCharacter}
-                        onOpenModal={(mode, data) => {
-                            setModalMode(mode);
-                            setModalData(data);
-                        }}
-                        onLongPress={(item, type) => handleLongPress(item, type)}
-                    />
-                )}
-
-                {activeTab === 'magic' && (
-                    <MagicView
-                        character={rulesCharacter}
-                        characterActions={characterActions}
-                        setModalData={setModalData}
-                        setModalMode={setModalMode}
-                        setCatalogMode={setCatalogMode}
-                        onLongPress={handleLongPress}
-                    />
-                )}
-                {activeTab === 'impulses' && (
-                    <ImpulsesView
-                        character={rulesCharacter}
-                        setModalData={setModalData}
-                        setModalMode={setModalMode}
-                        onLongPress={handleLongPress}
-                    />
-                )}
-                {activeTab === 'feats' && (
-                    <FeatsView
-                        character={rulesCharacter}
-                        setModalData={setModalData}
-                        setModalMode={setModalMode}
-                        setCatalogMode={setCatalogMode}
-                        onLongPress={handleLongPress}
-                    />
-                )}
-
-                {activeTab === 'maps' && <MapsView />}
-                {activeTab === 'progress' && <ProgressView />}
-                {activeTab === 'camp' && <CampScreen />}
-                {activeTab === 'companion' && (
-                    <CompanionTab
-                        character={character}
-                        ownerActor={myActor}
-                        companionActors={ownedCompanionActors}
-                        dataActions={dataActions}
-                        activeCampaignId={activeCampaign?.id}
-                    />
-                )}
-                {activeTab === 'pact' && <PactView character={character} db={db} />}
+                <PlayerPageRenderer
+                    activePageId={activePageId}
+                    activeCampaign={activeCampaign}
+                    actorRules={actorRules}
+                    character={character}
+                    characterActions={characterActions}
+                    characterConditions={characterConditions}
+                    dataActions={dataActions}
+                    db={db}
+                    fireWeapon={fireWeapon}
+                    handleBuyFormula={handleBuyFormula}
+                    handleConsumeItem={handleConsumeItem}
+                    handleLongPress={handleLongPress}
+                    inspectInventoryItem={inspectInventoryItem}
+                    loadWeapon={loadWeapon}
+                    myActor={myActor}
+                    onGoToPage={selectPageId}
+                    ownedCompanionActors={ownedCompanionActors}
+                    playerQuests={playerQuests}
+                    rulesCharacter={rulesCharacter}
+                    runDataAction={runDataAction}
+                    setActionModal={setActionModal}
+                    setCatalogMode={setCatalogMode}
+                    setModalData={setModalData}
+                    setModalMode={setModalMode}
+                    toggleInventoryEquipped={toggleInventoryEquipped}
+                    updateCharacter={updateCharacter}
+                />
             </div>
 
-            {/* MODALS / FULL PAGE VIEWS */}
+            {/* MODALS */}
             <PactOfferModal
                 character={character}
                 db={db}
@@ -424,71 +314,6 @@ export default function PlayerAppController() {
                 dataActions={dataActions}
                 runDataAction={runDataAction}
             />
-
-            {
-                activeTab === 'items' && (
-                    <div>
-                        <InventoryView
-                            character={character}
-                            db={db}
-                            onUpdateCharacter={updateCharacter}
-                            onSaveCustomItem={(dbItem) => runDataAction(dataActions.globalContent.saveCustomItem(dbItem))}
-                            onOpenModal={(mode, data) => {
-                                setModalMode(mode);
-                                setModalData(data);
-                            }}
-                            onInspectItem={inspectInventoryItem}
-                            onConsumeItem={handleConsumeItem}
-                            onToggleEquip={toggleInventoryEquipped}
-                            onFireWeapon={fireWeapon}
-                            onLoadWeapon={loadWeapon}
-                            onLongPress={handleLongPress}
-                            onClaimLoot={(bag, item) => {
-                                if (!activeCampaign?.id || !character?.id) return;
-                                runDataAction(dataActions.loot.claimItem(activeCampaign.id, bag.id, item, character.id));
-                            }}
-                            onClaimGold={(bagId, amount) => {
-                                if (!activeCampaign?.id || !character?.id) return;
-                                runDataAction(dataActions.loot.claimGold(activeCampaign.id, bagId, character.id, amount));
-                            }}
-                            onSplitGold={(bagId) => {
-                                if (!activeCampaign?.id) return;
-                                runDataAction(dataActions.loot.splitGold(activeCampaign.id, bagId));
-                            }}
-                            onOpenShop={() => {
-                                setSelectedPlayerPageId(PLAYER_PAGE_IDS.SHOP);
-                                setActiveTab('shop');
-                            }}
-                        />
-                    </div>
-                )
-            }
-
-            {
-                activeTab === 'shop' && (
-                    <ShopView
-                        db={db}
-                        onInspectItem={(item) => {
-                            setModalData(item);
-                            setModalMode('item');
-                        }}
-                        onBuyItem={(item) => {
-                            const scrollMatch = item.name.match(/(?:Scroll of Rank (\d+)|Scroll of (\d+)(?:st|nd|rd|th)?-rank Spell)/i);
-                            const wandMatch = item.name.match(/(?:Wand of Rank (\d+)|Magic Wand \((\d+)(?:st|nd|rd|th)?-Rank Spell\))/i);
-
-                            if (scrollMatch) {
-                                setActionModal({ mode: 'SELECT_SPELL', rank: parseInt(scrollMatch[1] || scrollMatch[2]), type: 'scroll', baseItem: item });
-                            } else if (wandMatch) {
-                                setActionModal({ mode: 'SELECT_SPELL', rank: parseInt(wandMatch[1] || wandMatch[2]), type: 'wand', baseItem: item });
-                            } else {
-                                setActionModal({ mode: 'BUY_RESTOCK', item });
-                            }
-                        }}
-                        onBuyFormula={handleBuyFormula}
-                        knownFormulas={character.formulaBook || []}
-                    />
-                )
-            }
 
             {/* Item Actions Modal */}
             {actionModal.mode !== 'SELECT_SPELL' && (
@@ -622,8 +447,8 @@ export default function PlayerAppController() {
             <XpOverlay xpNotification={activeCampaign?.xpNotification} />
 
             <PlayerBottomNav
-                activePageId={activePlayerPageId}
-                onSelectPage={handleSelectPlayerPage}
+                activePageId={activePageId}
+                onSelectPage={selectPage}
                 hasLoot={hasPlayerLoot}
             />
         </div>

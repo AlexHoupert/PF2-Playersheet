@@ -1,12 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { getAllActionIndexItems } from '../../shared/catalog/actionIndex';
 import { calculateStat } from '../../utils/rules';
 import { parseFoundry, ACTION_ICONS } from '../../shared/utils/foundryParser';
 import { LongPressable } from '../../shared/components/LongPressable';
 import CampingView from '../../camping/CampingView';
 
-export function ActionsView({ character, onOpenModal, onLongPress }) {
-    const [activeTab, setActiveTab] = useState('Combat');
+export function ActionsView({ character, initialTab = 'Combat', onOpenModal, onLongPress }) {
+    const [activeTab, setActiveTab] = useState(initialTab);
+
+    useEffect(() => {
+        setActiveTab(initialTab);
+    }, [initialTab]);
 
     // 1. Collect Actions: Index based only (File System) & Flatten
     const categorizedActions = useMemo(() => {

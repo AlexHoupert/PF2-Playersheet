@@ -205,6 +205,26 @@ test('quest fallback reads stay centralized in selectors', () => {
     assert.match(gmSource, /selectQuestLists/);
 });
 
+test('player page cutover uses registry renderer instead of header mode switch', () => {
+    const playerSource = readSource('src/player/PlayerAppController.jsx');
+    const rendererSource = readSource('src/player/navigation/PlayerPageRenderer.jsx');
+    const hookSource = readSource('src/player/navigation/usePlayerPageNavigation.js');
+    const bottomNavSource = readSource('src/player/navigation/PlayerBottomNav.jsx');
+
+    assert.match(playerSource, /usePlayerPageNavigation/);
+    assert.match(playerSource, /PlayerPageRenderer/);
+    assert.match(playerSource, /PlayerDesktopNav/);
+    assert.equal(playerSource.includes('player-mode-toggle'), false);
+    assert.equal(playerSource.includes('usePlayerNavigation'), false);
+    assert.equal(playerSource.includes('activeTab ==='), false);
+    assert.equal(playerSource.includes('setAppMode'), false);
+    assert.match(rendererSource, /PLAYER_PAGE_IDS\.CRAFTING/);
+    assert.match(rendererSource, /PlayerPlaceholderPage/);
+    assert.match(hookSource, /playerPage/);
+    assert.match(hookSource, /playerTab/);
+    assert.equal(bottomNavSource.includes('disabled={Boolean(page.future)}'), false);
+});
+
 test('player basis edit modals use targeted character actions', () => {
     const sources = [
         'src/player/modals/ACModals.jsx',

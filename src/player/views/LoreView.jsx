@@ -11,7 +11,7 @@ import { selectLoreArticles } from '../../shared/db/selectors/loreSelectors';
 import { buildBestiaryCreatureEntries, selectVisibleCreatureFields } from '../../shared/bestiary/creaturePresentation';
 import { selectCatalogEntryStates } from '../../shared/db/selectors/catalogOverrideSelectors';
 
-const LORE_CATEGORIES = ['History', 'Locations', 'NPCs', 'Bestiary'];
+const LORE_CATEGORIES = ['History', 'Locations', 'NPCs', 'Bestiary', 'Other'];
 
 // --- Helper: Build Tree Structure from Flat List ---
 const buildTree = (items) => {
@@ -114,13 +114,21 @@ const TreeFolder = ({ name, node, level = 0, onSelect, selectedId, forceExpand =
 };
 
 
-export default function LoreView({ db, lore, bestiary }) {
+export default function LoreView({ db, lore, bestiary, initialCategory = null }) {
     // viewMode: 'tiles' (Initial) | 'book' (Reading)
     const [viewMode, setViewMode] = useState('tiles');
     const [currentCategory, setCurrentCategory] = useState(null);
     const [currentArticleId, setCurrentArticleId] = useState(null);
     const [historyStack, setHistoryStack] = useState([]);
     const selectorDb = useMemo(() => db || { lore, bestiary }, [db, lore, bestiary]);
+
+    useEffect(() => {
+        if (!initialCategory) return;
+        setCurrentCategory(initialCategory);
+        setViewMode('book');
+        setHistoryStack([]);
+        setCurrentArticleId(null);
+    }, [initialCategory]);
 
     // Data Patching for missing groups
     const articles = useMemo(() => {

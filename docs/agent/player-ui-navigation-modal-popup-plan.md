@@ -1,6 +1,6 @@
 # Player UI Navigation, Modal Focus, And Popup Hardening Plan
 
-Status: phase 2 complete
+Status: phase 3 complete
 Created: 2026-07-09
 
 ## Summary
@@ -220,7 +220,7 @@ Implementation steps:
   - old `items` -> `items.equipment` or last used item subpage
   - old `shop` -> `items.shop`
   - old `quests` -> `campaign.quests`
-- [ ] Add persistence helper:
+- [x] Add persistence helper:
   - use URL search params or localStorage to preserve the current category/subpage across reload;
   - preserve old `playerTab` links as compatibility input only.
 - [x] Add unit tests for old-tab-to-new-page mapping and availability decisions.
@@ -297,31 +297,31 @@ Replace the old `appMode + activeTab` render switch with the page registry.
 
 Implementation steps:
 
-- [ ] Replace `usePlayerNavigation` state with a new hook, e.g. `usePlayerPageNavigation`.
-- [ ] Keep a temporary compatibility setter:
+- [x] Replace `usePlayerNavigation` state with a new hook, e.g. `usePlayerPageNavigation`.
+- [x] Keep a temporary compatibility setter:
   - `goToLegacyTab('shop')` maps to `items.shop`;
   - `goToLegacyTab('quests')` maps to `campaign.quests`.
-- [ ] Move the view rendering switch out of `PlayerAppController.jsx` into a page renderer helper/component.
-- [ ] Remove the header character/story toggle once all old story tabs are reachable through bottom categories.
-- [ ] Keep GM character cycling and GM screen button in the header.
-- [ ] Wire existing direct navigation actions:
+- [x] Move the view rendering switch out of `PlayerAppController.jsx` into a page renderer helper/component.
+- [x] Remove the header character/story toggle once all old story tabs are reachable through bottom categories.
+- [x] Keep GM character cycling and GM screen button in the header.
+- [x] Wire existing direct navigation actions:
   - Inventory `onOpenShop` -> `items.shop`
   - item/loot indicators -> `items.loot` or category badge
   - quest links -> `campaign.quests`
-- [ ] Split existing broad views only where needed:
+- [x] Split existing broad views only where needed:
   - `ActionsView` may initially receive an initial category/subtype prop for Combat/Movement/General/Downtime/Camping.
   - `InventoryView` may initially receive an initial section/filter prop for Equipment/Consumables/Misc/Loot.
   - `LoreView` may initially receive an initial category prop for History/Locations/NPCs/Bestiary/Other.
-- [ ] Add placeholder pages for:
+- [x] Add placeholder pages for:
   - Character / Proficiencies
   - Skills / Exploration
   - Items / Crafting
 
 Success criteria:
 
-- [ ] Every target subpage is reachable from the bottom nav drawer.
-- [ ] The old header character/campaign switch is gone.
-- [ ] Existing player feature entry points still work:
+- [x] Every target subpage is reachable from the bottom nav drawer.
+- [x] The old header character/campaign switch is gone.
+- [x] Existing player feature entry points still work:
   - Open Shop
   - Loot
   - Quests
@@ -329,7 +329,27 @@ Success criteria:
   - Camp
   - Pact
   - Companion
-- [ ] `PlayerAppController.jsx` no longer owns a long inline tab render switch.
+- [x] `PlayerAppController.jsx` no longer owns a long inline tab render switch.
+
+### Phase 3 Implementation Notes
+
+- Replaced the old `usePlayerNavigation` hook with `src/player/navigation/usePlayerPageNavigation.js`.
+- Removed the header character/story toggle; GM character cycling and the GM screen button remain in the header.
+- Added `src/player/navigation/PlayerPageRenderer.jsx` so `PlayerAppController.jsx` no longer owns the full inline tab render switch.
+- Added `src/player/navigation/PlayerDesktopNav.jsx` so desktop can use the same category/page registry after the header toggle removal.
+- Added `src/player/navigation/PlayerPlaceholderPage.jsx` for Proficiencies, Exploration, and Crafting.
+- Existing broad views received narrow initial-page adapters:
+  - `ActionsView.initialTab`
+  - `InventoryView.initialSubTab`
+  - `LoreView.initialCategory`
+- `playerPage` URL param and localStorage persistence are supported by the new hook; old `playerTab/playerMode` params remain compatibility input.
+- Updated Playwright smoke helpers to use the new desktop category/page navigation instead of `player-mode-toggle`.
+- Added a static regression guard that blocks reintroducing the old header mode switch or controller-owned inline page switch.
+- Verification:
+  - `npm run check`
+  - `git diff --check`
+  - local Playwright desktop smoke for Quests, Loot, Magic, and Proficiencies placeholder.
+  - local Playwright mobile smoke for anchored drawer navigation, Crafting placeholder, and Quests.
 
 ## Phase 4: Swipe Between Subpages
 
