@@ -30,6 +30,13 @@ import { selectActorRulesViewModel } from '../shared/rules/actorRulesViewModel';
 import NotificationOverlay from './components/NotificationOverlay';
 import XpOverlay from './components/XpOverlay';
 import LazyCatalogOverlay from './components/LazyCatalogOverlay';
+import PlayerBottomNav from './navigation/PlayerBottomNav';
+import {
+    getLegacyNavigationForPlayerPage,
+    getPlayerPageForLegacyNavigation,
+    isPlayerPageCompatibleWithLegacyNavigation,
+    PLAYER_PAGE_IDS,
+} from './navigation/playerPageRegistry';
 export default function PlayerAppController() {
     const {
         activeCampaign,
@@ -82,6 +89,11 @@ export default function PlayerAppController() {
         modalMode,
         myCharacter,
     });
+
+    const [selectedPlayerPageId, setSelectedPlayerPageId] = useState(null);
+    const activePlayerPageId = selectedPlayerPageId && isPlayerPageCompatibleWithLegacyNavigation(selectedPlayerPageId, activeTab, appMode)
+        ? selectedPlayerPageId
+        : getPlayerPageForLegacyNavigation(activeTab, appMode);
 
     const actorRules = selectActorRulesViewModel(activeCampaign, myActor?.id || character?.id);
     const rulesCharacter = actorRules.character || character;
@@ -148,6 +160,19 @@ export default function PlayerAppController() {
         updateCharacter,
     });
 
+    const hasPlayerLoot = (
+        character?.inventory?.some(i => i.isLoot) ||
+        playerLootBags.some(b => !b.isLocked && (b.items || []).some(i => !i.claimedBy))
+    );
+
+    const handleSelectPlayerPage = (page) => {
+        const legacyTarget = getLegacyNavigationForPlayerPage(page.id);
+        if (!legacyTarget) return;
+        setSelectedPlayerPageId(page.id);
+        if (legacyTarget.appMode !== appMode) setAppMode(legacyTarget.appMode);
+        if (legacyTarget.activeTab !== activeTab) setActiveTab(legacyTarget.activeTab);
+    };
+
     // If no character found (e.g. empty campaign), guard against crash
     if (!character) {
         return (
@@ -182,7 +207,7 @@ export default function PlayerAppController() {
     // --- MAIN RENDER ---
 
     return (
-        <div className="app-container" ref={swipeRef} {...swipeHandlers} onClick={handleContentLinkClick}>
+        <div className="app-container player-nav-v2-active" ref={swipeRef} {...swipeHandlers} onClick={handleContentLinkClick}>
             {/* HEADER */}
             <style>{`
                 /* MAGIC TAB CSS */
@@ -299,10 +324,7 @@ export default function PlayerAppController() {
             {/* TABS */}
             <div className="tabs no-swipe">
                 {mainTabs.map(tab => {
-                    const hasLoot = tab === 'items' && (
-                        character?.inventory?.some(i => i.isLoot) ||
-                        playerLootBags.some(b => !b.isLocked && (b.items || []).some(i => !i.claimedBy))
-                    );
+                    const hasLoot = tab === 'items' && hasPlayerLoot;
                     return (
                         <button
                             key={tab}
@@ -433,7 +455,10 @@ export default function PlayerAppController() {
                                 if (!activeCampaign?.id) return;
                                 runDataAction(dataActions.loot.splitGold(activeCampaign.id, bagId));
                             }}
-                            onOpenShop={() => setActiveTab('shop')}
+                            onOpenShop={() => {
+                                setSelectedPlayerPageId(PLAYER_PAGE_IDS.SHOP);
+                                setActiveTab('shop');
+                            }}
                         />
                     </div>
                 )
@@ -595,6 +620,12 @@ export default function PlayerAppController() {
 
             {/* XP Overlay */}
             <XpOverlay xpNotification={activeCampaign?.xpNotification} />
+
+            <PlayerBottomNav
+                activePageId={activePlayerPageId}
+                onSelectPage={handleSelectPlayerPage}
+                hasLoot={hasPlayerLoot}
+            />
         </div>
     );
 }
