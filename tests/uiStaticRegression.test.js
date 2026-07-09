@@ -661,6 +661,44 @@ test('runtime feedback and debug logging use shared helpers in migrated surfaces
     assert.match(debugLogSource, /import\.meta\.env\.DEV/);
 });
 
+test('player blocking overlays register with the modal layer', () => {
+    const mainSource = readSource('src/main.jsx');
+    const modalLayerSource = readSource('src/shared/overlays/ModalLayerProvider.jsx');
+    const overlaySurfaceSource = readSource('src/shared/overlays/OverlaySurface.jsx');
+    const modalManagerSource = readSource('src/player/ModalManager.jsx');
+    const itemActionsSource = readSource('src/player/ItemActionsModal.jsx');
+    const spellSelectorSource = readSource('src/player/modals/SpellScrollSelectorModal.jsx');
+    const pactOfferSource = readSource('src/pacts/PactOfferModal.jsx');
+    const feedbackSource = readSource('src/shared/feedback/AppFeedback.jsx');
+    const bottomSheetSource = readSource('src/shared/components/BottomSheet.jsx');
+    const catalogOverlaySource = readSource('src/player/components/LazyCatalogOverlay.jsx');
+    const itemCatalogSource = readSource('src/player/ItemCatalog.jsx');
+    const notificationSource = readSource('src/player/components/NotificationOverlay.jsx');
+    const xpSource = readSource('src/player/components/XpOverlay.jsx');
+    const conditionsSource = readSource('src/player/modals/ConditionsModal.jsx');
+    const swipeSource = readSource('src/player/navigation/playerSubpageSwipe.js');
+
+    assert.match(mainSource, /ModalLayerProvider/);
+    assert.match(modalLayerSource, /registerModal/);
+    assert.match(modalLayerSource, /modalLayerGesturesSuspended/);
+    assert.match(overlaySurfaceSource, /modal-layer-scroll-body/);
+    assert.match(modalManagerSource, /ModalLayerMount/);
+    assert.match(itemActionsSource, /ModalLayerMount/);
+    assert.match(spellSelectorSource, /ModalLayerMount/);
+    assert.match(pactOfferSource, /ModalLayerMount/);
+    assert.match(feedbackSource, /OverlaySurface/);
+    assert.match(bottomSheetSource, /ModalLayerMount/);
+    assert.match(catalogOverlaySource, /ModalLayerMount/);
+    assert.match(itemCatalogSource, /data-player-interaction-lock/);
+    assert.match(notificationSource, /ModalLayerMount/);
+    assert.match(notificationSource, /suspendPageGestures: true/);
+    assert.match(xpSource, /ModalLayerMount/);
+    assert.match(xpSource, /suspendPageGestures: true/);
+    assert.match(swipeSource, /modalLayerGesturesSuspended/);
+    assert.equal(conditionsSource.includes('body.style.position'), false);
+    assert.equal(conditionsSource.includes("body.style.overflow = 'hidden'"), false);
+});
+
 test('runtime source does not use native browser dialogs', () => {
     const forbidden = [
         /window\.confirm/,
@@ -677,9 +715,12 @@ test('runtime source does not use native browser dialogs', () => {
     });
 
     const feedbackSource = readSource('src/shared/feedback/AppFeedback.jsx');
+    const overlaySurfaceSource = readSource('src/shared/overlays/OverlaySurface.jsx');
     assert.match(feedbackSource, /confirm: async/);
     assert.match(feedbackSource, /prompt: async/);
-    assert.match(feedbackSource, /role="dialog"/);
+    assert.match(feedbackSource, /OverlaySurface/);
+    assert.match(overlaySurfaceSource, /role = 'dialog'/);
+    assert.match(overlaySurfaceSource, /role=\{role\}/);
 });
 
 test('console log output is dev-gated through debugLog helper', () => {

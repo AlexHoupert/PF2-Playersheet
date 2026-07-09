@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ItemCatalog from '../ItemCatalog';
 import { mergeCatalogIndexWithOverrides } from '../../shared/db/selectors/catalogOverrideSelectors';
+import { ModalLayerMount } from '../../shared/overlays/ModalLayerProvider';
 
 const LOADERS = {
     feat: async () => {
@@ -56,7 +57,8 @@ export default function LazyCatalogOverlay({ mode, db, onSelect, onClose }) {
 
     if (state.loading) {
         return (
-            <div style={{
+            <ModalLayerMount id={`catalog-overlay-${mode}`}>
+            <div data-player-interaction-lock="true" style={{
                 position: 'fixed',
                 inset: 0,
                 background: 'rgba(0,0,0,0.85)',
@@ -68,12 +70,14 @@ export default function LazyCatalogOverlay({ mode, db, onSelect, onClose }) {
             }}>
                 Loading catalog...
             </div>
+            </ModalLayerMount>
         );
     }
 
     if (state.error || !state.config) {
         return (
-            <div style={{
+            <ModalLayerMount id={`catalog-overlay-${mode}`}>
+            <div data-player-interaction-lock="true" style={{
                 position: 'fixed',
                 inset: 0,
                 background: 'rgba(0,0,0,0.85)',
@@ -90,10 +94,12 @@ export default function LazyCatalogOverlay({ mode, db, onSelect, onClose }) {
                     <button className="set-btn" onClick={onClose}>Close</button>
                 </div>
             </div>
+            </ModalLayerMount>
         );
     }
 
     return (
+        <ModalLayerMount id={`catalog-overlay-${mode}`}>
         <ItemCatalog
             title={state.config.title}
             items={mergeCatalogIndexWithOverrides(state.config.items, db, mode)}
@@ -101,5 +107,6 @@ export default function LazyCatalogOverlay({ mode, db, onSelect, onClose }) {
             onSelect={onSelect}
             onClose={onClose}
         />
+        </ModalLayerMount>
     );
 }

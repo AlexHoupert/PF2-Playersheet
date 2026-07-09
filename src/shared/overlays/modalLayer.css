@@ -1,0 +1,66 @@
+.modal-layer-scroll-locked {
+    overscroll-behavior: none;
+}
+
+.modal-layer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 11000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.72);
+    overscroll-behavior: contain;
+    touch-action: none;
+}
+
+.modal-layer-surface {
+    width: min(560px, 100%);
+    max-height: calc(100dvh - 32px);
+    min-height: 0;
+    overflow: hidden;
+    outline: none;
+    border: 1px solid #c5a059;
+    border-radius: 8px;
+    background: #202020;
+    color: #eee;
+    box-shadow: 0 20px 54px rgba(0, 0, 0, 0.6);
+    touch-action: pan-y;
+}
+
+.modal-layer-scroll-body,
+.modal-layer-contained-scroll {
+    max-height: inherit;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
+
+.modal-layer-scroll-body {
+    padding: 18px;
+}
+
+.modal-overlay,
+.item-catalog-overlay {
+    overscroll-behavior: contain;
+    touch-action: none;
+}
+
+.modal-overlay > .modal-box,
+.modal-overlay > .modal-content,
+.item-catalog-overlay > *,
+[role="dialog"][aria-modal="true"] {
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+}
+
+.modal-overlay .modal-box,
+.modal-overlay .modal-content {
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+

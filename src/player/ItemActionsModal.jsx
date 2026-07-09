@@ -1,9 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { ModalLayerMount } from '../shared/overlays/ModalLayerProvider';
 import { shouldStack } from '../shared/utils/inventoryUtils';
 
 // MODES: 'BUY', 'QTY', 'TRANSFER', 'CONTEXT'
 
-export default function ItemActionsModal({ mode, item, characters, activeCharIndex, onClose, onBuy, onChangeQty, onTransfer, onUnstack, onLoadSpecial, onUnloadAll, onOpenMode, onEditProficiency }) {
+export default function ItemActionsModal(props) {
+    if (!props.mode || !props.item) return null;
+    return (
+        <ModalLayerMount id={`item-actions-${props.mode}`}>
+            <ItemActionsModalContent {...props} />
+        </ModalLayerMount>
+    );
+}
+
+function ItemActionsModalContent({ mode, item, characters, activeCharIndex, onClose, onBuy, onChangeQty, onTransfer, onUnstack, onLoadSpecial, onUnloadAll, onOpenMode, onEditProficiency }) {
     const [val, setVal] = useState(1);
     const [targetCharId, setTargetCharId] = useState('');
 
@@ -22,8 +32,6 @@ export default function ItemActionsModal({ mode, item, characters, activeCharInd
     const otherCharacters = useMemo(() => {
         return characters.map((c, i) => ({ name: c.name, index: i })).filter((c, i) => i !== activeCharIndex);
     }, [characters, activeCharIndex]);
-
-    if (!mode || !item) return null;
 
     // --- CONTEXT MENU ---
     if (mode === 'CONTEXT') {

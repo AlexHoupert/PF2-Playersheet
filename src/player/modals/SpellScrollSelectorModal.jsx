@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { SPELL_INDEX_ITEMS } from '../../shared/catalog/spellIndex';
 import { mergeCatalogIndexWithOverrides } from '../../shared/db/selectors/catalogOverrideSelectors';
+import { ModalLayerMount } from '../../shared/overlays/ModalLayerProvider';
 
 export default function SpellScrollSelectorModal({ rank, type, db, onSelect, onCancel, ignoreAvailability = false }) {
     const [search, setSearch] = useState('');
@@ -25,15 +26,20 @@ export default function SpellScrollSelectorModal({ rank, type, db, onSelect, onC
     }, [rank, type, search, ignoreAvailability, spellItems]);
 
     return (
-        <div style={{
+        <ModalLayerMount id={`spell-scroll-selector-${type}-${rank}`}>
+        <div data-player-interaction-lock="true" style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
             backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
+            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20,
+            overscrollBehavior: 'contain',
+            touchAction: 'none'
         }} onClick={onCancel}>
-            <div style={{
+            <div role="dialog" aria-modal="true" style={{
                 backgroundColor: '#2b2b2e', border: '1px solid #c5a059',
                 padding: '20px', borderRadius: '8px', maxWidth: '500px', width: '100%',
-                maxHeight: '80vh', display: 'flex', flexDirection: 'column'
+                maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+                overscrollBehavior: 'contain',
+                touchAction: 'pan-y'
             }} onClick={e => e.stopPropagation()}>
                 <h3 style={{ marginTop: 0, color: '#e0e0e0', borderBottom: '1px solid #444', paddingBottom: 10 }}>
                     Select Spell for {type === 'scroll' ? 'Scroll' : 'Wand'} (Rank {rank})
@@ -94,5 +100,6 @@ export default function SpellScrollSelectorModal({ rank, type, db, onSelect, onC
                 </div>
             </div>
         </div>
+        </ModalLayerMount>
     );
 }

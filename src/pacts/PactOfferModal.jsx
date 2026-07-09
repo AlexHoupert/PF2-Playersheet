@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FEAT_INDEX_ITEMS } from '../shared/catalog/featIndex';
 import { selectDeviantAbilityList } from '../shared/db/selectors/abilitySelectors';
+import { ModalLayerMount } from '../shared/overlays/ModalLayerProvider';
 import {
     resolvePactDedication,
     selectPactAbilityOptions,
@@ -69,7 +70,8 @@ export default function PactOfferModal({ character, db, activeCampaignId, dataAc
     const showMainDialog = !(isMobile && detailAbility);
 
     return (
-        <div style={overlayStyle}>
+        <ModalLayerMount id={`pact-offer-${offer.id}`}>
+        <div className="pact-offer-overlay" data-player-interaction-lock="true" style={overlayStyle}>
             {showMainDialog && (
             <div role="dialog" aria-modal="true" style={{ ...modalStyle, borderColor: el.color }}>
                 {step === 'offer' ? (
@@ -195,6 +197,7 @@ export default function PactOfferModal({ character, db, activeCampaignId, dataAc
                 </div>
             )}
         </div>
+        </ModalLayerMount>
     );
 }
 
@@ -271,6 +274,8 @@ const overlayStyle = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
+    overscrollBehavior: 'contain',
+    touchAction: 'none',
 };
 
 const modalStyle = {
@@ -283,6 +288,8 @@ const modalStyle = {
     boxShadow: '0 20px 54px rgba(0,0,0,0.6)',
     color: '#eee',
     padding: 18,
+    overscrollBehavior: 'contain',
+    touchAction: 'pan-y',
 };
 
 const detailsStyle = {

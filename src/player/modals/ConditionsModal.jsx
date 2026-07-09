@@ -73,36 +73,6 @@ export function ConditionsModal({
         }
     }, [initialCondition]);
 
-    // Lock background scroll while this modal is open (prevents the page behind from scrolling on mobile).
-    useEffect(() => {
-        const body = document.body;
-        const html = document.documentElement;
-
-        const prevBodyOverflow = body.style.overflow;
-        const prevBodyPosition = body.style.position;
-        const prevBodyTop = body.style.top;
-        const prevBodyWidth = body.style.width;
-        const prevHtmlOverflow = html.style.overflow;
-
-        const scrollY = window.scrollY || 0;
-
-        html.style.overflow = 'hidden';
-        body.style.overflow = 'hidden';
-        body.style.position = 'fixed';
-        body.style.top = `-${scrollY}px`;
-        body.style.width = '100%';
-
-        return () => {
-            html.style.overflow = prevHtmlOverflow;
-            body.style.overflow = prevBodyOverflow;
-            body.style.position = prevBodyPosition;
-            body.style.top = prevBodyTop;
-            body.style.width = prevBodyWidth;
-            window.scrollTo(0, scrollY);
-        };
-    }, []);
-
-
     // --- HELPERS ---
 
     const TABS = ['ACTIVE', 'NEGATIVE', 'POSITIVE', 'VISIBILITY'];
@@ -448,15 +418,16 @@ export function ConditionsModal({
     // --- WRAPPER RENDER ---
 
     return (
-        <div style={{
+        <div data-player-interaction-lock="true" style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
             backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 11000,
             display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20,
-            overscrollBehavior: 'none'
+            overscrollBehavior: 'none',
+            touchAction: 'none'
         }} onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
         }}>
-            <div style={{
+            <div role="dialog" aria-modal="true" style={{
                 backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
                 borderRadius: '8px', maxWidth: '500px', width: '100%',
                 color: '#e0e0e0',
@@ -464,7 +435,9 @@ export function ConditionsModal({
                 flexDirection: 'column',
                 maxHeight: '90vh',
                 height: '80vh', // Fixed height for consistency
-                position: 'relative'
+                position: 'relative',
+                overscrollBehavior: 'contain',
+                touchAction: 'pan-y'
             }} onClick={e => {
                 e.stopPropagation();
                 if (onContentLinkClick) onContentLinkClick(e);

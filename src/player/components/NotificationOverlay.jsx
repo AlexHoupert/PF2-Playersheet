@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { ModalLayerMount } from '../../shared/overlays/ModalLayerProvider';
 
 export default function NotificationOverlay({ queue = [], onClear }) {
     const [active, setActive] = useState(null); // The current notification object
@@ -62,6 +63,10 @@ export default function NotificationOverlay({ queue = [], onClear }) {
     else if (content.length > 25) sizeClass = 'text-small';
 
     return (
+        <ModalLayerMount
+            id={`player-notification-${active.id || 'active'}`}
+            options={{ blocking: false, lockPageScroll: false, suspendPageGestures: true }}
+        >
         <div className="notification-overlay">
             <div className={`notification-content type-${active.type}`}>
                 <div className={`notification-text ${sizeClass}`} style={{ color }}>{content}</div>
@@ -69,5 +74,6 @@ export default function NotificationOverlay({ queue = [], onClear }) {
 
 
         </div>
+        </ModalLayerMount>
     );
 }

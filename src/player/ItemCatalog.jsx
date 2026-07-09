@@ -68,10 +68,12 @@ export default function ItemCatalog({ title, items, filterOptions, onSelect, onC
     }, [search, filterTypes, filterTraits, filterRarities, filterCategories, itemsPerPage]);
 
     return (
-        <div className="item-catalog-overlay" style={{
+        <div className="item-catalog-overlay" data-player-interaction-lock="true" style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
             background: 'rgba(0,0,0,0.9)', zIndex: 9999, display: 'flex', flexDirection: 'column',
-            padding: 20
+            padding: 20,
+            overscrollBehavior: 'contain',
+            touchAction: 'none'
         }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <h2 style={{ margin: 0, color: '#c5a059' }}>{title}</h2>
@@ -131,7 +133,7 @@ export default function ItemCatalog({ title, items, filterOptions, onSelect, onC
             )}
 
             {/* List */}
-            <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.3)', borderRadius: 5, padding: 5 }}>
+            <div className="modal-layer-contained-scroll" style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.3)', borderRadius: 5, padding: 5 }}>
                 {paginatedItems.map((item, idx) => {
                     const hasLevel = item.level !== undefined && item.level !== null && item.level !== '';
                     return (

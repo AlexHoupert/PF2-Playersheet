@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import OverlaySurface from '../overlays/OverlaySurface';
 
 const FeedbackContext = createContext({
     notify: () => {},
@@ -175,38 +176,18 @@ function FeedbackDialog({ dialog, onClose }) {
     const cancel = () => onClose(isPrompt ? null : false);
 
     return (
-        <div
-            role="presentation"
-            data-testid="app-feedback-backdrop"
-            onMouseDown={(event) => {
-                if (event.target === event.currentTarget) cancel();
-            }}
-            style={{
-                position: 'fixed',
-                inset: 0,
-                background: 'rgba(0,0,0,0.62)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 16,
-                zIndex: 11000,
+        <OverlaySurface
+            id="app-feedback-dialog"
+            ariaLabelledBy="app-feedback-dialog-title"
+            backdropClassName="app-feedback-backdrop"
+            onBackdropClick={cancel}
+            onEscape={cancel}
+            contentStyle={{
+                width: 'min(440px, 100%)',
+                borderColor: dialog.danger ? '#d45a5a' : '#c5a059',
             }}
         >
-            <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="app-feedback-dialog-title"
-                data-testid="app-feedback-dialog"
-                style={{
-                    width: 'min(440px, 100%)',
-                    background: '#202020',
-                    border: `1px solid ${dialog.danger ? '#d45a5a' : '#c5a059'}`,
-                    borderRadius: 8,
-                    boxShadow: '0 18px 48px rgba(0,0,0,0.55)',
-                    color: '#eee',
-                    padding: 18,
-                }}
-            >
+            <div data-testid="app-feedback-dialog">
                 <h3
                     id="app-feedback-dialog-title"
                     style={{
@@ -263,6 +244,6 @@ function FeedbackDialog({ dialog, onClose }) {
                     </button>
                 </div>
             </div>
-        </div>
+        </OverlaySurface>
     );
 }

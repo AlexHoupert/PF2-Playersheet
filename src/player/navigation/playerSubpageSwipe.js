@@ -82,6 +82,7 @@ export function isPlayerSwipeExcludedTarget(target, selectors = PLAYER_SWIPE_EXC
 
 export function hasBlockingPlayerOverlay(doc = typeof document !== 'undefined' ? document : null) {
     if (!doc?.querySelector) return false;
+    if (doc.body?.dataset?.modalLayerGesturesSuspended === 'true') return true;
     return Boolean(doc.querySelector([
         '.modal-overlay',
         '.bottom-sheet-backdrop.open',

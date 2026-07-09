@@ -1,4 +1,5 @@
 import React from 'react';
+import { ModalLayerMount } from '../shared/overlays/ModalLayerProvider';
 
 // Previously Extracted Modals
 import { ConditionsModal } from './modals/ConditionsModal';
@@ -53,7 +54,18 @@ import { getShopIndexItemByName } from '../shared/catalog/shopIndex';
  * @param {Function} props.saveNewAction - Callback to save a new action.
  * @returns {JSX.Element|null}
  */
-export function ModalManager({
+export function ModalManager(props) {
+    const { modalMode } = props;
+    if (!modalMode) return null;
+
+    return (
+        <ModalLayerMount id={`player-modal-${modalMode}`}>
+            <ModalManagerContent {...props} />
+        </ModalLayerMount>
+    );
+}
+
+function ModalManagerContent({
     modalMode,
     setModalMode,
     modalData,
@@ -80,8 +92,6 @@ export function ModalManager({
     saveNewAction,
     onDailyPrep
 }) {
-
-    if (!modalMode) return null;
 
     // --- SIMPLE EDIT MODALS ---
 

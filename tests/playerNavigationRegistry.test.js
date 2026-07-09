@@ -13,6 +13,7 @@ import {
     buildPlayerInteractionLockState,
     getAdjacentPlayerSubpageId,
     getSwipeTargetPlayerPageId,
+    hasBlockingPlayerOverlay,
     isPlayerSwipeExcludedTarget,
     shouldCancelPlayerSubpageSwipeForVerticalScroll,
     shouldHandlePlayerSubpageSwipe,
@@ -105,4 +106,17 @@ test('player interaction lock covers known overlay states', () => {
     assert.equal(buildPlayerInteractionLockState({ catalogMode: 'spell' }), true);
     assert.equal(buildPlayerInteractionLockState({ navDrawerOpen: true }), true);
     assert.equal(buildPlayerInteractionLockState({ dailyPrepCount: 1 }), true);
+});
+
+test('player swipe guard respects modal layer gesture suspension', () => {
+    const doc = {
+        body: {
+            dataset: {
+                modalLayerGesturesSuspended: 'true',
+            },
+        },
+        querySelector: () => false,
+    };
+
+    assert.equal(hasBlockingPlayerOverlay(doc), true);
 });

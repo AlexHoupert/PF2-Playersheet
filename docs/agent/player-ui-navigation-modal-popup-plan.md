@@ -1,6 +1,6 @@
 # Player UI Navigation, Modal Focus, And Popup Hardening Plan
 
-Status: phase 4 complete
+Status: phase 5 complete
 Created: 2026-07-09
 
 ## Summary
@@ -409,23 +409,23 @@ Suggested files:
 
 Implementation steps:
 
-- [ ] Add a modal layer provider near `AppFeedbackProvider` or inside `App`.
-- [ ] Expose:
+- [x] Add a modal layer provider near `AppFeedbackProvider` or inside `App`.
+- [x] Expose:
   - `registerModal(id, options)`
   - `unregisterModal(id)`
   - `hasActiveModal`
   - `topModalId`
   - `lockPageScroll`
   - `suspendPageGestures`
-- [ ] Lock body/root scrolling while any blocking modal is active.
-- [ ] Apply stable scroll containment to modal bodies:
+- [x] Lock body/root scrolling while any blocking modal is active.
+- [x] Apply stable scroll containment to modal bodies:
   - `overflow-y: auto`
   - `overscroll-behavior: contain`
   - `touch-action: pan-y`
   - `-webkit-overflow-scrolling: touch`
-- [ ] Make background app content inert or pointer-disabled while a blocking modal is open.
-- [ ] Ensure focus starts inside the dialog and Escape/backdrop behavior is consistent.
-- [ ] Convert or wrap these surfaces first:
+- [x] Make background app content inert or pointer-disabled while a blocking modal is open.
+- [x] Ensure focus starts inside the dialog and Escape/backdrop behavior is consistent.
+- [x] Convert or wrap these surfaces first:
   - `ModalManager` modals
   - `ItemActionsModal`
   - `SpellScrollSelectorModal`
@@ -433,19 +433,41 @@ Implementation steps:
   - `AppFeedback` confirm/prompt dialog
   - `BottomSheet`
   - `LazyCatalogOverlay`
-- [ ] Then convert view-local sheets:
+- [x] Then convert view-local sheets:
   - `InventoryView` bottom sheet
   - `MapsView` pin sheets
   - `ProgressView` detail sheets
-- [ ] Remove ad-hoc body scroll locks once the central layer owns them.
+- [x] Remove ad-hoc body scroll locks once the central layer owns them.
 
 Success criteria:
 
-- [ ] On mobile, dragging inside a modal scrolls the modal content.
-- [ ] The background page does not move while a blocking modal is open.
-- [ ] Page swipe is disabled while any modal/sheet/popup is active.
-- [ ] All active overlays register with the modal layer.
-- [ ] No modal relies only on inline fixed overlay styles for scroll behavior.
+- [x] On mobile, dragging inside a modal scrolls the modal content.
+- [x] The background page does not move while a blocking modal is open.
+- [x] Page swipe is disabled while any modal/sheet/popup is active.
+- [x] All active overlays register with the modal layer.
+- [x] No modal relies only on inline fixed overlay styles for scroll behavior.
+
+### Phase 5 Implementation Notes
+
+- Added `src/shared/overlays/ModalLayerProvider.jsx` with modal registration, active stack state, root/body scroll locking, and a global `modalLayerGesturesSuspended` signal.
+- Added `src/shared/overlays/OverlaySurface.jsx` and `src/shared/overlays/modalLayer.css` for scroll-contained dialog bodies and safe backdrop touch handling.
+- Mounted `ModalLayerProvider` around the app in `src/main.jsx`.
+- Registered these blocking surfaces with the modal layer:
+  - `ModalManager`
+  - `ItemActionsModal`
+  - `SpellScrollSelectorModal`
+  - `PactOfferModal`
+  - `AppFeedback` confirm/prompt dialogs
+  - `BottomSheet`
+  - `LazyCatalogOverlay`
+- `BottomSheet` now gets body/root scroll locking from the modal layer. This automatically covers Inventory, Maps, Progress, Admin mobile sheets, and other BottomSheet consumers.
+- Removed the old ad-hoc body fixed-position lock from `ConditionsModal`.
+- XP and Notification overlays now register as non-blocking modal-layer entries that suspend page gestures without locking scroll.
+- The Player swipe guard now reads the modal layer gesture-suspension flag in addition to DOM overlay checks.
+- Static guards ensure the key Player blocking overlays remain registered and that the old Conditions body-lock does not return.
+- Verification:
+  - `node --test tests/playerNavigationRegistry.test.js tests/uiStaticRegression.test.js`
+  - `npm run build:app`
 
 ## Phase 6: Unified Player Popup Queue
 

@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
+import { ModalLayerMount } from '../../shared/overlays/ModalLayerProvider';
 
 const SEEN_KEY = 'pf2e-seen-xp-notifications';
 
@@ -35,6 +36,10 @@ export default function XpOverlay({ xpNotification }) {
     if (!active) return null;
 
     return (
+        <ModalLayerMount
+            id={`player-xp-${active.id || 'active'}`}
+            options={{ blocking: false, lockPageScroll: false, suspendPageGestures: true }}
+        >
         <div className="xp-overlay">
             <div className="xp-content">
                 <div className="xp-amount">+{active.amount} XP!!!</div>
@@ -85,5 +90,6 @@ export default function XpOverlay({ xpNotification }) {
                 }
             `}</style>
         </div>
+        </ModalLayerMount>
     );
 }

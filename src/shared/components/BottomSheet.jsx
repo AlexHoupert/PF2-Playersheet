@@ -9,25 +9,22 @@
  *   children     ReactNode
  */
 import React, { useEffect, useRef, useState } from 'react';
+import { ModalLayerMount } from '../overlays/ModalLayerProvider';
 import './BottomSheet.css';
 
 export default function BottomSheet({ isOpen, onClose, title, height = '70vh', children }) {
     const sheetRef = useRef(null);
+    const layerIdRef = useRef(`bottom-sheet-${Math.random().toString(36).slice(2)}`);
 
     // Drag-to-dismiss state
     const dragStart = useRef(null);
     const [dragOffset, setDragOffset] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
 
-    // Lock body scroll while open
     useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
+        if (!isOpen) {
             setDragOffset(0);
         }
-        return () => { document.body.style.overflow = ''; };
     }, [isOpen]);
 
     // Close on Escape
@@ -67,13 +64,17 @@ export default function BottomSheet({ isOpen, onClose, title, height = '70vh', c
     const translateY = isOpen ? dragOffset : '100%';
 
     return (
+        <ModalLayerMount id={layerIdRef.current} active={isOpen}>
         <div
             className={`bottom-sheet-backdrop ${isOpen ? 'open' : ''}`}
+            data-player-interaction-lock="true"
             onClick={onClose}
         >
             <div
                 ref={sheetRef}
                 className="bottom-sheet"
+                role="dialog"
+                aria-modal="true"
                 style={{ maxHeight: height, transform: `translateY(${typeof translateY === 'number' ? translateY + 'px' : translateY})` }}
                 onClick={e => e.stopPropagation()}
                 onMouseMove={onPointerMove}
@@ -99,10 +100,11 @@ export default function BottomSheet({ isOpen, onClose, title, height = '70vh', c
                 )}
 
                 {/* Content */}
-                <div className="bottom-sheet-content">
+                <div className="bottom-sheet-content modal-layer-contained-scroll">
                     {children}
                 </div>
             </div>
         </div>
+        </ModalLayerMount>
     );
 }
