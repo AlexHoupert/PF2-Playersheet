@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import skillsIcon from '../../assets/game-icons/skills.svg';
 import diceIcon from '../../assets/game-icons/dice-twenty-faces-twenty.svg';
 import drinkIcon from '../../assets/game-icons/drink-me.svg';
@@ -21,6 +21,7 @@ const CATEGORY_ICONS = {
 export default function PlayerBottomNav({
     activePageId,
     onSelectPage,
+    onDrawerOpenChange,
     hasLoot = false,
 }) {
     const activeCategoryId = getCategoryIdForPlayerPage(activePageId);
@@ -30,6 +31,14 @@ export default function PlayerBottomNav({
     const drawerCategory = useMemo(() => {
         return PLAYER_NAV_CATEGORIES.find((category) => category.id === drawerCategoryId) || PLAYER_NAV_CATEGORIES[0];
     }, [drawerCategoryId]);
+
+    useEffect(() => {
+        onDrawerOpenChange?.(Boolean(openCategoryId));
+    }, [onDrawerOpenChange, openCategoryId]);
+
+    useEffect(() => {
+        return () => onDrawerOpenChange?.(false);
+    }, [onDrawerOpenChange]);
 
     const openCategory = (categoryId) => {
         if (openCategoryId === categoryId) {

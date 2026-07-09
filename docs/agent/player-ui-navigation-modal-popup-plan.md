@@ -1,6 +1,6 @@
 # Player UI Navigation, Modal Focus, And Popup Hardening Plan
 
-Status: phase 3 complete
+Status: phase 4 complete
 Created: 2026-07-09
 
 ## Summary
@@ -362,24 +362,39 @@ Suggested files:
 
 Implementation steps:
 
-- [ ] Make swipe operate within the active category only.
-- [ ] Swiping left/right changes to previous/next subpage in that category.
-- [ ] Disable page swipe when any modal, drawer, bottom sheet, popup, feedback dialog, item action modal, or catalog overlay is active.
-- [ ] Improve event filtering:
+- [x] Make swipe operate within the active category only.
+- [x] Swiping left/right changes to previous/next subpage in that category.
+- [x] Disable page swipe when any modal, drawer, bottom sheet, popup, feedback dialog, item action modal, or catalog overlay is active.
+- [x] Improve event filtering:
   - ignore gestures starting inside scrollable modal content;
   - ignore horizontal scroll areas;
   - ignore form controls and rich text editors;
   - do not treat normal vertical scroll as a swipe.
-- [ ] Add a central `isInteractionLocked` or modal-layer signal instead of checking only `modalMode`.
-- [ ] Keep threshold high enough to avoid accidental page changes during table/list scrolling.
-- [ ] Add tests for registry subpage ordering and swipe target selection.
+- [x] Add a central `isInteractionLocked` or modal-layer signal instead of checking only `modalMode`.
+- [x] Keep threshold high enough to avoid accidental page changes during table/list scrolling.
+- [x] Add tests for registry subpage ordering and swipe target selection.
 
 Success criteria:
 
-- [ ] Mobile swipe changes subpages inside a category.
-- [ ] Vertical scrolling does not change pages.
-- [ ] Swiping inside a dialog does not move the background page.
-- [ ] Drawer and popup states suspend page swipe.
+- [x] Mobile swipe changes subpages inside a category.
+- [x] Vertical scrolling does not change pages.
+- [x] Swiping inside a dialog does not move the background page.
+- [x] Drawer and popup states suspend page swipe.
+
+### Phase 4 Implementation Notes
+
+- Added `src/player/navigation/playerSubpageSwipe.js` for pure subpage ordering, horizontal/vertical gesture decisions, target exclusions, and interaction-lock state.
+- Added `src/player/navigation/usePlayerSubpageSwipe.js` and connected it through `usePlayerPageNavigation`.
+- Swipe does not wrap between categories. Reaching the first or last page in a category is a no-op.
+- `PlayerAppController` now builds one Player interaction lock from ModalManager, item actions, catalog overlays, nav drawer state, notifications, XP, and daily prep state.
+- The swipe hook also checks DOM overlays such as BottomSheets, feedback dialogs, item catalog overlays, and modal overlays at gesture start/end so view-local sheets suspend page navigation.
+- The hook uses Pointer Events for the primary mobile path and keeps Touch Events as a fallback.
+- `PlayerBottomNav` reports drawer open/closed state to the controller.
+- Actor rules normalization now preserves `feats`, `actions`, and `impulses` arrays so swiping into Feats/Impulses cannot crash on actor-shaped data.
+- Tests cover category-local page order, horizontal-vs-vertical gesture filtering, excluded targets, and interaction-lock states.
+- Verification:
+  - `node --test tests/acAndWandRules.test.js tests/playerNavigationRegistry.test.js tests/uiStaticRegression.test.js`
+  - local Playwright/CDP mobile smoke for horizontal subpage swipe, vertical scroll guard, and drawer-open swipe lock.
 
 ## Phase 5: Modal Focus And Scroll Containment
 

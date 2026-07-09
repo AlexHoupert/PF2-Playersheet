@@ -161,6 +161,9 @@ test('actor rules viewmodel normalizes incomplete actor shapes', () => {
 
     assert.deepEqual(viewModel.character.skills, {});
     assert.deepEqual(viewModel.character.inventory, []);
+    assert.deepEqual(viewModel.character.feats, []);
+    assert.deepEqual(viewModel.character.actions, []);
+    assert.deepEqual(viewModel.character.impulses, []);
     assert.equal(viewModel.character.stats.hp.current, 0);
     assert.equal(viewModel.character.stats.hp.max, 1);
     assert.equal(viewModel.character.stats.speed.land, 25);

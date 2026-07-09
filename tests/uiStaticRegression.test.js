@@ -210,10 +210,14 @@ test('player page cutover uses registry renderer instead of header mode switch',
     const rendererSource = readSource('src/player/navigation/PlayerPageRenderer.jsx');
     const hookSource = readSource('src/player/navigation/usePlayerPageNavigation.js');
     const bottomNavSource = readSource('src/player/navigation/PlayerBottomNav.jsx');
+    const swipeSource = readSource('src/player/navigation/usePlayerSubpageSwipe.js');
+    const swipeCoreSource = readSource('src/player/navigation/playerSubpageSwipe.js');
 
     assert.match(playerSource, /usePlayerPageNavigation/);
     assert.match(playerSource, /PlayerPageRenderer/);
     assert.match(playerSource, /PlayerDesktopNav/);
+    assert.match(playerSource, /buildPlayerInteractionLockState/);
+    assert.match(playerSource, /onDrawerOpenChange=\{setPlayerNavDrawerOpen\}/);
     assert.equal(playerSource.includes('player-mode-toggle'), false);
     assert.equal(playerSource.includes('usePlayerNavigation'), false);
     assert.equal(playerSource.includes('activeTab ==='), false);
@@ -222,7 +226,12 @@ test('player page cutover uses registry renderer instead of header mode switch',
     assert.match(rendererSource, /PlayerPlaceholderPage/);
     assert.match(hookSource, /playerPage/);
     assert.match(hookSource, /playerTab/);
+    assert.match(hookSource, /usePlayerSubpageSwipe/);
     assert.equal(bottomNavSource.includes('disabled={Boolean(page.future)}'), false);
+    assert.match(bottomNavSource, /onDrawerOpenChange/);
+    assert.match(swipeSource, /hasBlockingPlayerOverlay/);
+    assert.match(swipeCoreSource, /bottom-sheet-backdrop\.open/);
+    assert.match(swipeCoreSource, /item-catalog-overlay/);
 });
 
 test('player basis edit modals use targeted character actions', () => {

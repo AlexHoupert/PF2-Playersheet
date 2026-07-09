@@ -48,6 +48,8 @@ export function normalizeCharacterRuntimeShape(character) {
   next.formulaBook = ensureArray(next.formulaBook);
   next.languages = ensureArray(next.languages);
   next.senses = ensureArray(next.senses);
+  next.feats = ensureArray(next.feats);
+  next.actions = ensureArray(next.actions);
   if (
     next.proficiencies === undefined ||
     next.proficiencies === null ||
@@ -72,7 +74,7 @@ export function normalizeCharacterRuntimeShape(character) {
   next.stats.speed.land = Math.max(0, normalizeNumber(next.stats.speed.land, 25));
   next.stats.ac.shield_raised = normalizeBoolean(next.stats.ac.shield_raised);
   next.stats.ac.armor_equipped = normalizeBoolean(next.stats.ac.armor_equipped);
-  if (!Array.isArray(next.impulses)) next.impulses = [];
+  next.impulses = ensureArray(next.impulses);
   if (next.stats.impulse_proficiency == null) next.stats.impulse_proficiency = 0;
   if (next.stats.spell_proficiency == null) next.stats.spell_proficiency = 0;
   if (next.isKineticist === undefined) next.isKineticist = false;

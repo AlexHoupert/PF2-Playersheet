@@ -18,6 +18,7 @@ import LazyCatalogOverlay from './components/LazyCatalogOverlay';
 import PlayerBottomNav from './navigation/PlayerBottomNav';
 import PlayerDesktopNav from './navigation/PlayerDesktopNav';
 import PlayerPageRenderer from './navigation/PlayerPageRenderer';
+import { buildPlayerInteractionLockState } from './navigation/playerSubpageSwipe';
 import { usePlayerPageNavigation } from './navigation/usePlayerPageNavigation';
 export default function PlayerAppController() {
     const {
@@ -49,8 +50,20 @@ export default function PlayerAppController() {
     } = usePlayerModalState();
 
     const [dailyPrepQueue, setDailyPrepQueue] = useState([]);
+    const [playerNavDrawerOpen, setPlayerNavDrawerOpen] = useState(false);
     const ownedCompanionActors = (ownedActors || [])
         .filter(actor => ['animal_companion', 'familiar', 'pet'].includes(actor.kind));
+    const playerNotificationQueue = [
+        ...(activeCampaign?.notificationQueue || []),
+        ...(db?.notificationQueue || []),
+    ];
+    const isPlayerInteractionLocked = buildPlayerInteractionLockState({
+        modalMode,
+        actionModalMode: actionModal.mode,
+        catalogMode,
+        navDrawerOpen: playerNavDrawerOpen,
+        dailyPrepCount: dailyPrepQueue.length,
+    });
 
     const {
         activeCharIndex,
@@ -64,6 +77,7 @@ export default function PlayerAppController() {
         swipeRef,
     } = usePlayerPageNavigation({
         activeCampaign,
+        isInteractionLocked: isPlayerInteractionLocked,
         myCharacter,
     });
 
@@ -439,7 +453,7 @@ export default function PlayerAppController() {
 
             {/* Notification Overlay */}
             <NotificationOverlay
-                queue={[...(activeCampaign?.notificationQueue || []), ...(db.notificationQueue || [])]}
+                queue={playerNotificationQueue}
                 onClear={handleClearNotification}
             />
 
@@ -449,6 +463,7 @@ export default function PlayerAppController() {
             <PlayerBottomNav
                 activePageId={activePageId}
                 onSelectPage={selectPage}
+                onDrawerOpenChange={setPlayerNavDrawerOpen}
                 hasLoot={hasPlayerLoot}
             />
         </div>

@@ -5,11 +5,13 @@ import {
     getPlayerPageForLegacyNavigation,
     PLAYER_PAGE_IDS,
 } from './playerPageRegistry';
+import { usePlayerSubpageSwipe } from './usePlayerSubpageSwipe';
 
 const PLAYER_PAGE_STORAGE_KEY = 'pf2.player.activePageId';
 
 export function usePlayerPageNavigation({
     activeCampaign,
+    isInteractionLocked = false,
     myCharacter,
 }) {
     const [activeCharIndex, setActiveCharIndex] = useState(0);
@@ -49,6 +51,12 @@ export function usePlayerPageNavigation({
         selectPageId(getPlayerPageForLegacyNavigation(activeTab, appMode));
     };
 
+    const swipeHandlers = usePlayerSubpageSwipe({
+        activePageId,
+        disabled: isInteractionLocked,
+        onSelectPageId: selectPageId,
+    });
+
     return {
         activeCharIndex,
         activePageId,
@@ -58,7 +66,7 @@ export function usePlayerPageNavigation({
         selectPage,
         selectPageId,
         setActiveCharIndex,
-        swipeHandlers: {},
+        swipeHandlers,
         swipeRef,
     };
 }
