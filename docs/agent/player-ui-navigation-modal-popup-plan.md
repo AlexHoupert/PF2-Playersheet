@@ -1,6 +1,6 @@
 # Player UI Navigation, Modal Focus, And Popup Hardening Plan
 
-Status: phase 6 complete
+Status: phase 7 complete
 Created: 2026-07-09
 
 ## Summary
@@ -543,48 +543,59 @@ This phase makes the new shell feel intentional rather than just functional.
 
 Implementation steps:
 
-- [ ] Define a compact Player bottom-nav visual system:
+- [x] Define a compact Player bottom-nav visual system:
   - dark rail;
   - gold active state;
   - muted inactive state;
   - clear tap targets;
   - no decorative clutter.
-- [ ] Define drawer layout:
+- [x] Define drawer layout:
   - category title;
   - subpage list;
   - small per-entry icons from `https://game-icons.net/` so drawer items have distinct visual personality;
   - active subpage indicator;
   - short disabled/dummy label where appropriate.
-- [ ] Add drawer item icon mapping:
+- [x] Add drawer item icon mapping:
   - choose a suitable `game-icons.net` icon for every drawer entry, not only the five main categories;
   - keep icon style consistent in size, color treatment, and inactive opacity;
   - cache/import icons through the existing asset strategy instead of hotlinking remote images at runtime.
-- [ ] Rework the active subpage tabs below the header into a wrapping carousel:
+- [x] Rework the active subpage tabs below the header into a wrapping carousel:
   - keep the current gold-framed tab language;
   - active tab is centered;
   - two neighboring tabs are fully readable but inactive/muted;
   - one additional tab edge is partially visible on each side and fades toward the screen edge;
   - swipe changes the page and the active carousel tab in one synchronized animation.
-- [ ] Add concise empty states for unavailable content:
+- [x] Add concise empty states for unavailable content:
   - no pact yet;
   - no companion yet;
   - not a caster;
   - not a kineticist;
   - dummy future pages.
-- [ ] Add subtle motion:
+- [x] Add subtle motion:
   - drawer opens upward from nav border;
   - active drawer item transitions;
   - popup transitions are consistent with existing dramatic PF2 style but deduped.
-- [ ] Keep typography scaled for dense app UI, not a marketing page.
+- [x] Keep typography scaled for dense app UI, not a marketing page.
 
 Success criteria:
 
-- [ ] Navigation is faster to scan than the old horizontal tab list.
-- [ ] Drawer entries have distinct, readable icons without making the drawer noisy.
-- [ ] Header subpage tabs behave as a centered wrapping carousel and stay synced with swipe navigation.
-- [ ] Drawer motion is clear but not noisy.
-- [ ] Text fits on small mobile widths.
-- [ ] The active page is obvious from bottom icon, drawer state, and carousel tab state.
+- [x] Navigation is faster to scan than the old horizontal tab list.
+- [x] Drawer entries have distinct, readable icons without making the drawer noisy.
+- [x] Header subpage tabs behave as a centered wrapping carousel and stay synced with swipe navigation.
+- [x] Drawer motion is clear but not noisy.
+- [x] Text fits on small mobile widths.
+- [x] The active page is obvious from bottom icon, drawer state, and carousel tab state.
+
+### Phase 7 Implementation Notes
+
+- Added page-level icon keys to `src/player/navigation/playerPageRegistry.js`.
+- Added local Game-icons SVG assets under `src/assets/game-icons/` and updated `src/assets/game-icons/ATTRIBUTION.md`.
+- Added `src/player/navigation/playerNavIcons.js` as the shared local icon map for bottom nav, drawer entries, and carousel tabs.
+- Added `src/player/navigation/PlayerSubpageCarousel.jsx` and `getPlayerSubpageCarouselItems(...)` for the centered, wrapping subpage tab projection.
+- `PlayerDesktopNav` now uses the carousel for active subpages; on mobile the category row is hidden but the carousel remains visible below the header.
+- Drawer entries now display compact per-page icons, retain loot indicators, and use the same local icon assets as the carousel.
+- Verification:
+  - `node --test tests/playerNavigationRegistry.test.js tests/uiStaticRegression.test.js`
 
 ## Phase 8: Tests, Smokes, And Static Guards
 

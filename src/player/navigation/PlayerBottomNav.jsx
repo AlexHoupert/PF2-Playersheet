@@ -1,22 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import skillsIcon from '../../assets/game-icons/skills.svg';
-import diceIcon from '../../assets/game-icons/dice-twenty-faces-twenty.svg';
-import drinkIcon from '../../assets/game-icons/drink-me.svg';
-import bookmarkletIcon from '../../assets/game-icons/bookmarklet.svg';
-import treasureMapIcon from '../../assets/game-icons/treasure-map.svg';
 import {
     getCategoryIdForPlayerPage,
     PLAYER_NAV_CATEGORIES,
 } from './playerPageRegistry';
+import { getPlayerNavIconSrc } from './playerNavIcons';
 import './playerNavigation.css';
-
-const CATEGORY_ICONS = {
-    skills: skillsIcon,
-    'dice-twenty-faces-twenty': diceIcon,
-    'drink-me': drinkIcon,
-    bookmarklet: bookmarkletIcon,
-    'treasure-map': treasureMapIcon,
-};
 
 export default function PlayerBottomNav({
     activePageId,
@@ -78,6 +66,7 @@ export default function PlayerBottomNav({
                     {drawerCategory.pages.map((page) => {
                         const active = page.id === activePageId;
                         const hasPageLoot = page.alertKey === 'loot' && hasLoot;
+                        const iconSrc = getPlayerNavIconSrc(page.icon);
                         return (
                             <button
                                 key={page.id}
@@ -86,6 +75,9 @@ export default function PlayerBottomNav({
                                 onClick={() => selectPage(page)}
                                 data-testid={`player-nav-page-${page.id}`}
                             >
+                                <span className="player-category-drawer__page-icon-wrap">
+                                    <img src={iconSrc} alt="" className="player-category-drawer__page-icon" />
+                                </span>
                                 <span className="player-category-drawer__page-main">
                                     <span>{page.label}</span>
                                     {hasPageLoot && <span className="player-nav-alert-dot" aria-label="New loot" />}
@@ -100,7 +92,7 @@ export default function PlayerBottomNav({
                 {PLAYER_NAV_CATEGORIES.map((category) => {
                     const active = category.id === activeCategoryId;
                     const open = category.id === openCategoryId;
-                    const iconSrc = CATEGORY_ICONS[category.icon];
+                    const iconSrc = getPlayerNavIconSrc(category.icon);
                     const categoryHasLoot = category.id === 'items' && hasLoot;
                     return (
                         <button

@@ -4,6 +4,7 @@ import {
     getCategoryIdForPlayerPage,
     getLegacyNavigationForPlayerPage,
     getPlayerPageForLegacyNavigation,
+    getPlayerSubpageCarouselItems,
     isFuturePlayerPage,
     isPlayerPageCompatibleWithLegacyNavigation,
     PLAYER_NAV_CATEGORIES,
@@ -27,6 +28,25 @@ test('player navigation registry exposes the five planned mobile categories', ()
         'knowledge',
         'campaign',
     ]);
+});
+
+test('player navigation registry gives every drawer page a local icon key', () => {
+    const missingIcons = PLAYER_NAV_CATEGORIES.flatMap((category) =>
+        category.pages
+            .filter((page) => !page.icon)
+            .map((page) => `${category.id}:${page.id}`)
+    );
+
+    assert.deepEqual(missingIcons, []);
+});
+
+test('player subpage carousel centers the active page and wraps neighbors', () => {
+    const items = getPlayerSubpageCarouselItems(PLAYER_PAGE_IDS.COMBAT);
+
+    assert.equal(items.find((item) => item.offset === 0).page.id, PLAYER_PAGE_IDS.COMBAT);
+    assert.equal(items.find((item) => item.offset === -1).page.id, PLAYER_PAGE_IDS.CAMPING_SKILLS);
+    assert.equal(items.find((item) => item.offset === 1).page.id, PLAYER_PAGE_IDS.MOVEMENT);
+    assert.ok(items.some((item) => item.state === 'edge'));
 });
 
 test('player navigation registry maps old player tabs to new page ids', () => {

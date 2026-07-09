@@ -210,6 +210,8 @@ test('player page cutover uses registry renderer instead of header mode switch',
     const rendererSource = readSource('src/player/navigation/PlayerPageRenderer.jsx');
     const hookSource = readSource('src/player/navigation/usePlayerPageNavigation.js');
     const bottomNavSource = readSource('src/player/navigation/PlayerBottomNav.jsx');
+    const carouselSource = readSource('src/player/navigation/PlayerSubpageCarousel.jsx');
+    const iconSource = readSource('src/player/navigation/playerNavIcons.js');
     const swipeSource = readSource('src/player/navigation/usePlayerSubpageSwipe.js');
     const swipeCoreSource = readSource('src/player/navigation/playerSubpageSwipe.js');
 
@@ -228,7 +230,12 @@ test('player page cutover uses registry renderer instead of header mode switch',
     assert.match(hookSource, /playerTab/);
     assert.match(hookSource, /usePlayerSubpageSwipe/);
     assert.equal(bottomNavSource.includes('disabled={Boolean(page.future)}'), false);
+    assert.match(bottomNavSource, /getPlayerNavIconSrc\(page\.icon\)/);
     assert.match(bottomNavSource, /onDrawerOpenChange/);
+    assert.match(carouselSource, /getPlayerSubpageCarouselItems/);
+    assert.match(carouselSource, /getPlayerNavIconSrc\(page\.icon\)/);
+    assert.match(iconSource, /heart-beats/);
+    assert.match(iconSource, /rolled-cloth/);
     assert.match(swipeSource, /hasBlockingPlayerOverlay/);
     assert.match(swipeCoreSource, /bottom-sheet-backdrop\.open/);
     assert.match(swipeCoreSource, /item-catalog-overlay/);

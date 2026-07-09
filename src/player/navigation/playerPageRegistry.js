@@ -43,13 +43,13 @@ export const PLAYER_NAV_CATEGORIES = [
         label: 'Character',
         icon: 'skills',
         pages: [
-            { id: PLAYER_PAGE_IDS.STATUS, label: 'Status', legacyTab: 'stats', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.FEATS, label: 'Feats', legacyTab: 'feats', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.MAGIC, label: 'Magic', legacyTab: 'magic', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.IMPULSES, label: 'Impulses', legacyTab: 'impulses', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.PACT, label: 'Pact', legacyTab: 'pact', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.COMPANION, label: 'Companion', legacyTab: 'companion', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.PROFICIENCIES, label: 'Proficiencies', future: true },
+            { id: PLAYER_PAGE_IDS.STATUS, label: 'Status', legacyTab: 'stats', legacyMode: 'character', icon: 'heart-beats' },
+            { id: PLAYER_PAGE_IDS.FEATS, label: 'Feats', legacyTab: 'feats', legacyMode: 'character', icon: 'laurels-trophy' },
+            { id: PLAYER_PAGE_IDS.MAGIC, label: 'Magic', legacyTab: 'magic', legacyMode: 'character', icon: 'magic-swirl' },
+            { id: PLAYER_PAGE_IDS.IMPULSES, label: 'Impulses', legacyTab: 'impulses', legacyMode: 'character', icon: 'lightning-arc' },
+            { id: PLAYER_PAGE_IDS.PACT, label: 'Pact', legacyTab: 'pact', legacyMode: 'character', icon: 'shaking-hands' },
+            { id: PLAYER_PAGE_IDS.COMPANION, label: 'Companion', legacyTab: 'companion', legacyMode: 'character', icon: 'wolf-head' },
+            { id: PLAYER_PAGE_IDS.PROFICIENCIES, label: 'Proficiencies', future: true, icon: 'crossed-swords' },
         ],
     },
     {
@@ -57,12 +57,12 @@ export const PLAYER_NAV_CATEGORIES = [
         label: 'Skills',
         icon: 'dice-twenty-faces-twenty',
         pages: [
-            { id: PLAYER_PAGE_IDS.COMBAT, label: 'Combat', legacyTab: 'actions', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.MOVEMENT, label: 'Movement', legacyTab: 'actions', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.GENERAL, label: 'General', legacyTab: 'actions', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.DOWNTIME, label: 'Downtime', legacyTab: 'actions', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.EXPLORATION, label: 'Exploration', future: true },
-            { id: PLAYER_PAGE_IDS.CAMPING_SKILLS, label: 'Camping', legacyTab: 'actions', legacyMode: 'character' },
+            { id: PLAYER_PAGE_IDS.COMBAT, label: 'Combat', legacyTab: 'actions', legacyMode: 'character', icon: 'crossed-swords' },
+            { id: PLAYER_PAGE_IDS.MOVEMENT, label: 'Movement', legacyTab: 'actions', legacyMode: 'character', icon: 'running-shoe' },
+            { id: PLAYER_PAGE_IDS.GENERAL, label: 'General', legacyTab: 'actions', legacyMode: 'character', icon: 'skills' },
+            { id: PLAYER_PAGE_IDS.DOWNTIME, label: 'Downtime', legacyTab: 'actions', legacyMode: 'character', icon: 'hourglass' },
+            { id: PLAYER_PAGE_IDS.EXPLORATION, label: 'Exploration', future: true, icon: 'compass' },
+            { id: PLAYER_PAGE_IDS.CAMPING_SKILLS, label: 'Camping', legacyTab: 'actions', legacyMode: 'character', icon: 'campfire' },
         ],
     },
     {
@@ -70,12 +70,12 @@ export const PLAYER_NAV_CATEGORIES = [
         label: 'Items',
         icon: 'drink-me',
         pages: [
-            { id: PLAYER_PAGE_IDS.EQUIPMENT, label: 'Equipment', legacyTab: 'items', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.CONSUMABLES, label: 'Consumables', legacyTab: 'items', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.MISC, label: 'Misc.', legacyTab: 'items', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.SHOP, label: 'Shop', legacyTab: 'shop', legacyMode: 'character' },
-            { id: PLAYER_PAGE_IDS.CRAFTING, label: 'Crafting', future: true },
-            { id: PLAYER_PAGE_IDS.LOOT, label: 'Loot', legacyTab: 'items', legacyMode: 'character', alertKey: 'loot' },
+            { id: PLAYER_PAGE_IDS.EQUIPMENT, label: 'Equipment', legacyTab: 'items', legacyMode: 'character', icon: 'backpack' },
+            { id: PLAYER_PAGE_IDS.CONSUMABLES, label: 'Consumables', legacyTab: 'items', legacyMode: 'character', icon: 'potion-ball' },
+            { id: PLAYER_PAGE_IDS.MISC, label: 'Misc.', legacyTab: 'items', legacyMode: 'character', icon: 'swap-bag' },
+            { id: PLAYER_PAGE_IDS.SHOP, label: 'Shop', legacyTab: 'shop', legacyMode: 'character', icon: 'cash' },
+            { id: PLAYER_PAGE_IDS.CRAFTING, label: 'Crafting', future: true, icon: 'hammer-nails' },
+            { id: PLAYER_PAGE_IDS.LOOT, label: 'Loot', legacyTab: 'items', legacyMode: 'character', alertKey: 'loot', icon: 'locked-chest' },
         ],
     },
     {
@@ -83,11 +83,11 @@ export const PLAYER_NAV_CATEGORIES = [
         label: 'Knowledge',
         icon: 'bookmarklet',
         pages: [
-            { id: PLAYER_PAGE_IDS.HISTORY, label: 'History', legacyTab: 'lore', legacyMode: 'story' },
-            { id: PLAYER_PAGE_IDS.LOCATIONS, label: 'Locations', legacyTab: 'lore', legacyMode: 'story' },
-            { id: PLAYER_PAGE_IDS.NPCS, label: 'NPCs', legacyTab: 'lore', legacyMode: 'story' },
-            { id: PLAYER_PAGE_IDS.BESTIARY, label: 'Bestiary', legacyTab: 'lore', legacyMode: 'story' },
-            { id: PLAYER_PAGE_IDS.OTHER, label: 'Other', legacyTab: 'lore', legacyMode: 'story' },
+            { id: PLAYER_PAGE_IDS.HISTORY, label: 'History', legacyTab: 'lore', legacyMode: 'story', icon: 'scroll-quill' },
+            { id: PLAYER_PAGE_IDS.LOCATIONS, label: 'Locations', legacyTab: 'lore', legacyMode: 'story', icon: 'world' },
+            { id: PLAYER_PAGE_IDS.NPCS, label: 'NPCs', legacyTab: 'lore', legacyMode: 'story', icon: 'cloak-dagger' },
+            { id: PLAYER_PAGE_IDS.BESTIARY, label: 'Bestiary', legacyTab: 'lore', legacyMode: 'story', icon: 'monster-grasp' },
+            { id: PLAYER_PAGE_IDS.OTHER, label: 'Other', legacyTab: 'lore', legacyMode: 'story', icon: 'bookshelf' },
         ],
     },
     {
@@ -95,10 +95,10 @@ export const PLAYER_NAV_CATEGORIES = [
         label: 'Campaign',
         icon: 'treasure-map',
         pages: [
-            { id: PLAYER_PAGE_IDS.QUESTS, label: 'Quests', legacyTab: 'quests', legacyMode: 'story' },
-            { id: PLAYER_PAGE_IDS.PROGRESS, label: 'Progress', legacyTab: 'progress', legacyMode: 'story' },
-            { id: PLAYER_PAGE_IDS.MAPS, label: 'Maps', legacyTab: 'maps', legacyMode: 'story' },
-            { id: PLAYER_PAGE_IDS.CAMP, label: 'Camp', legacyTab: 'camp', legacyMode: 'story' },
+            { id: PLAYER_PAGE_IDS.QUESTS, label: 'Quests', legacyTab: 'quests', legacyMode: 'story', icon: 'rolled-cloth' },
+            { id: PLAYER_PAGE_IDS.PROGRESS, label: 'Progress', legacyTab: 'progress', legacyMode: 'story', icon: 'progression' },
+            { id: PLAYER_PAGE_IDS.MAPS, label: 'Maps', legacyTab: 'maps', legacyMode: 'story', icon: 'treasure-map' },
+            { id: PLAYER_PAGE_IDS.CAMP, label: 'Camp', legacyTab: 'camp', legacyMode: 'story', icon: 'campfire' },
         ],
     },
 ];
@@ -164,8 +164,37 @@ export function getCategoryIdForPlayerPage(pageId) {
     return getPlayerPage(pageId)?.categoryId || PLAYER_CATEGORY_IDS.CHARACTER;
 }
 
+export function getPlayerSubpageCarouselItems(pageId, radius = 2) {
+    const page = getPlayerPage(pageId);
+    const category = getPlayerCategory(page?.categoryId);
+    const pages = category?.pages || [];
+    if (!page || pages.length === 0) return [];
+
+    const activeIndex = pages.findIndex((entry) => entry.id === page.id);
+    if (activeIndex === -1) return [];
+
+    const seen = new Set();
+    const items = [];
+    for (let offset = -radius; offset <= radius; offset += 1) {
+        const index = wrapIndex(activeIndex + offset, pages.length);
+        const entry = pages[index];
+        if (!entry || seen.has(entry.id)) continue;
+        seen.add(entry.id);
+        items.push({
+            page: entry,
+            offset,
+            state: offset === 0 ? 'active' : Math.abs(offset) === 1 ? 'neighbor' : 'edge',
+        });
+    }
+    return items;
+}
+
 export function isFuturePlayerPage(pageId) {
     return Boolean(getPlayerPage(pageId)?.future);
+}
+
+function wrapIndex(index, length) {
+    return ((index % length) + length) % length;
 }
 
 function inferModeForLegacyTab(activeTab) {
