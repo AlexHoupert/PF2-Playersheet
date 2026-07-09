@@ -552,8 +552,19 @@ Implementation steps:
 - [ ] Define drawer layout:
   - category title;
   - subpage list;
+  - small per-entry icons from `https://game-icons.net/` so drawer items have distinct visual personality;
   - active subpage indicator;
   - short disabled/dummy label where appropriate.
+- [ ] Add drawer item icon mapping:
+  - choose a suitable `game-icons.net` icon for every drawer entry, not only the five main categories;
+  - keep icon style consistent in size, color treatment, and inactive opacity;
+  - cache/import icons through the existing asset strategy instead of hotlinking remote images at runtime.
+- [ ] Rework the active subpage tabs below the header into a wrapping carousel:
+  - keep the current gold-framed tab language;
+  - active tab is centered;
+  - two neighboring tabs are fully readable but inactive/muted;
+  - one additional tab edge is partially visible on each side and fades toward the screen edge;
+  - swipe changes the page and the active carousel tab in one synchronized animation.
 - [ ] Add concise empty states for unavailable content:
   - no pact yet;
   - no companion yet;
@@ -569,9 +580,11 @@ Implementation steps:
 Success criteria:
 
 - [ ] Navigation is faster to scan than the old horizontal tab list.
+- [ ] Drawer entries have distinct, readable icons without making the drawer noisy.
+- [ ] Header subpage tabs behave as a centered wrapping carousel and stay synced with swipe navigation.
 - [ ] Drawer motion is clear but not noisy.
 - [ ] Text fits on small mobile widths.
-- [ ] The active page is obvious from both bottom icon and drawer state.
+- [ ] The active page is obvious from bottom icon, drawer state, and carousel tab state.
 
 ## Phase 8: Tests, Smokes, And Static Guards
 
