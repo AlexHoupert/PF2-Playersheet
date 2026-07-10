@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { selectActiveCharacters } from '../../shared/db/selectors/characterSelectors';
 import {
+    buildPlayerNavigationContext,
     getPlayerPage,
     getPlayerPageForLegacyNavigation,
+    getVisiblePlayerPage,
+    getVisiblePlayerPageId,
     PLAYER_PAGE_IDS,
 } from './playerPageRegistry';
 import { usePlayerSubpageSwipe } from './usePlayerSubpageSwipe';
@@ -13,12 +16,17 @@ export function usePlayerPageNavigation({
     activeCampaign,
     isInteractionLocked = false,
     myCharacter,
+    ownedCompanionActors = [],
 }) {
     const [activeCharIndex, setActiveCharIndex] = useState(0);
     const [activePageId, setActivePageId] = useState(readInitialPageId);
     const characters = useMemo(() => selectActiveCharacters(activeCampaign), [activeCampaign]);
     const character = characters[activeCharIndex];
     const swipeRef = useRef(null);
+    const navigationContext = useMemo(
+        () => buildPlayerNavigationContext({ character, ownedCompanionActors }),
+        [character, ownedCompanionActors]
+    );
 
     useEffect(() => {
         if (myCharacter && characters.length) {
@@ -36,16 +44,23 @@ export function usePlayerPageNavigation({
         }
     }, [activePageId]);
 
-    const selectPageId = (pageId) => {
-        const page = getPlayerPage(pageId);
+    useEffect(() => {
+        const visiblePageId = getVisiblePlayerPageId(activePageId, navigationContext);
+        if (visiblePageId !== activePageId) {
+            setActivePageId(visiblePageId);
+        }
+    }, [activePageId, navigationContext]);
+
+    const selectPageId = useCallback((pageId) => {
+        const page = getVisiblePlayerPage(pageId, navigationContext);
         if (!page) return;
         setActivePageId(page.id);
-    };
+    }, [navigationContext]);
 
-    const selectPage = (page) => {
+    const selectPage = useCallback((page) => {
         if (!page?.id) return;
         selectPageId(page.id);
-    };
+    }, [selectPageId]);
 
     const goToLegacyTab = (activeTab, appMode) => {
         selectPageId(getPlayerPageForLegacyNavigation(activeTab, appMode));
@@ -54,6 +69,7 @@ export function usePlayerPageNavigation({
     const swipeHandlers = usePlayerSubpageSwipe({
         activePageId,
         disabled: isInteractionLocked,
+        navigationContext,
         onSelectPageId: selectPageId,
     });
 
@@ -63,6 +79,7 @@ export function usePlayerPageNavigation({
         character,
         characters,
         goToLegacyTab,
+        navigationContext,
         selectPage,
         selectPageId,
         setActiveCharIndex,

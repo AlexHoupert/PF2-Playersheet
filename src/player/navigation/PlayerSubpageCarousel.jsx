@@ -2,18 +2,19 @@ import React from 'react';
 import { Carousel, CarouselContent, CarouselItem } from '../../components/ui/carousel';
 import {
     getCategoryIdForPlayerPage,
-    getPlayerCategory,
+    getVisiblePlayerCategory,
 } from './playerPageRegistry';
 import { getPlayerNavIconSrc } from './playerNavIcons';
 
 export default function PlayerSubpageCarousel({
     activePageId,
+    navigationContext,
     hasLoot = false,
     onSelectPage,
 }) {
     const [api, setApi] = React.useState(null);
     const categoryId = getCategoryIdForPlayerPage(activePageId);
-    const pages = getPlayerCategory(categoryId)?.pages || [];
+    const pages = getVisiblePlayerCategory(categoryId, navigationContext)?.pages || [];
     const activeIndex = Math.max(0, pages.findIndex((page) => page.id === activePageId));
 
     React.useEffect(() => {

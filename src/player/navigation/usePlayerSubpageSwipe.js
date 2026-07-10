@@ -11,6 +11,7 @@ import {
 export function usePlayerSubpageSwipe({
     activePageId,
     disabled = false,
+    navigationContext,
     onSelectPageId,
     threshold = PLAYER_SWIPE_THRESHOLD,
 }) {
@@ -18,10 +19,12 @@ export function usePlayerSubpageSwipe({
     const activePointerIdRef = useRef(null);
     const pointerStartedAtRef = useRef(0);
     const disabledRef = useRef(Boolean(disabled));
+    const navigationContextRef = useRef(navigationContext);
     const activePageIdRef = useRef(activePageId);
     const onSelectPageIdRef = useRef(onSelectPageId);
 
     disabledRef.current = Boolean(disabled);
+    navigationContextRef.current = navigationContext;
     activePageIdRef.current = activePageId;
     onSelectPageIdRef.current = onSelectPageId;
 
@@ -67,7 +70,7 @@ export function usePlayerSubpageSwipe({
         const distanceY = start.y - y;
         if (!shouldHandlePlayerSubpageSwipe({ distanceX, distanceY, threshold })) return;
 
-        const targetPageId = getSwipeTargetPlayerPageId(activePageIdRef.current, distanceX);
+        const targetPageId = getSwipeTargetPlayerPageId(activePageIdRef.current, distanceX, navigationContextRef.current);
         if (targetPageId) {
             onSelectPageIdRef.current?.(targetPageId);
         }

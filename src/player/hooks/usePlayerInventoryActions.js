@@ -129,13 +129,36 @@ export function usePlayerInventoryActions({
         };
     };
 
-    const pressEvents = (item, type) => ({
-        onContextMenu: (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleLongPress(item, type);
-        }
-    });
+    const pressEvents = (item, type) => {
+        const start = () => {
+            if (longPressTimer.current) clearTimeout(longPressTimer.current);
+            longPressTimer.current = setTimeout(() => {
+                handleLongPress(item, type);
+                longPressTimer.current = null;
+            }, 600);
+        };
+        const cancel = () => {
+            if (longPressTimer.current) {
+                clearTimeout(longPressTimer.current);
+                longPressTimer.current = null;
+            }
+        };
+        return {
+            onContextMenu: (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                cancel();
+                handleLongPress(item, type);
+            },
+            onMouseDown: start,
+            onMouseUp: cancel,
+            onMouseLeave: cancel,
+            onTouchStart: start,
+            onTouchEnd: cancel,
+            onTouchMove: cancel,
+            onTouchCancel: cancel,
+        };
+    };
 
     const isBasicAmmo = (item) =>
         /^(arrows?|bolts?|rounds?\s*\()/i.test(item?.name || '') ||

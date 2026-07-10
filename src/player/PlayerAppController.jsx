@@ -67,6 +67,7 @@ export default function PlayerAppController() {
         activePageId,
         character,
         characters,
+        navigationContext,
         selectPage,
         selectPageId,
         setActiveCharIndex,
@@ -76,6 +77,7 @@ export default function PlayerAppController() {
         activeCampaign,
         isInteractionLocked: isPlayerInteractionLocked,
         myCharacter,
+        ownedCompanionActors,
     });
 
     const actorRules = selectActorRulesViewModel(activeCampaign, myActor?.id || character?.id);
@@ -281,6 +283,7 @@ export default function PlayerAppController() {
 
             <PlayerDesktopNav
                 activePageId={activePageId}
+                navigationContext={navigationContext}
                 onSelectPage={selectPage}
                 hasLoot={hasPlayerLoot}
             />
@@ -289,6 +292,7 @@ export default function PlayerAppController() {
             <div className="view-section">
                 <PlayerPageCarousel
                     activePageId={activePageId}
+                    navigationContext={navigationContext}
                     onSelectPageId={selectPageId}
                     rendererProps={{
                         activeCampaign,
@@ -456,6 +460,7 @@ export default function PlayerAppController() {
 
             <PlayerBottomNav
                 activePageId={activePageId}
+                navigationContext={navigationContext}
                 onSelectPage={selectPage}
                 onDrawerOpenChange={setPlayerNavDrawerOpen}
                 hasLoot={hasPlayerLoot}

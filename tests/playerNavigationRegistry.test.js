@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+    buildPlayerNavigationContext,
     getCategoryIdForPlayerPage,
     getLegacyNavigationForPlayerPage,
     getPlayerPageForLegacyNavigation,
     getPlayerSubpageCarouselItems,
+    getVisiblePlayerNavCategories,
+    getVisiblePlayerPageId,
     isFuturePlayerPage,
     isPlayerPageCompatibleWithLegacyNavigation,
     PLAYER_NAV_CATEGORIES,
@@ -98,6 +101,50 @@ test('player subpage swipe stays within the active category', () => {
     assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.QUESTS, 'previous'), PLAYER_PAGE_IDS.CAMP);
     assert.equal(getSwipeTargetPlayerPageId(PLAYER_PAGE_IDS.EQUIPMENT, 80), PLAYER_PAGE_IDS.CONSUMABLES);
     assert.equal(getSwipeTargetPlayerPageId(PLAYER_PAGE_IDS.EQUIPMENT, -80), PLAYER_PAGE_IDS.LOOT);
+});
+
+test('player navigation hides optional magic impulse and companion pages when unavailable', () => {
+    const navigationContext = buildPlayerNavigationContext({
+        character: {
+            stats: {},
+            magic: { list: [], slots: {} },
+            impulses: [],
+            isCaster: false,
+            isKineticist: false,
+        },
+        ownedCompanionActors: [],
+    });
+    const characterPages = getVisiblePlayerNavCategories(navigationContext)
+        .find((category) => category.id === 'character')
+        .pages
+        .map((page) => page.id);
+
+    assert.deepEqual(characterPages, [
+        PLAYER_PAGE_IDS.STATUS,
+        PLAYER_PAGE_IDS.FEATS,
+        PLAYER_PAGE_IDS.PACT,
+        PLAYER_PAGE_IDS.PROFICIENCIES,
+    ]);
+    assert.equal(getVisiblePlayerPageId(PLAYER_PAGE_IDS.MAGIC, navigationContext), PLAYER_PAGE_IDS.STATUS);
+    assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.FEATS, 'next', navigationContext), PLAYER_PAGE_IDS.PACT);
+});
+
+test('player navigation shows optional pages when the character has matching features', () => {
+    const navigationContext = buildPlayerNavigationContext({
+        character: {
+            isCaster: true,
+            impulses: [{ name: 'Elemental Blast' }],
+        },
+        ownedCompanionActors: [{ id: 'wolf', kind: 'animal_companion' }],
+    });
+    const characterPages = getVisiblePlayerNavCategories(navigationContext)
+        .find((category) => category.id === 'character')
+        .pages
+        .map((page) => page.id);
+
+    assert.ok(characterPages.includes(PLAYER_PAGE_IDS.MAGIC));
+    assert.ok(characterPages.includes(PLAYER_PAGE_IDS.IMPULSES));
+    assert.ok(characterPages.includes(PLAYER_PAGE_IDS.COMPANION));
 });
 
 test('player subpage swipe distinguishes horizontal navigation from vertical scroll', () => {

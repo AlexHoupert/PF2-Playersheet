@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     getCategoryIdForPlayerPage,
-    PLAYER_NAV_CATEGORIES,
+    getVisiblePlayerNavCategories,
 } from './playerPageRegistry';
 import { getPlayerNavIconSrc } from './playerNavIcons';
 import './playerNavigation.css';
 
 export default function PlayerBottomNav({
     activePageId,
+    navigationContext,
     onSelectPage,
     onDrawerOpenChange,
     hasLoot = false,
@@ -15,10 +16,14 @@ export default function PlayerBottomNav({
     const activeCategoryId = getCategoryIdForPlayerPage(activePageId);
     const [openCategoryId, setOpenCategoryId] = useState(null);
     const [drawerCategoryId, setDrawerCategoryId] = useState(activeCategoryId);
+    const visibleCategories = useMemo(
+        () => getVisiblePlayerNavCategories(navigationContext),
+        [navigationContext]
+    );
 
     const drawerCategory = useMemo(() => {
-        return PLAYER_NAV_CATEGORIES.find((category) => category.id === drawerCategoryId) || PLAYER_NAV_CATEGORIES[0];
-    }, [drawerCategoryId]);
+        return visibleCategories.find((category) => category.id === drawerCategoryId) || visibleCategories[0];
+    }, [drawerCategoryId, visibleCategories]);
 
     useEffect(() => {
         onDrawerOpenChange?.(Boolean(openCategoryId));
@@ -89,7 +94,7 @@ export default function PlayerBottomNav({
                 </div>
             </section>
             <nav className="player-bottom-nav" aria-label="Player navigation">
-                {PLAYER_NAV_CATEGORIES.map((category) => {
+                {visibleCategories.map((category) => {
                     const active = category.id === activeCategoryId;
                     const open = category.id === openCategoryId;
                     const iconSrc = getPlayerNavIconSrc(category.icon);

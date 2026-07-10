@@ -45,10 +45,10 @@ export const PLAYER_NAV_CATEGORIES = [
         pages: [
             { id: PLAYER_PAGE_IDS.STATUS, label: 'Status', legacyTab: 'stats', legacyMode: 'character', icon: 'heart-beats' },
             { id: PLAYER_PAGE_IDS.FEATS, label: 'Feats', legacyTab: 'feats', legacyMode: 'character', icon: 'laurels-trophy' },
-            { id: PLAYER_PAGE_IDS.MAGIC, label: 'Magic', legacyTab: 'magic', legacyMode: 'character', icon: 'magic-swirl' },
-            { id: PLAYER_PAGE_IDS.IMPULSES, label: 'Impulses', legacyTab: 'impulses', legacyMode: 'character', icon: 'lightning-arc' },
+            { id: PLAYER_PAGE_IDS.MAGIC, label: 'Magic', legacyTab: 'magic', legacyMode: 'character', icon: 'magic-swirl', requires: 'magic' },
+            { id: PLAYER_PAGE_IDS.IMPULSES, label: 'Impulses', legacyTab: 'impulses', legacyMode: 'character', icon: 'lightning-arc', requires: 'impulses' },
             { id: PLAYER_PAGE_IDS.PACT, label: 'Pact', legacyTab: 'pact', legacyMode: 'character', icon: 'shaking-hands' },
-            { id: PLAYER_PAGE_IDS.COMPANION, label: 'Companion', legacyTab: 'companion', legacyMode: 'character', icon: 'wolf-head' },
+            { id: PLAYER_PAGE_IDS.COMPANION, label: 'Companion', legacyTab: 'companion', legacyMode: 'character', icon: 'wolf-head', requires: 'companion' },
             { id: PLAYER_PAGE_IDS.PROFICIENCIES, label: 'Proficiencies', future: true, icon: 'crossed-swords' },
         ],
     },
@@ -115,13 +115,51 @@ export function getPlayerCategory(categoryId) {
     return CATEGORY_BY_ID.get(categoryId) || null;
 }
 
+export function getVisiblePlayerNavCategories(navigationContext = {}) {
+    const capabilities = normalizeNavigationCapabilities(navigationContext);
+    return PLAYER_NAV_CATEGORIES
+        .map((category) => ({
+            ...category,
+            pages: category.pages.filter((page) => isPlayerPageVisible(page, capabilities)),
+        }))
+        .filter((category) => category.pages.length > 0);
+}
+
+export function getVisiblePlayerCategory(categoryId, navigationContext = {}) {
+    return getVisiblePlayerNavCategories(navigationContext).find((category) => category.id === categoryId) || null;
+}
+
 export function getPlayerPage(pageId) {
     return PAGE_BY_ID.get(pageId) || null;
+}
+
+export function getVisiblePlayerPage(pageId, navigationContext = {}) {
+    const page = getPlayerPage(pageId);
+    if (!page) return null;
+    return isPlayerPageVisible(page, normalizeNavigationCapabilities(navigationContext)) ? page : null;
 }
 
 export function getDefaultPageForCategory(categoryId) {
     const category = getPlayerCategory(categoryId);
     return category?.pages?.[0] || null;
+}
+
+export function getDefaultVisiblePageForCategory(categoryId, navigationContext = {}) {
+    const category = getVisiblePlayerCategory(categoryId, navigationContext);
+    return category?.pages?.[0] || null;
+}
+
+export function getVisiblePlayerPageId(pageId, navigationContext = {}) {
+    const requestedPage = getVisiblePlayerPage(pageId, navigationContext);
+    if (requestedPage) return requestedPage.id;
+
+    const staticPage = getPlayerPage(pageId);
+    const sameCategoryDefault = staticPage
+        ? getDefaultVisiblePageForCategory(staticPage.categoryId, navigationContext)
+        : null;
+    if (sameCategoryDefault) return sameCategoryDefault.id;
+
+    return getVisiblePlayerNavCategories(navigationContext)[0]?.pages?.[0]?.id || PLAYER_PAGE_IDS.STATUS;
 }
 
 export function getPlayerPageForLegacyNavigation(activeTab, appMode) {
@@ -193,10 +231,71 @@ export function isFuturePlayerPage(pageId) {
     return Boolean(getPlayerPage(pageId)?.future);
 }
 
+export function buildPlayerNavigationContext({ character, ownedCompanionActors } = {}) {
+    return {
+        hasMagic: characterHasMagic(character),
+        hasImpulses: characterHasImpulses(character),
+        hasCompanion: characterHasCompanion(character, ownedCompanionActors),
+    };
+}
+
+export function characterHasMagic(character) {
+    if (!character) return false;
+    if (character.isCaster) return true;
+    if ((character.magic?.list || []).length > 0) return true;
+    if (Number(character.stats?.spell_proficiency || 0) > 0) return true;
+
+    const slots = character.magic?.slots || {};
+    return Object.entries(slots).some(([key, value]) =>
+        String(key).endsWith('_max') && Number(value || 0) > 0
+    );
+}
+
+export function characterHasImpulses(character) {
+    if (!character) return false;
+    if (character.isKineticist) return true;
+    if ((character.impulses || []).length > 0) return true;
+    return Number(character.stats?.impulse_proficiency || 0) > 0;
+}
+
+export function characterHasCompanion(character, ownedCompanionActors = []) {
+    if ((ownedCompanionActors || []).length > 0) return true;
+    if (character?.has_companion) return true;
+    return Boolean(character?.companion);
+}
+
 function wrapIndex(index, length) {
     return ((index % length) + length) % length;
 }
 
 function inferModeForLegacyTab(activeTab) {
     return ['quests', 'lore', 'maps', 'progress', 'camp'].includes(activeTab) ? 'story' : 'character';
+}
+
+function normalizeNavigationCapabilities(navigationContext = {}) {
+    if (
+        Object.prototype.hasOwnProperty.call(navigationContext, 'hasMagic') ||
+        Object.prototype.hasOwnProperty.call(navigationContext, 'hasImpulses') ||
+        Object.prototype.hasOwnProperty.call(navigationContext, 'hasCompanion')
+    ) {
+        return {
+            hasMagic: Boolean(navigationContext.hasMagic),
+            hasImpulses: Boolean(navigationContext.hasImpulses),
+            hasCompanion: Boolean(navigationContext.hasCompanion),
+        };
+    }
+
+    return {
+        hasMagic: true,
+        hasImpulses: true,
+        hasCompanion: true,
+    };
+}
+
+function isPlayerPageVisible(page, capabilities) {
+    if (!page?.requires) return true;
+    if (page.requires === 'magic') return capabilities.hasMagic;
+    if (page.requires === 'impulses') return capabilities.hasImpulses;
+    if (page.requires === 'companion') return capabilities.hasCompanion;
+    return true;
 }

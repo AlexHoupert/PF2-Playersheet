@@ -1,20 +1,22 @@
 import React from 'react';
 import {
     getCategoryIdForPlayerPage,
-    PLAYER_NAV_CATEGORIES,
+    getVisiblePlayerNavCategories,
 } from './playerPageRegistry';
 import PlayerSubpageCarousel from './PlayerSubpageCarousel';
 
 export default function PlayerDesktopNav({
     activePageId,
+    navigationContext,
     onSelectPage,
     hasLoot = false,
 }) {
     const activeCategoryId = getCategoryIdForPlayerPage(activePageId);
+    const visibleCategories = getVisiblePlayerNavCategories(navigationContext);
     return (
         <nav className="player-desktop-nav no-swipe" aria-label="Player page navigation">
             <div className="player-desktop-nav__categories">
-                {PLAYER_NAV_CATEGORIES.map(category => (
+                {visibleCategories.map(category => (
                     <button
                         key={category.id}
                         type="button"
@@ -28,6 +30,7 @@ export default function PlayerDesktopNav({
             </div>
             <PlayerSubpageCarousel
                 activePageId={activePageId}
+                navigationContext={navigationContext}
                 hasLoot={hasLoot}
                 onSelectPage={onSelectPage}
             />

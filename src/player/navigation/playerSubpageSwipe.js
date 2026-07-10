@@ -1,7 +1,7 @@
 import {
     getCategoryIdForPlayerPage,
-    getPlayerCategory,
     getPlayerPage,
+    getVisiblePlayerCategory,
 } from './playerPageRegistry.js';
 
 export const PLAYER_SWIPE_THRESHOLD = 108;
@@ -28,14 +28,14 @@ export const PLAYER_SWIPE_EXCLUDE_SELECTORS = [
     'a',
 ];
 
-export function getPlayerSubpagesForActivePage(pageId) {
+export function getPlayerSubpagesForActivePage(pageId, navigationContext) {
     const categoryId = getCategoryIdForPlayerPage(pageId);
-    return getPlayerCategory(categoryId)?.pages || [];
+    return getVisiblePlayerCategory(categoryId, navigationContext)?.pages || [];
 }
 
-export function getAdjacentPlayerSubpageId(pageId, direction) {
+export function getAdjacentPlayerSubpageId(pageId, direction, navigationContext) {
     if (!getPlayerPage(pageId)) return null;
-    const pages = getPlayerSubpagesForActivePage(pageId);
+    const pages = getPlayerSubpagesForActivePage(pageId, navigationContext);
     const index = pages.findIndex((page) => page.id === pageId);
     if (index === -1) return null;
     if (pages.length <= 1) return null;
@@ -45,9 +45,9 @@ export function getAdjacentPlayerSubpageId(pageId, direction) {
     return pages[wrappedIndex]?.id || null;
 }
 
-export function getSwipeTargetPlayerPageId(pageId, distanceX) {
+export function getSwipeTargetPlayerPageId(pageId, distanceX, navigationContext) {
     if (!distanceX) return null;
-    return getAdjacentPlayerSubpageId(pageId, distanceX > 0 ? 'next' : 'previous');
+    return getAdjacentPlayerSubpageId(pageId, distanceX > 0 ? 'next' : 'previous', navigationContext);
 }
 
 export function shouldHandlePlayerSubpageSwipe({
