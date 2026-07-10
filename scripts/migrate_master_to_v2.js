@@ -1,8 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { initializeApp } from 'firebase/app';
-import { doc, getDoc, initializeFirestore, terminate } from 'firebase/firestore';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { initializeApp } = require('firebase/app');
+const { doc, getDoc, initializeFirestore, terminate } = require('firebase/firestore');
 import { normalizeMasterToV2 } from '../src/shared/db/v2/normalizers.js';
 import { writeMasterMigrationToV2 } from '../src/shared/db/v2/firestoreMigration.js';
 

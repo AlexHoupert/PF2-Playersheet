@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { calculateStat } from '../../utils/rules';
 import { getArmorClassData } from '../../shared/hooks/useCharacterStats';
 import { resolveEffectModifiersForSelectors } from '../../shared/rules/effectResolver';
+import { isDefeatedCombatant } from '../../shared/encounter/turnOrder';
 import './InitiativeCard.css';
 
 const InitiativeCard = forwardRef(function InitiativeCard({
@@ -26,6 +27,7 @@ const InitiativeCard = forwardRef(function InitiativeCard({
     combatantEffects = [],
     effectBadges = [],
     revealState,         // { hp: 'precise'|'estimate'|'hidden' } — only relevant for creatures on player screen
+    falseData = {},
 }, ref) {
     const [editingInit, setEditingInit] = useState(false);
     const [editingHp, setEditingHp] = useState(false);
@@ -35,6 +37,7 @@ const InitiativeCard = forwardRef(function InitiativeCard({
     const instanceSuffix = combatant.instanceLabel > 1 ? ` #${combatant.instanceLabel}` : '';
     const isHidden = !combatant.visible;
     const isPlayer = combatant.type === 'player';
+    const isDefeated = isDefeatedCombatant(combatant);
     const nameRevealed = isGM || isPlayer || revealState?.name === 'precise';
     const displayName = (nameRevealed ? combatant.name : (combatant.unknownName || '???')) + instanceSuffix;
 
@@ -80,6 +83,13 @@ const InitiativeCard = forwardRef(function InitiativeCard({
     const will = isPlayer
         ? computePlayerSave('will')
         : applyEffectTotal(creatureData?.system?.saves?.will?.value ?? creatureData?.saves?.will ?? '?', ['save.will', 'all.checks']);
+    const saveReveal = (isGM || isPlayer) ? 'precise' : (revealState?.saves || 'hidden');
+    const saveEntries = [
+        { key: 'fortitude', label: 'Fort', value: fort },
+        { key: 'reflex', label: 'Ref', value: ref_ },
+        { key: 'will', label: 'Will', value: will },
+    ].map((entry) => ({ ...entry, display: getSaveDisplay(entry.key, entry.value, saveReveal, falseData) }))
+        .filter((entry) => entry.display !== null);
 
     const handleInitiativeClick = (e) => {
         if (!isGM) return;
@@ -107,12 +117,6 @@ const InitiativeCard = forwardRef(function InitiativeCard({
         setEditingHp(false);
     };
 
-    const formatBonus = (val) => {
-        const n = parseInt(val);
-        if (isNaN(n)) return '?';
-        return n >= 0 ? `+${n}` : `${n}`;
-    };
-
     const conditionBadges = [
         ...(Array.isArray(combatant.conditions) ? combatant.conditions.map((label, index) => ({
             id: `legacy-${index}`,
@@ -132,6 +136,7 @@ const InitiativeCard = forwardRef(function InitiativeCard({
                 isActive && 'init-card--active',
                 isSelected && 'init-card--selected',
                 isHidden && 'init-card--hidden',
+                isDefeated && 'init-card--defeated',
                 isPlayer ? 'init-card--player' : 'init-card--creature',
             ].filter(Boolean).join(' ')}
             data-testid={`initiative-card-${combatant.id}`}
@@ -172,6 +177,7 @@ const InitiativeCard = forwardRef(function InitiativeCard({
                 <div className="init-card__name-row">
                     <span className="init-card__type-icon">{isPlayer ? '🧑' : '👹'}</span>
                     <span className="init-card__name">{displayName}</span>
+                    {isDefeated && <span className="init-card__defeated-label">Defeated</span>}
                     {isHidden && isGM && <span className="init-card__hidden-icon" title="Hidden from players">👁️‍🗨️</span>}
                 </div>
 
@@ -204,15 +210,11 @@ const InitiativeCard = forwardRef(function InitiativeCard({
                     <span className="init-card__stat" title="Armor Class">
                         <span className="init-card__stat-label">AC</span> {ac}
                     </span>
-                    <span className="init-card__stat" title="Fortitude">
-                        <span className="init-card__stat-label">Fort</span> {formatBonus(fort)}
-                    </span>
-                    <span className="init-card__stat" title="Reflex">
-                        <span className="init-card__stat-label">Ref</span> {formatBonus(ref_)}
-                    </span>
-                    <span className="init-card__stat" title="Will">
-                        <span className="init-card__stat-label">Will</span> {formatBonus(will)}
-                    </span>
+                    {saveEntries.map((entry) => (
+                        <span className="init-card__stat" title={entry.key} key={entry.key}>
+                            <span className="init-card__stat-label">{entry.label}</span> {entry.display}
+                        </span>
+                    ))}
                 </div>
 
                 {/* Row 4: Conditions */}
@@ -265,4 +267,19 @@ function toBadgeSlug(value) {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '') || 'effect';
+}
+
+function getSaveDisplay(saveKey, value, reveal, falseData) {
+    if (reveal === 'precise') return formatBonusValue(value);
+    if (reveal === 'false') {
+        const configuredValue = falseData?.saves?.[saveKey];
+        return configuredValue ? `(${configuredValue})` : '?';
+    }
+    return null;
+}
+
+function formatBonusValue(value) {
+    const numericValue = Number.parseInt(value, 10);
+    if (Number.isNaN(numericValue)) return '?';
+    return numericValue >= 0 ? `+${numericValue}` : `${numericValue}`;
 }

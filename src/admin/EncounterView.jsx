@@ -12,9 +12,10 @@ import { selectBestiaryRevealState, selectCustomCreatureData, selectCustomCreatu
 import { selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
 import {
     getCombatantEffectTargetId,
-    selectCombatantEffectBadges,
+    selectCombatantEffectPresentationItems,
     selectCombatantEffects
 } from '../shared/db/selectors/effectSelectors';
+import { getRotatedEncounterTurnOrder } from '../shared/encounter/turnOrder';
 import BottomSheet from '../shared/components/BottomSheet';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import InitiativeCard from './components/InitiativeCard';
@@ -232,13 +233,10 @@ export default function EncounterView({ db }) {
     };
 
     // ── Turn management ──
-    // Initiative-sorted, then rotated so the active combatant is always first (top of list).
     const sortedCombatants = useMemo(() => {
         if (!activeEncounter) return [];
-        const byInit = [...activeEncounter.combatants].sort((a, b) => (b.initiative ?? 0) - (a.initiative ?? 0));
-        const idx = (activeEncounter.currentTurnIndex ?? 0) % (byInit.length || 1);
-        return [...byInit.slice(idx), ...byInit.slice(0, idx)];
-    }, [activeEncounter?.combatants, activeEncounter?.currentTurnIndex]);
+        return getRotatedEncounterTurnOrder(activeEncounter);
+    }, [activeEncounter]);
 
     const endTurn = () => {
         if (!activeEncounter) return;
@@ -289,34 +287,44 @@ export default function EncounterView({ db }) {
         runEncounterAction(factory(campaignId, targetActorId));
     };
 
-    const addStandardConditionToCombatant = (conditionName, value) => {
+    const addStandardConditionToCombatant = (conditionName, value, visibilityOptions = {}) => {
         addEffectToCombatant((campaignId, targetActorId) =>
             dataActions.effect.createStandardCondition(campaignId, targetActorId, conditionName, value, {
                 sourceType: 'encounter',
                 sourceId: activeEncounter?.id,
                 sourceName: conditionName,
+                hidden: Boolean(visibilityOptions.hidden),
             })
         );
     };
 
-    const addPersistentDamageToCombatant = (payload) => {
+    const addPersistentDamageToCombatant = (payload, visibilityOptions = {}) => {
         addEffectToCombatant((campaignId, targetActorId) =>
             dataActions.effect.createPersistentDamage(campaignId, targetActorId, payload, {
                 sourceType: 'encounter',
                 sourceId: activeEncounter?.id,
                 sourceName: 'Persistent Damage',
+                hidden: Boolean(visibilityOptions.hidden),
             })
         );
     };
 
-    const addCustomBadgeToCombatant = (label) => {
+    const addCustomBadgeToCombatant = (label, visibilityOptions = {}) => {
         addEffectToCombatant((campaignId, targetActorId) =>
             dataActions.effect.createCustomBadge(campaignId, targetActorId, label, {
                 sourceType: 'encounter',
                 sourceId: activeEncounter?.id,
                 sourceName: label,
+                hidden: Boolean(visibilityOptions.hidden),
             })
         );
+    };
+
+    const setCombatantDefeated = (combatant) => {
+        const campaignId = requireCampaignId();
+        if (!campaignId || !activeEncounter || combatant?.type !== 'creature') return;
+        runEncounterAction(dataActions.encounter.setCombatantDefeated(campaignId, activeEncounter.id, combatant.id));
+        closeContextMenu();
     };
 
     const removeEffectFromCombatant = (effectId) => {
@@ -430,7 +438,7 @@ export default function EncounterView({ db }) {
                                     creatureData={combatant.type === 'creature' ? creatureDataCache[combatant.creatureId] : null}
                                     characterData={combatant.type === 'player' ? characters.find(c => c.id === combatant.playerId) : null}
                                     combatantEffects={selectCombatantEffects(activeCampaign, activeEncounter.id, combatant)}
-                                    effectBadges={selectCombatantEffectBadges(activeCampaign, activeEncounter.id, combatant)}
+                                    effectBadges={selectCombatantEffectPresentationItems(activeCampaign, activeEncounter.id, combatant)}
                                 />
                             ))}
                         </AnimatePresence>
@@ -484,6 +492,11 @@ export default function EncounterView({ db }) {
                     }}>
                         🎲 Set Initiative
                     </button>
+                    {contextMenu.combatant.type === 'creature' && !contextMenu.combatant.defeatedAt && (
+                        <button data-testid="encounter-set-defeated" onClick={() => setCombatantDefeated(contextMenu.combatant)}>
+                            ☠ Set Defeated
+                        </button>
+                    )}
                     <button data-testid="encounter-add-condition" onClick={() => openEffectDialog('condition')}>🏷️ Add Condition</button>
                     <button data-testid="encounter-add-persistent-damage" onClick={() => openEffectDialog('persistent')}>🔥 Add Persistent Damage</button>
                     <button data-testid="encounter-add-affliction" onClick={() => openEffectDialog('affliction')}>☣️ Add Affliction</button>

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Command,
     CommandEmpty,
@@ -18,6 +19,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -44,6 +46,7 @@ export default function EncounterEffectDialogs({
     const [diceCount, setDiceCount] = useState(1);
     const [dieSize, setDieSize] = useState(6);
     const [staticValue, setStaticValue] = useState(1);
+    const [shareWithParty, setShareWithParty] = useState(true);
 
     const conditionNames = useMemo(() =>
         Object.values(conditionsCatalog)
@@ -57,7 +60,7 @@ export default function EncounterEffectDialogs({
 
     const handleCondition = (conditionName) => {
         const value = isConditionValued(conditionName) ? conditionValue : 1;
-        onAddCondition?.(conditionName, value);
+        onAddCondition?.(conditionName, value, { hidden: !shareWithParty });
         onClose?.();
     };
 
@@ -68,14 +71,14 @@ export default function EncounterEffectDialogs({
             diceCount,
             dieSize,
             staticValue,
-        });
+        }, { hidden: !shareWithParty });
         onClose?.();
     };
 
     const handleCustomBadge = () => {
         const label = customLabel.trim();
         if (!label) return;
-        onAddCustomBadge?.(label);
+        onAddCustomBadge?.(label, { hidden: !shareWithParty });
         setCustomLabel('');
         onClose?.();
     };
@@ -117,6 +120,7 @@ export default function EncounterEffectDialogs({
                             </CommandGroup>
                         </CommandList>
                     </Command>
+                    <EffectVisibilityToggle checked={shareWithParty} onCheckedChange={setShareWithParty} />
                 </DialogContent>
             )}
 
@@ -197,6 +201,7 @@ export default function EncounterEffectDialogs({
                             </label>
                         )}
                     </div>
+                    <EffectVisibilityToggle checked={shareWithParty} onCheckedChange={setShareWithParty} />
                     <DialogFooter>
                         <Button variant="outline" onClick={onClose}>Cancel</Button>
                         <Button data-testid="encounter-persistent-add" onClick={handlePersistentDamage}>Add</Button>
@@ -218,6 +223,7 @@ export default function EncounterEffectDialogs({
                         placeholder="Custom badge"
                         onKeyDown={(e) => { if (e.key === 'Enter') handleCustomBadge(); }}
                     />
+                    <EffectVisibilityToggle checked={shareWithParty} onCheckedChange={setShareWithParty} />
                     <DialogFooter>
                         <Button variant="outline" onClick={onClose}>Cancel</Button>
                         <Button data-testid="encounter-custom-condition-add" onClick={handleCustomBadge} disabled={!customLabel.trim()}>Add</Button>
@@ -232,11 +238,26 @@ export default function EncounterEffectDialogs({
                         <DialogDescription>Diseases and poisons will use this slot in a later wave.</DialogDescription>
                     </DialogHeader>
                     <p className="enc-effect-dialog__note">Coming later. This menu is present so the combat workflow has a stable place for afflictions.</p>
+                    <EffectVisibilityToggle checked={shareWithParty} onCheckedChange={setShareWithParty} disabled />
                     <DialogFooter>
                         <Button onClick={onClose}>Close</Button>
                     </DialogFooter>
                 </DialogContent>
             )}
         </Dialog>
+    );
+}
+
+function EffectVisibilityToggle({ checked, onCheckedChange, disabled = false }) {
+    return (
+        <div className="enc-effect-dialog__visibility">
+            <Checkbox
+                id="encounter-effect-share-with-party"
+                checked={checked}
+                disabled={disabled}
+                onCheckedChange={(nextValue) => onCheckedChange(nextValue === true)}
+            />
+            <Label htmlFor="encounter-effect-share-with-party">Share with party</Label>
+        </div>
     );
 }

@@ -72,6 +72,8 @@ function ModalManagerContent({
     setModalData,
     character,
     conditions,
+    effects,
+    readOnly,
     updateCharacter,
     characterActions,
     onClose,
@@ -182,6 +184,7 @@ function ModalManagerContent({
 
     if (modalMode === 'conditions' || modalMode === 'conditionInfo') {
         const condName = typeof modalData === 'string' ? modalData : modalData?.name;
+        const effectId = typeof modalData === 'object' ? modalData?.id : null;
         // If mode is 'conditions', initialCondition is likely null or undefined unless intended.
         // if mode is 'conditionInfo', initialCondition is condName.
         const initial = modalMode === 'conditionInfo' ? condName : null;
@@ -189,12 +192,13 @@ function ModalManagerContent({
         return (
             <ConditionsModal
                 character={character}
-                conditions={conditions}
-                updateCharacter={updateCharacter}
+                effects={effects || conditions}
                 onClose={onClose}
                 initialCondition={initial}
+                initialEffectId={effectId}
                 onContentLinkClick={onContentLinkClick}
                 onBack={hasHistory ? onBack : undefined}
+                readOnly={readOnly}
             // Note: ConditionsModal handles "Back" internally for list nav, but if we want to pop history, we pass onBack.
             />
         );

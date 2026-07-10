@@ -10,6 +10,7 @@ import { usePlayerCharacterActions } from './hooks/usePlayerCharacterActions';
 import { usePlayerInventoryActions } from './hooks/usePlayerInventoryActions';
 import { usePlayerModalState } from './hooks/usePlayerModalState';
 import { selectActorRulesViewModel } from '../shared/rules/actorRulesViewModel';
+import { selectActorEffectPresentationItems } from '../shared/db/selectors/effectSelectors';
 import LazyCatalogOverlay from './components/LazyCatalogOverlay';
 import PlayerBottomNav from './navigation/PlayerBottomNav';
 import PlayerDesktopNav from './navigation/PlayerDesktopNav';
@@ -83,6 +84,7 @@ export default function PlayerAppController() {
     const actorRules = selectActorRulesViewModel(activeCampaign, myActor?.id || character?.id);
     const rulesCharacter = actorRules.character || character;
     const characterConditions = actorRules.conditions || [];
+    const characterEffects = selectActorEffectPresentationItems(activeCampaign, myActor?.id || character?.id);
 
     const {
         characterActions,
@@ -300,6 +302,7 @@ export default function PlayerAppController() {
                         character,
                         characterActions,
                         characterConditions,
+                        characterEffects,
                         dataActions,
                         db,
                         fireWeapon,
@@ -436,6 +439,7 @@ export default function PlayerAppController() {
                 setModalData={setModalData}
                 character={rulesCharacter}
                 conditions={characterConditions}
+                effects={characterEffects}
                 updateCharacter={updateCharacter}
                 characterActions={characterActions}
                 onClose={() => setModalMode(null)}

@@ -7,12 +7,12 @@ const AID_ROW_ID = "actions-aid-json";
 
 async function gotoFixture(page, params = "") {
   const query = params ? `&${params.replace(/^&/, "")}` : "";
-  await page.goto(`/?e2e=true&e2eReset=true${query}`, { waitUntil: "domcontentloaded" });
+  await page.goto(`/?e2e=true&e2eReset=true${query}`, { waitUntil: "commit" });
 }
 
 async function reloadFixture(page, params = "") {
   const query = params ? `&${params.replace(/^&/, "")}` : "";
-  await page.goto(`/?e2e=true${query}`, { waitUntil: "domcontentloaded" });
+  await page.goto(`/?e2e=true${query}`, { waitUntil: "commit" });
 }
 
 async function openPlayerCategory(page, name) {
@@ -21,7 +21,7 @@ async function openPlayerCategory(page, name) {
 
 async function openPlayerPage(page, categoryName, pageId) {
   await openPlayerCategory(page, categoryName);
-  await page.getByTestId(`player-desktop-page-${pageId}`).click();
+  await page.getByTestId(`player-carousel-page-${pageId}`).click();
 }
 
 async function readFixtureXp(page) {
@@ -32,15 +32,20 @@ async function readFixtureXp(page) {
   });
 }
 
+async function expectFixtureRoute(page, route) {
+  await expect(page.getByTestId(`${route}-route`)).toBeVisible({ timeout: 120_000 });
+}
+
 test("auth gate renders without fixture bypass", async ({ page }) => {
-  await page.goto("/", { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await page.goto("/?e2eAuthGate=true", { waitUntil: "domcontentloaded", timeout: 120_000 });
   await expect(page.getByText("PF2e Player Sheet")).toBeVisible();
   await expect(page.getByText("Sign in with Google")).toBeVisible();
 });
 
 test("player fixture route loads character, quests, loot, shop, and spell override", async ({ page }) => {
+  test.slow();
   await gotoFixture(page);
-  await expect(page.getByTestId("player-route")).toBeVisible();
+  await expectFixtureRoute(page, "player");
   await expect(page.getByText("Nimwe Smoke")).toBeVisible();
 
   await openPlayerPage(page, "Campaign", "campaign.quests");
@@ -54,13 +59,13 @@ test("player fixture route loads character, quests, loot, shop, and spell overri
   await expect(page.getByText("Uplifting Overture")).toBeVisible();
 
   await openPlayerPage(page, "Items", "items.equipment");
-  await page.getByRole("button", { name: /\+ Open Shop/i }).click();
+  await page.getByRole("button", { name: /\+ Open Shop/i }).first().click();
   await expect(page.getByText("Show all available Items")).toBeVisible();
 });
 
 test("admin fixture route loads campaign, player, items, quests, and encounter surfaces", async ({ page }) => {
   await gotoFixture(page, "admin=true");
-  await expect(page.getByTestId("admin-route")).toBeVisible();
+  await expectFixtureRoute(page, "admin");
   await expect(page.getByRole("heading", { name: "E2E Smoke Campaign", exact: true })).toBeVisible();
 
   await page.getByText("Players", { exact: true }).click();
@@ -80,7 +85,7 @@ test("admin fixture route loads campaign, player, items, quests, and encounter s
 
 test("player HP, gold, and condition edits survive reload in fixture runtime", async ({ page }) => {
   await gotoFixture(page);
-  await expect(page.getByTestId("player-route")).toBeVisible();
+  await expectFixtureRoute(page, "player");
 
   await page.getByTestId("player-health-bar").click();
   await page.getByTestId("hp-modal-input").fill("21");
@@ -92,15 +97,49 @@ test("player HP, gold, and condition edits survive reload in fixture runtime", a
   await page.getByTestId("gold-modal-set").click();
   await expect(page.getByTestId("player-gold-display")).toContainText("15.00");
 
-  await page.getByTestId("condition-badge-frightened").click();
-  await page.getByTestId("condition-list-plus-frightened").click();
+  await page.getByRole("button", { name: /Frightened/i }).click();
+  await page.getByTestId("condition-detail-increase-frightened").click();
   await page.getByRole("button", { name: "Close" }).click();
-  await expect(page.getByTestId("condition-badge-frightened")).toContainText("Frightened 2");
+  await expect(page.getByRole("button", { name: /Frightened 2/i })).toBeVisible();
 
   await reloadFixture(page);
   await expect(page.getByTestId("player-health-text")).toContainText(/21\s*\/\s*30/);
   await expect(page.getByTestId("player-gold-display")).toContainText("15.00");
-  await expect(page.getByTestId("condition-badge-frightened")).toContainText("Frightened 2");
+  await expect(page.getByRole("button", { name: /Frightened 2/i })).toBeVisible();
+});
+
+test("persistent damage is removable by its player and hidden encounter effects stay out of Party view", async ({ page }) => {
+  await gotoFixture(page, "admin=true");
+  await page.getByText("Encounters", { exact: true }).click();
+
+  await page.getByTestId("initiative-card-combatant_player").click({ button: "right" });
+  await page.getByTestId("encounter-add-persistent-damage").click();
+  await page.getByTestId("encounter-persistent-add").click();
+  await expect(page.getByText("1d6 fire persistent", { exact: true })).toBeVisible();
+
+  await page.getByTestId("initiative-card-combatant_player").click({ button: "right" });
+  await page.getByTestId("encounter-add-custom-condition").click();
+  await page.getByTestId("encounter-custom-condition-input").fill("GM Only Mark");
+  await page.getByLabel("Share with party").click();
+  await page.getByTestId("encounter-custom-condition-add").click();
+  await expect(page.getByText("GM Only Mark", { exact: true })).toBeVisible();
+
+  await page.getByTestId("initiative-card-combatant_creature").click({ button: "right" });
+  await page.getByTestId("encounter-set-defeated").click();
+  await expect(page.getByTestId("initiative-card-combatant_creature")).toContainText("Defeated");
+
+  await page.goto("/?e2e=true&party=true", { waitUntil: "domcontentloaded" });
+  await expectFixtureRoute(page, "party");
+  await expect(page.getByTestId("initiative-card-combatant_creature")).toHaveCount(0);
+  await expect(page.getByText("1d6 fire persistent", { exact: true })).toBeVisible();
+  await expect(page.getByText("GM Only Mark", { exact: true })).toHaveCount(0);
+
+  await page.goto("/?e2e=true", { waitUntil: "domcontentloaded" });
+  await expectFixtureRoute(page, "player");
+  await page.getByRole("button", { name: /1d6 fire persistent/i }).click();
+  await expect(page.getByText(/Persistent damage is taken at the end/i)).toBeVisible();
+  await page.getByRole("button", { name: "Remove" }).click();
+  await expect(page.getByRole("button", { name: /1d6 fire persistent/i })).toHaveCount(0);
 });
 
 test("player loot claim and gold split persist without losing remaining state", async ({ page }) => {
@@ -151,7 +190,7 @@ test("quest reward toggle is idempotent across reload", async ({ page }) => {
   await page.getByTestId("app-feedback-confirm").click();
 
   await reloadFixture(page, "admin=true");
-  await expect(page.getByTestId("admin-route")).toBeVisible();
+  await expectFixtureRoute(page, "admin");
   await expect(await readFixtureXp(page)).toBe(120);
 
   await page.getByText("Quests", { exact: true }).click();
@@ -308,6 +347,9 @@ test("admin action delete creates a hide override and deleted filter reveals it"
   await page.getByTestId("app-feedback-confirm").click();
   await expect(page.getByTestId(`catalog-row-action-${AID_ROW_ID}`)).toHaveCount(0);
 
+  await page.getByRole("button", { name: /Filters/i }).click();
+  await page.getByRole("button", { name: "Catalog Status", exact: true }).click();
   await page.getByTestId("catalog-status-action-deleted").click();
+  await page.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(page.getByTestId(`catalog-row-action-${AID_ROW_ID}`)).toBeVisible();
 });

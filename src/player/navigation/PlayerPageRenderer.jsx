@@ -46,6 +46,7 @@ export default function PlayerPageRenderer({
     character,
     characterActions,
     characterConditions,
+    characterEffects,
     dataActions,
     db,
     fireWeapon,
@@ -73,6 +74,7 @@ export default function PlayerPageRenderer({
                 character={rulesCharacter}
                 rulesViewModel={actorRules}
                 conditions={characterConditions}
+                displayEffects={characterEffects}
                 characterActions={characterActions}
                 onOpenModal={(mode, data) => {
                     setModalMode(mode);

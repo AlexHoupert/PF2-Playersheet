@@ -1,6 +1,6 @@
 # Known Risks And Modernization Notes
 
-Last updated: 2026-06-28.
+Last updated: 2026-07-10.
 
 ## Highest-Impact Risks
 
@@ -47,7 +47,9 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 - Conditions are campaign-scoped `actorEffects` for Player Stats, ConditionsModal, Encounter right-click assignment, Admin CharacterCard backlash, mutagen effects, and companion conditions. Encounter creature combatants use stable `effectTargetId` values such as `encounter:{encounterId}:combatant:{combatantId}` until full NPC Actor migration.
 - Player and shared Actor sheets now use `src/shared/rules/actorRulesViewModel.js` to build the effective Actor+Effects rules input. Avoid reintroducing ad-hoc pseudo-character condition injection as a rules source.
 - Persistent damage is stored as `actorEffects(category="damage_effect")` and displayed as a badge. The resolver keeps the strongest persistent damage per damage type, but this wave does not roll persistent damage automatically at turn end.
+- Conditions, persistent damage, afflictions, and custom badges use the shared `src/shared/effects/effectPresentation.js` display contract. Party readers see non-hidden display Effects; Player owners and GMs see their own complete displayable set.
 - Custom encounter badges use `actorEffects(category="custom")` and intentionally have no modifiers. Afflictions are only a placeholder UI entry for now.
+- The legacy generic `Persistent Damage` and `Fast Healing` condition records are deprecated. `npm run cleanup:legacy-conditions` is dry-run by default; run its explicit `--write` mode only after reviewing the generated report and backup plan.
 - Catalog overrides are the production-safe write target for deployed item/spell/action/feat/impulse/ability/creature editing. Static resource file APIs should stay local-dev only.
 - Wands are reusable inventory items with `system.wand = { charges, max }`, not consumable stacks. Inventory double-tap and spell detail casting should reduce charges only; Daily Preparation recharges them. Keep wand detection centralized in `src/shared/utils/wandUtils.js`.
 - Mutagens are represented as `actorEffects` with concrete modifiers. Modifier-less legacy mutagen effects are normalized during reads. `currentMutagen` must not become a runtime rules source again.

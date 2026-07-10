@@ -1,6 +1,6 @@
 # Smoke Results
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-10.
 
 ## Scope
 
@@ -15,7 +15,7 @@ environment before treating a build as production-verified.
 
 Command: `npm run smoke`
 
-Result on 2026-07-08: `verified`.
+Result on 2026-07-10: `verified` (`13/13` Playwright fixture tests).
 
 | Flow | Result | Notes |
 | --- | --- | --- |
@@ -33,6 +33,7 @@ Result on 2026-07-08: `verified`.
 | Admin item edit/clone semantics | verified | Static item edit updates the effective row without a duplicate; clone creates a custom copy. |
 | Admin creature production-style edit | verified | Creature editor writes a DB override in production-like mode instead of requiring file writes. |
 | Encounter effect removal via closable badge | verified | Effect-backed combatant condition badges can be removed and re-added through the encounter UI. |
+| Shared effects, Party visibility, and defeated combatants | verified | Persistent damage is removable from its target Actor, hidden effects do not reach Party cards, and defeated creatures leave the Party initiative list. |
 
 ## Manual Firebase Smokes
 
@@ -108,3 +109,4 @@ Result on 2026-07-08: `verified`.
   `localStorage` under `pf2:e2e-runtime-db`.
 - The fixture does not replace live Firestore smoke checks, because rules,
   auth, subscriptions, and multi-client timing are outside its scope.
+- The conditions maintenance script requires target-project `VITE_FIREBASE_*` configuration. The local checkout did not contain that configuration on 2026-07-10, so no Firestore cleanup dry-run or write was performed.

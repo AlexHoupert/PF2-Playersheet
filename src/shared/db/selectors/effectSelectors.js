@@ -1,3 +1,8 @@
+import {
+    buildEffectPresentationItems,
+    getEffectPresentationById,
+} from '../../effects/effectPresentation.js';
+
 export function selectActorEffects(campaign, actorId) {
     if (!actorId) return [];
     return (campaign?.actorEffects || []).filter(effect => effect.targetActorId === actorId && !effect.disabled);
@@ -35,19 +40,19 @@ export function selectCombatantEffects(campaign, encounterId, combatant) {
 }
 
 export function selectCombatantEffectBadges(campaign, encounterId, combatant) {
-    return selectCombatantEffects(campaign, encounterId, combatant)
-        .filter(effect => ["condition", "damage_effect", "custom", "affliction"].includes(effect.category))
-        .map(effect => {
-            const isPersistent = effect.category === "damage_effect";
-            const formula = effect.value?.formula || effect.modifiers?.find(modifier => modifier.mode === "persistent_damage")?.formula;
-            return {
-                id: effect.id,
-                label: isPersistent ? (formula || effect.label || "Persistent Damage") : (effect.label || effect.name || "Effect"),
-                category: effect.category,
-                value: effect.value,
-                persistentDamageType: isPersistent ? (effect.value?.damageType || effect.modifiers?.find(modifier => modifier.mode === "persistent_damage")?.damageType) : null,
-            };
-        });
+    return selectCombatantEffectPresentationItems(campaign, encounterId, combatant);
+}
+
+export function selectActorEffectPresentationItems(campaign, actorId, options = {}) {
+    return buildEffectPresentationItems(selectActorEffects(campaign, actorId), options);
+}
+
+export function selectActorEffectPresentationById(campaign, actorId, effectId, options = {}) {
+    return getEffectPresentationById(selectActorEffects(campaign, actorId), effectId, options);
+}
+
+export function selectCombatantEffectPresentationItems(campaign, encounterId, combatant, options = {}) {
+    return buildEffectPresentationItems(selectCombatantEffects(campaign, encounterId, combatant), options);
 }
 
 export function selectEffectTemplates(campaign) {

@@ -70,22 +70,31 @@ export function createEffectActions(context) {
   };
 
   const createStandardCondition = (campaignId, targetActorId, conditionName, value = 1, options = {}) =>
-    createEffect(campaignId, targetActorId, createStandardConditionEffectInput(conditionName, value, {
+    createEffect(campaignId, targetActorId, {
+      ...createStandardConditionEffectInput(conditionName, value, {
       ...options,
       actorId: options.actorId || targetActorId,
-    }));
+      }),
+      hidden: Boolean(options.hidden),
+    });
 
   const createPersistentDamage = (campaignId, targetActorId, payload = {}, options = {}) =>
-    createEffect(campaignId, targetActorId, createPersistentDamageEffectInput(payload, {
+    createEffect(campaignId, targetActorId, {
+      ...createPersistentDamageEffectInput(payload, {
       ...options,
       actorId: options.actorId || targetActorId,
-    }));
+      }),
+      hidden: Boolean(options.hidden),
+    });
 
   const createCustomBadge = (campaignId, targetActorId, label, options = {}) =>
-    createEffect(campaignId, targetActorId, createCustomBadgeEffectInput(label, {
+    createEffect(campaignId, targetActorId, {
+      ...createCustomBadgeEffectInput(label, {
       ...options,
       actorId: options.actorId || targetActorId,
-    }));
+      }),
+      hidden: Boolean(options.hidden),
+    });
 
   const saveEffectTemplate = (campaignId, templateInput) => {
     const template = {

@@ -17,7 +17,7 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       PORT: String(PORT),
-      VITE_FIREBASE_API_KEY: "e2e-api-key",
+      VITE_FIREBASE_API_KEY: "YOUR_API_KEY",
       VITE_FIREBASE_AUTH_DOMAIN: "e2e.localhost",
       VITE_FIREBASE_PROJECT_ID: "e2e-project",
       VITE_FIREBASE_STORAGE_BUCKET: "e2e-project.appspot.com",

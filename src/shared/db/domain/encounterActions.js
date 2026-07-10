@@ -13,6 +13,7 @@ import {
   softDeleteEncounterInCampaign,
   activateEncounterInCampaign,
   removeCombatantFromEncounterInCampaign,
+  setCombatantDefeatedInCampaign,
   updateCombatantInEncounterInCampaign,
   updateEncounterInCampaign,
 } from "./encounterReducers.js";
@@ -127,6 +128,11 @@ export function createEncounterActions(actionContext) {
     updateCombatant(campaignId, encounterId, combatantId, updater) {
       return updateEncounterViaReducer(campaignId, encounterId, (campaign, id) =>
         updateCombatantInEncounterInCampaign(campaign, id, combatantId, updater)
+      );
+    },
+    setCombatantDefeated(campaignId, encounterId, combatantId) {
+      return updateEncounterViaReducer(campaignId, encounterId, (campaign, id) =>
+        setCombatantDefeatedInCampaign(campaign, id, combatantId, { now: nowIso(), actorEmail: actor })
       );
     },
     selectEntity(campaignId, encounterId, entityId) {

@@ -60,6 +60,7 @@ import {
     removeCombatantFromEncounterInCampaign,
     restoreEncounterInCampaign,
     rollEncounterInitiativeInCampaign,
+    setCombatantDefeatedInCampaign,
     softDeleteEncounterInCampaign,
     updateCombatantInEncounterInCampaign,
 } from '../src/shared/db/domain/encounterReducers.js';
@@ -564,6 +565,7 @@ test('encounter reducer creates, activates, updates, archives, and restores enco
     }, { createId });
     const active = activateEncounterInCampaign(withCreature, created.encounter.id);
     const encounter = active.encounters[0];
+    const playerCombatantId = encounter.combatants.find(c => c.type === 'player').id;
 
     assert.equal(encounter.isActive, true);
     assert.equal(encounter.combatants.length, 2);
@@ -588,9 +590,20 @@ test('encounter reducer creates, activates, updates, archives, and restores enco
     assert.equal(rolled.encounters[0].combatants.find(c => c.id === creatureId).initiative, 15);
 
     const nextTurn = endEncounterTurnInCampaign(rolled, encounter.id);
-    assert.equal(nextTurn.encounters[0].currentTurnIndex, 1);
+    assert.equal(nextTurn.encounters[0].currentTurnCombatantId, creatureId);
 
-    const removed = removeCombatantFromEncounterInCampaign(nextTurn, encounter.id, creatureId);
+    const defeated = setCombatantDefeatedInCampaign(nextTurn, encounter.id, creatureId, {
+        now: '2026-01-03T00:00:00.000Z',
+        actorEmail: 'gm@example.com',
+    });
+    assert.equal(defeated.encounters[0].combatants.find(c => c.id === creatureId).currentHp, 0);
+    assert.equal(defeated.encounters[0].combatants.find(c => c.id === creatureId).defeatedAt, '2026-01-03T00:00:00.000Z');
+    assert.equal(defeated.encounters[0].currentTurnCombatantId, playerCombatantId);
+
+    const revived = updateCombatantInEncounterInCampaign(defeated, encounter.id, creatureId, { currentHp: 2 });
+    assert.equal(revived.encounters[0].combatants.find(c => c.id === creatureId).defeatedAt, undefined);
+
+    const removed = removeCombatantFromEncounterInCampaign(revived, encounter.id, creatureId);
     assert.equal(removed.encounters[0].combatants.length, 1);
 
     const deleted = softDeleteEncounterInCampaign(removed, encounter.id, { now: '2026-01-01T00:00:00.000Z' });

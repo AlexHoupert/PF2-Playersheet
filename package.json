@@ -22,6 +22,7 @@
     "smoke:install": "playwright install chromium",
     "migrate:v2:dry-run": "node scripts/migrate_master_to_v2.js --from-firestore --report-out recovery/v2-migration-report.json",
     "migrate:v2": "node scripts/migrate_master_to_v2.js --from-firestore --write --backup-file --report-out recovery/v2-migration-report.json",
+    "cleanup:legacy-conditions": "node scripts/cleanup_legacy_condition_effects.js",
     "test": "node --test tests/*.test.js",
     "preview": "vite preview"
   },

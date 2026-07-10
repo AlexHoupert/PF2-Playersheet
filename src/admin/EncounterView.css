@@ -357,6 +357,14 @@
     line-height: 1.5;
 }
 
+.enc-effect-dialog__visibility {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #d2d2d2;
+    font-size: 0.9em;
+}
+
 /* ── Shared buttons ── */
 .enc-btn {
     padding: 6px 14px;

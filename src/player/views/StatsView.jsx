@@ -7,7 +7,7 @@ import { AttributesSection } from '../sections/AttributesSection';
 import { SkillsSection } from '../sections/SkillsSection';
 import { buildActorRulesContext, buildActorStatsViewModel } from '../../shared/rules/actorRulesViewModel';
 
-export function StatsView({ character, conditions = [], rulesViewModel = null, characterActions, onOpenModal, onLongPress }) {
+export function StatsView({ character, conditions = [], displayEffects = [], rulesViewModel = null, characterActions, onOpenModal, onLongPress, readOnly = false }) {
     if (!character) return null;
 
     const actorRules = rulesViewModel || buildActorStatsViewModel(buildActorRulesContext({
@@ -15,7 +15,6 @@ export function StatsView({ character, conditions = [], rulesViewModel = null, c
         effects: Array.isArray(conditions) ? conditions : [],
     }));
     const rulesCharacter = actorRules.character || character;
-    const activeConditions = Array.isArray(actorRules.conditions) ? actorRules.conditions : [];
     const condDrained = getCondLevel('drained', rulesCharacter);
     // Drained reduces max HP by level * value
     const drainedPenalty = (condDrained || 0) * (character.level || 1);
@@ -48,9 +47,10 @@ export function StatsView({ character, conditions = [], rulesViewModel = null, c
             </div>
 
             <ConditionList
-                conditions={activeConditions}
-                onClick={(c) => onOpenModal('conditionInfo', c.name)}
+                conditions={displayEffects}
+                onClick={(effect) => onOpenModal('conditionInfo', effect)}
                 onAdd={() => onOpenModal('conditions', null)}
+                readOnly={readOnly}
             />
 
             <DefensesSection

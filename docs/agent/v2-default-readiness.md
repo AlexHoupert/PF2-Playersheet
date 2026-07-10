@@ -51,7 +51,7 @@ Status meanings:
 | Progress | Ready by tests/code | Player reads active-only reducer output. |
 | Camping | Ready by tests/code | Settings, custom activities, assignments, rolls, and unassign are domain-action backed. |
 | Pacts/deviant abilities | Ready by tests/code | Reads use selectors; admin writes use pact actions. |
-| Conditions/effects foundation | Ready by tests/code | Conditions can be stored as `actorEffects`; the legacy projection overlays character conditions from actor effects. Full condition/effect UI migration is not complete. |
+| Conditions/effects foundation | Ready by tests/code | Standard conditions, persistent damage, afflictions, and custom badges share the `actorEffects` presentation contract across Player, GM, and Party surfaces. The legacy generic Persistent Damage/Fast Healing cleanup still needs a target-project dry-run and manual mobile layout verification. |
 | Root notification fallback clear | Ready by tests/code | Uses `dataActions.globalContent.clearRootNotification`. |
 
 ## GM/Admin Flows

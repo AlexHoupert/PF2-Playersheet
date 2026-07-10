@@ -1,468 +1,271 @@
-import React, { useState, useEffect } from 'react';
-import {
-    NEG_CONDS, POS_CONDS, VIS_CONDS, BINARY_CONDS, getConditionIcon
-} from '../../shared/constants/conditions';
-import { getConditionImgSrc, isConditionValued, getConditionCatalogEntry } from '../../shared/constants/conditionsCatalog';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { getConditionImgSrc, getConditionCatalogEntry, isConditionValued } from '../../shared/constants/conditionsCatalog';
+import { getConditionIcon, NEG_CONDS, POS_CONDS, VIS_CONDS } from '../../shared/constants/conditions';
 import { parseFoundry } from '../../shared/utils/foundryParser';
 import { useCampaign } from '../../shared/context/CampaignContext';
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 import {
     createStandardConditionEffectInput,
-    normalizeConditionValue
+    normalizeConditionValue,
 } from '../../shared/rules/conditionEffectRules';
+import './ConditionsModal.css';
 
-/**
- * @typedef {Object} Condition
- * @property {string} name - The name of the condition (e.g., 'Frightened').
- * @property {number} [level] - The magnitude/value of the condition (if applicable).
- */
+const TABS = ['ACTIVE', 'NEGATIVE', 'POSITIVE', 'VISIBILITY'];
+const NEGATIVE_GROUPS = [
+    { title: 'Control & Positioning', items: ['off-guard', 'prone', 'grabbed', 'restrained', 'immobilized', 'stunned', 'paralyzed', 'petrified'] },
+    { title: 'Lowered Abilities', items: ['frightened', 'clumsy', 'drained', 'enfeebled', 'stupefied', 'sickened', 'fatigued', 'encumbered', 'slowed'] },
+    { title: 'Senses', items: ['blinded', 'dazzled', 'deafened'] },
+    { title: 'Mental', items: ['confused', 'controlled', 'fascinated', 'fleeing'] },
+    { title: 'Death and Injury', items: ['doomed', 'dying', 'unconscious', 'wounded'] },
+];
 
-/**
- * @typedef {Object} Character
- * @property {Condition[]} conditions - List of active conditions on the character.
- * @property {string} name - Character name.
- * @property {Object} [magic] - Magic related properties.
- */
-
-/**
- * Modal component for managing character conditions.
- * Displays a categorized list of conditions and allows adding/removing/incrementing them.
- * Also handles displaying detailed information about a selected condition.
- * 
- * @param {Object} props
- * @param {Character} props.character - The character object.
- * @param {Function} props.updateCharacter - State setter for character.
- * @param {Function} props.onClose - Handler to close the modal.
- * @param {string} [props.initialCondition] - Name of a condition to show details for immediately.
- * @param {Object[]} [props.modalHistory] - History stack for back navigation support (optional).
- * @param {Function} [props.onBack] - Handler for back navigation (optional).
- */
 export function ConditionsModal({
     character,
-    conditions = [],
-    updateCharacter,
+    effects = [],
     onClose,
     initialCondition = null,
-    modalHistory = [],
+    initialEffectId = null,
     onBack,
-    onContentLinkClick
+    onContentLinkClick,
+    readOnly = false,
 }) {
-    // --- STATE ---
-    const { activeCampaignId, myActor, dataActions } = useCampaign();
+    const { activeCampaignId, dataActions } = useCampaign();
     const { notifyError } = useAppFeedback();
+    const safeEffects = Array.isArray(effects) ? effects : [];
+    const [activeTab, setActiveTab] = useState(safeEffects.length ? 'ACTIVE' : 'NEGATIVE');
+    const [selectedEffectId, setSelectedEffectId] = useState(initialEffectId || null);
+    const [selectedConditionName, setSelectedConditionName] = useState(null);
+    const [query, setQuery] = useState('');
 
-    // Internal state to track which condition is being viewed (if any).
-    // If initialCondition is provided, start with that.
-    const [selectedCondition, setSelectedCondition] = useState(initialCondition);
-
-    // Tab state for the list view
-    const safeConds = Array.isArray(conditions) ? conditions : [];
-    const hasActive = safeConds.some(c => {
-        const name = (typeof c === 'string') ? c : c?.name;
-        const level = (typeof c === 'string') ? 1 : (c?.level || 0);
-        return isConditionValued(name) ? level > 0 : true;
-    });
-    const [activeTab, setActiveTab] = useState(hasActive ? 'ACTIVE' : 'NEGATIVE');
-
-    // --- EFFECT ---
-
-    // If props change to force a view, update state.
     useEffect(() => {
+        if (initialEffectId) {
+            setActiveTab('ACTIVE');
+            setSelectedEffectId(initialEffectId);
+            setSelectedConditionName(null);
+            return;
+        }
         if (initialCondition) {
-            setSelectedCondition(initialCondition);
+            const effect = safeEffects.find((item) => String(item.name || '').toLowerCase() === String(initialCondition).toLowerCase());
+            if (effect) {
+                setActiveTab('ACTIVE');
+                setSelectedEffectId(effect.id);
+                setSelectedConditionName(null);
+            } else {
+                setSelectedEffectId(null);
+                setSelectedConditionName(getConditionCatalogEntry(initialCondition)?.name || initialCondition);
+            }
         }
-    }, [initialCondition]);
+    }, [initialCondition, initialEffectId, safeEffects]);
 
-    // --- HELPERS ---
+    const selectedEffect = safeEffects.find((effect) => effect.id === selectedEffectId)
+        || buildConditionPreview(selectedConditionName);
+    const visibleTabs = safeEffects.length ? TABS : TABS.filter((tab) => tab !== 'ACTIVE');
+    const normalizedQuery = query.trim().toLowerCase();
+    const activeEffects = useMemo(() => filterByQuery(safeEffects, normalizedQuery), [safeEffects, normalizedQuery]);
+    const standardRows = useMemo(() => buildStandardRows(activeTab, normalizedQuery), [activeTab, normalizedQuery]);
 
-    const TABS = ['ACTIVE', 'NEGATIVE', 'POSITIVE', 'VISIBILITY'];
-    const DISPLAY_TABS = hasActive ? TABS : TABS.filter(t => t !== 'ACTIVE');
+    const findStandardEffect = (conditionName) => safeEffects.find((effect) => (
+        effect.category === 'condition'
+        && String(effect.name || '').toLowerCase() === String(conditionName).toLowerCase()
+    ));
 
-    /**
-     * Helper to retrieve the list of conditions for the current tab.
-     * @param {string} tab - Tab name.
-     * @returns {string[]} List of condition names.
-     */
-    const getListForTab = (tab) => {
-        if (tab === 'ACTIVE') {
-            // Handle conditions that can be strings or objects, with or without level
-            return safeConds
-                .filter(c => {
-                    // If string, it's active with level 1
-                    if (typeof c === 'string') return true;
-                    // If object, check if it has a level > 0, or if it's a binary condition (no level means active)
-                    const name = c?.name || '';
-                    const level = c?.level;
-                    // For valued conditions, need level > 0; for binary conditions, just being present means active
-                    if (level === undefined || level === null) {
-                        // Binary condition - just being present means active
-                        return !isConditionValued(name);
-                    }
-                    return level > 0;
-                })
-                .map(c => (typeof c === 'string') ? c : c?.name);
-        }
-        if (tab === 'NEGATIVE') return NEG_CONDS;
-        if (tab === 'POSITIVE') return POS_CONDS;
-        if (tab === 'VISIBILITY') return VIS_CONDS;
-        // Binary/Other fallback
-        return BINARY_CONDS;
+    const runEffectAction = (action) => {
+        Promise.resolve(action).catch((error) => {
+            console.error(error);
+            notifyError(error);
+        });
     };
 
-    /**
-     * Adds, removes, or modifies the level of a condition.
-     * @param {string} condName - Name of the condition.
-     * @param {number} delta - +1 to add/increment, -1 to remove/decrement.
-     */
-    const adjustCondition = (condName, delta) => {
-        if (!condName) return;
-        const targetKey = String(condName).toLowerCase();
-        const canonicalName = getConditionCatalogEntry(condName)?.name || condName;
-        const active = safeConds.find(x => {
-            const name = (typeof x === 'string') ? x : x?.name;
-            return String(name || '').toLowerCase() === targetKey;
-        });
-        const actorId = myActor?.id || character?.id;
-        const valued = isConditionValued(condName);
+    const adjustStandardCondition = (conditionName, delta) => {
+        if (readOnly || !activeCampaignId || !character?.id || !dataActions?.effect) return;
+        const canonicalName = getConditionCatalogEntry(conditionName)?.name || conditionName;
+        const currentEffect = findStandardEffect(canonicalName);
+        const valued = isConditionValued(canonicalName);
+        const currentValue = Number(currentEffect?.value) || 0;
+        const nextValue = valued ? currentValue + delta : (delta > 0 ? 1 : 0);
 
-        if (!activeCampaignId || !actorId || !dataActions?.effect) {
-            notifyError('No active actor is available for condition updates.');
+        if (nextValue <= 0) {
+            if (currentEffect?.id) runEffectAction(dataActions.effect.deleteEffect(activeCampaignId, currentEffect.id));
             return;
         }
 
-        const currentLevel = typeof active === 'string' ? 1 : (Number(active?.level ?? active?.value) || 0);
-        const nextLevel = valued ? currentLevel + delta : (delta > 0 ? 1 : 0);
-        const effectId = typeof active === 'object' ? active.sourceEffectId || active.id : null;
-        const normalizedNextLevel = normalizeConditionValue(canonicalName, nextLevel);
-        const nextEffectInput = createStandardConditionEffectInput(canonicalName, normalizedNextLevel, {
-            sourceType: 'manual',
-            sourceName: canonicalName,
-            actorId,
+        const nextInput = createStandardConditionEffectInput(canonicalName, normalizeConditionValue(canonicalName, nextValue), {
+            sourceType: currentEffect?.source?.type || 'manual',
+            sourceId: currentEffect?.source?.id || null,
+            sourceName: currentEffect?.source?.name || canonicalName,
+            actorId: character.id,
         });
-        const effectAction = nextLevel <= 0
-            ? (effectId ? dataActions.effect.deleteEffect(activeCampaignId, effectId) : Promise.resolve())
-            : effectId
-                ? dataActions.effect.updateEffect(activeCampaignId, effectId, effect => ({
-                    ...effect,
-                    label: nextEffectInput.label,
-                    category: nextEffectInput.category,
-                    value: nextEffectInput.value,
-                    templateId: effect.templateId || nextEffectInput.templateId,
-                    source: effect.source || nextEffectInput.source,
-                    modifiers: nextEffectInput.modifiers,
-                }))
-                : dataActions.effect.createStandardCondition(activeCampaignId, actorId, canonicalName, normalizedNextLevel);
-
-        Promise.resolve(effectAction)
-            .then(() => {
-                if (targetKey === 'drained' && delta > 0 && dataActions?.character?.adjustHp) {
-                    const charLevel = Math.max(1, parseInt(character?.level) || 1);
-                    return dataActions.character.adjustHp(activeCampaignId, character.id, -(charLevel * Math.max(1, delta)));
-                }
-                return null;
-            })
-            .catch(err => {
-                console.error(err);
-                notifyError(err);
+        const action = currentEffect?.id
+            ? dataActions.effect.updateEffect(activeCampaignId, currentEffect.id, (effect) => ({ ...effect, ...nextInput, source: effect.source || nextInput.source }))
+            : dataActions.effect.createStandardCondition(activeCampaignId, character.id, canonicalName, nextInput.value, {
+                sourceType: nextInput.source.type,
+                sourceId: nextInput.source.id,
+                sourceName: nextInput.source.name,
+                actorId: character.id,
             });
-    };
+        runEffectAction(action);
 
-
-    // --- RENDERERS ---
-
-    /**
-     * Renders the Detail View for a specific condition.
-     */
-    const renderDetailView = () => {
-        const condName = selectedCondition;
-        const entry = getConditionCatalogEntry(condName);
-        const iconSrc = getConditionImgSrc(condName);
-        const active = safeConds.find(c => String((typeof c === 'string') ? c : c?.name || '').toLowerCase() === String(condName).toLowerCase());
-        const level = (active && typeof active === 'object') ? active.level : (active ? 1 : 0);
-        const displayName = entry?.name || condName;
-
-        return (
-            <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
-                {/* Header / Nav */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 15 }}>
-                    <button
-                        type="button"
-                        style={{
-                            width: 'auto', padding: '8px 12px', marginTop: 0,
-                            background: '#333', color: '#ccc', border: '1px solid #555', borderRadius: 4, cursor: 'pointer',
-                            // If we have history (from another modal), use back logic. 
-                            // If we just drilled down from list, go back to list.
-                        }}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (initialCondition && onBack) {
-                                // If specifically opened as "Condition Info" from somewhere else (like chat link)
-                                onBack();
-                            } else {
-                                // Go back to list
-                                setSelectedCondition(null);
-                            }
-                        }}
-                    >
-                        ← Back
-                    </button>
-                    <h2 style={{ margin: 0, flex: 1, textAlign: 'center' }}>{displayName}</h2>
-                    <div style={{ width: 72 }} /> {/* Spacer for centering */}
-                </div>
-
-                {/* Controls */}
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                    {iconSrc ? (
-                        <img src={iconSrc} alt="" style={{ width: 48, height: 48, objectFit: 'contain' }} />
-                    ) : (
-                        <span style={{ fontSize: '2em' }}>{getConditionIcon(condName) || "⚪"}</span>
-                    )}
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <button data-testid={`condition-detail-minus-${String(condName).toLowerCase().replace(/\s+/g, '-')}`} onClick={() => adjustCondition(condName, -1)} style={{ width: 32, height: 32, cursor: 'pointer' }}>-</button>
-                        <span style={{ minWidth: 24, textAlign: 'center', fontSize: '1.2em', fontWeight: 'bold' }}>{level}</span>
-                        <button data-testid={`condition-detail-plus-${String(condName).toLowerCase().replace(/\s+/g, '-')}`} onClick={() => adjustCondition(condName, 1)} style={{ width: 32, height: 32, cursor: 'pointer' }}>+</button>
-                    </div>
-                </div>
-
-                {/* Description Content */}
-                <div
-                    className="formatted-content"
-                    dangerouslySetInnerHTML={{ __html: parseFoundry(entry?.description || "No description.", { actor: character }) }}
-                    style={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
-                />
-            </div>
-        );
-    };
-
-    /**
-     * Renders the List/Grid View of available conditions.
-     */
-    const renderListView = () => {
-        const rawList = Array.isArray(getListForTab(activeTab)) ? [...getListForTab(activeTab)] : [];
-
-        const getDisplayName = (name) => {
-            const entry = getConditionCatalogEntry(name);
-            return entry?.name || String(name || '');
-        };
-
-        let sortedList = rawList.sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b)));
-
-        if (activeTab === 'NEGATIVE') {
-            const NEGATIVE_GROUPS = [
-                {
-                    title: 'Control & Positioning',
-                    items: ['off-guard', 'prone', 'grabbed', 'restrained', 'immobilized', 'stunned', 'paralyzed', 'petrified']
-                },
-                {
-                    title: 'Lowered Abilities',
-                    items: ['frightened', 'clumsy', 'drained', 'enfeebled', 'stupefied', 'sickened', 'fatigued', 'encumbered', 'slowed']
-                },
-                { title: 'Senses', items: ['blinded', 'dazzled', 'deafened'] },
-                { title: 'Mental', items: ['confused', 'controlled', 'fascinated', 'fleeing'] },
-                {
-                    title: 'Death and Injury',
-                    items: ['doomed', 'dying', 'unconscious', 'wounded', 'persistent damage']
-                }
-            ];
-
-            const allKeys = new Set(rawList.map(x => String(x).toLowerCase()));
-            const included = new Set();
-            const grouped = [];
-
-            NEGATIVE_GROUPS.forEach(group => {
-                const present = group.items.filter(k => allKeys.has(k));
-                if (present.length === 0) return;
-                grouped.push(`__group:${group.title}`);
-                present.forEach(k => {
-                    grouped.push(k);
-                    included.add(k);
-                });
-            });
-
-            const other = rawList
-                .filter(k => !included.has(String(k).toLowerCase()))
-                .sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b)));
-
-            if (other.length > 0) {
-                grouped.push(`__group:Other`);
-                grouped.push(...other);
-            }
-
-            sortedList = grouped;
+        if (String(canonicalName).toLowerCase() === 'drained' && delta > 0 && dataActions.character?.adjustHp) {
+            runEffectAction(dataActions.character.adjustHp(activeCampaignId, character.id, -((character.level || 1) * delta)));
         }
+    };
 
+    const removeEffect = (effect) => {
+        if (readOnly || !effect?.id || !activeCampaignId || !dataActions?.effect) return;
+        runEffectAction(dataActions.effect.deleteEffect(activeCampaignId, effect.id));
+        setSelectedEffectId(null);
+        setSelectedConditionName(null);
+        setActiveTab('ACTIVE');
+    };
+
+    const returnToList = () => {
+        if ((initialEffectId || initialCondition) && onBack) onBack();
+        else {
+            setSelectedEffectId(null);
+            setSelectedConditionName(null);
+        }
+    };
+
+    const renderDetail = () => {
+        const isStandardCondition = selectedEffect.category === 'condition';
+        const image = isStandardCondition ? getConditionImgSrc(selectedEffect.name) : null;
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div style={{ padding: '20px 20px 0 20px' }}>
-                    <h2 style={{ textAlign: 'center', marginBottom: 15, marginTop: 0 }}>Conditions</h2>
-
-                    <div style={{ display: 'flex', gap: 5, marginBottom: 10, flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: 5 }}>
-                        {DISPLAY_TABS.map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                style={{
-                                    padding: '6px 10px', fontSize: '0.8em', flexShrink: 0,
-                                    background: activeTab === tab ? '#c5a059' : '#333',
-                                    color: activeTab === tab ? '#1a1a1d' : '#ccc',
-                                    border: activeTab === tab ? '1px solid #c5a059' : '1px solid #444',
-                                    cursor: 'pointer', fontFamily: 'Cinzel, serif',
-                                    textTransform: 'uppercase'
-                                }}
-                            >
-                                {tab}
-                            </button>
-                        ))}
-                    </div>
+            <>
+                <div className="conditions-modal__header">
+                    <button type="button" className="conditions-modal__back" onClick={returnToList}>Back</button>
+                    <h2>{selectedEffect.label}</h2>
+                    <span aria-hidden="true" />
                 </div>
-
-                {/* LIST */}
-                <div style={{ overflowY: 'auto', flex: 1, padding: '0 20px 20px 20px', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
-                    {sortedList.length === 0 && (
-                        <div style={{ textAlign: 'center', color: '#888', marginTop: 20 }}>
-                            No conditions found.
+                <div className="conditions-modal__detail-controls">
+                    {image ? <img src={image} alt="" /> : <span className="conditions-modal__effect-icon">{getEffectIcon(selectedEffect)}</span>}
+                    {isStandardCondition && selectedEffect.canModifyValue && !readOnly && (
+                        <div className="conditions-modal__value-controls">
+                            <button type="button" data-testid={`condition-detail-decrease-${toConditionSlug(selectedEffect.name)}`} onClick={() => adjustStandardCondition(selectedEffect.name, -1)}>-</button>
+                            <strong>{selectedEffect.value}</strong>
+                            <button type="button" data-testid={`condition-detail-increase-${toConditionSlug(selectedEffect.name)}`} onClick={() => adjustStandardCondition(selectedEffect.name, 1)}>+</button>
                         </div>
                     )}
-
-                    {sortedList.map((condName, idx) => {
-                        if (typeof condName === 'string' && condName.startsWith('__group:')) {
-                            const title = condName.slice('__group:'.length);
-                            return (
-                                <div key={condName} style={{ marginTop: idx === 0 ? 0 : 12 }}>
-                                    <div style={{
-                                        fontSize: '0.75em',
-                                        color: '#aaa',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: 1,
-                                        borderBottom: '1px solid #333',
-                                        padding: '6px 0 4px 0'
-                                    }}>
-                                        {title}
-                                    </div>
-                                </div>
-                            );
-                        }
-
-                        const activeEntry = safeConds.find(c => String((typeof c === 'string') ? c : c?.name || '').toLowerCase() === String(condName).toLowerCase());
-                        const isActive = !!activeEntry;
-                        const level = (activeEntry && typeof activeEntry === 'object') ? activeEntry.level : (activeEntry ? 1 : 0);
-                        const iconSrc = getConditionImgSrc(condName);
-                        const emojiIcon = getConditionIcon(condName);
-
-                        return (
-                            <div key={condName} data-testid={`condition-row-${String(condName).toLowerCase().replace(/\s+/g, '-')}`} style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                borderBottom: '1px solid #444',
-                                padding: '8px 5px',
-                                background: isActive && activeTab !== 'ACTIVE' ? 'rgba(197, 160, 89, 0.05)' : 'transparent'
-                            }}>
-                                <div
-                                    style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flex: 1 }}
-                                    onClick={() => setSelectedCondition(condName)}
-                                >
-                                    {iconSrc ? (
-                                        <img src={iconSrc} alt="" style={{ width: 32, height: 32, objectFit: 'contain' }} />
-                                    ) : (
-                                        <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5em' }}>
-                                            {emojiIcon || '⚪'}
-                                        </div>
-                                    )}
-                                    <span style={{
-                                        fontWeight: isActive ? 'bold' : 'normal',
-                                        color: isActive ? '#c5a059' : '#e0e0e0',
-                                        fontSize: '1em'
-                                    }}>
-                                        {getDisplayName(condName)}
-                                    </span>
-                                </div>
-
-                                {/* Quick Adjustment Controls in List */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <button
-                                        data-testid={`condition-list-minus-${String(condName).toLowerCase().replace(/\s+/g, '-')}`}
-                                        onClick={() => adjustCondition(condName, -1)}
-                                        style={{
-                                            background: '#1a1a1d', border: '1px solid #c5a059', color: '#c5a059',
-                                            width: 32, height: 32, borderRadius: 4, cursor: 'pointer', fontSize: '1.2em',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                        }}
-                                    >
-                                        -
-                                    </button>
-
-                                    <span style={{ width: 25, textAlign: 'center', fontWeight: 'bold', fontSize: '1.1em', color: '#fff' }}>
-                                        {level}
-                                    </span>
-
-                                    <button
-                                        data-testid={`condition-list-plus-${String(condName).toLowerCase().replace(/\s+/g, '-')}`}
-                                        onClick={() => adjustCondition(condName, 1)}
-                                        style={{
-                                            background: '#1a1a1d', border: '1px solid #c5a059', color: '#c5a059',
-                                            width: 32, height: 32, borderRadius: 4, cursor: 'pointer', fontSize: '1.2em',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                        }}
-                                    >
-                                        +
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })}
+                    {!readOnly && selectedEffect.id && (
+                        <button type="button" className="conditions-modal__remove" onClick={() => removeEffect(selectedEffect)}>Remove</button>
+                    )}
                 </div>
+                <div
+                    className="conditions-modal__description formatted-content"
+                    onClick={onContentLinkClick}
+                    dangerouslySetInnerHTML={{ __html: parseFoundry(selectedEffect.description, { actor: character }) }}
+                />
+            </>
+        );
+    };
+
+    const renderStandardRow = (conditionName) => {
+        const entry = getConditionCatalogEntry(conditionName);
+        const active = findStandardEffect(conditionName);
+        const valued = isConditionValued(conditionName);
+        const value = Number(active?.value) || 0;
+        const image = getConditionImgSrc(conditionName);
+        return (
+            <div className="conditions-modal__row" key={conditionName}>
+                <button type="button" className="conditions-modal__row-main" onClick={() => {
+                    if (active?.id) setSelectedEffectId(active.id);
+                    else setSelectedConditionName(entry?.name || conditionName);
+                }}>
+                    {image ? <img src={image} alt="" /> : <span>{getConditionIcon(conditionName) || 'O'}</span>}
+                    <span className={active ? 'conditions-modal__row-name--active' : ''}>{entry?.name || conditionName}</span>
+                </button>
+                {!readOnly && (
+                    <div className="conditions-modal__row-actions">
+                        <button type="button" aria-label={`Decrease ${conditionName}`} onClick={() => adjustStandardCondition(conditionName, -1)}>-</button>
+                        <span>{valued ? value : (active ? 1 : 0)}</span>
+                        <button type="button" aria-label={`Increase ${conditionName}`} onClick={() => adjustStandardCondition(conditionName, 1)}>+</button>
+                    </div>
+                )}
             </div>
         );
     };
 
-    // --- WRAPPER RENDER ---
+    const renderList = () => {
+        const active = activeTab === 'ACTIVE';
+        return (
+            <>
+                <div className="conditions-modal__header conditions-modal__header--list"><h2>Conditions</h2></div>
+                <div className="conditions-modal__tabs" role="tablist" aria-label="Condition categories">
+                    {visibleTabs.map((tab) => (
+                        <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? 'is-active' : ''} onClick={() => setActiveTab(tab)}>{tab}</button>
+                    ))}
+                </div>
+                <Input className="conditions-modal__search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search conditions..." aria-label="Search conditions" />
+                <div className="conditions-modal__list">
+                    {active ? (
+                        activeEffects.length
+                            ? activeEffects.map((effect) => (
+                                <button type="button" key={effect.id} className={`conditions-modal__active-effect conditions-modal__active-effect--${effect.variant}`} onClick={() => setSelectedEffectId(effect.id)}>
+                                    <span>{getEffectIcon(effect)}</span><span>{effect.label}</span>
+                                </button>
+                            ))
+                            : <p className="conditions-modal__empty">No active conditions found.</p>
+                    ) : standardRows.map((row) => (
+                        row.type === 'group'
+                            ? <div className="conditions-modal__group" key={row.title}>{row.title}</div>
+                            : renderStandardRow(row.name)
+                    ))}
+                </div>
+            </>
+        );
+    };
 
     return (
-        <div data-player-interaction-lock="true" style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 11000,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20,
-            overscrollBehavior: 'none',
-            touchAction: 'none'
-        }} onClick={(e) => {
-            if (e.target === e.currentTarget) onClose();
+        <div className="conditions-modal__overlay" data-player-interaction-lock="true" onClick={(event) => {
+            if (event.target === event.currentTarget) onClose();
         }}>
-            <div role="dialog" aria-modal="true" style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                borderRadius: '8px', maxWidth: '500px', width: '100%',
-                color: '#e0e0e0',
-                display: 'flex',
-                flexDirection: 'column',
-                maxHeight: '90vh',
-                height: '80vh', // Fixed height for consistency
-                position: 'relative',
-                overscrollBehavior: 'contain',
-                touchAction: 'pan-y'
-            }} onClick={e => {
-                e.stopPropagation();
-                if (onContentLinkClick) onContentLinkClick(e);
-            }}>
-
-                <style>{`
-                    .formatted-content p { margin: 0.5em 0; }
-                    .formatted-content ul, .formatted-content ol { margin: 0.5em 0; padding-left: 20px; }
-                    .formatted-content { line-height: 1.6; }
-                    .content-link { transition: opacity 0.2s; }
-                    .gold-link { color: var(--text-gold); cursor: pointer; text-decoration: none; }
-                    .gold-link:hover { text-decoration: underline; opacity: 1; }
-                `}</style>
-
-                {selectedCondition ? renderDetailView() : renderListView()}
-
-                {/* Close Button (Global for this modal) */}
-                <div style={{ padding: 20, borderTop: '1px solid #444', flexShrink: 0 }}>
-                    <button onClick={onClose} style={{
-                        width: '100%', padding: '10px', background: '#c5a059',
-                        border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', color: '#1a1a1d',
-                        fontSize: '0.9em'
-                    }}>Close</button>
-                </div>
-            </div>
+            <section className="conditions-modal" role="dialog" aria-modal="true" aria-label="Conditions">
+                <div className="conditions-modal__content">{selectedEffect ? renderDetail() : renderList()}</div>
+                <footer className="conditions-modal__footer"><button type="button" onClick={onClose}>Close</button></footer>
+            </section>
         </div>
     );
+}
+
+function buildStandardRows(tab, query) {
+    const matches = (name) => !query || String(getConditionCatalogEntry(name)?.name || name).toLowerCase().includes(query);
+    if (tab === 'NEGATIVE') {
+        return NEGATIVE_GROUPS.flatMap((group) => {
+            const items = group.items.filter(matches);
+            return items.length ? [{ type: 'group', title: group.title }, ...items.map((name) => ({ type: 'condition', name }))] : [];
+        });
+    }
+    const names = tab === 'POSITIVE' ? POS_CONDS : VIS_CONDS;
+    return names.filter(matches).sort((left, right) => String(left).localeCompare(String(right))).map((name) => ({ type: 'condition', name }));
+}
+
+function buildConditionPreview(conditionName) {
+    if (!conditionName) return null;
+    const entry = getConditionCatalogEntry(conditionName);
+    const name = entry?.name || conditionName;
+    return {
+        id: null,
+        name,
+        label: name,
+        category: 'condition',
+        value: 0,
+        canModifyValue: isConditionValued(name),
+        description: entry?.description || 'No condition description is available.',
+    };
+}
+
+function filterByQuery(effects, query) {
+    if (!query) return effects;
+    return effects.filter((effect) => `${effect.label} ${effect.name}`.toLowerCase().includes(query));
+}
+
+function getEffectIcon(effect) {
+    if (effect.category === 'damage_effect') return 'FIRE';
+    if (effect.category === 'affliction') return 'AFF';
+    if (effect.category === 'custom') return 'NOTE';
+    return getConditionIcon(effect.name) || 'O';
+}
+
+function toConditionSlug(value) {
+    return String(value || 'condition').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }

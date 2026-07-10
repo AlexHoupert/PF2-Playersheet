@@ -1,45 +1,52 @@
 import React from 'react';
 import { getConditionImgSrc } from '../constants/conditionsCatalog';
 import { getConditionIcon, NEG_CONDS, POS_CONDS } from '../constants/conditions';
+import './ConditionList.css';
 
-export function ConditionList({ conditions = [], onClick, onAdd }) {
-    // Filter active conditions
-    const active = conditions.filter(c => c.level > 0);
+const CATEGORY_ICONS = {
+    damage_effect: 'FIRE',
+    affliction: 'AFF',
+    custom: 'NOTE',
+};
+
+export function ConditionList({ conditions = [], onClick, onAdd, readOnly = false }) {
+    const active = Array.isArray(conditions) ? conditions : [];
 
     return (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10, justifyContent: 'center' }}>
-            {active.map(c => {
-                const img = getConditionImgSrc(c.name);
-                const isNeg = NEG_CONDS.includes(c.name.toLowerCase());
-                const isPos = POS_CONDS.includes(c.name.toLowerCase());
-                let bg = '#222';
-                if (isNeg) bg = '#5c1a1a';
-                if (isPos) bg = '#1a5c1a';
+        <div className="condition-list" aria-label="Active conditions">
+            {active.map((condition) => {
+                const lowerName = String(condition.name || '').toLowerCase();
+                const image = condition.category === 'condition' ? getConditionImgSrc(condition.name) : null;
+                const isNegative = condition.category === 'condition' && NEG_CONDS.includes(lowerName);
+                const isPositive = condition.category === 'condition' && POS_CONDS.includes(lowerName);
+                const variant = condition.variant || condition.category || 'condition';
+                const icon = image
+                    ? null
+                    : condition.category === 'condition'
+                        ? getConditionIcon(condition.name) || 'O'
+                        : CATEGORY_ICONS[condition.category] || 'FX';
 
                 return (
-                    <div key={c.name} data-testid={`condition-badge-${String(c.name).toLowerCase().replace(/\s+/g, '-')}`} style={{
-                        background: bg, padding: '4px 8px', borderRadius: 15,
-                        display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.9em',
-                        border: '1px solid #555', cursor: 'pointer',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                    }} onClick={onAdd}> {/* Clicking badge opens Manager (onAdd) */}
-                        {img ? <img src={img} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} /> : <span>{getConditionIcon(c.name)}</span>}
-                        <span style={{ color: '#e0e0e0', fontWeight: 'bold' }}>{c.name} {c.level > 1 ? c.level : ''}</span>
-                    </div>
+                    <button
+                        key={condition.id}
+                        type="button"
+                        data-testid={`condition-badge-${String(condition.id || condition.name).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                        className={[
+                            'condition-list__badge',
+                            `condition-list__badge--${variant}`,
+                            isNegative && 'condition-list__badge--negative',
+                            isPositive && 'condition-list__badge--positive',
+                        ].filter(Boolean).join(' ')}
+                        onClick={() => onClick?.(condition)}
+                    >
+                        {image ? <img src={image} alt="" className="condition-list__image" /> : <span className="condition-list__icon">{icon}</span>}
+                        <span>{condition.label}</span>
+                    </button>
                 );
             })}
 
-            {active.length === 0 && (
-                <button
-                    data-testid="condition-add-button"
-                    className="btn-add-condition"
-                    onClick={onAdd}
-                    style={{
-                        fontSize: '0.75em', padding: '4px 10px',
-                        background: 'transparent', border: '1px dashed #666', color: '#aaa',
-                        cursor: 'pointer', borderRadius: 15
-                    }}
-                >
+            {active.length === 0 && !readOnly && (
+                <button type="button" data-testid="condition-add-button" className="condition-list__add" onClick={onAdd}>
                     + ADD CONDITION
                 </button>
             )}

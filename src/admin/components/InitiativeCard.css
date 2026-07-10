@@ -225,6 +225,19 @@
     font-weight: 500;
 }
 
+.init-card--defeated {
+    opacity: 0.64;
+    border-color: #734044;
+}
+
+.init-card__defeated-label {
+    margin-left: auto;
+    color: #ffaaa5;
+    font-size: 0.72em;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
 .init-card__condition-pill--closable {
     padding-right: 2px;
 }

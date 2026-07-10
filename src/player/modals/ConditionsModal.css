@@ -1,0 +1,37 @@
+.conditions-modal__overlay { position: fixed; inset: 0; z-index: 11000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.82); overscroll-behavior: contain; touch-action: none; }
+.conditions-modal { display: flex; flex-direction: column; width: min(500px, 100%); height: min(80dvh, 720px); max-height: calc(100dvh - 32px); overflow: hidden; border: 2px solid #c5a059; border-radius: 8px; background: #2b2b2e; color: #e0e0e0; box-shadow: 0 20px 54px rgba(0, 0, 0, 0.6); touch-action: pan-y; }
+.conditions-modal__content { display: flex; min-height: 0; flex: 1; flex-direction: column; overflow: hidden; }
+.conditions-modal__header { display: grid; grid-template-columns: minmax(72px, 1fr) minmax(0, 2fr) minmax(72px, 1fr); align-items: center; gap: 8px; padding: 18px 20px 12px; }
+.conditions-modal__header--list { display: block; text-align: center; }
+.conditions-modal__header h2 { margin: 0; color: #f0d18a; font-size: 1.25rem; text-align: center; }
+.conditions-modal__back { justify-self: start; }
+.conditions-modal__tabs { display: flex; gap: 5px; overflow-x: auto; padding: 0 20px 8px; }
+.conditions-modal__tabs button, .conditions-modal__row-actions button, .conditions-modal__back, .conditions-modal__remove, .conditions-modal__footer button { border: 1px solid #555; border-radius: 4px; background: #333; color: #ddd; cursor: pointer; font: inherit; }
+.conditions-modal__tabs button { flex: 0 0 auto; padding: 6px 10px; font-family: Cinzel, serif; font-size: 0.78em; }
+.conditions-modal__tabs button.is-active { border-color: #c5a059; background: #c5a059; color: #1a1a1d; }
+.conditions-modal__search { margin: 0 20px 10px; width: calc(100% - 40px); }
+.conditions-modal__list, .conditions-modal__description { min-height: 0; flex: 1; overflow-y: auto; padding: 0 20px 20px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.conditions-modal__group { margin-top: 12px; border-bottom: 1px solid #444; padding: 6px 0 4px; color: #aaa; font-size: 0.75em; letter-spacing: 0.08em; text-transform: uppercase; }
+.conditions-modal__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid #444; padding: 8px 4px; }
+.conditions-modal__row-main { display: flex; min-width: 0; flex: 1; align-items: center; gap: 10px; border: 0; background: transparent; color: #e0e0e0; cursor: pointer; font: inherit; text-align: left; }
+.conditions-modal__row-main img { width: 30px; height: 30px; object-fit: contain; }
+.conditions-modal__row-name--active { color: #e8c97a; font-weight: 700; }
+.conditions-modal__row-actions { display: flex; align-items: center; gap: 8px; }
+.conditions-modal__row-actions button { display: grid; width: 30px; height: 30px; place-items: center; border-color: #c5a059; color: #e8c97a; }
+.conditions-modal__row-actions span { width: 22px; text-align: center; font-weight: 700; }
+.conditions-modal__active-effect { display: flex; width: 100%; align-items: center; gap: 10px; border: 1px solid #444; border-radius: 5px; margin-bottom: 8px; padding: 10px; background: #252529; color: #e8e8e8; cursor: pointer; font: inherit; text-align: left; }
+.conditions-modal__active-effect--persistent { border-color: #a64b38; color: #ffb09b; }
+.conditions-modal__active-effect--affliction { border-color: #7e5bab; color: #d7c2ff; }
+.conditions-modal__active-effect--custom { border-color: #4f7897; color: #b9ddff; }
+.conditions-modal__detail-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 0 20px 16px; }
+.conditions-modal__detail-controls img { width: 48px; height: 48px; object-fit: contain; }
+.conditions-modal__effect-icon { color: #e8c97a; font-size: 0.85em; font-weight: 800; }
+.conditions-modal__value-controls { display: flex; align-items: center; gap: 10px; }
+.conditions-modal__value-controls button { width: 32px; height: 32px; }
+.conditions-modal__remove { border-color: #9b3737; color: #ffaaa0; padding: 7px 10px; }
+.conditions-modal__description { line-height: 1.6; }
+.conditions-modal__description p { margin: 0.5em 0; }
+.conditions-modal__empty { color: #999; text-align: center; }
+.conditions-modal__footer { flex: 0 0 auto; border-top: 1px solid #444; padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px)); }
+.conditions-modal__footer button { width: 100%; border: 0; background: #c5a059; color: #1a1a1d; font-weight: 700; padding: 10px; }
+@media (max-width: 640px) { .conditions-modal__overlay { align-items: flex-end; padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)); } .conditions-modal { height: min(90dvh, 760px); max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 20px); } }

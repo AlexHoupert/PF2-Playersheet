@@ -1,0 +1,47 @@
+.condition-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.condition-list__badge,
+.condition-list__add {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 30px;
+    border: 1px solid #555;
+    border-radius: 15px;
+    padding: 4px 8px;
+    background: #222;
+    color: #e0e0e0;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.9em;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.condition-list__badge--negative { background: #5c1a1a; }
+.condition-list__badge--positive { background: #1a5c1a; }
+.condition-list__badge--persistent { border-color: #a64b38; background: #4a211c; color: #ffb09b; }
+.condition-list__badge--affliction { border-color: #7e5bab; background: #3b294c; color: #d7c2ff; }
+.condition-list__badge--custom { border-color: #4f7897; background: #22384a; color: #b9ddff; }
+
+.condition-list__badge:focus-visible,
+.condition-list__add:focus-visible {
+    outline: 2px solid #c5a059;
+    outline-offset: 2px;
+}
+
+.condition-list__image { width: 20px; height: 20px; object-fit: contain; }
+.condition-list__icon { font-size: 0.75em; letter-spacing: 0.04em; }
+
+.condition-list__add {
+    border-style: dashed;
+    background: transparent;
+    color: #aaa;
+    font-size: 0.75em;
+}

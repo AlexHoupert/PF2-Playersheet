@@ -1,6 +1,12 @@
 import { isSoftDeleted, markDeleted, markRestored } from "./campaignReducers.js";
 import { cloneValue, createInstanceId } from "./inventoryReducers.js";
 import { applyRecordUpdater } from "./updateHelpers.js";
+import {
+  getCurrentTurnCombatantId,
+  getCurrentTurnIndex,
+  getNextTurnCombatantId,
+  getRoundStartCombatantId,
+} from "../../encounter/turnOrder.js";
 
 export function createEncounterRecord(nameOrEncounter, options = {}) {
   const { createId = () => createInstanceId("encounter") } = options;
@@ -155,7 +161,6 @@ export function removeCombatantFromEncounterInCampaign(campaign, encounterId, co
       ...encounter,
       combatants,
       selectedEntityId: encounter.selectedEntityId === combatantId ? null : encounter.selectedEntityId,
-      currentTurnIndex: clampTurnIndex(encounter.currentTurnIndex, combatants.length),
     };
   });
 }
@@ -172,6 +177,34 @@ export function updateCombatantInEncounterInCampaign(campaign, encounterId, comb
   });
 }
 
+export function setCombatantDefeatedInCampaign(campaign, encounterId, combatantId, options = {}) {
+  return updateEncounterInCampaign(campaign, encounterId, (encounter) => {
+    const currentTurnId = getCurrentTurnCombatantId(encounter);
+    const combatant = (encounter.combatants || []).find((entry) => entry.id === combatantId);
+    if (!combatant || combatant.type !== "creature") return encounter;
+
+    const next = {
+      ...encounter,
+      combatants: (encounter.combatants || []).map((entry) => (
+        entry.id === combatantId
+          ? {
+            ...entry,
+            currentHp: 0,
+            defeatedAt: options.now || new Date().toISOString(),
+            defeatedBy: options.actorEmail || null,
+          }
+          : entry
+      )),
+      selectedEntityId: encounter.selectedEntityId === combatantId ? null : encounter.selectedEntityId,
+    };
+
+    if (currentTurnId === combatantId) {
+      next.currentTurnCombatantId = getNextTurnCombatantId(next, combatantId);
+    }
+    return next;
+  });
+}
+
 export function selectEncounterEntityInCampaign(campaign, encounterId, entityId) {
   return updateEncounterInCampaign(campaign, encounterId, (encounter) => ({
     ...encounter,
@@ -181,14 +214,16 @@ export function selectEncounterEntityInCampaign(campaign, encounterId, entityId)
 
 export function endEncounterTurnInCampaign(campaign, encounterId) {
   return updateEncounterInCampaign(campaign, encounterId, (encounter) => {
-    const total = encounter.combatants?.length || 0;
-    if (total === 0) return encounter;
-    return { ...encounter, currentTurnIndex: ((encounter.currentTurnIndex || 0) + 1) % total };
+    const currentTurnCombatantId = getNextTurnCombatantId(encounter);
+    return { ...encounter, currentTurnCombatantId };
   });
 }
 
 export function resetEncounterRoundInCampaign(campaign, encounterId) {
-  return updateEncounterInCampaign(campaign, encounterId, (encounter) => ({ ...encounter, currentTurnIndex: 0 }));
+  return updateEncounterInCampaign(campaign, encounterId, (encounter) => ({
+    ...encounter,
+    currentTurnCombatantId: getRoundStartCombatantId(encounter),
+  }));
 }
 
 export function rollEncounterInitiativeInCampaign(campaign, encounterId, options = {}) {
@@ -237,6 +272,8 @@ function normalizeEncounter(encounter = {}) {
   next.combatants = Array.isArray(next.combatants)
     ? next.combatants.map((combatant) => normalizeCombatant(combatant, next.id))
     : [];
+  next.currentTurnCombatantId = getCurrentTurnCombatantId(next);
+  next.currentTurnIndex = getCurrentTurnIndex(next);
   return next;
 }
 
@@ -249,6 +286,10 @@ function normalizeCombatant(combatant = {}, encounterId = null) {
   next.initiative = Number.isFinite(Number(next.initiative)) ? Number(next.initiative) : 0;
   next.maxHp = Number.isFinite(Number(next.maxHp)) ? Number(next.maxHp) : 0;
   next.currentHp = clamp(Number(next.currentHp) || 0, 0, next.maxHp);
+  if (next.currentHp > 0) {
+    delete next.defeatedAt;
+    delete next.defeatedBy;
+  }
   next.conditions = Array.isArray(next.conditions) ? next.conditions : [];
   next.visible = next.visible !== false;
   if (next.type === "player") {
@@ -265,11 +306,6 @@ function normalizeCombatant(combatant = {}, encounterId = null) {
 export function buildEncounterCombatantEffectTargetId(encounterId, combatantId) {
   if (!encounterId || !combatantId) return null;
   return `encounter:${encounterId}:combatant:${combatantId}`;
-}
-
-function clampTurnIndex(index, total) {
-  if (total <= 0) return 0;
-  return Math.min(Number(index) || 0, total - 1);
 }
 
 function clamp(value, min, max) {

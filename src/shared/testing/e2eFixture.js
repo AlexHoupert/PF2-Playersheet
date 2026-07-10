@@ -12,6 +12,11 @@ export function isE2eFixtureEnabled() {
   return new URLSearchParams(window.location.search).get("e2e") === "true";
 }
 
+export function isE2eAuthGateEnabled() {
+  if (!import.meta.env.DEV) return false;
+  return new URLSearchParams(window.location.search).get("e2eAuthGate") === "true";
+}
+
 export function createE2eV2Store() {
   return {
     campaigns: {

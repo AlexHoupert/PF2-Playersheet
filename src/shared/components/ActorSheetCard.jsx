@@ -11,6 +11,7 @@ import { useAppFeedback } from '../feedback/AppFeedback';
 import { selectDeviantAbility } from '../db/selectors/abilitySelectors';
 import { selectPact, selectPactList } from '../db/selectors/pactSelectors';
 import { selectActorRulesViewModel } from '../rules/actorRulesViewModel';
+import { selectActorEffectPresentationItems } from '../db/selectors/effectSelectors';
 import { findInventoryItemIndex } from '../utils/itemIdentity';
 
 const DEFAULT_CAPABILITIES = {
@@ -46,6 +47,10 @@ export function ActorSheetCard({
     const actorRules = useMemo(() => selectActorRulesViewModel(activeCampaign, character?.id), [activeCampaign, character?.id]);
     const rulesCharacter = actorRules.character || character;
     const conditions = actorRules.conditions || [];
+    const displayEffects = useMemo(
+        () => selectActorEffectPresentationItems(activeCampaign, character?.id),
+        [activeCampaign, character?.id]
+    );
     const assignedPact = useMemo(() => selectPact(db, character?.pact?.pactId), [character?.pact?.pactId, db]);
     const allPacts = useMemo(() => selectPactList(db), [db]);
     const hasPact = !!assignedPact;
@@ -175,9 +180,11 @@ export function ActorSheetCard({
                             character={rulesCharacter}
                             rulesViewModel={actorRules}
                             conditions={conditions}
+                            displayEffects={displayEffects}
                             characterActions={characterActions}
                             onOpenModal={handleOpenModal}
                             onLongPress={onOpenModalLong}
+                            readOnly={!resolvedCapabilities.editable}
                         />
                     </>
                 )}
@@ -259,12 +266,14 @@ export function ActorSheetCard({
                     setModalData={setLocalModalData}
                     character={rulesCharacter}
                     conditions={conditions}
+                    effects={displayEffects}
                     updateCharacter={updateCharacter}
                     characterActions={characterActions}
                     onClose={() => { setLocalModalMode(null); setLocalModalData(null); }}
                     onBack={() => { setLocalModalMode(null); setLocalModalData(null); }}
                     hasHistory={false}
                     onContentLinkClick={() => {}}
+                    readOnly={!resolvedCapabilities.editable}
                     dailyPrepQueue={[]}
                     setDailyPrepQueue={() => {}}
                     toggleInventoryEquipped={handleToggleEquip}

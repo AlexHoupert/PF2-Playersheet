@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from '../db/firebase-config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { LoginView } from './LoginView';
-import { createE2eUser, isE2eFixtureEnabled } from '../testing/e2eFixture';
+import { createE2eUser, isE2eAuthGateEnabled, isE2eFixtureEnabled } from '../testing/e2eFixture';
 
 const AuthContext = createContext();
 
@@ -12,12 +12,18 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
     const e2eFixture = isE2eFixtureEnabled();
+    const e2eAuthGate = isE2eAuthGateEnabled();
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(!e2eFixture);
+    const [loading, setLoading] = useState(!e2eFixture && !e2eAuthGate);
 
     useEffect(() => {
         if (e2eFixture) {
             setUser(createE2eUser());
+            setLoading(false);
+            return undefined;
+        }
+        if (e2eAuthGate) {
+            setUser(null);
             setLoading(false);
             return undefined;
         }
@@ -26,7 +32,7 @@ export function AuthProvider({ children }) {
             setLoading(false);
         });
         return unsubscribe;
-    }, [e2eFixture]);
+    }, [e2eAuthGate, e2eFixture]);
 
     const logout = () => {
         if (e2eFixture) return Promise.resolve();

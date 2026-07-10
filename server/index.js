@@ -1,5 +1,6 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
+import { createServer as createHttpServer } from 'node:http';
 import { exec } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -10,12 +11,16 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 5173;
 
 async function createServer() {
     const app = express();
+    const httpServer = createHttpServer(app);
 
     // Create Vite server in middleware mode and configure the app type as
     // 'custom', disabling Vite's own HTML serving logic so parent server
     // can take control
     const vite = await createViteServer({
-        server: { middlewareMode: true },
+        server: {
+            middlewareMode: { server: httpServer },
+            hmr: { server: httpServer },
+        },
         appType: 'spa',
     });
 
@@ -272,7 +277,7 @@ async function createServer() {
     // Vite Middleware (Must be last to handle SPA fallback)
     app.use(vite.middlewares);
 
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
         console.log(`Server running at http://localhost:${PORT}`);
         console.log(`Admin API ready at http://localhost:${PORT}/api/admin`);
     });

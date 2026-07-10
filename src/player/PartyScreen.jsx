@@ -9,9 +9,18 @@ import { useCampaign } from '../shared/context/CampaignContext';
 import CreatureCard from '../shared/components/CreatureCard';
 import { ActorSheetCard } from '../shared/components/ActorSheetCard';
 import InitiativeCard from '../admin/components/InitiativeCard';
-import { selectBestiaryRevealState, selectCustomCreatureData } from '../shared/db/selectors/bestiarySelectors';
+import {
+    selectBestiaryCreatureMetadataEntry,
+    selectBestiaryRevealState,
+    selectCustomCreatureData,
+} from '../shared/db/selectors/bestiarySelectors';
 import { selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
+import {
+    selectCombatantEffectPresentationItems,
+    selectCombatantEffects,
+} from '../shared/db/selectors/effectSelectors';
 import { selectVisibleCreatureFields } from '../shared/bestiary/creaturePresentation';
+import { getCurrentTurnCombatantId, getRotatedEncounterTurnOrder } from '../shared/encounter/turnOrder';
 import './PartyScreen.css';
 
 export default function PartyScreen() {
@@ -25,25 +34,19 @@ export default function PartyScreen() {
     // Only show visible combatants, rotated so active is on top
     const visibleCombatants = useMemo(() => {
         if (!activeEncounter) return [];
-        const byInit = [...activeEncounter.combatants]
-            .sort((a, b) => (b.initiative ?? 0) - (a.initiative ?? 0));
-        const idx = (activeEncounter.currentTurnIndex ?? 0) % (byInit.length || 1);
-        const rotated = [...byInit.slice(idx), ...byInit.slice(0, idx)];
+        const rotated = getRotatedEncounterTurnOrder(activeEncounter, { includeDefeated: false });
         return rotated.filter(c => c.visible);
-    }, [activeEncounter?.combatants, activeEncounter?.currentTurnIndex]);
+    }, [activeEncounter]);
 
     // Active combatant is always first in the full rotated list (may be hidden)
     const activeTurnId = useMemo(() => {
         if (!activeEncounter) return null;
-        const byInit = [...(activeEncounter.combatants || [])]
-            .sort((a, b) => (b.initiative ?? 0) - (a.initiative ?? 0));
-        const idx = (activeEncounter.currentTurnIndex ?? 0) % (byInit.length || 1);
-        return byInit[idx]?.id;
+        return getCurrentTurnCombatantId(activeEncounter);
     }, [activeEncounter]);
 
     // selectedEntityId from GM
     const selectedEntityId = activeEncounter?.selectedEntityId || null;
-    const selectedCombatant = activeEncounter?.combatants?.find(c => c.id === selectedEntityId && c.visible);
+    const selectedCombatant = visibleCombatants.find(c => c.id === selectedEntityId) || null;
     const infoCreatureData = selectedCombatant?.type === 'creature' ? creatureDataCache[selectedCombatant.creatureId] : null;
     const infoCharData = selectedCombatant?.type === 'player' ? characters.find(c => c.id === selectedCombatant.playerId) : null;
 
@@ -100,6 +103,8 @@ export default function PartyScreen() {
         return selectBestiaryRevealState(db, creatureId);
     };
 
+    const getCreatureFalseData = (creatureId) => selectBestiaryCreatureMetadataEntry(db, creatureId)?.falseData || {};
+
     if (!activeEncounter) {
         return (
             <div className="party-screen party-screen--empty">
@@ -131,6 +136,9 @@ export default function PartyScreen() {
                                 creatureData={combatant.type === 'creature' ? creatureDataCache[combatant.creatureId] : null}
                                 characterData={combatant.type === 'player' ? characters.find(c => c.id === combatant.playerId) : null}
                                 revealState={combatant.type === 'creature' ? getRevealState(combatant.creatureId) : {}}
+                                falseData={combatant.type === 'creature' ? getCreatureFalseData(combatant.creatureId) : {}}
+                                combatantEffects={selectCombatantEffects(activeCampaign, activeEncounter.id, combatant)}
+                                effectBadges={selectCombatantEffectPresentationItems(activeCampaign, activeEncounter.id, combatant, { viewerMode: 'party' })}
                             />
                         ))}
                     </AnimatePresence>

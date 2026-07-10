@@ -22,7 +22,6 @@ export const CONDITION_ICONS = {
     Observed: '👀',
     'Off-Guard': '🛡️',
     Paralyzed: '🥶',
-    'Persistent Damage': '🔥',
     Petrified: '🗿',
     Prone: '🛌',
     Quickened: '⚡',
@@ -36,7 +35,6 @@ export const CONDITION_ICONS = {
     Unnoticed: '🥷',
     Wounded: '🩹',
     Blessed: '🙏',
-    'Fast Healing': '❤️‍🩹'
 };
 
 export const BINARY_CONDS = [
@@ -87,7 +85,6 @@ export const NEG_CONDS = [
     'immobilized',
     'off-guard',
     'paralyzed',
-    'persistent damage',
     'petrified',
     'prone',
     'restrained',
@@ -99,7 +96,7 @@ export const NEG_CONDS = [
     'wounded'
 ];
 
-export const POS_CONDS = ['quickened', 'blessed', 'fast healing'];
+export const POS_CONDS = ['quickened', 'blessed'];
 
 export const VIS_CONDS = ['concealed', 'hidden', 'invisible', 'observed', 'undetected', 'unnoticed'];
 
