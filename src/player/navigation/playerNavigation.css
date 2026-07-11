@@ -577,3 +577,18 @@
         font-weight: 700;
     }
 }
+
+/*
+ * Firefox Android can offset fixed bottom elements by the dynamic browser
+ * toolbar height while "Scroll to hide toolbar" is active. Anchor the same
+ * fixed root from the dynamic viewport top to avoid Gecko's bottom-offset
+ * path without changing the DOM or positioning model for other browsers.
+ */
+@media (max-width: 768px) {
+    @supports (-moz-appearance: none) and (height: 100dvh) {
+        .player-bottom-nav-root {
+            top: calc(100dvh - var(--player-bottom-nav-height) - env(safe-area-inset-bottom, 0px));
+            bottom: auto;
+        }
+    }
+}

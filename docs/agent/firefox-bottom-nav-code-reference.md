@@ -945,3 +945,26 @@ These are useful when researching regressions:
 - `PlayerBottomNav` is not portalled; it is rendered inside `PlayerAppController`.
 - `.player-bottom-nav-root` is `position: fixed` and no longer uses transform-based jitter fixes.
 
+## Targeted Dynamic Toolbar Workaround
+
+Manual testing on 2026-07-11 isolated the remaining movement to Firefox
+Android's `Scroll to hide toolbar` setting. This matches Mozilla bug 1880375:
+Firefox can incorrectly offset `position: fixed; bottom: 0` elements by the
+dynamic toolbar height.
+
+`playerNavigation.css` now keeps the existing fixed, in-shell root but anchors
+it from `100dvh` at the top in Firefox only:
+
+```css
+@supports (-moz-appearance: none) and (height: 100dvh) {
+    .player-bottom-nav-root {
+        top: calc(100dvh - var(--player-bottom-nav-height) - env(safe-area-inset-bottom, 0px));
+        bottom: auto;
+    }
+}
+```
+
+This avoids Gecko's faulty fixed-bottom offset path without portalling the bar,
+adding transforms, or changing Chrome's positioning. It still requires a
+physical Firefox Android smoke test with the setting enabled because desktop
+Firefox and Playwright cannot emulate GeckoView's dynamic browser toolbar.

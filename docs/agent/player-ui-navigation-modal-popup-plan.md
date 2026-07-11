@@ -616,6 +616,10 @@ Success criteria:
   - raised the app-level swipe threshold to make accidental page changes less likely;
   - moved the bottom nav back into the Player shell after the body portal caused drawer interaction regressions;
   - removed the fixed-layer transform/containment that did not solve Firefox jitter and could make fixed positioning less predictable.
+- Phase 7 Firefox dynamic-toolbar follow-up:
+  - isolated the remaining movement to Firefox Android's `Scroll to hide toolbar` handling of `position: fixed; bottom: 0`;
+  - kept the bottom nav in the Player shell and added a Firefox-only `100dvh` top anchor for the existing fixed root;
+  - retained the normal bottom anchor for Chrome and other browsers; physical Firefox Android verification remains required.
 - Verification:
   - `node --test tests/playerNavigationRegistry.test.js tests/uiStaticRegression.test.js`
   - `node --test tests/playerNavigationRegistry.test.js tests/uiStaticRegression.test.js tests/dataActionsV2Adapter.test.js`
