@@ -27,8 +27,10 @@ export function composeRuntimeDbFromV2Store(v2Store = {}) {
             ...(v2Store.global?.bestiary || {}),
         },
         lore: {
-            articles: Object.values(v2Store.loreArticles || {}),
             ...(v2Store.global?.lore || {}),
+            // Lore articles live in their own V2 collection. A stale legacy
+            // global/config.lore.articles array must never hide those records.
+            articles: Object.values(v2Store.loreArticles || {}),
         },
         actions: { ...(v2Store.global?.actions || {}) },
         pacts: { ...(v2Store.global?.pacts || {}) },
