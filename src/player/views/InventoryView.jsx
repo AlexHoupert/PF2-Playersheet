@@ -14,6 +14,13 @@ import { consumeWandCharge, getWandCharges, getWandMaxCharges, getWandSpell, isW
 import { findInventoryItemIndex } from '../../shared/utils/itemIdentity';
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 
+// Swallows the click that the browser fires after touchend once a
+// long-press has opened the context modal; without this the click lands
+// on the modal overlay and closes it again immediately.
+const suppressGhostClick = (e) => {
+    if (e.cancelable) e.preventDefault();
+};
+
 export function InventoryView({
     character,
     db,
@@ -41,6 +48,69 @@ export function InventoryView({
     const [showItemCreator, setShowItemCreator] = useState(false);
     const equipTapRef = useRef({ key: null, time: 0 });
     const equipTapTimeoutRef = useRef(null);
+    // Firefox Android does not dispatch contextmenu for long-presses on
+    // plain elements, so the rows need a touch-timer fallback next to the
+    // onContextMenu path that Chrome and desktop right-click use.
+    const rowLongPressRef = useRef({ timer: null, x: 0, y: 0, startedAt: 0, firedAt: 0, firedKey: null });
+
+    const clearRowLongPressTimer = () => {
+        if (rowLongPressRef.current.timer) {
+            clearTimeout(rowLongPressRef.current.timer);
+            rowLongPressRef.current.timer = null;
+        }
+    };
+
+    const fireRowLongPress = (merged) => {
+        const state = rowLongPressRef.current;
+        const rowKey = merged?._index ?? merged?.name ?? null;
+        // Timer and contextmenu can both trigger for the same press.
+        if (state.firedAt && state.firedKey === rowKey && Date.now() - state.firedAt < 600) return;
+        state.firedAt = Date.now();
+        state.firedKey = rowKey;
+        if (onLongPress) onLongPress(merged, 'item');
+    };
+
+    const rowLongPressTouchHandlers = (merged) => ({
+        onTouchStart: (e) => {
+            const touch = e.touches && e.touches[0];
+            if (!touch || e.touches.length > 1) return;
+            clearRowLongPressTimer();
+            const pressTarget = e.target;
+            rowLongPressRef.current = {
+                ...rowLongPressRef.current,
+                x: touch.clientX,
+                y: touch.clientY,
+                startedAt: Date.now(),
+                timer: setTimeout(() => {
+                    rowLongPressRef.current.timer = null;
+                    if (document.body.classList.contains('swiping-active')) return;
+                    pressTarget.addEventListener('touchend', suppressGhostClick, { passive: false, once: true });
+                    fireRowLongPress(merged);
+                }, 500),
+            };
+        },
+        onTouchMove: (e) => {
+            const state = rowLongPressRef.current;
+            if (!state.timer) return;
+            const touch = e.touches && e.touches[0];
+            if (!touch) return;
+            if (Math.abs(touch.clientX - state.x) > 10 || Math.abs(touch.clientY - state.y) > 10) {
+                clearRowLongPressTimer();
+            }
+        },
+        onTouchEnd: () => clearRowLongPressTimer(),
+        onTouchCancel: () => {
+            // Firefox Android can abort the press with touchcancel right at
+            // its own long-press threshold; a near-complete motionless hold
+            // counts as the long-press.
+            const state = rowLongPressRef.current;
+            const heldLongEnough = state.timer && state.startedAt && Date.now() - state.startedAt >= 400;
+            clearRowLongPressTimer();
+            if (heldLongEnough && !document.body.classList.contains('swiping-active')) {
+                fireRowLongPress(merged);
+            }
+        },
+    });
     const { confirm, prompt } = useAppFeedback();
     const { activeCampaign } = useCampaign();
     const { lootBags } = selectLootBagLists(db, activeCampaign, activeCampaign?.id);
@@ -274,8 +344,10 @@ export function InventoryView({
                         return;
                     }
                     e.preventDefault();
-                    if (onLongPress) onLongPress(merged, 'item');
+                    clearRowLongPressTimer();
+                    fireRowLongPress(merged);
                 }}
+                {...rowLongPressTouchHandlers(merged)}
             >
                 {merged?.img && (
                     <img className="item-icon" src={`ressources/${merged.img}`} alt="" />

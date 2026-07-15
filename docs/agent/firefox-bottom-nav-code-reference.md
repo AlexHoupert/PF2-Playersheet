@@ -945,26 +945,41 @@ These are useful when researching regressions:
 - `PlayerBottomNav` is not portalled; it is rendered inside `PlayerAppController`.
 - `.player-bottom-nav-root` is `position: fixed` and no longer uses transform-based jitter fixes.
 
-## Targeted Dynamic Toolbar Workaround
+## Dynamic Toolbar History (do not re-add these workarounds)
 
-Manual testing on 2026-07-11 isolated the remaining movement to Firefox
-Android's `Scroll to hide toolbar` setting. This matches Mozilla bug 1880375:
-Firefox can incorrectly offset `position: fixed; bottom: 0` elements by the
-dynamic toolbar height.
+2026-07-11: a Firefox-only `@supports (-moz-appearance: none)` block anchored
+`.player-bottom-nav-root` via `top: calc(100dvh - ...)`. This was removed
+2026-07-15: top-anchored fixed elements are exempt from Gecko's compositor
+mechanism that keeps bottom-anchored fixed elements glued to the visual
+viewport bottom, and viewport units are not resolved in sync with the
+toolbar animation (Mozilla bugs 1586144, 1774224), so the override detached
+the bar by the toolbar height. The upstream fixed-bottom offset bug
+(Mozilla bug 1880375) is fixed since Firefox 149. `bottom: 0` anchoring is
+the correct model in all browsers.
 
-`playerNavigation.css` now keeps the existing fixed, in-shell root but anchors
-it from `100dvh` at the top in Firefox only:
+2026-07-15 device test (Firefox 152.0.6) showed the bar *growing* while the
+toolbar hides. Only dynamic term in the height formula was
+`env(safe-area-inset-bottom)`: Firefox Android (edge-to-edge) reports it
+dynamically while the toolbar collapses, even without `viewport-fit=cover`,
+where conformant browsers resolve it to 0. The nav CSS therefore uses
+`--player-nav-safe-area-bottom: 0px` instead of env(); switch back to env()
+only together with `viewport-fit=cover` plus
+`env(safe-area-max-inset-bottom)` for the reserved height.
+`tests/uiStaticRegression.test.js` guards both decisions.
 
-```css
-@supports (-moz-appearance: none) and (height: 100dvh) {
-    .player-bottom-nav-root {
-        top: calc(100dvh - var(--player-bottom-nav-height) - env(safe-area-inset-bottom, 0px));
-        bottom: auto;
-    }
-}
-```
+## Long-Press on Firefox Android
 
-This avoids Gecko's faulty fixed-bottom offset path without portalling the bar,
-adding transforms, or changing Chrome's positioning. It still requires a
-physical Firefox Android smoke test with the setting enabled because desktop
-Firefox and Playwright cannot emulate GeckoView's dynamic browser toolbar.
+Firefox Android does not dispatch `contextmenu` for long-presses on plain
+elements and aborts the touch sequence with `touchcancel` when its own
+long-press gesture takes over. Long-press surfaces therefore need all of:
+
+- `user-select: none` (otherwise text selection swallows the gesture),
+- a touch timer fallback (`contextmenu` alone only works in Chrome),
+- ghost-click suppression after the timer fires (the click following
+  touchend otherwise lands on the opened modal overlay and closes it),
+- a touchcancel heuristic: a motionless hold >= ~80% of the delay counts as
+  the long-press when the browser cancels the touch.
+
+Implemented in `src/shared/hooks/useLongPress.js` (LongPressable),
+`src/player/views/InventoryView.jsx` (item rows), and `pressEvents` in
+`src/player/hooks/usePlayerInventoryActions.js`.

@@ -7,6 +7,12 @@ import { consumeWandCharge, isWandItem, rechargeWand } from '../../shared/utils/
 import { createMutagenEffectInput } from '../../utils/rules/mutagens';
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 
+// Swallows the click the browser fires after touchend once a long-press
+// has already been handled (see pressEvents below).
+const suppressGhostClick = (e) => {
+    if (e.cancelable) e.preventDefault();
+};
+
 export function usePlayerInventoryActions({
     activeCampaign,
     activeCharIndex,
@@ -130,11 +136,19 @@ export function usePlayerInventoryActions({
     };
 
     const pressEvents = (item, type) => {
-        const start = () => {
+        let startedAt = 0;
+        const start = (e) => {
+            startedAt = Date.now();
+            const pressTarget = e?.target || null;
             if (longPressTimer.current) clearTimeout(longPressTimer.current);
             longPressTimer.current = setTimeout(() => {
-                handleLongPress(item, type);
                 longPressTimer.current = null;
+                // Swallow the post-touchend click so it cannot land on the
+                // freshly opened modal overlay and close it again.
+                if (pressTarget) {
+                    pressTarget.addEventListener('touchend', suppressGhostClick, { passive: false, once: true });
+                }
+                handleLongPress(item, type);
             }, 600);
         };
         const cancel = () => {
@@ -156,7 +170,13 @@ export function usePlayerInventoryActions({
             onTouchStart: start,
             onTouchEnd: cancel,
             onTouchMove: cancel,
-            onTouchCancel: cancel,
+            onTouchCancel: () => {
+                // Firefox Android aborts a long-press with touchcancel and no
+                // contextmenu on plain elements; a near-complete hold counts.
+                const heldLongEnough = longPressTimer.current && startedAt && Date.now() - startedAt >= 480;
+                cancel();
+                if (heldLongEnough) handleLongPress(item, type);
+            },
         };
     };
 

@@ -9,6 +9,7 @@ export function useLongPress(
     const target = useRef();
     const startPoint = useRef(null); // {x, y}
     const hasMoved = useRef(false);
+    const startedAt = useRef(0);
 
     const start = useCallback((event, data) => {
         if (shouldPreventDefault && event.target) {
@@ -18,6 +19,7 @@ export function useLongPress(
 
         startPoint.current = getPoint(event);
         hasMoved.current = false;
+        startedAt.current = Date.now();
 
         // Clear any existing timeout just in case
         if (timeout.current) clearTimeout(timeout.current);
@@ -94,6 +96,23 @@ export function useLongPress(
         }
     }, [onLongPress]);
 
+    // Firefox Android can also abort a long-press with touchcancel alone
+    // (no contextmenu on plain elements). If the press was held nearly the
+    // full delay without moving, the browser takeover *is* the long-press.
+    const cancel = useCallback((event, data) => {
+        if (
+            timeout.current &&
+            !hasMoved.current &&
+            startedAt.current &&
+            Date.now() - startedAt.current >= Math.max(delay - 100, delay * 0.8)
+        ) {
+            clearTimeout(timeout.current);
+            timeout.current = null;
+            onLongPress && onLongPress(event, data);
+        }
+        clear(event, false, data);
+    }, [clear, delay, onLongPress]);
+
     return {
         onMouseDown: (e) => start(e),
         onTouchStart: (e) => start(e),
@@ -101,7 +120,7 @@ export function useLongPress(
         onMouseUp: (e) => clear(e),
         onMouseLeave: (e) => clear(e, false),
         onTouchEnd: (e) => end(e),
-        onTouchCancel: (e) => clear(e, false),
+        onTouchCancel: (e) => cancel(e),
         onContextMenu: (e) => contextMenu(e)
     };
 }

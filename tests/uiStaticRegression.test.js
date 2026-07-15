@@ -242,6 +242,8 @@ test('player page cutover uses registry renderer instead of header mode switch',
     assert.equal(bottomNavSource.includes('createPortal'), false);
     assert.equal(bottomNavCss.includes('@supports (-moz-appearance: none)'), false);
     assert.equal(bottomNavCss.includes('top: calc(100dvh'), false);
+    assert.equal(bottomNavCss.includes('env(safe-area-inset-bottom, 0px)'), false);
+    assert.match(bottomNavCss, /--player-nav-safe-area-bottom: 0px/);
     assert.match(bottomNavSource, /getPlayerNavIconSrc\(page\.icon\)/);
     assert.match(bottomNavSource, /onDrawerOpenChange/);
     assert.match(carouselSource, /CarouselContent/);
