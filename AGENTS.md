@@ -72,7 +72,20 @@ When adding docs:
 
 ## Context7-Fehlerbehandlung
 
-Wenn `ctx7`/Context7 bei einem Dokumentationsabruf mit `HTTP error 403`,
+Vor jedem `ctx7 library ...`- oder `ctx7 docs ...`-Abruf zuerst den lokalen
+Zscaler-Preflight ausführen:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ctx7_zscaler_preflight.ps1 -Quiet
+```
+
+- Exitcode `0`: Context7-Aufruf normal ausführen.
+- Der Preflight darf ausschließlich die bekannte Zscaler-Warnseite
+  `CC01` für `Generative AI and ML Applications` automatisch bestätigen.
+- Andere 403-, Netzwerk- oder Authentifizierungsfehler darf der Preflight nicht
+  umgehen.
+
+Wenn `ctx7` trotz erfolgreichem Preflight mit `HTTP error 403`,
 `Session may be expired`, abgelaufener Session oder vergleichbarer
 Authentifizierungs-/Autorisierungsmeldung scheitert:
 
