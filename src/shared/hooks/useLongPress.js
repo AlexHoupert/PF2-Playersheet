@@ -82,6 +82,18 @@ export function useLongPress(
         clear(event, !moved, data);
     }, [clear, moveThreshold]);
 
+    // Firefox Android ends a long-press with contextmenu followed by
+    // touchcancel, which clears the timer before it can fire. Treat the
+    // contextmenu event itself as the long-press instead.
+    const contextMenu = useCallback((event, data) => {
+        if (event && event.preventDefault) event.preventDefault();
+        if (timeout.current) {
+            clearTimeout(timeout.current);
+            timeout.current = null;
+            onLongPress && onLongPress(event, data);
+        }
+    }, [onLongPress]);
+
     return {
         onMouseDown: (e) => start(e),
         onTouchStart: (e) => start(e),
@@ -89,7 +101,8 @@ export function useLongPress(
         onMouseUp: (e) => clear(e),
         onMouseLeave: (e) => clear(e, false),
         onTouchEnd: (e) => end(e),
-        onTouchCancel: (e) => clear(e, false)
+        onTouchCancel: (e) => clear(e, false),
+        onContextMenu: (e) => contextMenu(e)
     };
 }
 

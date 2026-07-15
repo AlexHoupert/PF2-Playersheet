@@ -590,16 +590,11 @@
 }
 
 /*
- * Firefox Android can offset fixed bottom elements by the dynamic browser
- * toolbar height while "Scroll to hide toolbar" is active. Anchor the same
- * fixed root from the dynamic viewport top to avoid Gecko's bottom-offset
- * path without changing the DOM or positioning model for other browsers.
+ * Do NOT top-anchor .player-bottom-nav-root via 100dvh as a Firefox Android
+ * workaround. Gecko only keeps bottom-anchored fixed elements glued to the
+ * visual viewport bottom during the dynamic toolbar animation; viewport units
+ * are not resolved in sync with that compositor-driven animation (Mozilla
+ * bugs 1586144, 1774224), so a top/100dvh anchor detaches the bar by the
+ * toolbar height while "Scroll to hide toolbar" is active. The upstream
+ * fixed-bottom offset bug (Mozilla bug 1880375) is fixed since Firefox 149.
  */
-@media (max-width: 768px) {
-    @supports (-moz-appearance: none) and (height: 100dvh) {
-        .player-bottom-nav-root {
-            top: calc(100dvh - var(--player-bottom-nav-height) - env(safe-area-inset-bottom, 0px));
-            bottom: auto;
-        }
-    }
-}

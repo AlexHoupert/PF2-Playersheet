@@ -585,6 +585,16 @@ body.swiping-active .app-container * {
     background: rgba(255, 255, 255, 0.05);
 }
 
+/*
+ * Long-pressable rows must not be text-selectable: Firefox Android starts
+ * text selection on long-press of selectable text instead of dispatching
+ * the contextmenu event these rows rely on.
+ */
+.inventory-item-row {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
 .item-name {
     font-weight: bold;
     color: #ccc;

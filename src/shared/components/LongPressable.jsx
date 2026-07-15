@@ -8,7 +8,7 @@ export function LongPressable({ onLongPress, onClick, children, shouldPreventDef
     });
 
     return (
-        <div {...props} {...handlers} style={{ ...props.style }}>
+        <div {...props} {...handlers} style={{ userSelect: 'none', WebkitUserSelect: 'none', ...props.style }}>
             {children}
         </div>
     );

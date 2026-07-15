@@ -240,9 +240,8 @@ test('player page cutover uses registry renderer instead of header mode switch',
     assert.match(hookSource, /usePlayerSubpageSwipe/);
     assert.equal(bottomNavSource.includes('disabled={Boolean(page.future)}'), false);
     assert.equal(bottomNavSource.includes('createPortal'), false);
-    assert.match(bottomNavCss, /@supports \(-moz-appearance: none\) and \(height: 100dvh\)/);
-    assert.match(bottomNavCss, /top: calc\(100dvh - var\(--player-bottom-nav-height\) - env\(safe-area-inset-bottom, 0px\)\)/);
-    assert.match(bottomNavCss, /top: calc[\s\S]*bottom: auto/);
+    assert.equal(bottomNavCss.includes('@supports (-moz-appearance: none)'), false);
+    assert.equal(bottomNavCss.includes('top: calc(100dvh'), false);
     assert.match(bottomNavSource, /getPlayerNavIconSrc\(page\.icon\)/);
     assert.match(bottomNavSource, /onDrawerOpenChange/);
     assert.match(carouselSource, /CarouselContent/);
