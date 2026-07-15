@@ -1,8 +1,8 @@
 # Lore System Overhaul
 
-Status: complete (live migration and Rules Emulator execution remain separate approval gates)
+Status: complete (production migration verified; Rules Emulator execution remains a separate gate)
 
-This document is the execution record for the campaign-scoped Lore overhaul. It is intentionally separate from the legacy top-level Lore recovery data. Live Firestore migration remains blocked until the user explicitly approves the write run.
+This document is the execution record for the campaign-scoped Lore overhaul. It is intentionally separate from the legacy top-level Lore recovery data. The approved production migration was completed on 2026-07-15; top-level source documents remain available for recovery.
 
 ## Phase 0: Baseline
 
@@ -29,6 +29,7 @@ Baseline source: `recovery/recovered-lore-pacts-deviant-2026-07-06.json` (local 
 - [x] Convert only unambiguous title links; report ambiguous/broken links.
 - [x] Initialize published version 1 without historical notifications.
 - [x] Keep top-level Lore documents as recovery data until separate cleanup approval.
+- [x] Run the approved production migration with a backup and verify `16` articles, `5` groups, and `64` deliveries by reading Firestore back.
 
 ## Phase 3: Shared Lore Domain
 
@@ -81,7 +82,7 @@ Baseline source: `recovery/recovered-lore-pacts-deviant-2026-07-06.json` (local 
 - [x] Update durable agent documentation.
 - [x] Commit and push completed implementation.
 
-Verification details, the migration dry-run report, and the deferred emulator/live-migration gates are documented in `docs/agent/lore-migration-readiness.md`.
+Verification details, the production migration result, and the deferred Rules Emulator gate are documented in `docs/agent/lore-migration-readiness.md`.
 
 ## Non-Goals
 
@@ -89,4 +90,4 @@ Verification details, the migration dry-run report, and the deferred emulator/li
 - Giving companions their own Lore deliveries.
 - Moving Creature source data into Lore.
 - Deleting top-level recovery documents in this implementation.
-- Running a live Firestore migration without a separate explicit approval.
+- Deleting top-level recovery Lore after the migration; this still requires separate explicit approval.

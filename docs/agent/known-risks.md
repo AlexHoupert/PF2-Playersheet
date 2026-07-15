@@ -39,7 +39,7 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 
 6. Lore migration and rules verification
 
-Lore now writes campaign-scoped drafts, groups, materialized Actor deliveries, and private notes. Top-level Lore remains a recovery fallback until a separately approved live migration is complete. The local 16-article dry-run found 14 unresolved legacy links that must be reviewed instead of guessed. Firestore rules are implemented, but the repository has no Rules Emulator test harness yet; treat the documented gate in `docs/agent/lore-migration-readiness.md` as mandatory before deploying the new rules.
+Lore now writes campaign-scoped drafts, groups, materialized Actor deliveries, and private notes. The approved production migration completed on 2026-07-15 with 16 articles, 5 groups, 64 deliveries, and a verified `migrationBackups` document. Top-level Lore remains a read-only recovery fallback. Fourteen unresolved legacy links must still be reviewed instead of guessed. Firestore rules are implemented, but the repository has no Rules Emulator test harness yet; treat the documented gate in `docs/agent/lore-migration-readiness.md` as mandatory before deploying future rule changes.
 
 ## Data And Migration Risks
 

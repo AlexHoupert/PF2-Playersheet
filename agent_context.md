@@ -166,6 +166,7 @@ Migrated paths:
 - GM AbilitiesView custom ability saves/deletes/clones and custom-creature ability assignment use `dataActions.globalContent` and `dataActions.bestiary`.
 - GM PactAdminView and DeviantAbilitiesAdminView use `dataActions.pact`.
 - GM LoreAdminView uses `dataActions.lore` with campaign-scoped drafts, groups, materialized deliveries, and shared Player notes. Top-level Lore is a recovery fallback only.
+- The approved Lore production migration ran on 2026-07-15 for `War of the Elements`: 16 articles, 5 groups, and 64 deliveries were verified; backup `migrationBackups/lore-campaign-2026-07-15T13-32-43-274Z` retains all 16 source articles.
 - GM BestiaryView custom creature save/update/delete, metadata edits, bestiary toggles, group edits, reveal-state, and catalog metadata initialization use `dataActions.bestiary`.
 - Encounter creature reveal-state writes use `dataActions.bestiary.updateRevealState`.
 - Player root-notification clearing uses `dataActions.globalContent.clearRootNotification`.

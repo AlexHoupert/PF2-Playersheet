@@ -24,20 +24,29 @@ async function main() {
   const args = parseArgs(process.argv);
   loadDotEnv();
   let sourceArticles = [];
+  let activePcActors = [];
   let activePcActorIds = [];
+  let targetCounts = null;
   let firestore = null;
 
   if (args.fromFirestore || args.write) {
     firestore = createFirestore();
-    const [articleSnapshot, actorSnapshot] = await Promise.all([
+    const targetCollectionNames = ["loreArticles", "loreGroups", "loreDeliveries", "knowledgeNotes"];
+    const [articleSnapshot, actorSnapshot, ...targetSnapshots] = await Promise.all([
       getDocs(collection(firestore, "loreArticles")),
       getDocs(collection(firestore, "campaigns", args.campaignId, "actors")),
+      ...targetCollectionNames.map((collectionName) => (
+        getDocs(collection(firestore, "campaigns", args.campaignId, collectionName))
+      )),
     ]);
     sourceArticles = articleSnapshot.docs.map((snapshot) => ({ id: snapshot.id, ...snapshot.data() }));
-    activePcActorIds = actorSnapshot.docs
+    activePcActors = actorSnapshot.docs
       .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() }))
-      .filter((actor) => actor.kind === "pc" && !actor.deletedAt)
-      .map((actor) => actor.id);
+      .filter((actor) => actor.kind === "pc" && !actor.deletedAt);
+    activePcActorIds = activePcActors.map((actor) => actor.id);
+    targetCounts = Object.fromEntries(targetCollectionNames.map((collectionName, index) => (
+      [collectionName, targetSnapshots[index].size]
+    )));
   } else {
     const payload = JSON.parse(fs.readFileSync(path.resolve(repoRoot, args.input), "utf8"));
     sourceArticles = extractArticles(payload);
@@ -50,7 +59,18 @@ async function main() {
     activePcActorIds,
     actor: "lore-migration",
   });
-  const reportPath = writeJson(args.reportOut, { mode: args.write ? "write" : "dry-run", ...plan.report });
+  const report = {
+    mode: args.write ? "write" : "dry-run",
+    ...plan.report,
+    ...(targetCounts ? {
+      liveTarget: {
+        projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+        existingDocuments: targetCounts,
+        activePcActors: activePcActors.map(({ id, name, level }) => ({ id, name, level })),
+      },
+    } : {}),
+  };
+  const reportPath = writeJson(args.reportOut, report);
   if (args.docsOut) writeJson(args.docsOut, {
     articles: plan.articles,
     groups: plan.groups,
@@ -59,13 +79,18 @@ async function main() {
 
   if (args.write) {
     if (!args.confirmWrite) throw new Error("Write mode requires --confirm-write. Top-level source documents will still be retained.");
-    await writeLoreMigration(firestore, plan);
+    const existingDocumentCount = Object.values(targetCounts || {}).reduce((sum, count) => sum + count, 0);
+    if (existingDocumentCount > 0) {
+      throw new Error(`Refusing to overwrite ${existingDocumentCount} existing campaign Lore documents.`);
+    }
+    await writeLoreMigration(firestore, { ...plan, report });
   }
 
   console.log(JSON.stringify({
     mode: args.write ? "write" : "dry-run",
     reportPath,
     ...plan.report.counts,
+    ...(targetCounts ? { targetBefore: targetCounts } : {}),
   }, null, 2));
 }
 

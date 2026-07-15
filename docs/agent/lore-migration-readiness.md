@@ -9,7 +9,9 @@ The runtime implementation is campaign-scoped and uses `loreArticles`,
 Top-level `loreArticles` remain a read-only recovery fallback until the real
 campaign data has been migrated and verified.
 
-No live Firestore migration was run as part of the Lore overhaul.
+The production migration for `War of the Elements` was completed and verified
+on 2026-07-15. Top-level source documents were retained; no cleanup or physical
+deletion was performed.
 
 ## Local Migration Dry-run
 
@@ -43,9 +45,39 @@ not generate historical release popups.
 The generated report and document preview live below ignored `recovery/` and
 must not be committed.
 
-## Live Migration Gate
+## Production Migration Result
 
-The write pass requires all of the following:
+Target:
+
+- Firebase project: `pathfinder-companion-4290f`
+- Campaign: `campaign_1766691475810` (`War of the Elements`)
+- Active PC recipients: Nozzik, Nimwe, Zath, and Kairos
+
+The reviewed production dry-run found an empty campaign Lore target and
+produced 16 articles, 5 groups, and 64 deliveries. The explicit write pass then
+created the same records. A direct read-back returned:
+
+| Collection | Count |
+| --- | ---: |
+| `loreArticles` | 16 |
+| `loreGroups` | 5 |
+| `loreDeliveries` | 64 |
+| `knowledgeNotes` | 0 |
+
+Backup:
+
+- Document: `migrationBackups/lore-campaign-2026-07-15T13-32-43-274Z`
+- Source articles stored: 16
+- `sourceRetained`: `true`
+- Converted links: 22
+- Unresolved links: 14
+
+Initial deliveries use version 1 with `attentionVersion: 0`, so the restoration
+does not create 16 historical release notifications for every Player. The 14
+unresolved links remain a GM content-cleanup task and were not guessed by the
+migration.
+
+The write was guarded by all of the following:
 
 1. Explicit user approval for the target campaign and Firebase project.
 2. A reviewed `--from-firestore` dry-run against that project.
@@ -56,6 +88,13 @@ The write pass requires all of the following:
 
 The write pass retains top-level source documents and is designed to be
 recoverable. Physical deletion is a separate maintenance task.
+
+Read-only verification can be repeated with:
+
+```powershell
+node scripts/verify_lore_campaign_migration.js `
+  --campaign campaign_1766691475810
+```
 
 ## Firestore Rules Emulator Gate
 
