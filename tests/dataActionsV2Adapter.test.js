@@ -73,6 +73,42 @@ function createActionHarness(db = {}) {
                 );
             },
         },
+        loreRepo: {
+            async createDraft(_firestore, campaignId, article) {
+                calls.push(['lore.createDraft', campaignId, article.id]);
+                return article.id;
+            },
+            async saveDraft(_firestore, campaignId, articleId, updater) {
+                calls.push(['lore.saveDraft', campaignId, articleId]);
+                if (typeof updater === 'function') updater({ id: articleId, title: 'Draft' });
+            },
+            async publishArticle(_firestore, campaignId, articleId, options) {
+                calls.push(['lore.publishArticle', campaignId, articleId, options.notify]);
+            },
+            async retractArticle(_firestore, campaignId, articleId) {
+                calls.push(['lore.retractArticle', campaignId, articleId]);
+            },
+            async archiveArticle(_firestore, campaignId, articleId) {
+                calls.push(['lore.archiveArticle', campaignId, articleId]);
+            },
+            async restoreArticle(_firestore, campaignId, articleId) {
+                calls.push(['lore.restoreArticle', campaignId, articleId]);
+            },
+            async saveGroup(_firestore, campaignId, group) {
+                calls.push(['lore.saveGroup', campaignId, group.id]);
+                return group.id;
+            },
+            async markDeliveryRead(_firestore, campaignId, deliveryId) {
+                calls.push(['lore.markDeliveryRead', campaignId, deliveryId]);
+            },
+            async saveNote(_firestore, campaignId, note) {
+                calls.push(['lore.saveNote', campaignId, note.id]);
+                return note.id;
+            },
+            async notifyBestiaryReveal(_firestore, campaignId, creature) {
+                calls.push(['lore.notifyBestiaryReveal', campaignId, creature.id]);
+            },
+        },
         questRepo: {
             async updateQuestAndCampaignAndActors(_firestore, campaignId, questId, actorIds, updater) {
                 calls.push(['quest.updateQuestAndCampaignAndActors', campaignId, questId, actorIds]);
@@ -197,6 +233,35 @@ test('v2 adapter uses targeted repositories for migrated campaign domains', asyn
     ]);
     assert.equal(createdLootId, 'loot_new');
     assert.deepEqual(calls.at(-1), ['campaign.updateCampaignAndActors', 'camp1', ['char1', 'char2']]);
+});
+
+test('v2 adapter routes campaign knowledge through the targeted lore repository', async () => {
+    const { actions, calls } = createActionHarness();
+    const articleId = await actions.lore.createDraft('camp1', { id: 'lore1', title: 'Old Road' });
+    await actions.lore.saveDraft('camp1', articleId, { title: 'The Old Road' });
+    await actions.lore.publishArticle('camp1', articleId, { notify: true });
+    await actions.lore.markDeliveryRead('camp1', 'delivery1');
+    await actions.lore.saveGroup('camp1', { id: 'group1', name: 'Roads', category: 'locations' });
+    await actions.lore.saveNote('camp1', { actorId: 'char1', targetType: 'loreArticle', targetId: articleId, content: 'Unsafe at dusk.' });
+    await actions.lore.notifyBestiaryReveal('camp1', { id: 'wolf', name: 'Winter Wolf' });
+    await actions.lore.retractArticle('camp1', articleId);
+    await actions.lore.archiveArticle('camp1', articleId);
+    await actions.lore.restoreArticle('camp1', articleId);
+
+    assert.deepEqual(calls.map(call => call[0]), [
+        'lore.createDraft',
+        'lore.saveDraft',
+        'lore.publishArticle',
+        'lore.markDeliveryRead',
+        'lore.saveGroup',
+        'lore.saveNote',
+        'lore.notifyBestiaryReveal',
+        'lore.retractArticle',
+        'lore.archiveArticle',
+        'lore.restoreArticle',
+    ]);
+    assert.equal(articleId, 'lore1');
+    assert.equal(calls[2][3], true);
 });
 
 test('v2 adapter routes character basis edits through actor repository', async () => {

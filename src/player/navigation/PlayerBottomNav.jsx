@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     getCategoryIdForPlayerPage,
     getVisiblePlayerNavCategories,
@@ -11,7 +11,7 @@ export default function PlayerBottomNav({
     navigationContext,
     onSelectPage,
     onDrawerOpenChange,
-    hasLoot = false,
+    alertsByPage = {},
 }) {
     const activeCategoryId = getCategoryIdForPlayerPage(activePageId);
     const [openCategoryId, setOpenCategoryId] = useState(null);
@@ -70,7 +70,7 @@ export default function PlayerBottomNav({
                 <div className="player-category-drawer__pages">
                     {drawerCategory.pages.map((page) => {
                         const active = page.id === activePageId;
-                        const hasPageLoot = page.alertKey === 'loot' && hasLoot;
+                        const pageAlertCount = getPageAlertCount(page.id, alertsByPage);
                         const iconSrc = getPlayerNavIconSrc(page.icon);
                         return (
                             <button
@@ -85,7 +85,7 @@ export default function PlayerBottomNav({
                                 </span>
                                 <span className="player-category-drawer__page-main">
                                     <span>{page.label}</span>
-                                    {hasPageLoot && <span className="player-nav-alert-dot" aria-label="New loot" />}
+                                    {pageAlertCount > 0 && <span className="player-nav-alert-dot" aria-label={`${pageAlertCount} unread updates`} />}
                                 </span>
                                 {page.future && <span className="player-category-drawer__page-note">Soon</span>}
                             </button>
@@ -98,7 +98,7 @@ export default function PlayerBottomNav({
                     const active = category.id === activeCategoryId;
                     const open = category.id === openCategoryId;
                     const iconSrc = getPlayerNavIconSrc(category.icon);
-                    const categoryHasLoot = category.id === 'items' && hasLoot;
+                    const categoryAlertCount = category.pages.reduce((total, page) => total + getPageAlertCount(page.id, alertsByPage), 0);
                     return (
                         <button
                             key={category.id}
@@ -111,7 +111,7 @@ export default function PlayerBottomNav({
                         >
                             <span className="player-bottom-nav__icon-wrap">
                                 <img src={iconSrc} alt="" className="player-bottom-nav__icon" />
-                                {categoryHasLoot && <span className="player-bottom-nav__badge" aria-label="New loot" />}
+                                {categoryAlertCount > 0 && <span className="player-bottom-nav__badge has-count" aria-label={`${categoryAlertCount} unread updates`}>{categoryAlertCount > 9 ? "9+" : categoryAlertCount}</span>}
                             </span>
                             <span className="player-bottom-nav__label">{category.label}</span>
                         </button>
@@ -120,4 +120,8 @@ export default function PlayerBottomNav({
             </nav>
         </div>
     );
+}
+
+function getPageAlertCount(pageId, alertsByPage) {
+    return Math.max(0, Number(alertsByPage?.[pageId] || 0));
 }

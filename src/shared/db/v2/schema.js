@@ -1,4 +1,4 @@
-export const V2_SCHEMA_VERSION = 3;
+export const V2_SCHEMA_VERSION = 4;
 
 export const V2_COLLECTIONS = {
     campaigns: 'campaigns',
@@ -10,10 +10,13 @@ export const V2_COLLECTIONS = {
     encounters: 'encounters',
     maps: 'maps',
     members: 'members',
+    loreArticles: 'loreArticles',
+    loreGroups: 'loreGroups',
+    loreDeliveries: 'loreDeliveries',
+    knowledgeNotes: 'knowledgeNotes',
     customItems: 'customItems',
     customCreatures: 'customCreatures',
     customActions: 'customActions',
-    loreArticles: 'loreArticles',
     effectTemplates: 'effectTemplates',
     catalogOverrides: 'catalogOverrides',
     global: 'global',

@@ -210,10 +210,28 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `s
 - `deleteCustomAction(actionOrName)`
 - `saveCustomAbility(ability)`
 - `deleteCustomAbility(abilityOrId)`
-- `saveLoreArticle(article)`
-- `deleteLoreArticle(articleOrId)`
-- `moveLoreArticle(articleId, direction)`
+- `saveLoreArticle(article)` (top-level recovery compatibility only)
+- `deleteLoreArticle(articleOrId)` (top-level recovery compatibility only)
+- `moveLoreArticle(articleId, direction)` (top-level recovery compatibility only)
 - `clearRootNotification(notificationId)`
+
+`dataActions.lore`:
+
+- `createDraft(campaignId, input)`
+- `saveDraft(campaignId, articleId, updater)`
+- `cloneArticle(campaignId, article)`
+- `publishArticle(campaignId, articleId, { audience, notify })`
+- `retractArticle(campaignId, articleId)`
+- `archiveArticle(campaignId, articleId)`
+- `restoreArticle(campaignId, articleId)`
+- `saveGroup(campaignId, group)`
+- `archiveGroup(campaignId, groupId)`
+- `mergeGroup(campaignId, sourceGroupId, targetGroupId)`
+- `markDeliveryRead(campaignId, deliveryId)`
+- `markDeliveryNotified(campaignId, deliveryId)`
+- `saveNote(campaignId, note)`
+- `deleteNote(campaignId, noteOrTarget, actorId)`
+- `notifyBestiaryReveal(campaignId, creature)`
 
 `dataActions.pact`:
 
@@ -300,7 +318,8 @@ Firestore V2 mode:
 - Uses targeted map document updates for map CRUD/archive/restore, ordering, pins, scale, and image URL writes.
 - Uses targeted campaign document updates for progress sections and top-level progress archives/restores.
 - Uses targeted campaign document updates for camping settings, custom activities, assignments, rolls, and reset/archive/restore behavior.
-- Uses targeted global config/document writes for shop/trader state, pacts, deviant abilities, lore, bestiary reveal-state, bestiary metadata, and root-notification compatibility.
+- Uses targeted global config/document writes for shop/trader state, pacts, deviant abilities, bestiary reveal-state, bestiary metadata, and root-notification compatibility.
+- Uses targeted campaign Lore repositories and transactions for drafts, groups, publication, materialized Actor deliveries, read state, and private notes.
 - Uses targeted actor/effect/effect-template writes for the V2 actor/effects foundation.
 - Canonical admin catalog table saves write `catalogOverrides` in V2; deployed item, spell, action, feat, impulse, ability, and creature editing writes `catalogOverrides` directly.
 - Does not route migrated writes through `writeLegacyDbDiffToV2`.
@@ -421,7 +440,8 @@ Pacts/Lore:
 
 - GM PactAdminView pact save/delete.
 - GM DeviantAbilitiesAdminView deviant ability save/delete.
-- GM LoreAdminView article create/save/delete/clone/move.
+- GM LoreAdminView draft autosave, clone, move, publish/retract/archive, nested groups, audience materialization, and shared-note inspection through `dataActions.lore`.
+- Player Knowledge read/notification state and private/shared notes through `dataActions.lore`.
 
 Player compatibility:
 

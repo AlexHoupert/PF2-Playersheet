@@ -21,6 +21,7 @@ import {
     memberRepo,
     questRepo,
 } from '../db/v2/repositories';
+import { loreRepo } from '../db/v2/loreRepository';
 
 const CampaignContext = createContext();
 
@@ -32,6 +33,7 @@ const defaultRepositories = {
     encounterRepo,
     globalRepo,
     lootRepo,
+    loreRepo,
     mapRepo,
     memberRepo,
     questRepo,

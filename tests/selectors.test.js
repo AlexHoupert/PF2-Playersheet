@@ -32,8 +32,13 @@ import {
     selectCustomCreature,
     selectCustomCreatureData,
     selectCustomCreatureList,
+    selectPlayerVisibleCreatureIds,
 } from '../src/shared/db/selectors/bestiarySelectors.js';
-import { selectLoreArticle, selectLoreArticlesByCategory } from '../src/shared/db/selectors/loreSelectors.js';
+import {
+    selectCampaignLoreArticles,
+    selectLoreArticle,
+    selectLoreArticlesByCategory,
+} from '../src/shared/db/selectors/loreSelectors.js';
 import {
     resolvePactDedication,
     selectPact,
@@ -222,6 +227,43 @@ test('selectors read v2 projection with campaign subcollections and global confi
     assert.equal(selectPactList(db)[0].name, 'Ember Pact');
     assert.equal(selectLoreArticle(db, 'article1').title, 'Lore');
     assert.equal(selectLoreArticlesByCategory(db, 'history')[0].id, 'article1');
+});
+
+test('campaign lore overrides matching recovery articles while retaining missing recovery entries', () => {
+    const db = {
+        lore: {
+            articles: [
+                { id: 'shared', title: 'Recovery title' },
+                { id: 'recovery-only', title: 'Recovery only' },
+            ],
+        },
+    };
+    const merged = selectCampaignLoreArticles({
+        loreArticles: [
+            { id: 'shared', title: 'Campaign title' },
+            { id: 'campaign-only', title: 'Campaign only' },
+        ],
+    }, db);
+
+    assert.deepEqual(merged.map((article) => article.id), ['shared', 'campaign-only', 'recovery-only']);
+    assert.equal(merged[0].title, 'Campaign title');
+});
+
+test('player-visible creature selector requires published Bestiary metadata or custom publication state', () => {
+    const visible = selectPlayerVisibleCreatureIds({
+        bestiary: {
+            creatures: {
+                published: { bestiary: true },
+                hidden: { bestiary: false },
+            },
+            customCreatures: {
+                customPublished: { id: 'custom-published', bestiary: true, data: { name: 'Known Beast' } },
+                customHidden: { id: 'custom-hidden', bestiary: false, data: { name: 'Unknown Beast' } },
+            },
+        },
+    });
+
+    assert.deepEqual([...visible].sort(), ['custom-published', 'published']);
 });
 
 test('pact selectors derive offers, ability options, usage, and dedication references', () => {

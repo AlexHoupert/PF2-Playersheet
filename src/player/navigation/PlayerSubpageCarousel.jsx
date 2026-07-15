@@ -9,7 +9,7 @@ import { getPlayerNavIconSrc } from './playerNavIcons';
 export default function PlayerSubpageCarousel({
     activePageId,
     navigationContext,
-    hasLoot = false,
+    alertsByPage = {},
     onSelectPage,
 }) {
     const [api, setApi] = React.useState(null);
@@ -59,7 +59,7 @@ export default function PlayerSubpageCarousel({
                 <CarouselContent className="player-subpage-carousel__content">
                     {pages.map((page, index) => {
                         const active = page.id === activePageId;
-                        const hasPageLoot = page.alertKey === 'loot' && hasLoot;
+                        const pageAlertCount = Math.max(0, Number(alertsByPage?.[page.id] || 0));
                         const state = getCarouselState(index, activeIndex, pages.length);
                         return (
                             <CarouselItem key={page.id} className="player-subpage-carousel__item">
@@ -78,7 +78,7 @@ export default function PlayerSubpageCarousel({
                                         />
                                     </span>
                                     <span className="player-subpage-carousel__label">{page.label}</span>
-                                    {hasPageLoot && <span className="player-nav-alert-dot" aria-label="New loot" />}
+                                    {pageAlertCount > 0 && <span className="player-nav-alert-dot" aria-label={`${pageAlertCount} unread updates`} />}
                                     {page.future && <span className="player-subpage-carousel__note">Soon</span>}
                                 </button>
                             </CarouselItem>

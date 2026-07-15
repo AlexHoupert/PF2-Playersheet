@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
 
 import SpellScrollSelectorModal from './modals/SpellScrollSelectorModal';
@@ -18,6 +18,10 @@ import PlayerPageCarousel from './navigation/PlayerPageCarousel';
 import { buildPlayerInteractionLockState } from './navigation/playerSubpageSwipe';
 import { usePlayerPageNavigation } from './navigation/usePlayerPageNavigation';
 import PlayerPopupHost from './popups/PlayerPopupHost';
+import { selectCampaignLoreArticles } from '../shared/db/selectors/loreSelectors';
+import { buildLoreAlertsByPage } from '../shared/lore/loreSelectors';
+import { usePlayerLoreStore } from '../shared/lore/useLoreStores';
+import { PLAYER_PAGE_IDS } from './navigation/playerPageRegistry';
 export default function PlayerAppController() {
     const {
         activeCampaign,
@@ -29,6 +33,7 @@ export default function PlayerAppController() {
         quests: playerQuests,
         lootBags: playerLootBags,
         ownedActors,
+        dbMode,
     } = useCampaign();
 
     const {
@@ -49,6 +54,7 @@ export default function PlayerAppController() {
 
     const [dailyPrepQueue, setDailyPrepQueue] = useState([]);
     const [playerNavDrawerOpen, setPlayerNavDrawerOpen] = useState(false);
+    const [loreTarget, setLoreTarget] = useState(null);
     const ownedCompanionActors = (ownedActors || [])
         .filter(actor => ['animal_companion', 'familiar', 'pet'].includes(actor.kind));
     const playerNotificationQueue = [
@@ -151,6 +157,26 @@ export default function PlayerAppController() {
         character?.inventory?.some(i => i.isLoot) ||
         playerLootBags.some(b => !b.isLocked && (b.items || []).some(i => !i.claimedBy))
     );
+    const loreStore = usePlayerLoreStore({
+        campaignId: activeCampaign?.id,
+        actorId: myActor?.id || character?.id,
+        enabled: dbMode === 'firestore-v2',
+        fallbackArticles: selectCampaignLoreArticles(activeCampaign, db),
+        fallbackGroups: activeCampaign?.loreGroups || [],
+        fallbackDeliveries: activeCampaign?.loreDeliveries || [],
+        fallbackNotes: activeCampaign?.knowledgeNotes || [],
+    });
+    const alertsByPage = useMemo(() => buildLoreAlertsByPage(loreStore.deliveries, {
+        [PLAYER_PAGE_IDS.LOOT]: hasPlayerLoot ? 1 : 0,
+    }), [hasPlayerLoot, loreStore.deliveries]);
+    const navigateLoreArticle = React.useCallback((category, articleId) => {
+        setLoreTarget({ articleId, creatureId: null });
+        selectPageId(`knowledge.${String(category || 'other').toLowerCase()}`);
+    }, [selectPageId]);
+    const navigateLoreCreature = React.useCallback((creatureId) => {
+        setLoreTarget({ articleId: null, creatureId });
+        selectPageId(PLAYER_PAGE_IDS.BESTIARY);
+    }, [selectPageId]);
 
     // If no character found (e.g. empty campaign), guard against crash
     if (!character) {
@@ -287,7 +313,7 @@ export default function PlayerAppController() {
                 activePageId={activePageId}
                 navigationContext={navigationContext}
                 onSelectPage={selectPage}
-                hasLoot={hasPlayerLoot}
+                alertsByPage={alertsByPage}
             />
 
             {/* VIEW CONTENT */}
@@ -311,7 +337,11 @@ export default function PlayerAppController() {
                         handleLongPress,
                         inspectInventoryItem,
                         loadWeapon,
+                        loreStore,
+                        loreTarget,
                         myActor,
+                        onNavigateLoreArticle: navigateLoreArticle,
+                        onNavigateLoreCreature: navigateLoreCreature,
                         onGoToPage: selectPageId,
                         ownedCompanionActors,
                         playerQuests,
@@ -337,6 +367,9 @@ export default function PlayerAppController() {
                 notificationQueue={playerNotificationQueue}
                 onClearNotification={handleClearNotification}
                 xpNotification={activeCampaign?.xpNotification}
+                loreDeliveries={loreStore.deliveries}
+                onOpenLoreArticle={navigateLoreArticle}
+                onOpenLoreCreature={navigateLoreCreature}
             />
 
             {/* Item Actions Modal */}
@@ -467,7 +500,7 @@ export default function PlayerAppController() {
                 navigationContext={navigationContext}
                 onSelectPage={selectPage}
                 onDrawerOpenChange={setPlayerNavDrawerOpen}
-                hasLoot={hasPlayerLoot}
+                alertsByPage={alertsByPage}
             />
         </div>
     );

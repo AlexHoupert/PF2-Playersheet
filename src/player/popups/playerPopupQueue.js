@@ -1,13 +1,16 @@
 import { selectPendingPactOffer } from '../../shared/db/selectors/pactSelectors.js';
+import { doesLoreDeliveryNeedPopup } from '../../shared/lore/loreModel.js';
 
 export const PLAYER_POPUP_TYPES = {
     PACT_OFFER: 'pactOffer',
+    LORE_RELEASE: 'loreRelease',
     NOTIFICATION: 'notification',
     XP: 'xp',
 };
 
 export const PLAYER_POPUP_PRIORITIES = {
     [PLAYER_POPUP_TYPES.PACT_OFFER]: 100,
+    [PLAYER_POPUP_TYPES.LORE_RELEASE]: 70,
     [PLAYER_POPUP_TYPES.NOTIFICATION]: 50,
     [PLAYER_POPUP_TYPES.XP]: 20,
 };
@@ -18,6 +21,7 @@ export function buildPlayerPopupCandidates({
     character = null,
     db = null,
     notificationQueue = [],
+    loreDeliveries = [],
     xpNotification = null,
 } = {}) {
     const actorId = actor?.id || character?.id || null;
@@ -34,6 +38,19 @@ export function buildPlayerPopupCandidates({
             createdAt: pactOffer.offeredAt,
             requiresAction: true,
             payload: { offer: pactOffer },
+        }));
+    }
+
+    for (const delivery of Array.isArray(loreDeliveries) ? loreDeliveries : []) {
+        if (!doesLoreDeliveryNeedPopup(delivery)) continue;
+        candidates.push(createPlayerPopup({
+            type: PLAYER_POPUP_TYPES.LORE_RELEASE,
+            sourceId: `${delivery.id}:v${delivery.attentionVersion}`,
+            actorId,
+            campaignId,
+            createdAt: delivery.publishedAt,
+            requiresAction: false,
+            payload: { delivery },
         }));
     }
 
@@ -133,4 +150,3 @@ function normalizeCreatedAt(value) {
     const parsed = Date.parse(value);
     return Number.isFinite(parsed) ? parsed : 0;
 }
-

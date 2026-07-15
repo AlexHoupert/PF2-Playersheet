@@ -14,6 +14,7 @@ export function usePlayerPopupQueue({
     character,
     db,
     notificationQueue,
+    loreDeliveries,
     xpNotification,
 }) {
     const candidates = React.useMemo(() => buildPlayerPopupCandidates({
@@ -22,8 +23,9 @@ export function usePlayerPopupQueue({
         character,
         db,
         notificationQueue,
+        loreDeliveries,
         xpNotification,
-    }), [activeCampaign, actor, character, db, notificationQueue, xpNotification]);
+    }), [activeCampaign, actor, character, db, loreDeliveries, notificationQueue, xpNotification]);
 
     const [activePopupId, setActivePopupId] = React.useState(null);
 
@@ -50,4 +52,3 @@ export function usePlayerPopupQueue({
         candidates,
     };
 }
-

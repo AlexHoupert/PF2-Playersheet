@@ -2,6 +2,13 @@ import { expect, test } from "@playwright/test";
 
 test.setTimeout(120_000);
 
+test.beforeEach(async ({ page }) => {
+  page.on("pageerror", (error) => console.error(`[browser pageerror] ${error.stack || error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") console.error(`[browser console] ${message.text()}`);
+  });
+});
+
 const UPLIFTING_OVERTURE_ROW_ID = "spells-focus-uplifting-overture-json";
 const AID_ROW_ID = "actions-aid-json";
 
@@ -241,6 +248,89 @@ test("encounter player and creature combatants accept HP, initiative, and effect
   await expect(page.getByTestId("initiative-badge-combatant_creature")).toContainText("16");
   await expect(page.getByTestId("initiative-condition-combatant_creature-clumsy")).toBeVisible();
   await expect(page.getByTestId("initiative-condition-combatant_player-blessed-by-smoke")).toBeVisible();
+});
+
+test("GM publishes linked lore and player reads the release and shares a note", async ({ page }) => {
+  await gotoFixture(page, "admin=true");
+  await page.getByText("Lore", { exact: true }).click();
+  await expect(page.getByTestId("lore-admin-workspace")).toBeVisible();
+  await expect(page.getByTestId("lore-admin-row-e2e_lore_history")).toBeVisible();
+
+  await page.getByTestId("lore-new-article").click();
+  await page.getByTestId("lore-title-input").fill("E2E Released Chronicle");
+  await page.locator('[data-testid^="lore-block-content-"]').first().fill("The party recovered a new chronicle about");
+  await page.getByTestId("lore-insert-link").click();
+  await page.getByTestId("lore-reference-option-lore-e2e_lore_history").click();
+  await page.getByTestId("lore-open-publish").click();
+  await expect(page.getByTestId("lore-publish-notify")).toBeChecked();
+  await page.getByTestId("lore-publish-confirm").click();
+  await expect(page.locator('[data-testid^="lore-admin-row-"]', { hasText: "E2E Released Chronicle" })).toBeVisible();
+
+  await reloadFixture(page);
+  await expectFixtureRoute(page, "player");
+  await expect(page.getByRole("heading", { name: "E2E Released Chronicle" })).toBeVisible();
+  await page.getByTestId("lore-release-open").click();
+  const loreReader = page.getByTestId("player-lore-reader-history");
+  await expect(loreReader).toContainText("E2E Released Chronicle");
+  await expect(loreReader.getByRole("button", { name: "Founding of Smokehaven" })).toBeVisible();
+
+  await loreReader.getByTestId("knowledge-note-content").fill("The old road may still be useful.");
+  await expect.poll(() => page.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem("pf2:e2e-runtime-db") || "{}");
+    return db.campaigns?.e2e_campaign?.knowledgeNotes?.find?.(
+      (note) => note.content === "The old road may still be useful."
+    )?.content;
+  })).toBe("The old road may still be useful.");
+  await loreReader.getByTestId("knowledge-note-share").check();
+  await expect.poll(() => page.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem("pf2:e2e-runtime-db") || "{}");
+    return db.campaigns?.e2e_campaign?.knowledgeNotes?.find?.(
+      (note) => note.content === "The old road may still be useful."
+    )?.sharedWithGm;
+  })).toBe(true);
+  await expect(loreReader.getByTestId("knowledge-note-status")).toContainText("Saved");
+
+  const deliveryState = await page.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem("pf2:e2e-runtime-db") || "{}");
+    return db.campaigns?.e2e_campaign?.loreDeliveries?.find?.((delivery) => delivery.snapshot?.title === "E2E Released Chronicle");
+  });
+  expect(deliveryState?.readVersion).toBe(deliveryState?.attentionVersion);
+
+  await reloadFixture(page, "admin=true");
+  await page.getByText("Lore", { exact: true }).click();
+  await page.locator('[data-testid^="lore-admin-row-"]', { hasText: "E2E Released Chronicle" }).click();
+  await expect(page.getByText("The old road may still be useful.", { exact: true })).toBeVisible();
+});
+
+test("lore workspace and player knowledge surfaces keep visual smoke artifacts", async ({ page }, testInfo) => {
+  test.slow();
+  await gotoFixture(page, "admin=true");
+  await page.getByText("Lore", { exact: true }).click();
+  await expect(page.getByTestId("lore-admin-workspace")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("gm-lore-desktop.png") });
+
+  await reloadFixture(page);
+  await expectFixtureRoute(page, "player");
+  await openPlayerPage(page, "Knowledge", "knowledge.history");
+  await page.getByTestId("player-lore-entry-e2e_lore_history").click();
+  await expect(page.getByTestId("player-lore-reader-history")).toContainText("Founding of Smokehaven");
+  await page.screenshot({ path: testInfo.outputPath("player-lore-desktop.png") });
+
+  await page.getByTestId("player-lore-reader-history").getByRole("button", { name: "goblin warriors" }).click();
+  await expect(page.locator(".player-bestiary-library")).toBeVisible();
+  await expect(page.locator(".player-bestiary-library .player-knowledge-list > button").first()).toBeVisible();
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: testInfo.outputPath("player-bestiary-desktop.png") });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await reloadFixture(page);
+  await page.getByTestId("player-nav-category-knowledge").click();
+  await page.getByTestId("player-nav-page-knowledge.history").click();
+  await expect(page.locator(".player-category-drawer")).toHaveAttribute("aria-hidden", "true");
+  await page.getByTestId("player-lore-entry-e2e_lore_history").click();
+  await expect(page.getByTestId("player-lore-reader-history")).toBeVisible();
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: testInfo.outputPath("player-lore-mobile.png") });
 });
 
 test("spell catalog override appears in player add-spell flow at rank zero", async ({ page }) => {

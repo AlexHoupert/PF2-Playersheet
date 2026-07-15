@@ -1,6 +1,6 @@
 # Known Risks And Modernization Notes
 
-Last updated: 2026-07-10.
+Last updated: 2026-07-15.
 
 ## Highest-Impact Risks
 
@@ -37,6 +37,10 @@ Generated catalog files are large. It is easy to accidentally import a full cata
 
 Vite now isolates major catalog decoders into explicit data chunks (`ability-index`, `shop-index`, `creature-index`, `feat-index`, `spell-index`, `impulse-index`, `action-index`) and loads `icon_catalog.json` as a JSON asset. Do not reintroduce broad static imports from utility modules like clipboard helpers or shared editors; use dynamic imports for optional catalog dropdowns/detail paths.
 
+6. Lore migration and rules verification
+
+Lore now writes campaign-scoped drafts, groups, materialized Actor deliveries, and private notes. Top-level Lore remains a recovery fallback until a separately approved live migration is complete. The local 16-article dry-run found 14 unresolved legacy links that must be reviewed instead of guessed. Firestore rules are implemented, but the repository has no Rules Emulator test harness yet; treat the documented gate in `docs/agent/lore-migration-readiness.md` as mandatory before deploying the new rules.
+
 ## Data And Migration Risks
 
 - `src/shared/db/legacy-import/migrateDb.js` mutates the input object in place by design. It is import/backup-only; be careful when calling it with shared references.
@@ -70,6 +74,7 @@ Vite now isolates major catalog decoders into explicit data chunks (`ability-ind
 - User assignment is keyed by email in legacy DB and by member documents in v2. Email casing is normalized in v2 member docs.
 - `src/data/new_db.json` includes real-looking user email assignments. Avoid exposing or expanding this data unnecessarily.
 - Firestore rules now cover campaign `actors`, `actorEffects`, `effectTemplates`, and top-level `catalogOverrides`. They do not visibly permit legacy `data/master`; verify deployed rules before relying on legacy cloud writes.
+- Campaign Lore rules protect drafts from Players and constrain deliveries/notes by assigned Actor. Do not remove the `actorId`/`sharedWithGm` query constraints in `src/shared/lore/useLoreStores.js`; Firestore evaluates the possible query result set against rules.
 
 ## UI Risks
 

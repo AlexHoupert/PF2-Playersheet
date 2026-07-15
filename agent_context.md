@@ -1,6 +1,6 @@
 # Agent Context
 
-Last deep scan: 2026-06-20.
+Last deep scan: 2026-07-15.
 
 ## Project Identity
 
@@ -25,7 +25,7 @@ The root repo is `PF2-Playersheet`; the parent directory is not the git repo.
 ## Entry Points
 
 - `src/main.jsx` wraps `<App />` in `AuthProvider`.
-- `src/App.jsx` starts Firestore V2 directly on the `v2-convergence` branch and selects route shells. Player, Admin, Party, and Camp route shells are loaded with `React.lazy`.
+- `src/App.jsx` starts Firestore V2 directly on `main` and selects route shells. Player, Admin, Party, and Camp route shells are loaded with `React.lazy`.
   - Legacy `usePersistedDb` is no longer part of the normal app entry on this branch.
   - `?db=v2` is no longer required on this branch; the old query-param distinction is kept only in docs/history until final cleanup.
   - `?admin=true`: GM/admin app.
@@ -42,7 +42,7 @@ The root repo is `PF2-Playersheet`; the parent directory is not the git repo.
   - It creates one campaign, one assigned PC actor (`Nimwe Smoke`), one quest, one lootbag, one encounter, one shop trader, and a spell catalog override for `Uplifting Overture`.
   - `AuthProvider` uses a fake user only when `import.meta.env.DEV` and `?e2e=true`; production builds do not enable the fixture.
   - `App.jsx` routes the fixture through `CampaignProvider` with a local runtime DB state so smoke tests do not write Firestore.
-- Current smoke coverage is a baseline surface smoke: login gate, Player character/quest/loot/magic/shop surfaces, and GM sessions/players/items/quests/encounters. Deeper mutation flows such as item give, loot claim/split, quest reward application, and encounter condition writes still need dedicated Playwright tests.
+- Smoke coverage includes Player/GM surfaces and deterministic mutation flows for Actor edits, item give, loot, quest rewards, encounters, catalog overrides, shared Effects, defeated combatants, and campaign Lore publishing/reading/notes.
 - The custom dev server must let Vite transform `/ressources/...json?import` requests. `server/index.js` serves normal `/ressources` asset URLs statically, but passes `?import` requests through to Vite middleware.
 
 ## Feedback And Runtime Logging
@@ -93,9 +93,9 @@ Firestore V2 runtime:
 - Campaign/Session, Character, Actor, Actor Effect, Inventory, Loot, Quests/Rewards, Encounters, Maps, Progress, Camping, shop/trader, global custom content, Pacts, Abilities, Lore, Bestiary metadata/custom creatures, catalog overrides, and Player runtime fallbacks now go through `CampaignContext.dataActions` and targeted V2 repositories/transactions where migrated.
 - `CampaignContext` and global-facing views use pure selectors under `src/shared/db/selectors/` for campaign/character/actor/effect, shop, pact, ability, lore, and bestiary reads.
 
-Firestore V2 collections include `campaigns`, campaign subcollections `actors`, `actorEffects`, `effectTemplates`, `quests`, `lootBags`, `encounters`, `maps`, `members`, plus top-level `global`, `catalogOverrides`, `loreArticles`, and `migrationBackups`. Old `characters`, `customItems`, `customCreatures`, and `customActions` collections remain transition/import data, but runtime reads and writes should not target `characters`.
+Firestore V2 collections include `campaigns`, campaign subcollections `actors`, `actorEffects`, `effectTemplates`, `quests`, `lootBags`, `encounters`, `maps`, `members`, `loreArticles`, `loreGroups`, `loreDeliveries`, and `knowledgeNotes`, plus top-level `global`, `catalogOverrides`, and `migrationBackups`. Top-level `loreArticles` and old `characters`, `customItems`, `customCreatures`, and `customActions` remain transition/import data.
 
-V2 is the convergence branch runtime, but the branch is not yet production-cutover ready. Before deploying it as the play branch, use `docs/agent/v2-default-readiness.md` for the required manual smoke checklist and Firestore rules audit.
+V2 is the normal `main` runtime. Use `docs/agent/v2-default-readiness.md` and feature-specific readiness documents before deploying new rules or running maintenance migrations.
 
 ## Domain Actions Snapshot
 
@@ -109,7 +109,8 @@ Current domain action files:
 - `src/shared/db/domain/campaignActions.js`: Campaign lifecycle, party XP, XP threshold sync, and campaign notification actions.
 - `src/shared/db/domain/characterActions.js`: Character compatibility facade backed by PC Actor documents plus character lifecycle actions.
 - `src/shared/db/domain/inventoryActions.js`, `lootActions.js`, `questActions.js`, `encounterActions.js`, `mapActions.js`, `progressActions.js`, `campingActions.js`: campaign-scoped runtime write APIs.
-- `src/shared/db/domain/globalContentActions.js`: global content, bestiary, pact, lore, and shop actions.
+- `src/shared/db/domain/globalContentActions.js`: global content, bestiary, pact, and shop actions plus legacy top-level Lore compatibility helpers.
+- `src/shared/db/domain/loreActions.js`: campaign-scoped Lore draft, group, publication, delivery, notification, and private-note actions.
 - `src/shared/db/domain/effectActions.js`: ActorEffect and EffectTemplate actions.
 - `src/shared/db/domain/memberActions.js`: Campaign member assign/revoke actions.
 - `src/shared/db/domain/catalogOverrideActions.js`: direct Catalog Override save/delete actions.
@@ -125,7 +126,7 @@ Current domain action files:
 - `src/shared/db/domain/mapReducers.js`: pure map, pin, scale, order, and map soft-delete reducers.
 - `src/shared/db/domain/progressReducers.js`: pure progress normalization, active-only filtering, section updates, and top-level progress soft-delete reducers.
 - `src/shared/db/domain/campingReducers.js`: pure camping settings, activity, assignment, roll, and custom activity soft-delete reducers.
-- `src/shared/db/domain/globalContentReducers.js`: pure shop/trader, global custom content, pact, ability, lore, bestiary metadata/custom creature, notification, and reveal-state reducers.
+- `src/shared/db/domain/globalContentReducers.js`: pure shop/trader, global custom content, pact, ability, legacy Lore compatibility, bestiary metadata/custom creature, notification, and reveal-state reducers.
 - `src/shared/db/selectors/`: pure read selectors for campaign, character, actor, effect, inventory, shop, bestiary, progress, pact, ability, and lore data.
 - `src/shared/db/v2/repositories.js`: targeted Firestore v2 document updates and transactions.
 - `src/shared/hooks/useCatalogDetailController.js`: shared Player/Admin detail loader and content-link navigator for item, spell, feat, action, and impulse modals.
@@ -164,12 +165,12 @@ Migrated paths:
 - GM and player custom item/action saves use `dataActions.globalContent`.
 - GM AbilitiesView custom ability saves/deletes/clones and custom-creature ability assignment use `dataActions.globalContent` and `dataActions.bestiary`.
 - GM PactAdminView and DeviantAbilitiesAdminView use `dataActions.pact`.
-- GM LoreAdminView uses `dataActions.globalContent` with `loreArticles`.
+- GM LoreAdminView uses `dataActions.lore` with campaign-scoped drafts, groups, materialized deliveries, and shared Player notes. Top-level Lore is a recovery fallback only.
 - GM BestiaryView custom creature save/update/delete, metadata edits, bestiary toggles, group edits, reveal-state, and catalog metadata initialization use `dataActions.bestiary`.
 - Encounter creature reveal-state writes use `dataActions.bestiary.updateRevealState`.
 - Player root-notification clearing uses `dataActions.globalContent.clearRootNotification`.
 - Player skill-name runtime repair uses `dataActions.character.updateCharacter`.
-- Pacts, Abilities, Lore, Bestiary, Shop, Items, Encounter, Party, and Player inventory reads use selector helpers instead of component-local root-field fallbacks.
+- Pacts, Abilities, Bestiary, Shop, Items, Encounter, Party, and Player inventory reads use selector helpers instead of component-local root-field fallbacks. Lore uses the dedicated shared model/store/selector layer under `src/shared/lore/`.
 
 Soft delete uses `deletedAt`/`deletedBy`; restore removes those fields and sets `restoredAt`/`restoredBy`. `CampaignContext.campaigns`, actor-first character selectors, `activeCampaign.quests`, `activeCampaign.encounters`, and `activeCampaign.maps` expose active records; `archivedCampaigns`, actor-first archived character selectors, `activeCampaign.archivedQuests`, `activeCampaign.archivedEncounters`, and `activeCampaign.archivedMaps` expose archived records.
 

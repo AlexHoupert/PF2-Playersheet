@@ -1,6 +1,6 @@
 # UI Flows
 
-Last updated: 2026-06-16.
+Last updated: 2026-07-15.
 
 ## Authentication And Routing
 
@@ -22,12 +22,12 @@ Primary responsibilities:
 
 - Select assigned PC actor through actor-first character selectors.
 - Let GMs cycle characters in preview mode.
-- Maintain active tab and mode.
+- Maintain active navigation category/page through the Player page registry.
 - Run small runtime migrations/defaults for older character shapes.
 - Mutate character inventory, gold, spells, feats, impulses, formulas, conditions, equipment, weapons, ammo, loot, and custom actions.
 - Drive shared modals and catalog overlays.
 - Resolve content links emitted by `parseFoundry`.
-- Show notifications and XP overlay.
+- Show versioned popup-queue notifications and XP overlay.
 
 Player display is split into:
 
@@ -43,7 +43,27 @@ Player display is split into:
 - `src/player/views/ProgressView.jsx`
 - `src/player/views/CompanionTab.jsx`
 
-Character mode tabs are built dynamically in `PlayerApp`. Story mode uses quest/lore/map/progress/camp style tabs.
+Player navigation is defined in `src/player/navigation/playerPageRegistry.js`. The five fixed categories are Character, Skills, Items, Knowledge, and Campaign. Their visible subpages are rendered by `PlayerPageRenderer`; optional Magic, Impulses, Pact, and Companion pages depend on the assigned Actor's data. Mobile uses the fixed bottom navigation plus category drawers, while the subpage carousel and swipe navigation stay synchronized.
+
+## Lore And Knowledge Flow
+
+Important files:
+
+- `src/admin/LoreAdminView.jsx` and `src/admin/lore/`
+- `src/player/views/LoreView.jsx` and `src/player/lore/`
+- `src/shared/lore/`
+- `src/shared/db/domain/loreActions.js`
+- `src/shared/db/v2/loreRepository.js`
+
+Key concepts:
+
+- GM articles are campaign-scoped drafts with autosave and explicit publish.
+- Publish materializes a reveal-safe snapshot into one `loreDeliveries` document per target PC Actor.
+- `attentionVersion` controls one-time popups and unread badges independently from content version.
+- Player Knowledge pages open directly to History, Locations, NPCs, Bestiary, or Other.
+- Bestiary remains reveal-controlled by Bestiary metadata; Lore only links to already visible creatures.
+- Player notes are Actor-owned, autosaved, private by default, and readable by the GM only when explicitly shared.
+- Top-level Lore documents are recovery input, not the canonical write path. See `docs/agent/lore-migration-readiness.md` before running the migration.
 
 ## Inventory And Shop Flow
 

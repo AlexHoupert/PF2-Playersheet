@@ -52,6 +52,28 @@ test('player popup candidates are prioritized and deduplicated', () => {
     assert.equal(candidates[0].payload.offer.pact.name, 'Ember Pact');
 });
 
+test('lore releases use Firestore attention versions as popup identity', () => {
+    const candidates = buildPlayerPopupCandidates({
+        activeCampaign: { id: 'camp1' },
+        actor: { id: 'actor1' },
+        loreDeliveries: [{
+            id: 'lore1__actor1',
+            articleId: 'lore1',
+            actorId: 'actor1',
+            attentionVersion: 2,
+            notifiedVersion: 1,
+            readVersion: 1,
+            publishedAt: 40,
+            snapshot: { title: 'The Old Road', category: 'locations' },
+        }],
+    });
+
+    assert.equal(candidates.length, 1);
+    assert.equal(candidates[0].type, PLAYER_POPUP_TYPES.LORE_RELEASE);
+    assert.equal(candidates[0].sourceId, 'lore1__actor1:v2');
+    assert.equal(candidates[0].payload.delivery.snapshot.category, 'locations');
+});
+
 test('player popup selection skips acknowledged popups', () => {
     const pactPopup = createPlayerPopup({
         type: PLAYER_POPUP_TYPES.PACT_OFFER,

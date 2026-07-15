@@ -2,6 +2,16 @@ export function selectLoreArticles(db) {
     return Array.isArray(db?.lore?.articles) ? db.lore.articles : [];
 }
 
+export function selectCampaignLoreArticles(activeCampaign, db) {
+    const campaignArticles = Array.isArray(activeCampaign?.loreArticles) ? activeCampaign.loreArticles : [];
+    const legacyArticles = selectLoreArticles(db);
+    const campaignIds = new Set(campaignArticles.map((article) => article?.id).filter(Boolean));
+    return [
+        ...campaignArticles,
+        ...legacyArticles.filter((article) => !campaignIds.has(article?.id)),
+    ];
+}
+
 export function selectLoreArticlesByCategory(db, category) {
     const targetCategory = String(category || '').toLowerCase();
     return selectLoreArticles(db)

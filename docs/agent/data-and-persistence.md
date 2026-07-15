@@ -62,7 +62,7 @@ Top-level collections:
 - `customCreatures`
 - `customActions`
 - `catalogOverrides`
-- `loreArticles`
+- `loreArticles` (recovery/import compatibility only)
 - `migrationBackups`
 
 Campaign subcollections:
@@ -75,6 +75,10 @@ Campaign subcollections:
 - `encounters`
 - `maps`
 - `members`
+- `loreArticles`
+- `loreGroups`
+- `loreDeliveries`
+- `knowledgeNotes`
 
 Helpers:
 
@@ -187,7 +191,7 @@ Current migrated write paths:
 - GM/player custom item/action saves through `dataActions.globalContent`.
 - GM AbilitiesView custom ability saves/deletes/clones and custom-creature ability assignment through `dataActions.globalContent` and `dataActions.bestiary`.
 - GM PactAdminView and DeviantAbilitiesAdminView through `dataActions.pact`.
-- GM LoreAdminView through `dataActions.globalContent` and the `loreArticles` collection.
+- GM LoreAdminView through `dataActions.lore` and campaign-scoped Lore collections. Players read reveal-safe `loreDeliveries` and write Actor-owned `knowledgeNotes`; top-level Lore remains a recovery fallback.
 - GM BestiaryView custom creature, metadata, reveal-state, group, bestiary toggle, and catalog metadata initialization through `dataActions.bestiary`.
 - Encounter bestiary reveal-state writes through `dataActions.bestiary`.
 - Player root-notification clear and skill-name runtime repair through `dataActions`.
@@ -297,13 +301,15 @@ Access model:
 - Assigned players can create/update/delete actor effects that target their assigned actor.
 - Loot bag updates are allowed for any campaign member.
 - Campaign effect templates are readable by campaign members and writable by campaign GM/global admins.
-- Top-level global/custom/catalog-override/lore collections are readable by signed-in users but writable only by global admins.
+- Top-level global/custom/catalog-override/recovery-Lore collections are readable by signed-in users but writable only by global admins.
+- Campaign Lore drafts are GM-only. Campaign members may read groups; assigned Actors may query their own deliveries and notes. GMs see only notes explicitly shared with them.
 
 Mismatch to watch:
 
 - Legacy `data/master` is not explicitly allowed by these rules. Legacy mode may depend on older/deployed rules or admin privileges. Verify live rules before relying on legacy Firestore writes.
-- The currently targeted V2 global writes are covered by `global`, `customItems`, `customCreatures`, `customActions`, `catalogOverrides`, and `loreArticles`; all are signed-in readable and global-admin writable.
+- The currently targeted V2 global writes are covered by `global`, `customItems`, `customCreatures`, `customActions`, and `catalogOverrides`; top-level `loreArticles` is retained only for recovery/import compatibility.
 - The actor/effects foundation is covered by `actors`, `actorEffects`, and `effectTemplates` campaign subcollection rules.
+- Lore delivery/note queries must retain their `actorId` or `sharedWithGm` constraints because Firestore rules evaluate the potential query result set. See `docs/agent/lore-migration-readiness.md` for the emulator gate.
 
 ## Existing Tests
 
@@ -324,15 +330,16 @@ Tests cover:
 - String condition/item conversion.
 - Inventory quantity normalization.
 - Proficiencies array to object conversion.
-- Members, custom items/actions/creatures, pacts, abilities, and lore document paths/projection.
+- Members, custom items/actions/creatures, pacts, abilities, recovery Lore paths, and campaign-scoped Lore runtime composition.
 - Composition of v2 docs back into legacy projection.
 - Campaign/Character/Quest/Encounter soft delete and restore reducers.
 - Map soft delete, restore, order, pin, and scale reducers.
 - Progress update, active-only, top-level soft delete, and restore reducers.
 - Camping settings, custom activity archive/restore, assignment conflict, roll, and unassign reducers.
-- Global content reducers for custom items/actions/abilities/creatures, pacts, lore, trader state, availability lists, root notifications, and bestiary reveal-state/metadata.
+- Global content reducers for custom items/actions/abilities/creatures, pacts, legacy Lore compatibility, trader state, availability lists, root notifications, and bestiary reveal-state/metadata.
 - Legacy and v2 adapter behavior for `createDataActions`.
-- Selector behavior for active/archived campaign data, legacy root fallbacks, shop reads, bestiary reveal-state/custom creatures, pacts, abilities, and lore.
+- Selector behavior for active/archived campaign data, legacy root fallbacks, shop reads, bestiary reveal-state/custom creatures, pacts, abilities, and campaign/recovery Lore precedence.
+- Lore normalization, reveal materialization, audience changes, versioned alerts, links/backlinks, groups, migration reports, private notes, and targeted V2 adapter calls.
 - Broad-write guard coverage for migrated UI files.
 - Quest objective and quest reward idempotency.
 - Encounter activation, combatants, effect target IDs, initiative, turn state, compatibility conditions, and ActorEffect condition assignment.

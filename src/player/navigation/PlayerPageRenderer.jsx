@@ -1,4 +1,3 @@
-import React from 'react';
 import ShopView from '../ShopView';
 import { StatsView } from '../views/StatsView';
 import { ActionsView } from '../views/ActionsView';
@@ -56,6 +55,10 @@ export default function PlayerPageRenderer({
     inspectInventoryItem,
     loadWeapon,
     myActor,
+    loreStore,
+    loreTarget,
+    onNavigateLoreArticle,
+    onNavigateLoreCreature,
     onGoToPage,
     ownedCompanionActors,
     playerQuests,
@@ -242,7 +245,20 @@ export default function PlayerPageRenderer({
     }
 
     if (LORE_CATEGORY_BY_PAGE[activePageId]) {
-        return <LoreView db={db} initialCategory={LORE_CATEGORY_BY_PAGE[activePageId]} />;
+        return (
+            <LoreView
+                db={db}
+                initialCategory={LORE_CATEGORY_BY_PAGE[activePageId]}
+                loreStore={loreStore}
+                campaignId={activeCampaign?.id}
+                actorId={myActor?.id || character?.id}
+                dataActions={dataActions}
+                initialArticleId={loreTarget?.articleId || null}
+                initialCreatureId={loreTarget?.creatureId || null}
+                onNavigateArticle={onNavigateLoreArticle}
+                onNavigateCreature={onNavigateLoreCreature}
+            />
+        );
     }
 
     if (activePageId === PLAYER_PAGE_IDS.QUESTS) {

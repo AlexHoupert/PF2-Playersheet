@@ -106,6 +106,41 @@ service cloud.firestore {
         allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
         allow write: if isCampaignGm(campaignId) || isGlobalAdmin();
       }
+
+      match /loreArticles/{articleId} {
+        allow read, write: if isCampaignGm(campaignId) || isGlobalAdmin();
+      }
+
+      match /loreGroups/{groupId} {
+        allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
+        allow write: if isCampaignGm(campaignId) || isGlobalAdmin();
+      }
+
+      match /loreDeliveries/{deliveryId} {
+        allow read: if isCampaignGm(campaignId)
+          || isAssignedActor(campaignId, resource.data.actorId)
+          || isGlobalAdmin();
+        allow create, delete: if isCampaignGm(campaignId) || isGlobalAdmin();
+        allow update: if isCampaignGm(campaignId)
+          || isGlobalAdmin()
+          || (isAssignedActor(campaignId, resource.data.actorId)
+            && request.resource.data.actorId == resource.data.actorId
+            && request.resource.data.articleId == resource.data.articleId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'readVersion', 'readAt', 'notifiedVersion', 'notifiedAt', 'updatedAt', 'schemaVersion'
+            ]));
+      }
+
+      match /knowledgeNotes/{noteId} {
+        allow read: if isAssignedActor(campaignId, resource.data.actorId)
+          || ((isCampaignGm(campaignId) || isGlobalAdmin()) && resource.data.sharedWithGm == true);
+        allow create: if isAssignedActor(campaignId, request.resource.data.actorId);
+        allow update: if isAssignedActor(campaignId, resource.data.actorId)
+          && request.resource.data.actorId == resource.data.actorId
+          && request.resource.data.targetId == resource.data.targetId
+          && request.resource.data.targetType == resource.data.targetType;
+        allow delete: if isAssignedActor(campaignId, resource.data.actorId);
+      }
     }
 
     match /global/{documentId} {

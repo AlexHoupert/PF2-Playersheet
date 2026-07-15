@@ -567,6 +567,17 @@
         height: 9px;
     }
 
+    .player-bottom-nav__badge.has-count {
+        width: 16px;
+        height: 16px;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-size: 0.58rem;
+        font-weight: 900;
+        line-height: 1;
+    }
+
     .player-bottom-nav__label {
         max-width: 100%;
         overflow: hidden;

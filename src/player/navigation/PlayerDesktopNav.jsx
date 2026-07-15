@@ -1,4 +1,3 @@
-import React from 'react';
 import {
     getCategoryIdForPlayerPage,
     getVisiblePlayerNavCategories,
@@ -9,14 +8,16 @@ export default function PlayerDesktopNav({
     activePageId,
     navigationContext,
     onSelectPage,
-    hasLoot = false,
+    alertsByPage = {},
 }) {
     const activeCategoryId = getCategoryIdForPlayerPage(activePageId);
     const visibleCategories = getVisiblePlayerNavCategories(navigationContext);
     return (
         <nav className="player-desktop-nav no-swipe" aria-label="Player page navigation">
             <div className="player-desktop-nav__categories">
-                {visibleCategories.map(category => (
+                {visibleCategories.map(category => {
+                    const count = category.pages.reduce((total, page) => total + Math.max(0, Number(alertsByPage?.[page.id] || 0)), 0);
+                    return (
                     <button
                         key={category.id}
                         type="button"
@@ -24,14 +25,15 @@ export default function PlayerDesktopNav({
                         onClick={() => onSelectPage(category.pages[0])}
                     >
                         {category.label}
-                        {category.id === 'items' && hasLoot && <span className="player-nav-alert-dot" aria-label="New loot" />}
+                        {count > 0 && <span className="player-nav-alert-dot" aria-label={`${count} unread updates`} />}
                     </button>
-                ))}
+                    );
+                })}
             </div>
             <PlayerSubpageCarousel
                 activePageId={activePageId}
                 navigationContext={navigationContext}
-                hasLoot={hasLoot}
+                alertsByPage={alertsByPage}
                 onSelectPage={onSelectPage}
             />
         </nav>

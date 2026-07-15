@@ -5,7 +5,7 @@
  * Architecture: Creature DATA comes from catalog (static JSON files),
  * while db only stores METADATA (group, bestiary visibility, revealState, falseData)
  */
-import React, { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
@@ -15,7 +15,7 @@ import CreatureAbilityModal from '../shared/components/CreatureAbilityModal';
 import CreatureSkillDetailDialog from '../shared/components/CreatureSkillDetailDialog';
 import CreatureEditor from './editors/CreatureEditor';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
-import { getRecallKnowledgeDC, generateFalseData } from '../utils/bestiaryUtils';
+import { generateFalseData } from '../utils/bestiaryUtils';
 import { deepClone } from '../shared/utils/deepClone';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
 import { mergeCreatureDetailIntoEntry } from '../shared/catalog/catalogDetailMerge';
@@ -25,11 +25,22 @@ import { DEFAULT_CREATURE_REVEAL_STATE, buildBestiaryCreatureEntries } from '../
 import { buildHideOverride } from '../shared/catalog/catalogEntryModel';
 import { selectCatalogEntryStates } from '../shared/db/selectors/catalogOverrideSelectors';
 import { AdminPagination, AdminTableSurface, AdminTableToolbar } from './components/table';
+import { selectCampaignLoreArticles } from '../shared/db/selectors/loreSelectors';
+import { selectLoreBacklinks } from '../shared/lore/loreSelectors';
+import { useLoreAdminStore } from '../shared/lore/useLoreStores';
 
 export default function BestiaryView({ db, initialFilterType, onContentLinkClick }) {
-    const { dataActions } = useCampaign();
+    const { activeCampaign, activeCampaignId, dataActions, dbMode } = useCampaign();
     const { confirm, notifyError, notifySuccess, prompt } = useAppFeedback();
     const { isMobile } = useWindowSize();
+    const loreStore = useLoreAdminStore({
+        campaignId: activeCampaignId,
+        enabled: dbMode === 'firestore-v2',
+        fallbackArticles: selectCampaignLoreArticles(activeCampaign, db),
+        fallbackGroups: activeCampaign?.loreGroups || [],
+        fallbackDeliveries: activeCampaign?.loreDeliveries || [],
+        fallbackNotes: activeCampaign?.knowledgeNotes || [],
+    });
 
     // ── Filter / search state ────────────────────────────────────────────────
     const [search, setSearch] = useState('');
@@ -106,6 +117,9 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     const [loadedCreatureData, setLoadedCreatureData] = useState(null);
     const [selectedAbility, setSelectedAbility] = useState(null);
     const [selectedSkill, setSelectedSkill] = useState(null);
+    const loreBacklinks = useMemo(() => previewCreature?.id
+        ? selectLoreBacklinks(loreStore.articles, 'creature', previewCreature.id)
+        : [], [loreStore.articles, previewCreature?.id]);
 
     // Fetch full creature data when preview creature changes
     useEffect(() => {
@@ -450,6 +464,16 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                 </button>
                 <button
                     className="nav-btn"
+                    disabled={!activeCampaignId}
+                    onClick={() => Promise.resolve(dataActions.lore.notifyBestiaryReveal(activeCampaignId, {
+                        id: previewCreature.id,
+                        name: previewCreature.name,
+                    })).then(() => notifySuccess('Party notified about this Bestiary update')).catch(notifyError)}
+                >
+                    Notify party
+                </button>
+                <button
+                    className="nav-btn"
                     style={{ color: '#e57373' }}
                     onClick={() => handleDelete(previewCreature)}
                 >
@@ -469,6 +493,14 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                     />
                 ) : (
                     <div style={{ padding: 20, textAlign: 'center', color: '#888' }}>Loading creature data...</div>
+                )}
+                {loreBacklinks.length > 0 && (
+                    <section style={{ margin: '14px 0', padding: 12, borderTop: '1px solid #4c4136' }}>
+                        <h3 style={{ margin: '0 0 8px', color: 'var(--text-gold)' }}>Referenced by Knowledge</h3>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {loreBacklinks.map((article) => <span key={article.id} style={{ border: '1px solid #514a40', padding: '4px 8px', borderRadius: 4 }}>{article.title}</span>)}
+                        </div>
+                    </section>
                 )}
             </div>
         </div>

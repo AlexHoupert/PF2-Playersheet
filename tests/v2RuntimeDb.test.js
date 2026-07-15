@@ -30,3 +30,23 @@ test('runtime lore uses collection articles over stale global lore articles', ()
         ['history', 'npc']
     );
 });
+
+test('runtime campaign view maps campaign-scoped lore collections to lists', () => {
+    const db = composeRuntimeDbFromV2Store({
+        campaigns: {
+            campaign: {
+                id: 'campaign',
+                loreArticles: { article: { id: 'article', title: 'Campaign Lore' } },
+                loreGroups: { group: { id: 'group', name: 'History' } },
+                loreDeliveries: { delivery: { id: 'delivery', articleId: 'article', actorId: 'pc' } },
+                knowledgeNotes: { note: { id: 'note', actorId: 'pc', targetId: 'article' } },
+            },
+        },
+    });
+
+    const campaign = db.campaigns.campaign;
+    assert.deepEqual(campaign.loreArticles.map((entry) => entry.id), ['article']);
+    assert.deepEqual(campaign.loreGroups.map((entry) => entry.id), ['group']);
+    assert.deepEqual(campaign.loreDeliveries.map((entry) => entry.id), ['delivery']);
+    assert.deepEqual(campaign.knowledgeNotes.map((entry) => entry.id), ['note']);
+});

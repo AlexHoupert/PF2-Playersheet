@@ -100,6 +100,10 @@ export function campaignFromV2StoreCampaign(rawCampaign = {}, campaignId = rawCa
         lootBags: valuesOrList(rawCampaign, V2_COLLECTIONS.lootBags, "lootBagsList"),
         encounters: valuesOrList(rawCampaign, V2_COLLECTIONS.encounters, "encountersList"),
         maps: valuesOrList(rawCampaign, V2_COLLECTIONS.maps, "mapsList"),
+        loreArticles: valuesOrList(rawCampaign, V2_COLLECTIONS.loreArticles, "loreArticlesList"),
+        loreGroups: valuesOrList(rawCampaign, V2_COLLECTIONS.loreGroups, "loreGroupsList"),
+        loreDeliveries: valuesOrList(rawCampaign, V2_COLLECTIONS.loreDeliveries, "loreDeliveriesList"),
+        knowledgeNotes: valuesOrList(rawCampaign, V2_COLLECTIONS.knowledgeNotes, "knowledgeNotesList"),
         members: rawCampaign[V2_COLLECTIONS.members] || {},
         membersList: valuesOrList(rawCampaign, V2_COLLECTIONS.members, "membersList"),
     };

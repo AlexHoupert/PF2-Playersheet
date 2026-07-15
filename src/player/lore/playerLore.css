@@ -1,0 +1,53 @@
+.player-knowledge-library {
+  display: grid;
+  grid-template-columns: minmax(260px, 32%) minmax(0, 1fr);
+  min-height: min(720px, calc(100dvh - 210px));
+  overflow: hidden;
+  border: 1px solid #39332d;
+  border-radius: 5px;
+  background: #141416;
+  color: #e7e3dc;
+}
+.player-knowledge-index { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); min-height: 0; border-right: 1px solid #39332d; background: #18181a; }
+.player-knowledge-index > header { display: flex; align-items: center; justify-content: space-between; padding: 14px; border-bottom: 1px solid #39332d; }
+.player-knowledge-index h2 { margin: 2px 0 0; color: var(--text-gold); font-family: Cinzel, serif; }
+.player-knowledge-eyebrow { color: #827e77; font-size: .7rem; text-transform: uppercase; }
+.player-knowledge-search { position: relative; padding: 11px; }
+.player-knowledge-search > svg { position: absolute; left: 22px; top: 50%; width: 16px; transform: translateY(-50%); color: #8e8a83; }
+.player-knowledge-search input { padding-left: 34px; }
+.player-knowledge-index > select { margin: 0 11px 10px; min-height: 34px; border: 1px solid #48423c; border-radius: 4px; background: #101012; color: #ddd8cf; padding: 6px; }
+.player-knowledge-list { min-height: 0; overflow: auto; }
+.player-knowledge-list > button { position: relative; display: grid; gap: 3px; width: 100%; border: 0; border-bottom: 1px solid rgba(255,255,255,.045); background: transparent; color: #ddd9d1; padding: 11px 14px; text-align: left; cursor: pointer; }
+.player-knowledge-list > button:hover { background: #202023; }
+.player-knowledge-list > button.active { background: rgba(197,160,89,.12); box-shadow: inset 3px 0 var(--text-gold); }
+.player-knowledge-list__title { padding-right: 20px; font-weight: 700; }
+.player-knowledge-list small { display: flex; align-items: center; gap: 4px; color: #8f8b84; }
+.player-knowledge-list small svg { width: 13px; height: 13px; }
+.player-knowledge-unread { position: absolute; right: 12px; top: 11px; display: grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; background: var(--text-gold); color: #17130d; font-weight: 900; }
+.player-knowledge-empty { padding: 18px; color: #817d76; text-align: center; }
+.player-knowledge-reader { min-width: 0; overflow: auto; padding: 18px clamp(14px, 3vw, 42px) 36px; }
+.player-knowledge-reader > .lore-article-renderer { max-width: 880px; margin: auto; }
+.player-knowledge-reader__empty { display: grid; min-height: 340px; place-items: center; align-content: center; gap: 8px; color: #77736c; }
+.player-knowledge-reader__empty svg { width: 42px; height: 42px; opacity: .55; }
+.player-knowledge-mobile-back { display: none; margin-bottom: 12px; }
+.knowledge-note-editor { max-width: 880px; margin: 30px auto 0; border-top: 1px solid #4c4136; padding-top: 18px; }
+.knowledge-note-editor__heading { display: flex; justify-content: space-between; align-items: center; }
+.knowledge-note-editor__heading h3 { margin: 0; color: var(--text-gold); font-family: Cinzel, serif; }
+.knowledge-note-editor__heading small { color: #88837c; }
+.knowledge-note-editor textarea { margin-top: 9px; background: #111113; }
+.knowledge-note-editor__share { display: flex; align-items: center; gap: 8px; margin-top: 9px; color: #ccc7be; }
+.knowledge-note-editor__share > svg { width: 17px; }
+.knowledge-note-editor__share span { display: grid; }
+.knowledge-note-editor__share small { color: #817d76; }
+.knowledge-note-editor__autosave { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; color: #75716a; font-size: .75rem; }
+.knowledge-note-editor__autosave svg { width: 13px; }
+.player-bestiary-library .creature-card { max-width: 900px; margin-inline: auto; }
+
+@media (max-width: 720px) {
+  .player-knowledge-library { display: block; min-height: calc(100dvh - 210px); overflow: visible; border-inline: 0; }
+  .player-knowledge-index { min-height: 62dvh; border-right: 0; }
+  .player-knowledge-reader { display: none; overflow: visible; padding-inline: 12px; }
+  .player-knowledge-library.reading .player-knowledge-index { display: none; }
+  .player-knowledge-library.reading .player-knowledge-reader { display: block; }
+  .player-knowledge-mobile-back { display: inline-flex; }
+}

@@ -9,6 +9,7 @@ import { createEncounterActions } from "./encounterActions.js";
 import { createGlobalContentActions } from "./globalContentActions.js";
 import { createInventoryActions } from "./inventoryActions.js";
 import { createLootActions } from "./lootActions.js";
+import { createLoreActions } from "./loreActions.js";
 import { createMapActions } from "./mapActions.js";
 import { createMemberActions } from "./memberActions.js";
 import { createProgressActions } from "./progressActions.js";
@@ -35,6 +36,7 @@ export function createDataActions({
   const globalActions = createGlobalContentActions(actionContext);
   const inventoryActions = createInventoryActions(actionContext);
   const lootActions = createLootActions(actionContext);
+  const loreActions = createLoreActions(actionContext);
   const mapActions = createMapActions(actionContext);
   const memberActions = createMemberActions(actionContext);
   const progressActions = createProgressActions(actionContext);
@@ -50,6 +52,7 @@ export function createDataActions({
     effect: effectActions,
     catalogOverride: catalogOverrideActions,
     loot: lootActions,
+    lore: loreActions,
     quest: questActions,
     encounter: encounterActions,
     map: mapActions,

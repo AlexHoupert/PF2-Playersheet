@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeMasterToV2 } from '../src/shared/db/v2/normalizers.js';
 import { composeLegacyDbFromV2Documents } from '../src/shared/db/v2/legacyProjection.js';
 import { composeV2ViewModelFromDocuments } from '../src/shared/db/v2/viewModel.js';
+import { V2_SCHEMA_VERSION } from '../src/shared/db/v2/schema.js';
 
 test('normalizes legacy master data into campaign-scoped v2 documents', () => {
     const master = {
@@ -59,7 +60,7 @@ test('normalizes legacy master data into campaign-scoped v2 documents', () => {
     });
 
     const paths = new Set(result.documents.map(doc => doc.path));
-    assert.equal(result.schemaVersion, 3);
+    assert.equal(result.schemaVersion, V2_SCHEMA_VERSION);
     assert(paths.has('campaigns/camp1'));
     assert(paths.has('campaigns/camp1/characters/char1'));
     assert(paths.has('campaigns/camp1/actors/char1'));

@@ -62,6 +62,19 @@ test('bestiary entries merge static, custom, metadata, and publication visibilit
     assert.equal(entries[0].revealState.name, 'precise');
 });
 
+test('bestiary catalog states collapse duplicate source rows by creature id', () => {
+    const entries = buildBestiaryCreatureEntries({
+        entryStates: [
+            { status: 'original', baseId: 'wolf', effective: { id: 'wolf', name: 'Wolf', level: 1 } },
+            { status: 'original', baseId: 'wolf', effective: { id: 'wolf', name: 'Wolf', level: 1 } },
+        ],
+        metadata: { wolf: { bestiary: true } },
+        includeUnpublished: false,
+    });
+
+    assert.deepEqual(entries.map((entry) => entry.id), ['wolf']);
+});
+
 test('creature skill viewmodel handles numeric and object-shaped skills', () => {
     assert.deepEqual(
         buildCreatureSkillViewModel('athletics', { base: 12 }).bonus,

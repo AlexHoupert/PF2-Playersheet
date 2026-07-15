@@ -26,3 +26,19 @@ export function selectCustomCreature(db, creatureId) {
 export function selectCustomCreatureData(db, creatureId) {
     return selectCustomCreature(db, creatureId)?.data || null;
 }
+
+export function selectPlayerVisibleCreatureIds(db) {
+    const metadata = selectBestiaryCreatureMetadata(db);
+    const visibleIds = new Set(
+        Object.entries(metadata)
+            .filter(([, entry]) => Boolean(entry?.bestiary))
+            .map(([id]) => String(id))
+    );
+    for (const [key, record] of Object.entries(selectCustomCreatures(db))) {
+        const creature = record?.data || record || {};
+        const id = String(record?.id || creature?.id || creature?._id || key);
+        const isPublished = metadata[id]?.bestiary ?? record?.bestiary ?? creature?.bestiary;
+        if (isPublished) visibleIds.add(id);
+    }
+    return visibleIds;
+}

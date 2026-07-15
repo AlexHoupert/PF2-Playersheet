@@ -127,6 +127,7 @@ export function buildBestiaryCreatureEntries({ indexItems = [], customCreatures 
 }
 
 function buildCreatureEntriesFromCatalogStates(entryStates, metadata = {}, includeUnpublished = true) {
+    const seenIds = new Set();
     return (entryStates || [])
         .map(state => {
             const entry = state.effective || state.entry;
@@ -157,7 +158,8 @@ function buildCreatureEntriesFromCatalogStates(entryStates, metadata = {}, inclu
             };
         })
         .filter(entry => {
-            if (!entry?.id) return false;
+            if (!entry?.id || seenIds.has(entry.id)) return false;
+            seenIds.add(entry.id);
             if (entry.isDeleted) return includeUnpublished;
             return includeUnpublished || entry.bestiary;
         })

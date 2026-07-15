@@ -1,6 +1,6 @@
 # Smoke Results
 
-Last updated: 2026-07-10.
+Last updated: 2026-07-15.
 
 ## Scope
 
@@ -15,7 +15,7 @@ environment before treating a build as production-verified.
 
 Command: `npm run smoke`
 
-Result on 2026-07-10: `verified` (`13/13` Playwright fixture tests).
+Result on 2026-07-15: `verified` (`15/15` Playwright fixture tests).
 
 | Flow | Result | Notes |
 | --- | --- | --- |
@@ -23,17 +23,17 @@ Result on 2026-07-10: `verified` (`13/13` Playwright fixture tests).
 | Player surface load | verified | Character, quests, loot, magic, spell override, and shop entry render. |
 | Admin surface load | verified | Campaign, players, items, loot side list, quests, and encounter surfaces render. |
 | Player HP, gold, condition edit plus reload | verified | Mutates local Actor-backed fixture state and verifies reload persistence. |
-| GM custom item give to player plus reload | verified | Gives `Smoke Custom Charm`; player inventory displays it after reload. |
-| Loot item claim and gold split plus reload | verified | Claims item, splits gold, and verifies player inventory/gold after reload. |
+| Persistent damage and hidden Party effect | verified | Player removes persistent damage; hidden Encounter effects stay out of Party view. |
+| Loot item claim and gold split plus reload | verified | Claims item, splits gold, and verifies remaining state after reload. |
+| GM lootbag create and custom item give | verified | GM creates a lootbag and gives `Smoke Custom Charm`; Player inventory displays it after reload. |
 | Quest reward idempotency | verified | Objective reward applies once across repeated toggles/reload. |
 | Encounter HP, initiative, condition effects | verified | Creature HP/initiative and player/creature effects persist across reload. |
+| Campaign Lore publish/read/note flow | verified | GM creates and links an article, publishes it, Player handles the one-time release, reads it, shares a note, and GM sees the note. |
+| Lore visual surfaces | verified | Captures GM workspace, Player desktop reader, reveal-safe Bestiary reader, and mobile reader screenshots. |
 | Spell catalog override in player add flow | verified | `Uplifting Overture` override appears as rank/level 0 in Add Spell. |
 | Admin spell edit immediate refresh and Copy Reference | verified | Static spell edit writes an override, table context is retained, and Copy Reference resolves the effective entry. |
+| Admin table toolbar/drawer/context menu | verified | Shared admin table controls open without layout shifts; Drawer ref warnings were removed after the run and rechecked in isolation. |
 | Admin action hide/delete and Deleted filter | verified | Static action delete writes a hide override and the Deleted status filter reveals the hidden original. |
-| Admin item edit/clone semantics | verified | Static item edit updates the effective row without a duplicate; clone creates a custom copy. |
-| Admin creature production-style edit | verified | Creature editor writes a DB override in production-like mode instead of requiring file writes. |
-| Encounter effect removal via closable badge | verified | Effect-backed combatant condition badges can be removed and re-added through the encounter UI. |
-| Shared effects, Party visibility, and defeated combatants | verified | Persistent damage is removable from its target Actor, hidden effects do not reach Party cards, and defeated creatures leave the Party initiative list. |
 
 ## Manual Firebase Smokes
 
@@ -45,6 +45,7 @@ Result on 2026-07-10: `verified` (`13/13` Playwright fixture tests).
 | Loot Item Row: claim, partial claim, gold split | partial | Production smoke verified isolated lootbag creation, item claim, and single-character gold split. Partial claim still manual. |
 | GM Items side lists: trader/lootbag selection, icons, actions | verified | Production smoke verified selecting `Test V2`, creating lootbags, setting gold after commit, adding an item to a lootbag, and giving an item to player `test`. |
 | Production catalog edit and player visibility | not tested | Automated fixture covers override visibility and table refresh; deployed Firestore catalog edit still manual. |
+| Campaign Lore rules, subscriptions, and multi-client release timing | not tested | Deterministic fixture is green. Run the Rules Emulator gate and a Firebase-backed preview smoke before live Lore migration. |
 
 ## Production Smoke Attempts
 
