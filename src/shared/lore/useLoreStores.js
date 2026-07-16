@@ -93,6 +93,9 @@ export function usePlayerLoreStore({
       subscribeQuery(campaignId, V2_COLLECTIONS.knowledgeNotes, [where("actorId", "==", actorId)], (notes) => {
         setRemote((current) => ({ ...current, notes: notes.map(normalizeKnowledgeNote) }));
       }, setRemote),
+      subscribeQuery(campaignId, V2_COLLECTIONS.knowledgeNotes, [where("sharedWithParty", "==", true)], (notes) => {
+        setRemote((current) => ({ ...current, partyNotes: notes.map(normalizeKnowledgeNote) }));
+      }, setRemote),
     ];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   }, [actorId, campaignId, remoteEnabled]);
@@ -159,6 +162,7 @@ export function buildPlayerLoreFallback({
     groups: fallbackGroups.length ? fallbackGroups.map(normalizeLoreGroup) : inferLegacyLoreGroups(articles),
     deliveries,
     notes: fallbackNotes.filter((note) => note.actorId === actorId).map(normalizeKnowledgeNote),
+    partyNotes: fallbackNotes.filter((note) => note.sharedWithParty).map(normalizeKnowledgeNote),
     loading: false,
     source: "fallback",
   };
@@ -203,6 +207,7 @@ function emptyLoreStore() {
     groups: [],
     deliveries: [],
     notes: [],
+    partyNotes: [],
     sharedNotes: [],
     loading: true,
     error: null,

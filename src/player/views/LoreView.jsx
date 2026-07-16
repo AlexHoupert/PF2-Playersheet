@@ -9,6 +9,7 @@ export default function LoreView({
   campaignId,
   actorId,
   dataActions,
+  actors = [],
   initialArticleId = null,
   initialCreatureId = null,
   onNavigateArticle,
@@ -16,7 +17,7 @@ export default function LoreView({
 }) {
   const category = String(initialCategory || "history").toLowerCase();
   if (category === "bestiary") {
-    return <PlayerBestiaryLibrary db={db} loreStore={loreStore} campaignId={campaignId} actorId={actorId} dataActions={dataActions} initialCreatureId={initialCreatureId} />;
+    return <PlayerBestiaryLibrary db={db} loreStore={loreStore} campaignId={campaignId} actorId={actorId} dataActions={dataActions} actors={actors} initialCreatureId={initialCreatureId} />;
   }
-  return <PlayerLoreLibrary db={db} category={category} loreStore={loreStore} campaignId={campaignId} actorId={actorId} dataActions={dataActions} initialArticleId={initialArticleId} onNavigateArticle={onNavigateArticle} onNavigateCreature={onNavigateCreature} />;
+  return <PlayerLoreLibrary db={db} category={category} loreStore={loreStore} campaignId={campaignId} actorId={actorId} dataActions={dataActions} actors={actors} initialArticleId={initialArticleId} onNavigateArticle={onNavigateArticle} onNavigateCreature={onNavigateCreature} />;
 }

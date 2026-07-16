@@ -133,12 +133,18 @@ service cloud.firestore {
 
       match /knowledgeNotes/{noteId} {
         allow read: if isAssignedActor(campaignId, resource.data.actorId)
-          || ((isCampaignGm(campaignId) || isGlobalAdmin()) && resource.data.sharedWithGm == true);
-        allow create: if isAssignedActor(campaignId, request.resource.data.actorId);
+          || (isCampaignMember(campaignId) && resource.data.get('sharedWithParty', false) == true)
+          || ((isCampaignGm(campaignId) || isGlobalAdmin())
+            && resource.data.get('sharedWithGm', false) == true);
+        allow create: if isAssignedActor(campaignId, request.resource.data.actorId)
+          && request.resource.data.get('sharedWithGm', false) is bool
+          && request.resource.data.get('sharedWithParty', false) is bool;
         allow update: if isAssignedActor(campaignId, resource.data.actorId)
           && request.resource.data.actorId == resource.data.actorId
           && request.resource.data.targetId == resource.data.targetId
-          && request.resource.data.targetType == resource.data.targetType;
+          && request.resource.data.targetType == resource.data.targetType
+          && request.resource.data.get('sharedWithGm', false) is bool
+          && request.resource.data.get('sharedWithParty', false) is bool;
         allow delete: if isAssignedActor(campaignId, resource.data.actorId);
       }
     }

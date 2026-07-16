@@ -9,6 +9,7 @@ test("player lore subscriptions retain actor-constrained Firestore queries", () 
   assert.match(stores, /V2_COLLECTIONS\.loreDeliveries[\s\S]*where\("actorId", "==", actorId\)/);
   assert.match(stores, /V2_COLLECTIONS\.knowledgeNotes[\s\S]*where\("actorId", "==", actorId\)/);
   assert.match(stores, /where\("sharedWithGm", "==", true\)/);
+  assert.match(stores, /where\("sharedWithParty", "==", true\)/);
 });
 
 test("lore Firestore rules keep drafts private and owner fields immutable", () => {
@@ -18,5 +19,7 @@ test("lore Firestore rules keep drafts private and owner fields immutable", () =
   assert.match(rules, /match \/knowledgeNotes\/\{noteId\}[\s\S]*request\.resource\.data\.actorId == resource\.data\.actorId/);
   assert.match(rules, /request\.resource\.data\.targetId == resource\.data\.targetId/);
   assert.match(rules, /request\.resource\.data\.targetType == resource\.data\.targetType/);
-  assert.match(rules, /resource\.data\.sharedWithGm == true/);
+  assert.match(rules, /resource\.data\.get\('sharedWithGm', false\) == true/);
+  assert.match(rules, /resource\.data\.get\('sharedWithParty', false\) == true/);
+  assert.match(rules, /request\.resource\.data\.get\('sharedWithParty', false\) is bool/);
 });

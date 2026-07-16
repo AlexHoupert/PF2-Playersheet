@@ -253,6 +253,7 @@ export default function PlayerPageRenderer({
                 campaignId={activeCampaign?.id}
                 actorId={myActor?.id || character?.id}
                 dataActions={dataActions}
+                actors={activeCampaign?.actors || []}
                 initialArticleId={loreTarget?.articleId || null}
                 initialCreatureId={loreTarget?.creatureId || null}
                 onNavigateArticle={onNavigateLoreArticle}

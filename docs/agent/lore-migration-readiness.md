@@ -106,6 +106,7 @@ required by the rules:
 - Player deliveries: `where("actorId", "==", assignedActorId)`.
 - Player notes: `where("actorId", "==", assignedActorId)`.
 - GM shared notes: `where("sharedWithGm", "==", true)`.
+- Party shared notes: `where("sharedWithParty", "==", true)`.
 
 Before production rules deployment, an emulator suite must assert:
 
@@ -114,6 +115,7 @@ Before production rules deployment, an emulator suite must assert:
 - Player can read only deliveries for the assigned Actor.
 - Player can update only read/notification fields on an owned delivery.
 - Player can create, update, and delete only notes for the assigned Actor.
+- Campaign members can read Party-shared notes but cannot update or delete another Actor's notes.
 - Player cannot change a note's Actor, target type, or target ID.
 - GM can read a note only when `sharedWithGm` is true and cannot edit it.
 - Unauthenticated and unrelated campaign users are rejected.

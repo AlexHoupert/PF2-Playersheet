@@ -9,6 +9,7 @@ import {
   markLoreDeliveryNotified,
   markLoreDeliveryRead,
   materializeLoreSnapshot,
+  normalizeKnowledgeNote,
   normalizeLoreArticle,
   publishLoreArticle,
   resolveLoreAudienceActorIds,
@@ -17,6 +18,8 @@ import {
   buildLoreGroupTree,
   searchLoreDeliveries,
   selectLoreAttention,
+  selectOwnKnowledgeNote,
+  selectPartyKnowledgeNotes,
   validateLoreLinks,
 } from "../src/shared/lore/loreSelectors.js";
 import { buildLoreMigrationPlan } from "../src/shared/maintenance/loreMigration.js";
@@ -122,6 +125,36 @@ test("selected actor audiences are intersected with active PCs", () => {
     resolveLoreAudienceActorIds({ mode: "actors", actorIds: ["a", "archived"] }, ["a", "b"]),
     ["a"]
   );
+});
+
+test("knowledge notes keep independent GM and party sharing controls", () => {
+  const own = normalizeKnowledgeNote({
+    actorId: "a",
+    targetType: "loreArticle",
+    targetId: "entry",
+    content: "Private lead",
+    sharedWithGm: true,
+    sharedWithParty: false,
+  }, { now: "2026-01-01" });
+  const party = normalizeKnowledgeNote({
+    actorId: "b",
+    targetType: "loreArticle",
+    targetId: "entry",
+    content: "Shared lead",
+    sharedWithParty: true,
+  }, { now: "2026-01-02" });
+  const hidden = normalizeKnowledgeNote({
+    actorId: "c",
+    targetType: "loreArticle",
+    targetId: "entry",
+    content: "Private note",
+  }, { now: "2026-01-03" });
+
+  assert.equal(own.sharedWithGm, true);
+  assert.equal(own.sharedWithParty, false);
+  assert.equal(normalizeKnowledgeNote({ ...party, updatedAt: "2025-12-31" }).updatedAt, "2025-12-31");
+  assert.equal(selectOwnKnowledgeNote([own, party], "a", "loreArticle", "entry")?.id, own.id);
+  assert.deepEqual(selectPartyKnowledgeNotes([own, party, hidden], "a", "loreArticle", "entry").map((note) => note.id), [party.id]);
 });
 
 test("legacy title links convert only on a unique match", () => {

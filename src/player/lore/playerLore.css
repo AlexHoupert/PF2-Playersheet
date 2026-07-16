@@ -35,12 +35,26 @@
 .knowledge-note-editor__heading h3 { margin: 0; color: var(--text-gold); font-family: Cinzel, serif; }
 .knowledge-note-editor__heading small { color: #88837c; }
 .knowledge-note-editor textarea { margin-top: 9px; background: #111113; }
+.knowledge-note-editor__sharing { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 9px; }
 .knowledge-note-editor__share { display: flex; align-items: center; gap: 8px; margin-top: 9px; color: #ccc7be; }
+.knowledge-note-editor__sharing .knowledge-note-editor__share { margin-top: 0; border: 1px solid #39332d; padding: 9px 10px; background: #171719; }
 .knowledge-note-editor__share > svg { width: 17px; }
 .knowledge-note-editor__share span { display: grid; }
 .knowledge-note-editor__share small { color: #817d76; }
 .knowledge-note-editor__autosave { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; color: #75716a; font-size: .75rem; }
 .knowledge-note-editor__autosave svg { width: 13px; }
+.party-knowledge-notes { max-width: 880px; margin: 22px auto 0; border-top: 1px solid #39332d; padding-top: 16px; }
+.party-knowledge-notes > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.party-knowledge-notes > header > div { display: flex; align-items: center; gap: 8px; }
+.party-knowledge-notes > header svg { width: 18px; color: var(--text-gold); }
+.party-knowledge-notes h3 { margin: 0; color: var(--text-gold); font-family: Cinzel, serif; }
+.party-knowledge-notes > header small { color: #817d76; }
+.party-knowledge-notes__list { display: grid; gap: 10px; margin-top: 10px; }
+.party-knowledge-notes__list article { border-left: 2px solid rgba(197,160,89,.55); padding: 9px 12px; background: #171719; }
+.party-knowledge-notes__list article > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #d8d2c8; }
+.party-knowledge-notes__list article > header small { color: #77736c; }
+.party-knowledge-notes__list p { display: flex; align-items: flex-start; gap: 8px; margin: 7px 0 0; color: #bbb6ad; white-space: pre-wrap; }
+.party-knowledge-notes__list p svg { width: 15px; min-width: 15px; margin-top: 2px; color: #817d76; }
 .player-bestiary-library .creature-card { max-width: 900px; margin-inline: auto; }
 
 @media (max-width: 720px) {
@@ -50,4 +64,5 @@
   .player-knowledge-library.reading .player-knowledge-index { display: none; }
   .player-knowledge-library.reading .player-knowledge-reader { display: block; }
   .player-knowledge-mobile-back { display: inline-flex; }
+  .knowledge-note-editor__sharing { grid-template-columns: 1fr; }
 }

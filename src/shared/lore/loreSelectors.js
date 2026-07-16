@@ -2,6 +2,7 @@ import {
   doesLoreDeliveryNeedPopup,
   getLoreCategoryLabel,
   isLoreDeliveryUnread,
+  normalizeKnowledgeNote,
   normalizeLoreArticle,
   normalizeLoreCategory,
   normalizeLoreGroup,
@@ -56,6 +57,27 @@ export function selectVisibleLoreDeliveries(deliveries = [], category = null) {
 
 export function selectLoreDeliveryByArticleId(deliveries = [], articleId) {
   return (deliveries || []).find((delivery) => !delivery?.revokedAt && delivery.articleId === articleId) || null;
+}
+
+export function selectOwnKnowledgeNote(notes = [], actorId, targetType, targetId) {
+  return (notes || [])
+    .map(normalizeKnowledgeNote)
+    .find((note) => note.actorId === String(actorId || "")
+      && note.targetType === targetType
+      && note.targetId === String(targetId || "")) || null;
+}
+
+export function selectPartyKnowledgeNotes(notes = [], actorId, targetType, targetId) {
+  const ownerId = String(actorId || "");
+  return (notes || [])
+    .map(normalizeKnowledgeNote)
+    .filter((note) => note.sharedWithParty
+      && note.actorId !== ownerId
+      && note.targetType === targetType
+      && note.targetId === String(targetId || "")
+      && note.content.trim())
+    .sort((left, right) => String(right.updatedAt || "").localeCompare(String(left.updatedAt || ""))
+      || left.id.localeCompare(right.id));
 }
 
 export function selectLoreAttention(deliveries = []) {

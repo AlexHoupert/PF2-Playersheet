@@ -229,7 +229,19 @@ export function createE2eV2Store() {
             revokedAt: null,
           },
         },
-        knowledgeNotes: {},
+        knowledgeNotes: {
+          e2e_party_note_history: {
+            id: "e2e_party_note_history",
+            actorId: "e2e_party_actor",
+            targetType: "loreArticle",
+            targetId: "e2e_lore_history",
+            content: "A party member marked the old road as worth revisiting.",
+            sharedWithGm: false,
+            sharedWithParty: true,
+            createdAt: "2026-01-02T12:00:00.000Z",
+            updatedAt: "2026-01-02T12:00:00.000Z",
+          },
+        },
         members: {
           [E2E_USER_EMAIL]: {
             id: E2E_USER_EMAIL,

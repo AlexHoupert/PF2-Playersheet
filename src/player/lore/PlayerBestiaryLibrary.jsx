@@ -9,7 +9,9 @@ import CreatureCard from "../../shared/components/CreatureCard.jsx";
 import CreatureSkillDetailDialog from "../../shared/components/CreatureSkillDetailDialog.jsx";
 import { selectCatalogEntryStates } from "../../shared/db/selectors/catalogOverrideSelectors.js";
 import { selectBestiaryCreatureMetadata, selectCustomCreatureData } from "../../shared/db/selectors/bestiarySelectors.js";
+import { selectOwnKnowledgeNote, selectPartyKnowledgeNotes } from "../../shared/lore/loreSelectors.js";
 import KnowledgeNoteEditor from "./KnowledgeNoteEditor.jsx";
+import SharedKnowledgeNotes from "./SharedKnowledgeNotes.jsx";
 
 export default function PlayerBestiaryLibrary({
   db,
@@ -17,6 +19,7 @@ export default function PlayerBestiaryLibrary({
   campaignId,
   actorId,
   dataActions,
+  actors = [],
   initialCreatureId = null,
 }) {
   const [query, setQuery] = React.useState("");
@@ -70,7 +73,8 @@ export default function PlayerBestiaryLibrary({
     return () => { cancelled = true; };
   }, [db, selectedCreature]);
 
-  const note = (loreStore.notes || []).find((entry) => entry.targetType === "creature" && entry.targetId === selectedCreature?.id);
+  const note = selectOwnKnowledgeNote(loreStore.notes, actorId, "creature", selectedCreature?.id);
+  const partyNotes = selectPartyKnowledgeNotes(loreStore.partyNotes, actorId, "creature", selectedCreature?.id);
 
   return (
     <div className={`player-knowledge-library player-bestiary-library ${selectedCreature ? "reading" : ""}`}>
@@ -83,7 +87,7 @@ export default function PlayerBestiaryLibrary({
         </div>
       </aside>
       <main className="player-knowledge-reader">
-        {selectedCreature ? <><Button className="player-knowledge-mobile-back" variant="outline" onClick={() => setSelectedId(null)}><ArrowLeft />Back to index</Button>{loadedCreatureData ? <CreatureCard creature={{ ...selectedCreature, data: loadedCreatureData }} isGM={false} revealState={selectedCreature.revealState} falseData={selectedCreature.falseData} onAbilityClick={setSelectedAbility} onSkillClick={setSelectedSkill} /> : <div className="player-knowledge-reader__empty"><ShieldQuestion /><p>Loading creature details...</p></div>}<KnowledgeNoteEditor note={note} actorId={actorId} targetType="creature" targetId={selectedCreature.id} onSave={(next) => dataActions.lore.saveNote(campaignId, next)} onDelete={(current) => dataActions.lore.deleteNote(campaignId, current.id)} /></> : <div className="player-knowledge-reader__empty"><ShieldQuestion /><p>Select a discovered creature.</p></div>}
+        {selectedCreature ? <><Button className="player-knowledge-mobile-back" variant="outline" onClick={() => setSelectedId(null)}><ArrowLeft />Back to index</Button>{loadedCreatureData ? <CreatureCard creature={{ ...selectedCreature, data: loadedCreatureData }} isGM={false} revealState={selectedCreature.revealState} falseData={selectedCreature.falseData} onAbilityClick={setSelectedAbility} onSkillClick={setSelectedSkill} /> : <div className="player-knowledge-reader__empty"><ShieldQuestion /><p>Loading creature details...</p></div>}<KnowledgeNoteEditor note={note} actorId={actorId} targetType="creature" targetId={selectedCreature.id} onSave={(next) => dataActions.lore.saveNote(campaignId, next)} onDelete={(current) => dataActions.lore.deleteNote(campaignId, current.id)} /><SharedKnowledgeNotes notes={partyNotes} actors={actors} /></> : <div className="player-knowledge-reader__empty"><ShieldQuestion /><p>Select a discovered creature.</p></div>}
       </main>
       {selectedAbility && <CreatureAbilityModal ability={selectedAbility} onClose={() => setSelectedAbility(null)} />}
       {selectedSkill && <CreatureSkillDetailDialog skill={selectedSkill} onClose={() => setSelectedSkill(null)} />}

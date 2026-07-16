@@ -62,7 +62,8 @@ Key concepts:
 - `attentionVersion` controls one-time popups and unread badges independently from content version.
 - Player Knowledge pages open directly to History, Locations, NPCs, Bestiary, or Other.
 - Bestiary remains reveal-controlled by Bestiary metadata; Lore only links to already visible creatures.
-- Player notes are Actor-owned, autosaved, private by default, and readable by the GM only when explicitly shared.
+- Player notes are Actor-owned, autosaved, and private by default. `Share with GM` and `Share with party` are independent; other Players see Party-shared notes read-only at the related Lore or Bestiary entry.
+- The future sortable/filterable own-note overview is specified in `docs/agent/player-knowledge-notes-overview-plan.md`.
 - Top-level Lore documents are recovery input, not the canonical write path. See `docs/agent/lore-migration-readiness.md` before running the migration.
 
 ## Inventory And Shop Flow

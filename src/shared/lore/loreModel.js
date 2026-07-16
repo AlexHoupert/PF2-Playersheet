@@ -181,8 +181,9 @@ export function normalizeKnowledgeNote(note = {}, options = {}) {
     targetId,
     content: String(note.content || ""),
     sharedWithGm: Boolean(note.sharedWithGm),
+    sharedWithParty: Boolean(note.sharedWithParty),
     createdAt: note.createdAt || now,
-    updatedAt: now,
+    updatedAt: options.now || note.updatedAt || note.createdAt || now,
   });
 }
 

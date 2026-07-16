@@ -302,14 +302,14 @@ Access model:
 - Loot bag updates are allowed for any campaign member.
 - Campaign effect templates are readable by campaign members and writable by campaign GM/global admins.
 - Top-level global/custom/catalog-override/recovery-Lore collections are readable by signed-in users but writable only by global admins.
-- Campaign Lore drafts are GM-only. Campaign members may read groups; assigned Actors may query their own deliveries and notes. GMs see only notes explicitly shared with them.
+- Campaign Lore drafts are GM-only. Campaign members may read groups; assigned Actors query their own deliveries and notes. A separate `sharedWithParty == true` query exposes Party-shared notes read-only to campaign members, while the GM workspace still queries only `sharedWithGm == true` notes.
 
 Mismatch to watch:
 
 - Legacy `data/master` is not explicitly allowed by these rules. Legacy mode may depend on older/deployed rules or admin privileges. Verify live rules before relying on legacy Firestore writes.
 - The currently targeted V2 global writes are covered by `global`, `customItems`, `customCreatures`, `customActions`, and `catalogOverrides`; top-level `loreArticles` is retained only for recovery/import compatibility.
 - The actor/effects foundation is covered by `actors`, `actorEffects`, and `effectTemplates` campaign subcollection rules.
-- Lore delivery/note queries must retain their `actorId` or `sharedWithGm` constraints because Firestore rules evaluate the potential query result set. See `docs/agent/lore-migration-readiness.md` for the emulator gate.
+- Lore delivery/note queries must retain their `actorId`, `sharedWithGm`, or `sharedWithParty` constraints because Firestore rules evaluate the potential query result set. See `docs/agent/lore-migration-readiness.md` for the emulator gate.
 
 ## Existing Tests
 

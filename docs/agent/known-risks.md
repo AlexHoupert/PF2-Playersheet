@@ -74,7 +74,7 @@ Lore now writes campaign-scoped drafts, groups, materialized Actor deliveries, a
 - User assignment is keyed by email in legacy DB and by member documents in v2. Email casing is normalized in v2 member docs.
 - `src/data/new_db.json` includes real-looking user email assignments. Avoid exposing or expanding this data unnecessarily.
 - Firestore rules now cover campaign `actors`, `actorEffects`, `effectTemplates`, and top-level `catalogOverrides`. They do not visibly permit legacy `data/master`; verify deployed rules before relying on legacy cloud writes.
-- Campaign Lore rules protect drafts from Players and constrain deliveries/notes by assigned Actor. Do not remove the `actorId`/`sharedWithGm` query constraints in `src/shared/lore/useLoreStores.js`; Firestore evaluates the possible query result set against rules.
+- Campaign Lore rules protect drafts from Players and constrain deliveries/notes by assigned Actor or explicit sharing flag. Do not remove the `actorId`, `sharedWithGm`, or `sharedWithParty` query constraints in `src/shared/lore/useLoreStores.js`; Firestore evaluates the possible query result set against rules. Party-shared notes are read-only for non-owners.
 
 ## UI Risks
 

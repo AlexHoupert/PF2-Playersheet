@@ -288,6 +288,13 @@ test("GM publishes linked lore and player reads the release and shares a note", 
       (note) => note.content === "The old road may still be useful."
     )?.sharedWithGm;
   })).toBe(true);
+  await loreReader.getByTestId("knowledge-note-share-party").check();
+  await expect.poll(() => page.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem("pf2:e2e-runtime-db") || "{}");
+    return db.campaigns?.e2e_campaign?.knowledgeNotes?.find?.(
+      (note) => note.content === "The old road may still be useful."
+    )?.sharedWithParty;
+  })).toBe(true);
   await expect(loreReader.getByTestId("knowledge-note-status")).toContainText("Saved");
 
   const deliveryState = await page.evaluate(() => {
@@ -314,6 +321,7 @@ test("lore workspace and player knowledge surfaces keep visual smoke artifacts",
   await openPlayerPage(page, "Knowledge", "knowledge.history");
   await page.getByTestId("player-lore-entry-e2e_lore_history").click();
   await expect(page.getByTestId("player-lore-reader-history")).toContainText("Founding of Smokehaven");
+  await expect(page.getByTestId("party-shared-note-e2e_party_note_history")).toContainText("old road as worth revisiting");
   await page.screenshot({ path: testInfo.outputPath("player-lore-desktop.png") });
 
   await page.getByTestId("player-lore-reader-history").getByRole("button", { name: "goblin warriors" }).click();
