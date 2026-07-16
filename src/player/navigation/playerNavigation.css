@@ -180,6 +180,18 @@
     text-overflow: ellipsis;
 }
 
+.player-subpage-carousel__metadata {
+    display: inline-grid;
+    min-width: 18px;
+    height: 18px;
+    place-items: center;
+    border: 1px solid rgba(197, 160, 89, 0.34);
+    border-radius: 9px;
+    color: #a7a29a;
+    font-size: 0.66rem;
+    line-height: 1;
+}
+
 .player-subpage-carousel__note {
     color: #8f8f8f;
     font-size: 0.62rem;

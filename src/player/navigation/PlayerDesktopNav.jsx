@@ -9,6 +9,7 @@ export default function PlayerDesktopNav({
     navigationContext,
     onSelectPage,
     alertsByPage = {},
+    metadataByPage = {},
 }) {
     const activeCategoryId = getCategoryIdForPlayerPage(activePageId);
     const visibleCategories = getVisiblePlayerNavCategories(navigationContext);
@@ -34,6 +35,7 @@ export default function PlayerDesktopNav({
                 activePageId={activePageId}
                 navigationContext={navigationContext}
                 alertsByPage={alertsByPage}
+                metadataByPage={metadataByPage}
                 onSelectPage={onSelectPage}
             />
         </nav>

@@ -45,6 +45,7 @@ export default function PlayerPageCarousel({
             <PlayerPageRenderer
                 {...rendererProps}
                 activePageId={activePageId}
+                isPageActive={true}
             />
         );
     }
@@ -72,6 +73,7 @@ export default function PlayerPageCarousel({
                                 <PlayerPageRenderer
                                     {...rendererProps}
                                     activePageId={page.id}
+                                    isPageActive={page.id === activePageId}
                                 />
                             ) : (
                                 <div className="player-page-carousel__placeholder" aria-hidden="true" />

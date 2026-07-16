@@ -309,6 +309,83 @@ test("GM publishes linked lore and player reads the release and shares a note", 
   await expect(page.getByText("The old road may still be useful.", { exact: true })).toBeVisible();
 });
 
+test("player finds, filters, edits, and opens Lore and Bestiary notes from the overview", async ({ page }) => {
+  await gotoFixture(page);
+  await expectFixtureRoute(page, "player");
+
+  await openPlayerPage(page, "Knowledge", "knowledge.history");
+  await page.getByTestId("player-lore-entry-e2e_lore_history").click();
+  await page.getByTestId("player-lore-reader-history").getByTestId("knowledge-note-content").fill("Remember the amber road marker.");
+  await expect.poll(() => readFixtureKnowledgeNote(page, "loreArticle", "e2e_lore_history")).toBe("Remember the amber road marker.");
+
+  await openPlayerPage(page, "Knowledge", "knowledge.bestiary");
+  await page.getByTestId("player-bestiary-entry-fLLKuOXwPq1Iq0U4").click();
+  await page.getByTestId("knowledge-note-content").fill("Silver bells distract this goblin.");
+  await page.getByTestId("knowledge-note-share-party").check();
+  await expect.poll(() => readFixtureKnowledgeNote(page, "creature", "fLLKuOXwPq1Iq0U4")).toBe("Silver bells distract this goblin.");
+
+  await openPlayerPage(page, "Knowledge", "knowledge.notes");
+  await expect(page.getByTestId("player-knowledge-notes")).toBeVisible();
+  await expect(page.getByTestId("knowledge-notes-total")).toHaveText("2");
+  await expect(page.locator('[data-testid^="knowledge-note-row-"]')).toHaveCount(2);
+
+  await page.getByTestId("knowledge-notes-search").fill("silver bells");
+  await expect(page.locator('[data-testid^="knowledge-note-row-"]')).toHaveCount(1);
+  await expect(page.locator('[data-testid^="knowledge-note-row-"]').first()).toContainText("Goblin Warrior");
+  await page.getByTestId("knowledge-notes-search").fill("");
+  await page.getByTestId("knowledge-notes-sharing-filter").selectOption("party");
+  await expect(page.locator('[data-testid^="knowledge-note-row-"]')).toHaveCount(1);
+
+  await page.locator('[data-testid^="knowledge-note-row-"]').first().click();
+  await page.getByTestId("knowledge-note-content").fill("Silver bells distract this goblin. Confirm at camp.");
+  await expect.poll(() => readFixtureKnowledgeNote(page, "creature", "fLLKuOXwPq1Iq0U4")).toBe("Silver bells distract this goblin. Confirm at camp.");
+  await page.getByTestId("knowledge-note-open-source").click();
+  await expect(page.getByTestId("player-bestiary-entry-fLLKuOXwPq1Iq0U4")).toHaveClass(/active/);
+
+  await reloadFixture(page);
+  await openPlayerPage(page, "Knowledge", "knowledge.notes");
+  await page.getByTestId("knowledge-notes-search").fill("confirm at camp");
+  await expect(page.locator('[data-testid^="knowledge-note-row-"]')).toHaveCount(1);
+});
+
+test("mobile Knowledge notes switch cleanly between list and reachable editor controls", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await gotoFixture(page);
+  await expectFixtureRoute(page, "player");
+
+  await page.getByTestId("player-nav-category-knowledge").click();
+  await page.getByTestId("player-nav-page-knowledge.history").click();
+  await page.getByTestId("player-lore-entry-e2e_lore_history").click();
+  await page.getByTestId("knowledge-note-content").fill("Mobile note for the old road.");
+  await expect.poll(() => readFixtureKnowledgeNote(page, "loreArticle", "e2e_lore_history")).toBe("Mobile note for the old road.");
+
+  await page.getByTestId("player-nav-category-knowledge").click();
+  await page.getByTestId("player-nav-page-knowledge.notes").click();
+  await expect(page.getByTestId("player-knowledge-notes")).toBeVisible();
+  await page.locator('[data-testid^="knowledge-note-row-"]').first().click();
+  await expect(page.getByTestId("knowledge-notes-reader")).toBeVisible();
+
+  const partyShare = page.getByTestId("knowledge-notes-reader").getByTestId("knowledge-note-share-party");
+  await partyShare.scrollIntoViewIfNeeded();
+  const controlBox = await partyShare.boundingBox();
+  const navBox = await page.locator(".player-bottom-nav").boundingBox();
+  expect(controlBox.y + controlBox.height).toBeLessThanOrEqual(navBox.y);
+
+  await page.getByRole("button", { name: "Back to notes" }).click();
+  await expect(page.locator('[data-testid^="knowledge-note-row-"]').first()).toBeVisible();
+});
+
+async function readFixtureKnowledgeNote(page, targetType, targetId) {
+  return page.evaluate(({ targetType: expectedType, targetId: expectedId }) => {
+    const db = JSON.parse(localStorage.getItem("pf2:e2e-runtime-db") || "{}");
+    return db.campaigns?.e2e_campaign?.knowledgeNotes?.find?.(
+      (note) => note.actorId === "e2e_actor_nimwe"
+        && note.targetType === expectedType
+        && note.targetId === expectedId
+    )?.content || null;
+  }, { targetType, targetId });
+}
+
 test("lore workspace and player knowledge surfaces keep visual smoke artifacts", async ({ page }, testInfo) => {
   test.slow();
   await gotoFixture(page, "admin=true");

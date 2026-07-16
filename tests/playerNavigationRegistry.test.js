@@ -43,6 +43,15 @@ test('player navigation registry gives every drawer page a local icon key', () =
     assert.deepEqual(missingIcons, []);
 });
 
+test('player navigation exposes the notes overview as a Knowledge page', () => {
+    const knowledge = PLAYER_NAV_CATEGORIES.find((category) => category.id === 'knowledge');
+    const notes = knowledge.pages.find((page) => page.id === PLAYER_PAGE_IDS.NOTES);
+
+    assert.equal(notes.label, 'Notes');
+    assert.equal(notes.icon, 'scroll-quill');
+    assert.equal(getCategoryIdForPlayerPage(PLAYER_PAGE_IDS.NOTES), 'knowledge');
+});
+
 test('player subpage carousel centers the active page and wraps neighbors', () => {
     const items = getPlayerSubpageCarouselItems(PLAYER_PAGE_IDS.COMBAT);
 

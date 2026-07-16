@@ -169,6 +169,9 @@ export default function PlayerAppController() {
     const alertsByPage = useMemo(() => buildLoreAlertsByPage(loreStore.deliveries, {
         [PLAYER_PAGE_IDS.LOOT]: hasPlayerLoot ? 1 : 0,
     }), [hasPlayerLoot, loreStore.deliveries]);
+    const metadataByPage = useMemo(() => ({
+        [PLAYER_PAGE_IDS.NOTES]: (loreStore.notes || []).length,
+    }), [loreStore.notes]);
     const navigateLoreArticle = React.useCallback((category, articleId) => {
         setLoreTarget({ articleId, creatureId: null });
         selectPageId(`knowledge.${String(category || 'other').toLowerCase()}`);
@@ -314,6 +317,7 @@ export default function PlayerAppController() {
                 navigationContext={navigationContext}
                 onSelectPage={selectPage}
                 alertsByPage={alertsByPage}
+                metadataByPage={metadataByPage}
             />
 
             {/* VIEW CONTENT */}
@@ -501,6 +505,7 @@ export default function PlayerAppController() {
                 onSelectPage={selectPage}
                 onDrawerOpenChange={setPlayerNavDrawerOpen}
                 alertsByPage={alertsByPage}
+                metadataByPage={metadataByPage}
             />
         </div>
     );

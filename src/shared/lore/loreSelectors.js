@@ -61,7 +61,9 @@ export function selectLoreDeliveryByArticleId(deliveries = [], articleId) {
 
 export function selectOwnKnowledgeNote(notes = [], actorId, targetType, targetId) {
   return (notes || [])
-    .map(normalizeKnowledgeNote)
+    .map((note) => normalizeKnowledgeNote(note, {
+      now: note?.updatedAt || note?.createdAt || "1970-01-01T00:00:00.000Z",
+    }))
     .find((note) => note.actorId === String(actorId || "")
       && note.targetType === targetType
       && note.targetId === String(targetId || "")) || null;
@@ -78,6 +80,64 @@ export function selectPartyKnowledgeNotes(notes = [], actorId, targetType, targe
       && note.content.trim())
     .sort((left, right) => String(right.updatedAt || "").localeCompare(String(left.updatedAt || ""))
       || left.id.localeCompare(right.id));
+}
+
+export function buildKnowledgeNoteViewModels({
+  notes = [],
+  deliveries = [],
+  groups = [],
+  visibleCreatures = [],
+  actors = [],
+} = {}) {
+  const deliveryByArticleId = new Map(
+    (deliveries || [])
+      .filter((delivery) => delivery?.articleId && !delivery.revokedAt && delivery.snapshot)
+      .map((delivery) => [String(delivery.articleId), delivery])
+  );
+  const creatureById = new Map(
+    (visibleCreatures || [])
+      .filter((creature) => creature?.id)
+      .map((creature) => [String(creature.id), creature])
+  );
+  const groupById = new Map(selectActiveLoreGroups(groups).map((group) => [group.id, group]));
+  const actorById = new Map((actors || []).filter((actor) => actor?.id).map((actor) => [String(actor.id), actor]));
+
+  return (notes || [])
+    .map((note) => normalizeKnowledgeNote(note, {
+      now: note?.updatedAt || note?.createdAt || "1970-01-01T00:00:00.000Z",
+    }))
+    .map((note) => buildKnowledgeNoteViewModel(note, {
+      deliveryByArticleId,
+      creatureById,
+      groupById,
+      actorById,
+    }))
+    .sort(compareKnowledgeNotesByUpdatedAt);
+}
+
+export function filterKnowledgeNoteViewModels(viewModels = [], filters = {}) {
+  const query = String(filters.query || "").trim().toLowerCase();
+  const targetType = filters.targetType || "all";
+  const category = filters.category || "all";
+  const sharing = filters.sharing || "all";
+  const availability = filters.availability || "all";
+  const sortBy = filters.sortBy || "updated-desc";
+
+  return (viewModels || [])
+    .filter((note) => targetType === "all" || note.targetType === targetType)
+    .filter((note) => category === "all" || note.category === category)
+    .filter((note) => sharing === "all" || note.sharingState === sharing)
+    .filter((note) => availability === "all"
+      || (availability === "available" ? note.targetAccessible : !note.targetAccessible))
+    .filter((note) => !query || note.searchText.includes(query))
+    .sort(getKnowledgeNoteComparator(sortBy));
+}
+
+export function getKnowledgeNoteSharingState(note = {}) {
+  if (note.sharedWithGm && note.sharedWithParty) return "gm-party";
+  if (note.sharedWithGm) return "gm";
+  if (note.sharedWithParty) return "party";
+  return "private";
 }
 
 export function selectLoreAttention(deliveries = []) {
@@ -185,4 +245,96 @@ function selectLoreGroupPath(groupId, groupById) {
     current = current.parentId ? groupById.get(current.parentId) : null;
   }
   return names;
+}
+
+function buildKnowledgeNoteViewModel(note, context) {
+  const isCreature = note.targetType === "creature";
+  const delivery = isCreature ? null : context.deliveryByArticleId.get(note.targetId);
+  const creature = isCreature ? context.creatureById.get(note.targetId) : null;
+  const currentTarget = isCreature ? creature : delivery?.snapshot;
+  const targetAccessible = Boolean(currentTarget);
+  const fallback = note.targetSnapshot || {};
+  const category = isCreature
+    ? "bestiary"
+    : normalizeLoreCategory(currentTarget?.category || fallback.category);
+  const targetTitle = String(
+    currentTarget?.title
+      || currentTarget?.name
+      || fallback.title
+      || (isCreature ? "Unavailable Bestiary entry" : "Unavailable Lore entry")
+  );
+  const groupId = isCreature ? null : currentTarget?.groupId || null;
+  const groupPath = groupId ? selectLoreGroupPath(groupId, context.groupById).reverse() : [];
+  const owner = context.actorById.get(note.actorId);
+  const sharingState = getKnowledgeNoteSharingState(note);
+  const navigationCommand = targetAccessible
+    ? isCreature
+      ? { type: "creature", targetId: note.targetId }
+      : { type: "loreArticle", targetId: note.targetId, category }
+    : null;
+  const categoryLabel = getLoreCategoryLabel(category);
+
+  return {
+    id: note.id,
+    note,
+    actorId: note.actorId,
+    ownerName: owner?.name || "Unknown actor",
+    content: note.content,
+    excerpt: buildKnowledgeNoteExcerpt(note.content),
+    targetType: note.targetType,
+    targetId: note.targetId,
+    targetTitle,
+    targetImage: currentTarget?.image || fallback.image || null,
+    targetAccessible,
+    category,
+    categoryLabel,
+    groupId,
+    groupPath,
+    groupLabel: groupPath.join(" / "),
+    sharedWithGm: note.sharedWithGm,
+    sharedWithParty: note.sharedWithParty,
+    sharingState,
+    createdAt: note.createdAt || null,
+    updatedAt: note.updatedAt || note.createdAt || null,
+    navigationCommand,
+    searchText: [
+      note.content,
+      targetTitle,
+      categoryLabel,
+      ...groupPath,
+      owner?.name,
+    ].filter(Boolean).join(" ").toLowerCase(),
+  };
+}
+
+function buildKnowledgeNoteExcerpt(content) {
+  const normalized = String(content || "").replace(/\s+/g, " ").trim();
+  return normalized.length > 150 ? `${normalized.slice(0, 147).trimEnd()}...` : normalized;
+}
+
+function compareKnowledgeNotesByUpdatedAt(left, right) {
+  return compareDateDescending(left.updatedAt, right.updatedAt) || left.id.localeCompare(right.id);
+}
+
+function getKnowledgeNoteComparator(sortBy) {
+  if (sortBy === "created-desc") {
+    return (left, right) => compareDateDescending(left.createdAt, right.createdAt) || left.id.localeCompare(right.id);
+  }
+  if (sortBy === "title-asc") {
+    return (left, right) => left.targetTitle.localeCompare(right.targetTitle) || compareKnowledgeNotesByUpdatedAt(left, right);
+  }
+  if (sortBy === "category-asc") {
+    return (left, right) => left.categoryLabel.localeCompare(right.categoryLabel)
+      || left.targetTitle.localeCompare(right.targetTitle)
+      || compareKnowledgeNotesByUpdatedAt(left, right);
+  }
+  return compareKnowledgeNotesByUpdatedAt;
+}
+
+function compareDateDescending(left, right) {
+  const leftTime = Date.parse(left || "");
+  const rightTime = Date.parse(right || "");
+  const safeLeft = Number.isFinite(leftTime) ? leftTime : 0;
+  const safeRight = Number.isFinite(rightTime) ? rightTime : 0;
+  return safeRight - safeLeft;
 }

@@ -10,6 +10,7 @@ export default function KnowledgeNoteEditor({
   actorId,
   targetType,
   targetId,
+  targetSnapshot = null,
   onSave,
   onDelete,
 }) {
@@ -18,10 +19,12 @@ export default function KnowledgeNoteEditor({
   const [sharedWithParty, setSharedWithParty] = React.useState(Boolean(note?.sharedWithParty));
   const [status, setStatus] = React.useState("Saved");
   const noteRef = React.useRef(note);
+  const targetSnapshotRef = React.useRef(targetSnapshot);
   const saveRef = React.useRef(onSave);
   const deleteRef = React.useRef(onDelete);
 
   React.useEffect(() => { noteRef.current = note; }, [note]);
+  React.useEffect(() => { targetSnapshotRef.current = targetSnapshot; }, [targetSnapshot]);
   React.useEffect(() => { saveRef.current = onSave; }, [onSave]);
   React.useEffect(() => { deleteRef.current = onDelete; }, [onDelete]);
 
@@ -48,6 +51,7 @@ export default function KnowledgeNoteEditor({
           actorId,
           targetType,
           targetId,
+          targetSnapshot: targetSnapshotRef.current || noteRef.current?.targetSnapshot,
           content,
           sharedWithGm,
           sharedWithParty,

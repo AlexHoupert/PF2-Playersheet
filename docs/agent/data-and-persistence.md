@@ -191,7 +191,7 @@ Current migrated write paths:
 - GM/player custom item/action saves through `dataActions.globalContent`.
 - GM AbilitiesView custom ability saves/deletes/clones and custom-creature ability assignment through `dataActions.globalContent` and `dataActions.bestiary`.
 - GM PactAdminView and DeviantAbilitiesAdminView through `dataActions.pact`.
-- GM LoreAdminView through `dataActions.lore` and campaign-scoped Lore collections. Players read reveal-safe `loreDeliveries` and write Actor-owned `knowledgeNotes`; top-level Lore remains a recovery fallback.
+- GM LoreAdminView through `dataActions.lore` and campaign-scoped Lore collections. Players read reveal-safe `loreDeliveries` and write Actor-owned `knowledgeNotes`; each new note may retain a small reveal-safe `targetSnapshot` for unavailable-source fallback in the own-note overview. Top-level Lore remains a recovery fallback.
 - GM BestiaryView custom creature, metadata, reveal-state, group, bestiary toggle, and catalog metadata initialization through `dataActions.bestiary`.
 - Encounter bestiary reveal-state writes through `dataActions.bestiary`.
 - Player root-notification clear and skill-name runtime repair through `dataActions`.

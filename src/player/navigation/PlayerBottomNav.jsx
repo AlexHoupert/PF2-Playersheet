@@ -12,6 +12,7 @@ export default function PlayerBottomNav({
     onSelectPage,
     onDrawerOpenChange,
     alertsByPage = {},
+    metadataByPage = {},
 }) {
     const activeCategoryId = getCategoryIdForPlayerPage(activePageId);
     const [openCategoryId, setOpenCategoryId] = useState(null);
@@ -71,6 +72,7 @@ export default function PlayerBottomNav({
                     {drawerCategory.pages.map((page) => {
                         const active = page.id === activePageId;
                         const pageAlertCount = getPageAlertCount(page.id, alertsByPage);
+                        const pageMetadata = getPageMetadata(page.id, metadataByPage);
                         const iconSrc = getPlayerNavIconSrc(page.icon);
                         return (
                             <button
@@ -87,7 +89,9 @@ export default function PlayerBottomNav({
                                     <span>{page.label}</span>
                                     {pageAlertCount > 0 && <span className="player-nav-alert-dot" aria-label={`${pageAlertCount} unread updates`} />}
                                 </span>
-                                {page.future && <span className="player-category-drawer__page-note">Soon</span>}
+                                {page.future
+                                    ? <span className="player-category-drawer__page-note">Soon</span>
+                                    : pageMetadata !== null && <span className="player-category-drawer__page-note">{pageMetadata} notes</span>}
                             </button>
                         );
                     })}
@@ -124,4 +128,9 @@ export default function PlayerBottomNav({
 
 function getPageAlertCount(pageId, alertsByPage) {
     return Math.max(0, Number(alertsByPage?.[pageId] || 0));
+}
+
+function getPageMetadata(pageId, metadataByPage) {
+    if (!Object.prototype.hasOwnProperty.call(metadataByPage || {}, pageId)) return null;
+    return Math.max(0, Number(metadataByPage[pageId] || 0));
 }

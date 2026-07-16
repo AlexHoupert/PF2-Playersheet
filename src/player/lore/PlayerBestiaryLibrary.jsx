@@ -51,6 +51,9 @@ export default function PlayerBestiaryLibrary({
     .filter(({ visible }) => [visible.name, visible.group, visible.level].join(" ").toLowerCase().includes(query.trim().toLowerCase()))
     .sort((left, right) => String(left.visible.name).localeCompare(String(right.visible.name))), [creatures, query]);
   const selectedCreature = creatures.find((creature) => creature.id === selectedId) || null;
+  const selectedVisibleCreature = selectedCreature
+    ? selectVisibleCreatureFields(selectedCreature, "player")
+    : null;
 
   React.useEffect(() => {
     if (!selectedCreature) {
@@ -82,12 +85,12 @@ export default function PlayerBestiaryLibrary({
         <header><div><span className="player-knowledge-eyebrow">Knowledge</span><h2>Bestiary</h2></div><Badge variant="outline">{visibleCreatures.length}</Badge></header>
         <div className="player-knowledge-search"><Search /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search discovered creatures..." /></div>
         <div className="player-knowledge-list">
-          {visibleCreatures.map(({ creature, visible }) => <button key={creature.id} type="button" className={creature.id === selectedId ? "active" : ""} onClick={() => setSelectedId(creature.id)}><span className="player-knowledge-list__title">{visible.name}</span><small>{visible.levelVisible ? `Level ${visible.level}` : "Level unknown"}{visible.group ? ` · ${visible.group}` : ""}</small></button>)}
+          {visibleCreatures.map(({ creature, visible }) => <button key={creature.id} type="button" data-testid={`player-bestiary-entry-${creature.id}`} className={creature.id === selectedId ? "active" : ""} onClick={() => setSelectedId(creature.id)}><span className="player-knowledge-list__title">{visible.name}</span><small>{visible.levelVisible ? `Level ${visible.level}` : "Level unknown"}{visible.group ? ` · ${visible.group}` : ""}</small></button>)}
           {!visibleCreatures.length && <p className="player-knowledge-empty">No discovered creatures match your search.</p>}
         </div>
       </aside>
       <main className="player-knowledge-reader">
-        {selectedCreature ? <><Button className="player-knowledge-mobile-back" variant="outline" onClick={() => setSelectedId(null)}><ArrowLeft />Back to index</Button>{loadedCreatureData ? <CreatureCard creature={{ ...selectedCreature, data: loadedCreatureData }} isGM={false} revealState={selectedCreature.revealState} falseData={selectedCreature.falseData} onAbilityClick={setSelectedAbility} onSkillClick={setSelectedSkill} /> : <div className="player-knowledge-reader__empty"><ShieldQuestion /><p>Loading creature details...</p></div>}<KnowledgeNoteEditor note={note} actorId={actorId} targetType="creature" targetId={selectedCreature.id} onSave={(next) => dataActions.lore.saveNote(campaignId, next)} onDelete={(current) => dataActions.lore.deleteNote(campaignId, current.id)} /><SharedKnowledgeNotes notes={partyNotes} actors={actors} /></> : <div className="player-knowledge-reader__empty"><ShieldQuestion /><p>Select a discovered creature.</p></div>}
+        {selectedCreature ? <><Button className="player-knowledge-mobile-back" variant="outline" onClick={() => setSelectedId(null)}><ArrowLeft />Back to index</Button>{loadedCreatureData ? <CreatureCard creature={{ ...selectedCreature, data: loadedCreatureData }} isGM={false} revealState={selectedCreature.revealState} falseData={selectedCreature.falseData} onAbilityClick={setSelectedAbility} onSkillClick={setSelectedSkill} /> : <div className="player-knowledge-reader__empty"><ShieldQuestion /><p>Loading creature details...</p></div>}<KnowledgeNoteEditor note={note} actorId={actorId} targetType="creature" targetId={selectedCreature.id} targetSnapshot={{ title: selectedVisibleCreature?.name || "Unknown creature", category: "bestiary", image: loadedCreatureData?.img || null }} onSave={(next) => dataActions.lore.saveNote(campaignId, next)} onDelete={(current) => dataActions.lore.deleteNote(campaignId, current.id)} /><SharedKnowledgeNotes notes={partyNotes} actors={actors} /></> : <div className="player-knowledge-reader__empty"><ShieldQuestion /><p>Select a discovered creature.</p></div>}
       </main>
       {selectedAbility && <CreatureAbilityModal ability={selectedAbility} onClose={() => setSelectedAbility(null)} />}
       {selectedSkill && <CreatureSkillDetailDialog skill={selectedSkill} onClose={() => setSelectedSkill(null)} />}

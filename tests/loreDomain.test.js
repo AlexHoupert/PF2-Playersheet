@@ -10,12 +10,15 @@ import {
   markLoreDeliveryRead,
   materializeLoreSnapshot,
   normalizeKnowledgeNote,
+  normalizeKnowledgeNoteTargetSnapshot,
   normalizeLoreArticle,
   publishLoreArticle,
   resolveLoreAudienceActorIds,
 } from "../src/shared/lore/loreModel.js";
 import {
   buildLoreGroupTree,
+  buildKnowledgeNoteViewModels,
+  filterKnowledgeNoteViewModels,
   searchLoreDeliveries,
   selectLoreAttention,
   selectOwnKnowledgeNote,
@@ -155,6 +158,81 @@ test("knowledge notes keep independent GM and party sharing controls", () => {
   assert.equal(normalizeKnowledgeNote({ ...party, updatedAt: "2025-12-31" }).updatedAt, "2025-12-31");
   assert.equal(selectOwnKnowledgeNote([own, party], "a", "loreArticle", "entry")?.id, own.id);
   assert.deepEqual(selectPartyKnowledgeNotes([own, party, hidden], "a", "loreArticle", "entry").map((note) => note.id), [party.id]);
+});
+
+test("knowledge note snapshots preserve safe target metadata", () => {
+  assert.deepEqual(normalizeKnowledgeNoteTargetSnapshot({
+    title: "Old Chronicle",
+    category: "History",
+    image: "/chronicle.webp",
+  }), {
+    title: "Old Chronicle",
+    category: "history",
+    image: "/chronicle.webp",
+  });
+  assert.deepEqual(normalizeKnowledgeNoteTargetSnapshot({ title: "Known Beast" }, "creature"), {
+    title: "Known Beast",
+    category: "bestiary",
+    image: null,
+  });
+  assert.equal(normalizeKnowledgeNoteTargetSnapshot(null), undefined);
+});
+
+test("knowledge note overview resolves current targets and retains unavailable notes", () => {
+  const viewModels = buildKnowledgeNoteViewModels({
+    notes: [
+      { id: "lore-note", actorId: "pc", targetType: "loreArticle", targetId: "chronicle", content: "Ask about the eastern road.", sharedWithGm: true, createdAt: "2026-01-01", updatedAt: "2026-01-03", targetSnapshot: { title: "Old title", category: "history" } },
+      { id: "creature-note", actorId: "pc", targetType: "creature", targetId: "wolf", content: "It avoids silver bells.", sharedWithParty: true, createdAt: "2026-01-02", updatedAt: "2026-01-04", targetSnapshot: { title: "Old wolf name", category: "bestiary" } },
+      { id: "orphan-note", actorId: "pc", targetType: "loreArticle", targetId: "retracted", content: "Do not forget this clue.", sharedWithGm: true, sharedWithParty: true, createdAt: "2026-01-05", updatedAt: "2026-01-05", targetSnapshot: { title: "Retracted Secret", category: "other" } },
+    ],
+    deliveries: [{ articleId: "chronicle", snapshot: { title: "Current Chronicle", category: "history", groupId: "roads" } }],
+    groups: [
+      { id: "world", name: "World", category: "history" },
+      { id: "roads", name: "Roads", category: "history", parentId: "world" },
+    ],
+    visibleCreatures: [{ id: "wolf", name: "Winter Wolf" }],
+    actors: [{ id: "pc", name: "Nimwe" }],
+  });
+
+  assert.equal(viewModels[0].id, "orphan-note");
+  assert.equal(viewModels.find((note) => note.id === "lore-note").targetTitle, "Current Chronicle");
+  assert.equal(viewModels.find((note) => note.id === "lore-note").groupLabel, "World / Roads");
+  assert.deepEqual(viewModels.find((note) => note.id === "creature-note").navigationCommand, { type: "creature", targetId: "wolf" });
+  assert.equal(viewModels.find((note) => note.id === "orphan-note").targetTitle, "Retracted Secret");
+  assert.equal(viewModels.find((note) => note.id === "orphan-note").targetAccessible, false);
+  assert.equal(viewModels.find((note) => note.id === "orphan-note").navigationCommand, null);
+});
+
+test("knowledge note overview keeps incomplete legacy note ordering deterministic", () => {
+  const input = {
+    notes: [
+      { id: "undated", actorId: "pc", targetType: "loreArticle", targetId: "missing", content: "Old clue" },
+      { id: "dated", actorId: "pc", targetType: "loreArticle", targetId: "current", content: "New clue", updatedAt: "2026-01-01" },
+    ],
+  };
+
+  const first = buildKnowledgeNoteViewModels(input);
+  const second = buildKnowledgeNoteViewModels(input);
+
+  assert.deepEqual(first.map((note) => note.id), ["dated", "undated"]);
+  assert.deepEqual(first.map((note) => note.updatedAt), second.map((note) => note.updatedAt));
+});
+
+test("knowledge note overview composes search filters sharing and sorting", () => {
+  const viewModels = buildKnowledgeNoteViewModels({
+    notes: [
+      { id: "private", actorId: "pc", targetType: "loreArticle", targetId: "a", content: "Amber clue", updatedAt: "2026-01-02" },
+      { id: "party", actorId: "pc", targetType: "creature", targetId: "wolf", content: "Silver clue", sharedWithParty: true, updatedAt: "2026-01-03" },
+      { id: "dual", actorId: "pc", targetType: "loreArticle", targetId: "missing", content: "Hidden clue", sharedWithGm: true, sharedWithParty: true, updatedAt: "2026-01-04", targetSnapshot: { title: "Lost Lead", category: "other" } },
+    ],
+    deliveries: [{ articleId: "a", snapshot: { title: "Amber Archive", category: "history" } }],
+    visibleCreatures: [{ id: "wolf", name: "Winter Wolf" }],
+  });
+
+  assert.deepEqual(filterKnowledgeNoteViewModels(viewModels, { query: "amber" }).map((note) => note.id), ["private"]);
+  assert.deepEqual(filterKnowledgeNoteViewModels(viewModels, { targetType: "creature", sharing: "party" }).map((note) => note.id), ["party"]);
+  assert.deepEqual(filterKnowledgeNoteViewModels(viewModels, { availability: "unavailable", sharing: "gm-party" }).map((note) => note.id), ["dual"]);
+  assert.deepEqual(filterKnowledgeNoteViewModels(viewModels, { sortBy: "title-asc" }).map((note) => note.id), ["private", "dual", "party"]);
 });
 
 test("legacy title links convert only on a unique match", () => {

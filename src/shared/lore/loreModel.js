@@ -173,6 +173,7 @@ export function normalizeKnowledgeNote(note = {}, options = {}) {
   const actorId = String(note.actorId || "");
   const targetType = note.targetType === "creature" ? "creature" : "loreArticle";
   const targetId = String(note.targetId || "");
+  const targetSnapshot = normalizeKnowledgeNoteTargetSnapshot(note.targetSnapshot, targetType);
   return stripUndefined({
     ...note,
     id: String(note.id || createKnowledgeNoteId(actorId, targetType, targetId)),
@@ -182,9 +183,21 @@ export function normalizeKnowledgeNote(note = {}, options = {}) {
     content: String(note.content || ""),
     sharedWithGm: Boolean(note.sharedWithGm),
     sharedWithParty: Boolean(note.sharedWithParty),
+    targetSnapshot,
     createdAt: note.createdAt || now,
     updatedAt: options.now || note.updatedAt || note.createdAt || now,
   });
+}
+
+export function normalizeKnowledgeNoteTargetSnapshot(snapshot, targetType = "loreArticle") {
+  if (!isPlainObject(snapshot)) return undefined;
+  const title = String(snapshot.title || "").trim();
+  const image = snapshot.image ? String(snapshot.image) : null;
+  const category = targetType === "creature"
+    ? "bestiary"
+    : normalizeLoreCategory(snapshot.category);
+  if (!title && !image) return undefined;
+  return { title: title || "Unavailable entry", category, image };
 }
 
 export function createKnowledgeNoteId(actorId, targetType, targetId) {

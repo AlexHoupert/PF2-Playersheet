@@ -13,6 +13,7 @@ import ProgressView from '../views/ProgressView';
 import CampScreen from '../../camping/CampScreen';
 import PactView from '../../pacts/PactView';
 import PlayerPlaceholderPage from './PlayerPlaceholderPage';
+import PlayerKnowledgeNotesOverview from '../lore/PlayerKnowledgeNotesOverview.jsx';
 import { PLAYER_PAGE_IDS } from './playerPageRegistry';
 
 const ACTION_TAB_BY_PAGE = {
@@ -40,6 +41,7 @@ const LORE_CATEGORY_BY_PAGE = {
 
 export default function PlayerPageRenderer({
     activePageId,
+    isPageActive = true,
     activeCampaign,
     actorRules,
     character,
@@ -256,6 +258,22 @@ export default function PlayerPageRenderer({
                 actors={activeCampaign?.actors || []}
                 initialArticleId={loreTarget?.articleId || null}
                 initialCreatureId={loreTarget?.creatureId || null}
+                onNavigateArticle={onNavigateLoreArticle}
+                onNavigateCreature={onNavigateLoreCreature}
+            />
+        );
+    }
+
+    if (activePageId === PLAYER_PAGE_IDS.NOTES) {
+        return (
+            <PlayerKnowledgeNotesOverview
+                active={isPageActive}
+                db={db}
+                loreStore={loreStore}
+                campaignId={activeCampaign?.id}
+                actorId={myActor?.id || character?.id}
+                dataActions={dataActions}
+                actors={activeCampaign?.actors || []}
                 onNavigateArticle={onNavigateLoreArticle}
                 onNavigateCreature={onNavigateLoreCreature}
             />

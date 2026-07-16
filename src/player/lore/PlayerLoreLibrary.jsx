@@ -96,7 +96,7 @@ export default function PlayerLoreLibrary({
         </div>
       </aside>
       <main className="player-knowledge-reader" data-testid={`player-lore-reader-${category}`}>
-        {selectedSnapshot ? <><Button className="player-knowledge-mobile-back" variant="outline" onClick={() => setSelectedId(null)}><ArrowLeft />Back to index</Button><LoreArticleRenderer article={selectedSnapshot} resolveReference={resolveReference} /><KnowledgeNoteEditor note={note} actorId={actorId} targetType="loreArticle" targetId={selectedSnapshot.articleId} onSave={(next) => dataActions.lore.saveNote(campaignId, next)} onDelete={(current) => dataActions.lore.deleteNote(campaignId, current.id)} /><SharedKnowledgeNotes notes={partyNotes} actors={actors} /></> : <div className="player-knowledge-reader__empty"><BookOpen /><p>Select an entry to read.</p></div>}
+        {selectedSnapshot ? <><Button className="player-knowledge-mobile-back" variant="outline" onClick={() => setSelectedId(null)}><ArrowLeft />Back to index</Button><LoreArticleRenderer article={selectedSnapshot} resolveReference={resolveReference} /><KnowledgeNoteEditor note={note} actorId={actorId} targetType="loreArticle" targetId={selectedSnapshot.articleId} targetSnapshot={{ title: selectedSnapshot.title, category: selectedSnapshot.category, image: selectedSnapshot.image || null }} onSave={(next) => dataActions.lore.saveNote(campaignId, next)} onDelete={(current) => dataActions.lore.deleteNote(campaignId, current.id)} /><SharedKnowledgeNotes notes={partyNotes} actors={actors} /></> : <div className="player-knowledge-reader__empty"><BookOpen /><p>Select an entry to read.</p></div>}
       </main>
     </div>
   );

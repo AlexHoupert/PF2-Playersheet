@@ -57,6 +57,35 @@
 .party-knowledge-notes__list p svg { width: 15px; min-width: 15px; margin-top: 2px; color: #817d76; }
 .player-bestiary-library .creature-card { max-width: 900px; margin-inline: auto; }
 
+.player-knowledge-notes { grid-template-columns: minmax(330px, 40%) minmax(0, 1fr); }
+.player-knowledge-notes__index { grid-template-rows: auto auto minmax(0, 1fr); }
+.player-knowledge-notes__filters { border-bottom: 1px solid #39332d; padding-bottom: 11px; }
+.player-knowledge-notes__filters .player-knowledge-search { padding-bottom: 9px; }
+.player-knowledge-notes__filter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding: 0 11px; }
+.player-knowledge-notes__filter-grid label { display: grid; gap: 3px; color: #858078; font-size: .68rem; text-transform: uppercase; }
+.player-knowledge-notes__filter-grid label:last-child { grid-column: 1 / -1; }
+.player-knowledge-notes__filter-grid select { width: 100%; min-height: 32px; border: 1px solid #48423c; border-radius: 4px; background: #101012; color: #ddd8cf; padding: 5px 7px; text-transform: none; }
+.player-knowledge-notes__list > button { gap: 7px; padding-block: 12px; }
+.player-knowledge-notes__row-heading { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.player-knowledge-notes__row-heading > svg { width: 16px; min-width: 16px; color: var(--text-gold); }
+.player-knowledge-notes__row-heading > svg:last-child:not(:first-child) { margin-left: auto; color: #a66f62; }
+.player-knowledge-notes__excerpt { overflow: hidden; color: #aaa59c; font-size: .82rem; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.player-knowledge-notes__row-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.player-knowledge-notes__row-meta small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-knowledge-notes__badges { display: inline-flex; align-items: center; gap: 4px; }
+.player-knowledge-notes__badges [data-slot="badge"] { height: 18px; border-color: #48423c; color: #aaa59c; font-size: .64rem; }
+.player-knowledge-notes__empty { display: grid; min-height: 220px; place-items: center; align-content: center; gap: 7px; padding: 22px; color: #827e77; text-align: center; }
+.player-knowledge-notes__empty svg { width: 34px; height: 34px; opacity: .6; }
+.player-knowledge-notes__empty strong { color: #d0cbc2; }
+.player-knowledge-notes__empty p { max-width: 280px; margin: 0; line-height: 1.45; }
+.player-knowledge-notes__reader { padding-top: 20px; }
+.player-knowledge-notes__reader-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; max-width: 880px; margin: 0 auto; border-bottom: 1px solid #4c4136; padding-bottom: 16px; }
+.player-knowledge-notes__reader-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.player-knowledge-notes__reader-title > svg { width: 26px; min-width: 26px; color: var(--text-gold); }
+.player-knowledge-notes__reader-title h2 { margin: 3px 0 0; overflow-wrap: anywhere; color: #e3ded5; font-family: Cinzel, serif; }
+.player-knowledge-notes__reader-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; max-width: 880px; margin: 10px auto 0; color: #827e77; font-size: .75rem; }
+.player-knowledge-notes__reader .knowledge-note-editor { margin-top: 18px; border-top: 0; padding-top: 0; }
+
 @media (max-width: 720px) {
   .player-knowledge-library { display: block; min-height: calc(100dvh - 210px); overflow: visible; border-inline: 0; }
   .player-knowledge-index { min-height: 62dvh; border-right: 0; }
@@ -65,4 +94,14 @@
   .player-knowledge-library.reading .player-knowledge-reader { display: block; }
   .player-knowledge-mobile-back { display: inline-flex; }
   .knowledge-note-editor__sharing { grid-template-columns: 1fr; }
+  .player-knowledge-notes__filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .player-knowledge-notes__reader { padding-bottom: calc(var(--player-bottom-nav-height, 72px) + 28px); }
+  .player-knowledge-notes__reader-header { align-items: flex-start; flex-direction: column; }
+  .player-knowledge-notes__reader-header > button { width: 100%; }
+  .player-knowledge-notes__reader-meta { align-items: flex-start; flex-direction: column; }
+}
+
+@media (max-width: 430px) {
+  .player-knowledge-notes__filter-grid { grid-template-columns: 1fr; }
+  .player-knowledge-notes__filter-grid label:last-child { grid-column: auto; }
 }

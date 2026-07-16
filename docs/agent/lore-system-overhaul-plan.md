@@ -63,7 +63,7 @@ Baseline source: `recovery/recovered-lore-pacts-deviant-2026-07-06.json` (local 
 - [x] Add autosaving private notes with optional GM sharing.
 - [x] Add independent Party sharing and read-only Party-note presentation at Lore and Bestiary targets.
 - [x] Let GMs inspect shared notes without edit rights.
-- [ ] Add the sortable/filterable own-notes overview tracked in `docs/agent/player-knowledge-notes-overview-plan.md`.
+- [x] Add the sortable/filterable own-notes overview tracked in `docs/agent/player-knowledge-notes-overview-plan.md`.
 
 ## Phase 7: Bestiary And Reference Integration
 

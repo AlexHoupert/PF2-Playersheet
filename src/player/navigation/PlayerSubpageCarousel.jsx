@@ -10,6 +10,7 @@ export default function PlayerSubpageCarousel({
     activePageId,
     navigationContext,
     alertsByPage = {},
+    metadataByPage = {},
     onSelectPage,
 }) {
     const [api, setApi] = React.useState(null);
@@ -60,6 +61,9 @@ export default function PlayerSubpageCarousel({
                     {pages.map((page, index) => {
                         const active = page.id === activePageId;
                         const pageAlertCount = Math.max(0, Number(alertsByPage?.[page.id] || 0));
+                        const pageMetadata = Object.prototype.hasOwnProperty.call(metadataByPage, page.id)
+                            ? Math.max(0, Number(metadataByPage[page.id] || 0))
+                            : null;
                         const state = getCarouselState(index, activeIndex, pages.length);
                         return (
                             <CarouselItem key={page.id} className="player-subpage-carousel__item">
@@ -79,6 +83,7 @@ export default function PlayerSubpageCarousel({
                                     </span>
                                     <span className="player-subpage-carousel__label">{page.label}</span>
                                     {pageAlertCount > 0 && <span className="player-nav-alert-dot" aria-label={`${pageAlertCount} unread updates`} />}
+                                    {pageMetadata !== null && <span className="player-subpage-carousel__metadata" aria-label={`${pageMetadata} notes`}>{pageMetadata}</span>}
                                     {page.future && <span className="player-subpage-carousel__note">Soon</span>}
                                 </button>
                             </CarouselItem>

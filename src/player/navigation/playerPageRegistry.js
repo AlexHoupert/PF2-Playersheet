@@ -31,6 +31,7 @@ export const PLAYER_PAGE_IDS = {
     NPCS: 'knowledge.npcs',
     BESTIARY: 'knowledge.bestiary',
     OTHER: 'knowledge.other',
+    NOTES: 'knowledge.notes',
     QUESTS: 'campaign.quests',
     PROGRESS: 'campaign.progress',
     MAPS: 'campaign.maps',
@@ -88,6 +89,7 @@ export const PLAYER_NAV_CATEGORIES = [
             { id: PLAYER_PAGE_IDS.NPCS, label: 'NPCs', legacyTab: 'lore', legacyMode: 'story', icon: 'cloak-dagger' },
             { id: PLAYER_PAGE_IDS.BESTIARY, label: 'Bestiary', legacyTab: 'lore', legacyMode: 'story', icon: 'monster-grasp' },
             { id: PLAYER_PAGE_IDS.OTHER, label: 'Other', legacyTab: 'lore', legacyMode: 'story', icon: 'bookshelf' },
+            { id: PLAYER_PAGE_IDS.NOTES, label: 'Notes', icon: 'scroll-quill' },
         ],
     },
     {
