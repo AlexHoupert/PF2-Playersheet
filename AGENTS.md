@@ -72,29 +72,58 @@ When adding docs:
 
 ## Context7-Fehlerbehandlung
 
-Vor jedem `ctx7 library ...`- oder `ctx7 docs ...`-Abruf zuerst den lokalen
-Zscaler-Preflight ausführen:
+Vor jedem `ctx7 library ...`- oder `ctx7 docs ...`-Abruf zuerst den portablen
+Repository-Preflight ausführen:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ctx7_zscaler_preflight.ps1 -Quiet
 ```
 
-- Exitcode `0`: Context7-Aufruf normal ausführen.
+- Context7 nur bei Exitcode `0` aufrufen.
 - Der Preflight darf ausschließlich die bekannte Zscaler-Warnseite
   `CC01` für `Generative AI and ML Applications` automatisch bestätigen.
-- Andere 403-, Netzwerk- oder Authentifizierungsfehler darf der Preflight nicht
-  umgehen.
+- Andere Netzwerk-, Policy-, Quota- oder Authentifizierungsfehler darf der
+  Preflight nicht umgehen.
 
-Wenn `ctx7` trotz erfolgreichem Preflight mit `HTTP error 403`,
-`Session may be expired`, abgelaufener Session oder vergleichbarer
-Authentifizierungs-/Autorisierungsmeldung scheitert:
+Wenn der Preflight mit einem anderen Exitcode endet:
+
+- Context7 nicht aufrufen.
+- `Start-Process "https://context7.com/"` ausführen, um die Freigabe im Browser
+  zu ermöglichen. Falls der Browser nicht geöffnet werden kann, dem Nutzer die
+  URL direkt nennen.
+- Exitcode und Fehlermeldung melden und erwähnen, dass die Context7-Webseite
+  geöffnet wurde.
+- Auf den Nutzer warten. Keine automatische Wiederholungsschleife und keinen
+  alternativen Bypass starten.
+
+Nach einem erfolgreichen Preflight und vor dem ersten Context7-Aufruf eines
+Tasks zusätzlich die Session prüfen:
+
+```powershell
+npx ctx7@latest whoami
+```
+
+- Nicht nur den Exitcode prüfen. Enthält die Ausgabe `Not logged in` oder
+  `Session may be expired`, gilt die Session als ungültig.
+- Bei ungültiger Session `npx ctx7@latest login` starten, den Nutzer darauf
+  hinweisen, dass die Anmeldung im Browser bestätigt werden muss, und auf den
+  Abschluss des Login-Flows warten.
+- Anschließend Preflight und `whoami` erneut ausführen. Erst bei erfolgreichem
+  Preflight und gültiger Session mit `ctx7 library ...` oder `ctx7 docs ...`
+  fortfahren.
+
+Wenn `ctx7 library ...` oder `ctx7 docs ...` trotz erfolgreichem Preflight und
+gültigem `whoami` mit HTTP `401` oder `403`, einer abgelaufenen Session oder
+einer vergleichbaren Authentifizierungs-/Autorisierungsmeldung scheitert:
 
 - keine weiteren Analyse-, Implementierungs- oder Refactoring-Passes ausführen,
   die aktuelle externe Dokumentation voraussetzen.
 - nicht still auf Trainingswissen, Websuche oder alte lokale Annahmen ausweichen.
-- sofort anhalten und den Nutzer bitten, Context7 neu zu authentifizieren
-  (`npx ctx7@latest login`) oder den API-Key zu prüfen.
-- erst nach erfolgreichem `ctx7 library ...` / `ctx7 docs ...` fortfahren.
+- `npx ctx7@latest login` starten und den Nutzer um die Browserbestätigung
+  bitten.
+- nach der Reauthentifizierung erneut Preflight und `whoami` ausführen.
+- erst nach erfolgreichem Preflight, gültigem `whoami` und erfolgreichem
+  `ctx7 library ...` / `ctx7 docs ...` fortfahren.
 
-Ziel: 403-Fehler sollen sichtbar blockieren, statt zu veralteten oder
-ungeprüften Implementierungsentscheidungen zu führen.
+Ziel: Preflight- und Authentifizierungsfehler sollen sichtbar blockieren, statt
+zu veralteten oder ungeprüften Implementierungsentscheidungen zu führen.
