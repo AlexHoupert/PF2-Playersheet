@@ -19,11 +19,7 @@ export function StatsView({ character, conditions = [], displayEffects = [], rul
     // Drained reduces max HP by level * value
     const drainedPenalty = (condDrained || 0) * (character.level || 1);
 
-    // Quicksilver Mutagen Penalty (2 * Level)
-    const hasQuicksilver = (actorRules.effects || []).some(effect => String(effect?.label || effect?.name || '').toLowerCase().includes('quicksilver mutagen'));
-    const quicksilverPenalty = hasQuicksilver ? ((character.level || 1) * 2) : 0;
-
-    const totalPenalty = drainedPenalty + quicksilverPenalty;
+    const totalPenalty = drainedPenalty;
 
     // Original Max
     const baseMaxHP = rulesCharacter.stats.hp.max;

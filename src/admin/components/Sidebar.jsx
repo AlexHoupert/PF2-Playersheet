@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import BottomSheet from '../../shared/components/BottomSheet';
 import { useWindowSize } from '../../shared/hooks/useWindowSize';
+import { useCampaign } from '../../shared/context/CampaignContext';
+import { canAccessAdminTab } from '../../shared/auth/campaignCapabilities';
 import './Sidebar.css';
 
 // Navigation Data Configuration
@@ -8,6 +10,7 @@ const NAV_GROUPS = [
     {
         label: 'Management',
         items: [
+            { id: 'campaign_changes', label: 'Campaign Changes', icon: 'Changes' },
             { id: 'sessions', label: 'Sessions', icon: '📅' },
             { id: 'system',   label: 'System',   icon: '⚙️' },
             { id: 'players',  label: 'Players',  icon: '👥' }
@@ -71,7 +74,7 @@ const BOTTOM_NAV_ITEMS = [
 ];
 
 // ── Desktop Sidebar ──────────────────────────────────────────────────────────
-function DesktopSidebar({ activeTab, onSelect }) {
+function DesktopSidebar({ activeTab, onSelect, navGroups }) {
     const [collapsed, setCollapsed] = useState(false);
     const [openSubmenus, setOpenSubmenus] = useState({ magic: true, bestiary: true });
 
@@ -97,7 +100,7 @@ function DesktopSidebar({ activeTab, onSelect }) {
             </div>
 
             <div className="sidebar-content">
-                {NAV_GROUPS.map((group, idx) => (
+                {navGroups.map((group, idx) => (
                     <div key={idx} className="sidebar-group">
                         <div className="sidebar-group-label">{group.label}</div>
                         <ul className="sidebar-menu">
@@ -161,18 +164,18 @@ function DesktopSidebar({ activeTab, onSelect }) {
 }
 
 // ── Mobile Bottom Nav ────────────────────────────────────────────────────────
-function MobileBottomNav({ activeTab, onSelect }) {
+function MobileBottomNav({ activeTab, onSelect, navGroups }) {
     const [sheetItem, setSheetItem] = useState(null); // nav item whose children to show
 
     const isTabActive = (navItem) => {
         if (navItem.id === activeTab) return true;
         // check if active tab is a child of this nav item's group
-        const srcItem = NAV_GROUPS.flatMap(g => g.items).find(i => i.id === navItem.id);
+        const srcItem = navGroups.flatMap(g => g.items).find(i => i.id === navItem.id);
         return srcItem?.children?.some(c => c.id === activeTab) || false;
     };
 
     const handleNavTap = (navItem) => {
-        const srcItem = NAV_GROUPS.flatMap(g => g.items).find(i => i.id === navItem.id);
+        const srcItem = navGroups.flatMap(g => g.items).find(i => i.id === navItem.id);
         if (srcItem?.children) {
             setSheetItem(srcItem);
         } else {
@@ -181,8 +184,10 @@ function MobileBottomNav({ activeTab, onSelect }) {
     };
 
     // Determine which bottom nav items to show — all groups as tabs + a "more" fallback
-    const moreItems = NAV_GROUPS.flatMap(g => g.items).filter(
-        i => !BOTTOM_NAV_ITEMS.some(b => b.id === i.id)
+    const allowedIds = new Set(navGroups.flatMap(group => group.items).map(item => item.id));
+    const bottomNavItems = BOTTOM_NAV_ITEMS.filter(item => allowedIds.has(item.id));
+    const moreItems = navGroups.flatMap(g => g.items).filter(
+        i => !bottomNavItems.some(b => b.id === i.id)
     );
 
     const selectAndClose = (id) => { onSelect(id); setSheetItem(null); };
@@ -190,7 +195,7 @@ function MobileBottomNav({ activeTab, onSelect }) {
     return (
         <>
             <nav className="bottom-nav">
-                {BOTTOM_NAV_ITEMS.map(navItem => (
+                {bottomNavItems.map(navItem => (
                     <button
                         key={navItem.id}
                         className={`bottom-nav-item ${isTabActive(navItem) ? 'active' : ''} ${navItem.hasChildren ? 'has-children' : ''}`}
@@ -251,7 +256,21 @@ function MobileBottomNav({ activeTab, onSelect }) {
 // ── Public export: picks desktop or mobile automatically ─────────────────────
 export default function Sidebar({ activeTab, onSelect }) {
     const { isMobile } = useWindowSize();
+    const { capabilities } = useCampaign();
+    const navGroups = filterNavigation(capabilities);
     return isMobile
-        ? <MobileBottomNav activeTab={activeTab} onSelect={onSelect} />
-        : <DesktopSidebar  activeTab={activeTab} onSelect={onSelect} />;
+        ? <MobileBottomNav activeTab={activeTab} onSelect={onSelect} navGroups={navGroups} />
+        : <DesktopSidebar activeTab={activeTab} onSelect={onSelect} navGroups={navGroups} />;
+}
+
+function filterNavigation(capabilities) {
+    if (capabilities?.canAccessFullAdmin) return NAV_GROUPS;
+    return NAV_GROUPS.map(group => ({
+        ...group,
+        items: group.items.map(item => {
+            if (!item.children) return canAccessAdminTab(capabilities, item.id) ? item : null;
+            const children = item.children.filter(child => canAccessAdminTab(capabilities, child.id));
+            return children.length ? { ...item, children } : null;
+        }).filter(Boolean),
+    })).filter(group => group.items.length);
 }

@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useCampaign } from '../../shared/context/CampaignContext';
 import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
-import ItemEditor from '../../admin/editors/ItemEditor';
 import BottomSheet from '../../shared/components/BottomSheet';
 import { getShopItemRowMeta } from '../../shared/catalog/shopRowMeta';
 import ItemRow from '../../shared/components/ItemRow';
@@ -25,7 +24,7 @@ export function InventoryView({
     character,
     db,
     onUpdateCharacter,
-    onSaveCustomItem,
+    onAuthorCatalogEntry,
     onOpenModal,
     onToggleEquip,
     onInspectItem,
@@ -41,11 +40,11 @@ export function InventoryView({
     readOnly = false,
     allowLoot = true,
     showUtilityActions = true,
+    canAuthorCatalog = false,
     hideTabs = false
 }) {
     const [itemSubTab, setItemSubTab] = useState(initialSubTab);
     const [vialActivation, setVialActivation] = useState(null); // item being converted via Versatile Vial
-    const [showItemCreator, setShowItemCreator] = useState(false);
     const equipTapRef = useRef({ key: null, time: 0 });
     const equipTapTimeoutRef = useRef(null);
     // Firefox Android does not dispatch contextmenu for long-presses on
@@ -732,47 +731,12 @@ export function InventoryView({
                 <button className="btn-add-condition" style={{ flex: 1, margin: 0 }} onClick={() => onOpenModal('formula_book', { title: "Formula Book" })}>
                     📖 Formulas
                 </button>
-                <button className="btn-add-condition" style={{ flex: 1, margin: 0 }} onClick={() => setShowItemCreator(true)}>
-                    ✏️ Create Item
-                </button>
+                {canAuthorCatalog && (
+                    <button className="btn-add-condition" style={{ flex: 1, margin: 0 }} onClick={() => onAuthorCatalogEntry?.('item')}>
+                        Create Campaign Item
+                    </button>
+                )}
             </div>
-            )}
-
-            {/* Custom item creator overlay */}
-            {showItemCreator && (
-                <div style={{
-                    position: 'fixed', inset: 0, background: '#111', zIndex: 500,
-                    display: 'flex', flexDirection: 'column', overflow: 'hidden'
-                }}>
-                    <ItemEditor
-                        initialItem={null}
-                        dbOnly={true}
-                        onCancel={() => setShowItemCreator(false)}
-                        onSaveToDb={(dbItem) => {
-                            // 1. Store in shared campaign custom items (visible to all players and shop)
-                            onSaveCustomItem?.({ ...dbItem, playerCreated: true });
-                            // 2. Add immediately to this character's inventory (qty 1)
-                            onUpdateCharacter(c => {
-                                const flat = {
-                                    name: dbItem.name,
-                                    type: dbItem.type,
-                                    level: dbItem.system?.level?.value || 0,
-                                    price: dbItem.system?.price?.value?.gp || 0,
-                                    bulk: dbItem.system?.bulk?.value || '',
-                                    traits: dbItem.system?.traits?.value || [],
-                                    rarity: dbItem.system?.traits?.rarity || 'common',
-                                    description: dbItem.system?.description?.value || '',
-                                    img: dbItem.img || '',
-                                    isCustom: true,
-                                    playerCreated: true,
-                                    qty: 1,
-                                };
-                                c.inventory.push(flat);
-                            });
-                        }}
-                        onSave={() => setShowItemCreator(false)}
-                    />
-                </div>
             )}
         </div>
     );

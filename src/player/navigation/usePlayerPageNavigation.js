@@ -23,17 +23,25 @@ export function usePlayerPageNavigation({
     const characters = useMemo(() => selectActiveCharacters(activeCampaign), [activeCampaign]);
     const character = characters[activeCharIndex];
     const swipeRef = useRef(null);
+    const initializedActorRef = useRef(false);
     const navigationContext = useMemo(
         () => buildPlayerNavigationContext({ character, ownedCompanionActors }),
         [character, ownedCompanionActors]
     );
 
     useEffect(() => {
-        if (myCharacter && characters.length) {
+        if (!initializedActorRef.current && myCharacter && characters.length) {
             const idx = characters.findIndex(c => c.id === myCharacter.id);
-            if (idx !== -1) setActiveCharIndex(idx);
+            if (idx !== -1) {
+                setActiveCharIndex(idx);
+                initializedActorRef.current = true;
+            }
         }
     }, [myCharacter, characters]);
+
+    useEffect(() => {
+        if (characters.length > 0 && activeCharIndex >= characters.length) setActiveCharIndex(0);
+    }, [activeCharIndex, characters.length]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;

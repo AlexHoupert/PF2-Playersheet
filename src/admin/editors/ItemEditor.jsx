@@ -13,6 +13,12 @@ import {
     getCatalogEditorInitialItem,
 } from '../../shared/catalog/catalogEditorContract';
 import { mergeCatalogDetailIntoEntry } from '../../shared/catalog/catalogDetailMerge';
+import EffectDefinitionEditor from './EffectDefinitionEditor';
+import {
+    readCatalogEffectDefinitions,
+    validateCatalogEffectDefinitions,
+    writeCatalogEffectDefinitions,
+} from '../../shared/rules/catalogEffectDefinitions';
 
 const STATIC_RESOURCE_BASE_URL = import.meta.env.PROD ? '/ressources' : '/api/static';
 
@@ -33,7 +39,8 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
         range: '',
         description: '',
         sourceFile: null,
-        img: null
+        img: null,
+        effectDefinitions: []
     });
 
     const [isSaving, setIsSaving] = useState(false);
@@ -80,6 +87,8 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
 
     const handleSave = async () => {
         if (!formData.name) return setError("Name is required");
+        const effectValidation = validateCatalogEffectDefinitions(formData.effectDefinitions);
+        if (!effectValidation.valid) return setError(effectValidation.errors.join('; '));
         setIsSaving(true);
         setError(null);
 
@@ -89,7 +98,7 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
             const primaryDamage = formData.damages[0];
             const extraDamages = formData.damages.slice(1);
 
-            const itemJson = {
+            const itemJson = writeCatalogEffectDefinitions({
                 name: formData.name,
                 type: formData.type.toLowerCase(), // system uses lowercase types usually
                 img: formData.img || initialItem?.img || "systems/pf2e/icons/default-icons/mystery-man.svg",
@@ -111,7 +120,7 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
                     category: formData.category,
                     group: formData.group
                 }
-            };
+            }, formData.effectDefinitions);
 
             // Production editing is DB-backed; local dev may still use file APIs.
             if (dbOnly || import.meta.env.PROD) {
@@ -421,6 +430,13 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
                     <RichTextEditor value={formData.description} onChange={val => handleChange('description', val)} style={{ height: 300 }} />
                 </div>
 
+                <EffectDefinitionEditor
+                    value={formData.effectDefinitions}
+                    onChange={value => handleChange('effectDefinitions', value)}
+                    sourceType="item"
+                    sourceSubtype={`${formData.type} ${formData.category} ${formData.group}`}
+                />
+
                 <div className="form-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #444', paddingTop: 20 }}>
                     <button className="set-btn" style={{ background: '#555' }} onClick={onCancel} disabled={isSaving}>Cancel</button>
                     <button className="set-btn" onClick={handleSave} disabled={isSaving}>
@@ -512,7 +528,8 @@ export function buildItemEditorFormData(item = {}) {
         range: item.range || system.range || '',
         description: system.description?.value || item.description?.value || item.description || '',
         sourceFile: item.sourceFile || item.overrideSourceFile || null,
-        img: item.img || null
+        img: item.img || null,
+        effectDefinitions: readCatalogEffectDefinitions(item)
     };
 }
 
@@ -535,8 +552,9 @@ export function buildItemDbPayload(itemJson, formData, hasDamage = true) {
 
 export function buildItemOverride(itemRecord, formData, initialItem, options = {}) {
     const safeId = buildCatalogSafeId(initialItem?.id || initialItem?._id || itemRecord?.id || itemRecord?.name || 'item');
+    const recordWithEffects = writeCatalogEffectDefinitions(itemRecord, formData.effectDefinitions);
     return buildCatalogEditorOverride(options.catalogType || 'item', {
-        ...itemRecord,
+        ...recordWithEffects,
         id: safeId,
         _id: safeId,
     }, {

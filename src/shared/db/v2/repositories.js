@@ -137,7 +137,72 @@ export const effectRepo = {
         const id = safeDocId(templateId?.id || templateId?.label || templateId?.name || templateId, 'effect_template');
         await deleteDoc(campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.effectTemplates, id));
     },
+
+    async applySourceActivation(firestore, campaignId, actorIds, resolver) {
+        const uniqueActorIds = [...new Set((actorIds || []).filter(Boolean))];
+        const actorRefs = Object.fromEntries(uniqueActorIds.map(actorId => [
+            actorId,
+            campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actors, actorId),
+        ]));
+        await runTransaction(firestore, async transaction => {
+            const actorEntries = await Promise.all(uniqueActorIds.map(async actorId => {
+                const snapshot = await transaction.get(actorRefs[actorId]);
+                if (!snapshot.exists()) throw new Error(`Actor not found: ${actorId}`);
+                return [actorId, snapshot.data()];
+            }));
+            const actorsBefore = Object.fromEntries(actorEntries);
+            const result = resolver(actorsBefore);
+            Object.entries(result.actorsById || {}).forEach(([actorId, actor]) => {
+                if (actorRefs[actorId] && !recordsEqual(actorsBefore[actorId], actor)) {
+                    transaction.set(actorRefs[actorId], cleanForFirestore(stampRuntime(actor)));
+                }
+            });
+            for (const effectId of result.deleteEffectIds || []) {
+                transaction.delete(campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actorEffects, effectId));
+            }
+            for (const effect of result.effects || []) {
+                transaction.set(
+                    campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actorEffects, effect.id),
+                    cleanForFirestore(stampRuntime(effect))
+                );
+            }
+        });
+    },
+
+    async updateActorAndEffects(firestore, campaignId, actorId, effectIds, resolver) {
+        const actorRef = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actors, actorId);
+        const uniqueEffectIds = [...new Set((effectIds || []).filter(Boolean))];
+        const effectRefs = Object.fromEntries(uniqueEffectIds.map(effectId => [
+            effectId,
+            campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actorEffects, effectId),
+        ]));
+        await runTransaction(firestore, async transaction => {
+            const [actorSnapshot, effectEntries] = await Promise.all([
+                transaction.get(actorRef),
+                Promise.all(uniqueEffectIds.map(async effectId => {
+                    const snapshot = await transaction.get(effectRefs[effectId]);
+                    return [effectId, snapshot.exists() ? snapshot.data() : null];
+                })),
+            ]);
+            if (!actorSnapshot.exists()) throw new Error(`Actor not found: ${actorId}`);
+            const result = resolver(actorSnapshot.data(), Object.fromEntries(effectEntries));
+            if (result.actor) transaction.set(actorRef, cleanForFirestore(stampRuntime(result.actor)));
+            for (const effectId of result.deleteEffectIds || []) {
+                if (effectRefs[effectId]) transaction.delete(effectRefs[effectId]);
+            }
+            for (const effect of result.effects || []) {
+                transaction.set(
+                    campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.actorEffects, effect.id),
+                    cleanForFirestore(stampRuntime(effect))
+                );
+            }
+        });
+    },
 };
+
+function recordsEqual(left, right) {
+    return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
 
 export const memberRepo = {
     async assignUser(firestore, campaignId, email, member) {
@@ -154,6 +219,11 @@ export const memberRepo = {
     async revokeUser(firestore, campaignId, email) {
         const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.members, email);
         await deleteDoc(ref);
+    },
+
+    async setRole(firestore, campaignId, email, role) {
+        const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.members, email);
+        await updateDoc(ref, cleanForFirestore(stampRuntime({ role })));
     },
 };
 

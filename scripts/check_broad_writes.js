@@ -71,6 +71,26 @@ const forbiddenRuntimeContracts = [
     pattern: "currentMutagen",
     allowedFiles: new Set([]),
   },
+  {
+    name: "legacy mutagen rule table",
+    pattern: "MUTAGEN_DATA",
+    allowedFiles: new Set([]),
+  },
+  {
+    name: "Scaly Skin AC hardcode",
+    pattern: "getScalySkinAcAdjustment",
+    allowedFiles: new Set([]),
+  },
+  {
+    name: "player global custom catalog write",
+    pattern: "globalContent.saveCustomItem",
+    allowedFiles: new Set([]),
+  },
+  {
+    name: "player global custom action write",
+    pattern: "globalContent.saveCustomAction",
+    allowedFiles: new Set([]),
+  },
 ];
 
 const failures = [];

@@ -4,7 +4,17 @@ import { getSpellIndexItemByName } from '../../shared/catalog/spellIndex';
 import { LongPressable } from '../../shared/components/LongPressable';
 import { getWandSpellCasts, getWandSpellKey } from '../../shared/utils/wandUtils';
 
-export const MagicView = ({ character, characterActions, setModalData, setModalMode, setCatalogMode, onLongPress }) => {
+export const MagicView = ({
+    character,
+    characterActions,
+    setModalData,
+    setModalMode,
+    setCatalogMode,
+    onLongPress,
+    readOnly = false,
+    canAuthorCatalog = false,
+    onAuthorCatalogEntry,
+}) => {
     // Guard for missing magic data
     const magic = character.magic || { slots: {}, list: [] };
 
@@ -18,6 +28,7 @@ export const MagicView = ({ character, characterActions, setModalData, setModalM
     const slots = magic.slots || {};
 
     const toggleSpellSlot = (lvlKey, indexClicked, currentVal) => {
+        if (readOnly) return;
         let newVal = currentVal;
         // Ensure strictly numeric comparison
         if (Number(indexClicked) === Number(currentVal)) newVal = Number(currentVal) - 1; // Toggle off top
@@ -46,7 +57,7 @@ export const MagicView = ({ character, characterActions, setModalData, setModalM
                 <LongPressable
                     className="slot-box"
                     key={k}
-                    onLongPress={() => onLongPress({ level: k, max }, 'spell_slots')}
+                        onLongPress={() => { if (!readOnly) onLongPress({ level: k, max }, 'spell_slots'); }}
                     shouldPreventDefault={false}
                 >
                     <div className="slot-title">{title}</div>
@@ -161,7 +172,7 @@ export const MagicView = ({ character, characterActions, setModalData, setModalM
                         <LongPressable
                             className="spell-row"
                             key={`${lvl}-${spell.name}-${spell._wandOnly ? 'wand' : 'spell'}`}
-                            onLongPress={() => onLongPress(spell, 'spell')}
+                            onLongPress={() => { if (!readOnly) onLongPress(spell, 'spell'); }}
                             onClick={openSpell}
                         >
                             <div style={{ fontWeight: 'bold', color: '#ccc', display: 'flex', alignItems: 'center' }}>
@@ -210,7 +221,7 @@ export const MagicView = ({ character, characterActions, setModalData, setModalM
                     <LongPressable
                         className="hex-box"
                         onClick={() => { setModalData({ type: 'dc' }); setModalMode('spell_stat_info'); }}
-                        onLongPress={() => onLongPress(null, 'spell_proficiency')}
+                        onLongPress={() => { if (!readOnly) onLongPress(null, 'spell_proficiency'); }}
                     >
                         <div className="hex-content">
                             <div className={`stat-val ${spellDCHasPenalty ? 'stat-penalty' : ''}`} style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>
@@ -224,7 +235,7 @@ export const MagicView = ({ character, characterActions, setModalData, setModalM
                     <LongPressable
                         className="spell-attack-box"
                         onClick={() => { setModalData({ type: 'attack' }); setModalMode('spell_stat_info'); }}
-                        onLongPress={() => onLongPress(null, 'spell_proficiency')}
+                        onLongPress={() => { if (!readOnly) onLongPress(null, 'spell_proficiency'); }}
                     >
                         <div className={`stat-val ${spellAttackHasPenalty ? 'stat-penalty' : ''}`} style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>
                             {atkStr}
@@ -238,14 +249,23 @@ export const MagicView = ({ character, characterActions, setModalData, setModalM
             </div>
             <div id="spellListColumn">
                 {renderSpellList()}
-                <button
+                {!readOnly && <button
                     className="btn-add-condition"
                     data-testid="magic-add-spell"
                     style={{ marginTop: 20, width: '100%' }}
                     onClick={() => setCatalogMode('spell')}
                 >
                     + Add Spell
-                </button>
+                </button>}
+                {canAuthorCatalog && (
+                    <button
+                        className="btn-add-condition"
+                        style={{ marginTop: 10, width: '100%' }}
+                        onClick={() => onAuthorCatalogEntry?.('spell')}
+                    >
+                        Create Campaign Spell
+                    </button>
+                )}
             </div>
         </div>
     );

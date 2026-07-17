@@ -20,6 +20,8 @@ export function createEncounterRecord(nameOrEncounter, options = {}) {
     name: source.name || "New Encounter",
     isActive: Boolean(source.isActive),
     currentTurnIndex: Number.isFinite(Number(source.currentTurnIndex)) ? Number(source.currentTurnIndex) : 0,
+    turnSequence: Number.isFinite(Number(source.turnSequence)) ? Math.max(0, Number(source.turnSequence)) : 0,
+    roundNumber: Number.isFinite(Number(source.roundNumber)) ? Math.max(1, Number(source.roundNumber)) : 1,
     selectedEntityId: source.selectedEntityId || null,
     combatants: Array.isArray(source.combatants) ? source.combatants.map(normalizeCombatant) : [],
     ...source,
@@ -215,7 +217,14 @@ export function selectEncounterEntityInCampaign(campaign, encounterId, entityId)
 export function endEncounterTurnInCampaign(campaign, encounterId) {
   return updateEncounterInCampaign(campaign, encounterId, (encounter) => {
     const currentTurnCombatantId = getNextTurnCombatantId(encounter);
-    return { ...encounter, currentTurnCombatantId };
+    const startsNewRound = Boolean(currentTurnCombatantId)
+      && currentTurnCombatantId === getRoundStartCombatantId(encounter);
+    return {
+      ...encounter,
+      currentTurnCombatantId,
+      turnSequence: (Number(encounter.turnSequence) || 0) + 1,
+      roundNumber: Math.max(1, Number(encounter.roundNumber) || 1) + (startsNewRound ? 1 : 0),
+    };
   });
 }
 
@@ -223,6 +232,8 @@ export function resetEncounterRoundInCampaign(campaign, encounterId) {
   return updateEncounterInCampaign(campaign, encounterId, (encounter) => ({
     ...encounter,
     currentTurnCombatantId: getRoundStartCombatantId(encounter),
+    turnSequence: (Number(encounter.turnSequence) || 0) + 1,
+    roundNumber: Math.max(1, Number(encounter.roundNumber) || 1) + 1,
   }));
 }
 
@@ -268,6 +279,8 @@ function normalizeEncounter(encounter = {}) {
   next.name = next.name || "New Encounter";
   next.isActive = Boolean(next.isActive);
   next.currentTurnIndex = Number.isFinite(Number(next.currentTurnIndex)) ? Number(next.currentTurnIndex) : 0;
+  next.turnSequence = Number.isFinite(Number(next.turnSequence)) ? Math.max(0, Number(next.turnSequence)) : 0;
+  next.roundNumber = Number.isFinite(Number(next.roundNumber)) ? Math.max(1, Number(next.roundNumber)) : 1;
   next.selectedEntityId = next.selectedEntityId || null;
   next.combatants = Array.isArray(next.combatants)
     ? next.combatants.map((combatant) => normalizeCombatant(combatant, next.id))

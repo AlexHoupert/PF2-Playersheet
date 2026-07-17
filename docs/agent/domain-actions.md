@@ -72,6 +72,7 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `s
 
 - `assignUser(email, campaignId, characterId, role)`
 - `revokeUser(email)`
+- `setRole(campaignId, email, role)`
 
 `dataActions.inventory`:
 
@@ -109,11 +110,26 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `s
 - `deleteEffect(campaignId, effectId)`
 - `saveEffectTemplate(campaignId, template)`
 - `deleteEffectTemplate(campaignId, templateId)`
+- `applySourceEffect(campaignId, sourceActorId, targetActorIds, source, definition, options)`
+- `removeSourceEffect(campaignId, targetActorId, sourceId, definitionId)`
+- `advanceDuration(campaignId, targetActorId, options)`
+- `performDailyPreparation(campaignId, actorId, actorUpdater)`
+- `createEffectRequest(campaignId, sourceActorId, targets, source, definition, options)`
+- `approveEffectRequest(campaignId, requestId)`
+- `rejectEffectRequest(campaignId, requestId)`
 
 `dataActions.catalogOverride`:
 
 - `saveCatalogOverride(override)`
 - `deleteCatalogOverride(overrideId)`
+
+`dataActions.catalog`:
+
+- `saveCatalogEntry(entry, options)`
+- `deleteCatalogEntry(entryOrId, options)`
+- `revertCatalogChange(eventId, options)`
+- `promoteToGlobalCatalog(entryOrId, options)`
+- `saveCatalogOverride` and `deleteCatalogOverride` are campaign-scoped editor compatibility aliases.
 
 `dataActions.loot`:
 
@@ -163,6 +179,13 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `s
 - `deleteEffect(campaignId, effectId)`
 - `saveEffectTemplate(campaignId, templateInput)`
 - `deleteEffectTemplate(campaignId, templateId)`
+- `applySourceEffect(campaignId, sourceActorId, targetActorIds, source, definition, options)`
+- `removeSourceEffect(campaignId, targetActorId, sourceId, definitionId)`
+- `advanceDuration(campaignId, targetActorId, options)`
+- `performDailyPreparation(campaignId, actorId, actorUpdater)`
+- `createEffectRequest(campaignId, sourceActorId, targets, source, definition, options)`
+- `approveEffectRequest(campaignId, requestId)`
+- `rejectEffectRequest(campaignId, requestId)`
 
 `dataActions.map`:
 
@@ -232,6 +255,12 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `s
 - `saveNote(campaignId, note)`
 - `deleteNote(campaignId, noteOrTarget, actorId)`
 - `notifyBestiaryReveal(campaignId, creature)`
+
+`dataActions.loreContribution`:
+
+- `saveContribution(campaignId, contribution)`
+- `archiveContribution(campaignId, contributionId)`
+- `promoteContributionToOfficial(campaignId, contributionId)`
 
 `dataActions.pact`:
 

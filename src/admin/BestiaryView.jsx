@@ -261,10 +261,10 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
         if (creature?.isCustom) {
             runDataAction(Promise.all([
                 dataActions.bestiary.deleteCreature(id),
-                creature.catalogOverrideId ? dataActions.catalogOverride.deleteCatalogOverride(creature.catalogOverrideId) : Promise.resolve(),
+                creature.catalogOverrideId ? dataActions.catalog.deleteCatalogOverride(creature.catalogOverrideId) : Promise.resolve(),
             ]));
         } else {
-            runDataAction(dataActions.catalogOverride.saveCatalogOverride(buildHideOverride('creature', creature)));
+            runDataAction(dataActions.catalog.saveCatalogOverride(buildHideOverride('creature', creature)));
         }
         setContextMenu(null);
         if (previewCreature?.id === id) setPreviewCreature(null);
@@ -433,7 +433,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                 onSaveToDb={(creatureData) => {
                     return dataActions.bestiary.saveCustomCreature(creatureData);
                 }}
-                onSaveCatalogEntry={(override) => dataActions.catalogOverride.saveCatalogOverride(override)}
+                onSaveCatalogEntry={(override) => dataActions.catalog.saveCatalogOverride(override)}
             />
         );
     }

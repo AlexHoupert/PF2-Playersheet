@@ -42,7 +42,7 @@ export default function SpellsView() {
             if (!spellJson.system) spellJson.system = {};
             spellJson.system[property] = newValue;
             const formData = spellJsonToEditorFormData(spellJson, { ...item, [property]: newValue });
-            await dataActions.catalogOverride.saveCatalogOverride(
+            await dataActions.catalog.saveCatalogOverride(
                 buildSpellOverride(spellJson, formData, { ...item, [property]: newValue }, {
                     editorMode: 'edit',
                     catalogType: 'spell',

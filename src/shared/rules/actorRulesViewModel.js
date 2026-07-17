@@ -1,7 +1,9 @@
 import { selectActorEffects, selectConditionViewModels } from "../db/selectors/effectSelectors.js";
 import { normalizeCharacterRuntimeShape } from "../db/domain/characterShape.js";
+import { buildDerivedSourceEffects } from "./derivedSourceEffects.js";
+import { resolveEffectModifiers } from "./effectResolver.js";
 
-export function buildActorRulesContext({ actor, campaign = null, effects = null } = {}) {
+export function buildActorRulesContext({ actor, campaign = null, effects = null, catalog = null } = {}) {
     if (!actor) {
         return {
             actor: null,
@@ -12,11 +14,18 @@ export function buildActorRulesContext({ actor, campaign = null, effects = null 
     }
 
     const actorId = actor.id;
-    const resolvedEffects = Array.isArray(effects)
+    const persistedEffects = Array.isArray(effects)
         ? effects.map(normalizeEffectInput).filter(Boolean)
         : selectActorEffects(campaign, actorId);
+    const derivedEffects = buildDerivedSourceEffects({
+        actor,
+        campaign,
+        catalog,
+        persistedEffects,
+    });
+    const resolvedEffects = [...persistedEffects, ...derivedEffects];
     const conditions = Array.isArray(effects)
-        ? effectsToConditionViewModels(effects)
+        ? effectsToConditionViewModels(resolvedEffects)
         : selectConditionViewModels(campaign, actorId);
 
     return {
@@ -40,8 +49,22 @@ export function buildActorStatsViewModel(context = {}) {
 
     const effects = Array.isArray(context.effects) ? context.effects : [];
     const conditions = Array.isArray(context.conditions) ? context.conditions : [];
+    const baseCharacter = toRulesCharacter(actor);
+    const hpMaxEffects = effects.filter(effect => !isDrainedCondition(effect));
+    const hpMaxResolution = resolveEffectModifiers(hpMaxEffects, "hp.max");
+    const baseMaxHp = Math.max(1, Number(baseCharacter.stats?.hp?.max) || 1);
+    const resolvedMaxHp = hpMaxResolution.set == null
+        ? baseMaxHp + hpMaxResolution.total
+        : hpMaxResolution.set;
     const character = {
-        ...toRulesCharacter(actor),
+        ...baseCharacter,
+        stats: {
+            ...(baseCharacter.stats || {}),
+            hp: {
+                ...(baseCharacter.stats?.hp || {}),
+                max: Math.max(1, resolvedMaxHp),
+            },
+        },
         actorEffects: effects,
     };
 
@@ -50,7 +73,21 @@ export function buildActorStatsViewModel(context = {}) {
         character,
         effects,
         conditions,
+        breakdown: {
+            hpMax: {
+                base: baseMaxHp,
+                modifier: hpMaxResolution.total,
+                set: hpMaxResolution.set,
+                effective: character.stats.hp.max,
+                applied: hpMaxResolution.applied,
+            },
+        },
     };
+}
+
+function isDrainedCondition(effect) {
+    return effect?.category === "condition"
+        && String(effect?.label || effect?.name || "").trim().toLowerCase() === "drained";
 }
 
 function toRulesCharacter(actor) {

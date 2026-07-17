@@ -395,7 +395,7 @@ export default function ItemsView({ db, onInspectItem }) {
         });
         if (!confirmed) return;
         if (isCustom && item.catalogOverrideId) {
-            await dataActions.catalogOverride.deleteCatalogOverride(item.catalogOverrideId);
+            await dataActions.catalog.deleteCatalogOverride(item.catalogOverrideId);
             notifySuccess(`${item.name} deleted.`);
             return;
         }
@@ -404,7 +404,7 @@ export default function ItemsView({ db, onInspectItem }) {
             notifySuccess(`${item.name} deleted.`);
             return;
         }
-        await dataActions.catalogOverride.saveCatalogOverride(buildHideOverride('item', item));
+        await dataActions.catalog.saveCatalogOverride(buildHideOverride('item', item));
         notifySuccess(`${item.name} hidden.`);
     };
 

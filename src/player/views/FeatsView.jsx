@@ -2,16 +2,26 @@ import React from 'react';
 import { getFeatIndexItemByName } from '../../shared/catalog/featIndex';
 import { LongPressable } from '../../shared/components/LongPressable';
 
-export const FeatsView = ({ character, setModalData, setModalMode, setCatalogMode, onLongPress }) => {
+export const FeatsView = ({
+    character,
+    setModalData,
+    setModalMode,
+    setCatalogMode,
+    onLongPress,
+    readOnly = false,
+    canAuthorCatalog = false,
+    onAuthorCatalogEntry,
+}) => {
 
 
 
     const featsByType = {};
 
-    character.feats.forEach(featName => {
+    (character.feats || []).forEach(featRecord => {
+        const featName = typeof featRecord === 'string' ? featRecord : featRecord?.name;
         const featFromIndex = getFeatIndexItemByName(featName);
-        if (featFromIndex) {
-            const feat = { ...featFromIndex, _entityType: 'feat' };
+        if (featFromIndex || featRecord?.name) {
+            const feat = { ...(featFromIndex || {}), ...(typeof featRecord === 'object' ? featRecord : {}), name: featName, _entityType: 'feat' };
             let rawType = feat.category || feat.type || 'General';
             // Capitalize first letter, lowercase rest for consistent keys
             let type = rawType.charAt(0).toUpperCase() + rawType.slice(1).toLowerCase();
@@ -40,8 +50,8 @@ export const FeatsView = ({ character, setModalData, setModalMode, setCatalogMod
                     {featsByType[type].map((feat, i) => (
                         <LongPressable
                             className="item-row"
-                            key={feat.name}
-                            onLongPress={() => onLongPress(feat, 'feat')}
+                            key={feat.catalogEntryId || feat.catalogOverrideId || feat.name}
+                            onLongPress={() => { if (!readOnly) onLongPress(feat, 'feat'); }}
                             onClick={() => { setModalData(feat); setModalMode('item'); }}
                         >
                             <span className="item-name">{feat.name}</span>
@@ -49,13 +59,22 @@ export const FeatsView = ({ character, setModalData, setModalMode, setCatalogMod
                     ))}
                 </div>
             ))}
-            <button
+            {!readOnly && <button
                 className="btn-add-condition"
                 style={{ marginTop: 20, width: '100%' }}
                 onClick={() => setCatalogMode('feat')}
             >
                 + Add Feat
-            </button>
+            </button>}
+            {canAuthorCatalog && (
+                <button
+                    className="btn-add-condition"
+                    style={{ marginTop: 10, width: '100%' }}
+                    onClick={() => onAuthorCatalogEntry?.('feat')}
+                >
+                    Create Campaign Feat
+                </button>
+            )}
         </div>
     );
 };

@@ -3,6 +3,7 @@ import { createActorActions } from "./actorActions.js";
 import { createCampaignActions } from "./campaignActions.js";
 import { createCampingActions } from "./campingActions.js";
 import { createCatalogOverrideActions } from "./catalogOverrideActions.js";
+import { createCampaignCatalogActions } from "./campaignCatalogActions.js";
 import { createCharacterActions } from "./characterActions.js";
 import { createEffectActions } from "./effectActions.js";
 import { createEncounterActions } from "./encounterActions.js";
@@ -10,6 +11,7 @@ import { createGlobalContentActions } from "./globalContentActions.js";
 import { createInventoryActions } from "./inventoryActions.js";
 import { createLootActions } from "./lootActions.js";
 import { createLoreActions } from "./loreActions.js";
+import { createLoreContributionActions } from "./loreContributionActions.js";
 import { createMapActions } from "./mapActions.js";
 import { createMemberActions } from "./memberActions.js";
 import { createProgressActions } from "./progressActions.js";
@@ -23,13 +25,28 @@ export function createDataActions({
   firestore = null,
   createId = () => createInstanceId("item"),
   actorEmail = null,
+  campaignId = null,
+  memberRole = null,
+  isGlobalAdmin = false,
   repositories = {},
 } = {}) {
-  const actionContext = createActionContext({ db, setDb, mode, firestore, createId, actorEmail, repositories });
+  const actionContext = createActionContext({
+    db,
+    setDb,
+    mode,
+    firestore,
+    createId,
+    actorEmail,
+    campaignId,
+    memberRole,
+    isGlobalAdmin,
+    repositories,
+  });
   const actorActions = createActorActions(actionContext);
   const campaignActions = createCampaignActions(actionContext);
   const campingActions = createCampingActions(actionContext);
   const catalogOverrideActions = createCatalogOverrideActions(actionContext);
+  const catalogActions = createCampaignCatalogActions(actionContext);
   const characterActions = createCharacterActions(actionContext);
   const effectActions = createEffectActions(actionContext);
   const encounterActions = createEncounterActions(actionContext);
@@ -37,6 +54,7 @@ export function createDataActions({
   const inventoryActions = createInventoryActions(actionContext);
   const lootActions = createLootActions(actionContext);
   const loreActions = createLoreActions(actionContext);
+  const loreContributionActions = createLoreContributionActions(actionContext);
   const mapActions = createMapActions(actionContext);
   const memberActions = createMemberActions(actionContext);
   const progressActions = createProgressActions(actionContext);
@@ -51,8 +69,10 @@ export function createDataActions({
     actor: actorActions,
     effect: effectActions,
     catalogOverride: catalogOverrideActions,
+    catalog: catalogActions,
     loot: lootActions,
     lore: loreActions,
+    loreContribution: loreContributionActions,
     quest: questActions,
     encounter: encounterActions,
     map: mapActions,

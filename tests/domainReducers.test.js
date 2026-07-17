@@ -591,6 +591,7 @@ test('encounter reducer creates, activates, updates, archives, and restores enco
 
     const nextTurn = endEncounterTurnInCampaign(rolled, encounter.id);
     assert.equal(nextTurn.encounters[0].currentTurnCombatantId, creatureId);
+    assert.equal(nextTurn.encounters[0].turnSequence, 1);
 
     const defeated = setCombatantDefeatedInCampaign(nextTurn, encounter.id, creatureId, {
         now: '2026-01-03T00:00:00.000Z',

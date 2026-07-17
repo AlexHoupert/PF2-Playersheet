@@ -3,9 +3,12 @@ import {
   normalizeEmail,
   revokeUserInDb,
 } from "./campaignReducers.js";
+import { normalizeCampaignRole } from "../../auth/campaignCapabilities.js";
+import { cloneValue } from "./inventoryReducers.js";
 
 export function createMemberActions(context) {
   const {
+    capabilities,
     db,
     firestore,
     repos,
@@ -37,8 +40,30 @@ export function createMemberActions(context) {
     return updateDbLegacy((prev) => revokeUserInDb(prev, normalizedEmail));
   };
 
+  const setRole = (campaignId, email, role) => {
+    if (!capabilities?.canManageMembers) {
+      return Promise.reject(new Error("Only a campaign GM can change member roles"));
+    }
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedRole = normalizeCampaignRole(role);
+    if (!campaignId || !normalizedEmail) return Promise.resolve();
+    if (useFirestoreV2) {
+      return repos.memberRepo.setRole(firestore, campaignId, normalizedEmail, normalizedRole);
+    }
+    return updateDbLegacy((prev) => {
+      const next = cloneValue(prev) || {};
+      next.users = { ...(next.users || {}) };
+      const current = next.users[normalizedEmail] || next.users[email];
+      if (!current || current.campaignId !== campaignId) return prev;
+      next.users[normalizedEmail] = { ...current, role: normalizedRole };
+      if (email !== normalizedEmail) delete next.users[email];
+      return next;
+    });
+  };
+
   return {
     assignUser,
     revokeUser,
+    setRole,
   };
 }

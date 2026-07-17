@@ -1,0 +1,189 @@
+.effect-definition-editor {
+  margin: 22px 0;
+  border-top: 1px solid #4a4032;
+  padding-top: 18px;
+  color: #ddd;
+}
+
+.effect-definition-editor__header,
+.effect-definition__title,
+.effect-definition__list-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.effect-definition-editor__header h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: #d6b46b;
+}
+
+.effect-definition-editor__header p {
+  margin: 4px 0 0;
+  color: #8f8f8f;
+  font-size: 0.78rem;
+}
+
+.effect-definition-editor button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid #5b4a2f;
+  background: #191919;
+  color: #d6b46b;
+  min-height: 30px;
+  cursor: pointer;
+}
+
+.effect-definition-editor__add {
+  padding: 6px 10px;
+}
+
+.effect-definition-editor__empty {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px dashed #4a4a4a;
+  color: #888;
+}
+
+.effect-definition {
+  margin-top: 14px;
+  border-left: 3px solid #a77a31;
+  background: #1b1b1b;
+  padding: 12px;
+}
+
+.effect-definition__title > input {
+  flex: 1;
+  font-weight: 700;
+}
+
+.effect-definition__enabled {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.effect-definition__remove,
+.effect-definition__row-remove {
+  color: #d46d6d !important;
+  border-color: #593333 !important;
+  width: 32px;
+  flex: 0 0 32px;
+}
+
+.effect-definition__grid,
+.effect-definition__row,
+.effect-definition__value {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 8px;
+}
+
+.effect-definition__grid {
+  margin-top: 12px;
+}
+
+.effect-definition__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.effect-definition__field > span {
+  color: #8e8e8e;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.effect-definition__field input,
+.effect-definition__field select {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid #484848;
+  background: #111;
+  color: #eee;
+  padding: 5px 7px;
+}
+
+.effect-definition__list {
+  margin-top: 14px;
+  border-top: 1px solid #333;
+  padding-top: 10px;
+}
+
+.effect-definition__list-title button {
+  min-height: 26px;
+  padding: 3px 8px;
+}
+
+.effect-definition__list-item {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px;
+  background: #151515;
+}
+
+.effect-definition__list-item > :first-child {
+  flex: 1;
+}
+
+.effect-definition__value--compact {
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+}
+
+.effect-definition__tiers {
+  grid-column: 1 / -1;
+}
+
+.effect-definition__tiers > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr 32px;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.effect-definition__tiers input {
+  min-width: 0;
+}
+
+.effect-definition__summary {
+  margin-top: 12px;
+  color: #b9a47d;
+  font-size: 0.78rem;
+}
+
+.effect-definition-editor__errors {
+  margin-top: 12px;
+  border: 1px solid #813e3e;
+  background: #321d1d;
+  color: #ffb4b4;
+  padding: 10px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 700px) {
+  .effect-definition-editor__header,
+  .effect-definition__title {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .effect-definition-editor__header > div,
+  .effect-definition__title > input {
+    flex-basis: 100%;
+  }
+
+  .effect-definition__list-item {
+    align-items: stretch;
+  }
+}

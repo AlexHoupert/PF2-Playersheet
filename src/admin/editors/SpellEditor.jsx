@@ -5,6 +5,12 @@ import { SPELL_INDEX_FILTER_OPTIONS, fetchSpellDetailBySourceFile, normalizeSpel
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 import { buildCatalogEditorOverride, buildCatalogSafeId, getCatalogEditorInitialItem } from '../../shared/catalog/catalogEditorContract';
 import { mergeCatalogDetailIntoEntry } from '../../shared/catalog/catalogDetailMerge';
+import EffectDefinitionEditor from './EffectDefinitionEditor';
+import {
+    readCatalogEffectDefinitions,
+    validateCatalogEffectDefinitions,
+    writeCatalogEffectDefinitions,
+} from '../../shared/rules/catalogEffectDefinitions';
 
 export default function SpellEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'spell', onSave, onCancel, onSaveToDb, onSaveCatalogEntry }) {
     const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
@@ -22,7 +28,8 @@ export default function SpellEditor({ initialItem: initialItemProp, initialPaylo
         duration: '',
         defense: '',
         description: '',
-        sourceFile: null
+        sourceFile: null,
+        effectDefinitions: []
     });
 
     const [isSaving, setIsSaving] = useState(false);
@@ -44,7 +51,8 @@ export default function SpellEditor({ initialItem: initialItemProp, initialPaylo
                 duration: initialItem.duration || '',
                 defense: initialItem.defense || '',
                 description: initialItem.description || '',
-                sourceFile: initialItem.sourceFile || initialItem.overrideSourceFile || null
+                sourceFile: initialItem.sourceFile || initialItem.overrideSourceFile || null,
+                effectDefinitions: readCatalogEffectDefinitions(initialItem)
             });
 
             // Fetch full details if sourceFile exists (index items lack description, target, etc.)
@@ -78,11 +86,13 @@ export default function SpellEditor({ initialItem: initialItemProp, initialPaylo
 
     const handleSave = async () => {
         if (!formData.name) return setError("Name is required");
+        const effectValidation = validateCatalogEffectDefinitions(formData.effectDefinitions);
+        if (!effectValidation.valid) return setError(effectValidation.errors.join('; '));
         setIsSaving(true);
         setError(null);
 
         try {
-            const spellJson = {
+            const spellJson = writeCatalogEffectDefinitions({
                 name: formData.name,
                 type: 'spell',
                 img: initialItem?.img || "systems/pf2e/icons/default-icons/spell.svg",
@@ -101,7 +111,7 @@ export default function SpellEditor({ initialItem: initialItemProp, initialPaylo
                     duration: { value: formData.duration },
                     defense: { save: { statistic: formData.defense } }
                 }
-            };
+            }, formData.effectDefinitions);
 
             // Determine Path
             let filePath = formData.sourceFile;
@@ -261,6 +271,12 @@ export default function SpellEditor({ initialItem: initialItemProp, initialPaylo
                 <RichTextEditor value={formData.description} onChange={val => handleChange('description', val)} style={{ height: 300 }} />
             </div>
 
+            <EffectDefinitionEditor
+                value={formData.effectDefinitions}
+                onChange={value => handleChange('effectDefinitions', value)}
+                sourceType="spell"
+            />
+
             <div className="form-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #444', paddingTop: 20 }}>
                 <button className="set-btn" style={{ background: '#555' }} onClick={onCancel} disabled={isSaving}>Cancel</button>
                 <button data-testid="spell-editor-save" className="set-btn" onClick={handleSave} disabled={isSaving}>
@@ -276,8 +292,9 @@ export default function SpellEditor({ initialItem: initialItemProp, initialPaylo
 
 export function buildSpellOverride(spellJson, formData, initialItem, options = {}) {
     const safeId = buildCatalogSafeId(initialItem?.id || formData.name || 'spell');
+    const recordWithEffects = writeCatalogEffectDefinitions(spellJson, formData.effectDefinitions);
     return buildCatalogEditorOverride(options.catalogType || 'spell', {
-        ...spellJson,
+        ...recordWithEffects,
         id: safeId,
         _id: safeId,
         level: parseInt(formData.level) || 0,

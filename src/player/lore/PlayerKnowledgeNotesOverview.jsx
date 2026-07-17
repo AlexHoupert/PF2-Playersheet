@@ -40,6 +40,7 @@ export default function PlayerKnowledgeNotesOverview({
   actors = [],
   onNavigateArticle,
   onNavigateCreature,
+  readOnly = false,
 }) {
   const [filters, setFilters] = React.useState(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = React.useState(null);
@@ -224,6 +225,7 @@ export default function PlayerKnowledgeNotesOverview({
               <span>Created {formatNoteDate(selectedNote.createdAt)} · Edited {formatNoteDate(selectedNote.updatedAt)}</span>
             </div>
             <KnowledgeNoteEditor
+              readOnly={readOnly}
               note={selectedNote.note}
               actorId={actorId}
               targetType={selectedNote.targetType}

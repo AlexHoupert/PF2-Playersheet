@@ -3,7 +3,15 @@ import { calculateImpulseAttackAndClassDC } from '../../utils/rules';
 import { parseFoundry, ACTION_ICONS } from '../../shared/utils/foundryParser';
 import { LongPressable } from '../../shared/components/LongPressable';
 
-export const ImpulsesView = ({ character, setModalData, setModalMode, onLongPress }) => {
+export const ImpulsesView = ({
+    character,
+    setModalData,
+    setModalMode,
+    onLongPress,
+    readOnly = false,
+    canAuthorCatalog = false,
+    onAuthorCatalogEntry,
+}) => {
     const impulses = character.impulses || [];
 
     // Stats Calculation
@@ -18,7 +26,7 @@ export const ImpulsesView = ({ character, setModalData, setModalMode, onLongPres
                 <LongPressable
                     className="hex-box"
                     onClick={() => { setModalData({ type: 'class_dc' }); setModalMode('spell_stat_info'); }}
-                    onLongPress={() => onLongPress(null, 'class_dc')}
+                    onLongPress={() => { if (!readOnly) onLongPress(null, 'class_dc'); }}
                 >
                     <div className="hex-content">
                         <div className={`stat-val ${classDCHasPenalty ? 'stat-penalty' : ''}`} style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>
@@ -37,7 +45,7 @@ export const ImpulsesView = ({ character, setModalData, setModalMode, onLongPres
                         background: 'var(--bg-panel)', alignSelf: 'center'
                     }}
                     onClick={() => { setModalData({ type: 'impulse_attack' }); setModalMode('spell_stat_info'); }}
-                    onLongPress={() => onLongPress(null, 'impulse_attack')}
+                    onLongPress={() => { if (!readOnly) onLongPress(null, 'impulse_attack'); }}
                 >
                     <div className={`stat-val ${impulseAttackHasPenalty ? 'stat-penalty' : ''}`} style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#c5a059', lineHeight: 1.1 }}>
                         {impulseAttack.total >= 0 ? '+' : ''}{impulseAttack.total}
@@ -86,10 +94,23 @@ export const ImpulsesView = ({ character, setModalData, setModalMode, onLongPres
                             className="spell-row"
                             key={imp.name}
                             onClick={() => { setModalData(imp); setModalMode('item'); }}
-                            onLongPress={() => onLongPress(imp, 'impulse')}
+                            onLongPress={() => { if (!readOnly) onLongPress(imp, 'impulse'); }}
                         >
                             <div style={{ fontWeight: 'bold', color: '#ccc', display: 'flex', alignItems: 'center' }}>
                                 {imp.name}
+                                {canAuthorCatalog && (
+                                    <button
+                                        type="button"
+                                        className="btn-inline-action"
+                                        style={{ marginLeft: 'auto' }}
+                                        onClick={event => {
+                                            event.stopPropagation();
+                                            onAuthorCatalogEntry?.('impulse', imp, { linkImpulse: imp });
+                                        }}
+                                    >
+                                        Fork
+                                    </button>
+                                )}
                             </div>
                             <div className="spell-meta">
                                 {metaParts.reduce((acc, curr, idx) => {
@@ -101,6 +122,16 @@ export const ImpulsesView = ({ character, setModalData, setModalMode, onLongPres
                         </LongPressable>
                     );
                 })}
+                {canAuthorCatalog && (
+                    <button
+                        type="button"
+                        className="btn-add-condition"
+                        style={{ marginTop: 20, width: '100%' }}
+                        onClick={() => onAuthorCatalogEntry?.('impulse')}
+                    >
+                        Create Campaign Impulse
+                    </button>
+                )}
             </div>
         </div>
     );

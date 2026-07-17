@@ -1,4 +1,4 @@
-export const V2_SCHEMA_VERSION = 4;
+export const V2_SCHEMA_VERSION = 5;
 
 export const V2_COLLECTIONS = {
     campaigns: 'campaigns',
@@ -18,6 +18,10 @@ export const V2_COLLECTIONS = {
     customCreatures: 'customCreatures',
     customActions: 'customActions',
     effectTemplates: 'effectTemplates',
+    catalogEntries: 'catalogEntries',
+    catalogChangeEvents: 'catalogChangeEvents',
+    effectRequests: 'effectRequests',
+    loreContributions: 'loreContributions',
     catalogOverrides: 'catalogOverrides',
     global: 'global',
     migrationBackups: 'migrationBackups',

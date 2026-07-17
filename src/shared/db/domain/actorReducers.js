@@ -112,18 +112,27 @@ export function createActorEffectRecord(effect, options = {}) {
     templateId: effect?.templateId || null,
     label,
     category: normalizeEffectCategory(effect?.category),
-    value: toFiniteNumber(effect?.value ?? effect?.level, 1),
+    value: effect?.value && typeof effect.value === "object"
+      ? cloneValue(effect.value)
+      : toFiniteNumber(effect?.value ?? effect?.level, 1),
     source: {
       type: effect?.source?.type || effect?.type || "manual",
       id: effect?.source?.id || effect?.sourceId || null,
       name: effect?.source?.name || label,
       actorId: effect?.source?.actorId || null,
+      instanceId: effect?.source?.instanceId || null,
     },
     modifiers: Array.isArray(effect?.modifiers) ? cloneValue(effect.modifiers) : [],
-    duration: effect?.duration || null,
+    duration: effect?.duration ? cloneValue(effect.duration) : null,
+    definitionSnapshot: effect?.definitionSnapshot ? cloneValue(effect.definitionSnapshot) : null,
+    application: effect?.application ? cloneValue(effect.application) : null,
+    onApply: Array.isArray(effect?.onApply) ? cloneValue(effect.onApply) : [],
     stage: effect?.stage || null,
     hidden: Boolean(effect?.hidden),
     disabled: Boolean(effect?.disabled),
+    derived: Boolean(effect?.derived),
+    createdAt: effect?.createdAt || null,
+    createdBy: effect?.createdBy || null,
   };
 }
 

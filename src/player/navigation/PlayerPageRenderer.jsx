@@ -48,6 +48,7 @@ export default function PlayerPageRenderer({
     characterActions,
     characterConditions,
     characterEffects,
+    capabilities,
     dataActions,
     db,
     fireWeapon,
@@ -62,8 +63,10 @@ export default function PlayerPageRenderer({
     onNavigateLoreArticle,
     onNavigateLoreCreature,
     onGoToPage,
+    onAuthorCatalogEntry,
     ownedCompanionActors,
     playerQuests,
+    readOnly = false,
     rulesCharacter,
     runDataAction,
     setActionModal,
@@ -86,6 +89,7 @@ export default function PlayerPageRenderer({
                     if (data) setModalData(data);
                 }}
                 onLongPress={handleLongPress}
+                readOnly={readOnly}
             />
         );
     }
@@ -98,6 +102,9 @@ export default function PlayerPageRenderer({
                 setModalMode={setModalMode}
                 setCatalogMode={setCatalogMode}
                 onLongPress={handleLongPress}
+                readOnly={readOnly}
+                canAuthorCatalog={Boolean(capabilities?.canCreatePlayerContent)}
+                onAuthorCatalogEntry={onAuthorCatalogEntry}
             />
         );
     }
@@ -111,6 +118,9 @@ export default function PlayerPageRenderer({
                 setModalMode={setModalMode}
                 setCatalogMode={setCatalogMode}
                 onLongPress={handleLongPress}
+                readOnly={readOnly}
+                canAuthorCatalog={Boolean(capabilities?.canCreatePlayerContent)}
+                onAuthorCatalogEntry={onAuthorCatalogEntry}
             />
         );
     }
@@ -122,6 +132,9 @@ export default function PlayerPageRenderer({
                 setModalData={setModalData}
                 setModalMode={setModalMode}
                 onLongPress={handleLongPress}
+                readOnly={readOnly}
+                canAuthorCatalog={Boolean(capabilities?.canCreatePlayerContent)}
+                onAuthorCatalogEntry={onAuthorCatalogEntry}
             />
         );
     }
@@ -138,6 +151,7 @@ export default function PlayerPageRenderer({
                 companionActors={ownedCompanionActors}
                 dataActions={dataActions}
                 activeCampaignId={activeCampaign?.id}
+                readOnly={readOnly}
             />
         );
     }
@@ -162,6 +176,9 @@ export default function PlayerPageRenderer({
                     setModalData(data);
                 }}
                 onLongPress={(item, type) => handleLongPress(item, type)}
+                readOnly={readOnly}
+                canAuthorCatalog={Boolean(capabilities?.canCreatePlayerContent)}
+                onAuthorCatalogEntry={onAuthorCatalogEntry}
             />
         );
     }
@@ -183,7 +200,8 @@ export default function PlayerPageRenderer({
                 initialSubTab={INVENTORY_TAB_BY_PAGE[activePageId]}
                 hideTabs={true}
                 onUpdateCharacter={updateCharacter}
-                onSaveCustomItem={(dbItem) => runDataAction(dataActions.globalContent.saveCustomItem(dbItem))}
+                onAuthorCatalogEntry={onAuthorCatalogEntry}
+                canAuthorCatalog={Boolean(capabilities?.canCreatePlayerContent)}
                 onOpenModal={(mode, data) => {
                     setModalMode(mode);
                     setModalData(data);
@@ -207,6 +225,7 @@ export default function PlayerPageRenderer({
                     runDataAction(dataActions.loot.splitGold(activeCampaign.id, bagId));
                 }}
                 onOpenShop={() => onGoToPage(PLAYER_PAGE_IDS.SHOP)}
+                readOnly={readOnly}
             />
         );
     }
@@ -220,6 +239,7 @@ export default function PlayerPageRenderer({
                     setModalMode('item');
                 }}
                 onBuyItem={(item) => {
+                    if (readOnly) return;
                     const scrollMatch = item.name.match(/(?:Scroll of Rank (\d+)|Scroll of (\d+)(?:st|nd|rd|th)?-rank Spell)/i);
                     const wandMatch = item.name.match(/(?:Wand of Rank (\d+)|Magic Wand \((\d+)(?:st|nd|rd|th)?-Rank Spell\))/i);
 
@@ -231,7 +251,7 @@ export default function PlayerPageRenderer({
                         setActionModal({ mode: 'BUY_RESTOCK', item });
                     }
                 }}
-                onBuyFormula={handleBuyFormula}
+                onBuyFormula={readOnly ? undefined : handleBuyFormula}
                 knownFormulas={character.formulaBook || []}
             />
         );
@@ -260,6 +280,9 @@ export default function PlayerPageRenderer({
                 initialCreatureId={loreTarget?.creatureId || null}
                 onNavigateArticle={onNavigateLoreArticle}
                 onNavigateCreature={onNavigateLoreCreature}
+                contributions={activeCampaign?.loreContributions || []}
+                canAuthorContributions={Boolean(capabilities?.canAuthorCampaignContent)}
+                readOnly={readOnly}
             />
         );
     }
@@ -276,6 +299,7 @@ export default function PlayerPageRenderer({
                 actors={activeCampaign?.actors || []}
                 onNavigateArticle={onNavigateLoreArticle}
                 onNavigateCreature={onNavigateLoreCreature}
+                readOnly={readOnly}
             />
         );
     }

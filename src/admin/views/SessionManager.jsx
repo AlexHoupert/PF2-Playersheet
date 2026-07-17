@@ -17,6 +17,7 @@ export default function SessionManager({ db }) {
         restoreCampaign,
         setSelectedCampaignId,
         assignUser,
+        setMemberRole,
         createCharacter,
         deleteCharacter,
         restoreCharacter
@@ -25,6 +26,7 @@ export default function SessionManager({ db }) {
     const [newCampName, setNewCampName] = useState('');
     const [newUserEmail, setNewUserEmail] = useState('');
     const [selectedUserChar, setSelectedUserChar] = useState('');
+    const [newUserRole, setNewUserRole] = useState('player');
 
     // --- QUICK CREATE CHARACTER ---
     const [newCharName, setNewCharName] = useState('');
@@ -309,10 +311,18 @@ export default function SessionManager({ db }) {
                                     <option value="">-- Character --</option>
                                     {activeCharacters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </select>
+                                <select
+                                    value={newUserRole}
+                                    onChange={e => setNewUserRole(e.target.value)}
+                                    aria-label="Campaign role"
+                                    style={{ flex: '1 1 140px', padding: 8, background: '#111', border: '1px solid #444', color: '#fff', minHeight: 40 }}
+                                >
+                                    {roleOptions().map(role => <option key={role} value={role}>{formatRole(role)}</option>)}
+                                </select>
                                 <button
                                     onClick={() => {
-                                        if (newUserEmail && selectedUserChar) {
-                                            assignUser(newUserEmail, activeCampaign.id, selectedUserChar);
+                                        if (newUserEmail && (selectedUserChar || newUserRole === 'spectator' || newUserRole === 'assistant_gm')) {
+                                            assignUser(newUserEmail, activeCampaign.id, selectedUserChar || null, newUserRole);
                                             setNewUserEmail('');
                                         }
                                     }}
@@ -331,7 +341,21 @@ export default function SessionManager({ db }) {
                                 const charName = selectActiveCharacters(campaigns[info.campaignId]).find(c => c.id === assignedId)?.name;
                                 return (
                                     <div key={email} style={{ borderBottom: '1px solid #333', padding: '5px 0' }}>
-                                        <div style={{ color: '#fff' }}>{email} <span style={{ background: '#444', padding: '2px 4px', borderRadius: 3, fontSize: '0.7em' }}>{info.role || 'player'}</span></div>
+                                        <div style={{ color: '#fff', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                            <span>{email}</span>
+                                            {info.campaignId === activeCampaign.id ? (
+                                                <select
+                                                    value={info.role || 'player'}
+                                                    onChange={event => setMemberRole(activeCampaign.id, email, event.target.value)}
+                                                    aria-label={`Role for ${email}`}
+                                                    style={{ background: '#111', color: '#ddd', border: '1px solid #555', padding: '2px 5px' }}
+                                                >
+                                                    {roleOptions().map(role => <option key={role} value={role}>{formatRole(role)}</option>)}
+                                                </select>
+                                            ) : (
+                                                <span style={{ background: '#444', padding: '2px 4px', borderRadius: 3, fontSize: '0.7em' }}>{info.role || 'player'}</span>
+                                            )}
+                                        </div>
                                         {info.campaignId ? (
                                             <div>Playing <strong>{charName || 'Unknown'}</strong> in <em>{campName || info.campaignId}</em></div>
                                         ) : (
@@ -347,4 +371,15 @@ export default function SessionManager({ db }) {
             )}
         </div>
     );
+}
+
+function roleOptions() {
+    return ['player', 'trusted_player', 'assistant_gm', 'spectator', 'gm', 'admin'];
+}
+
+function formatRole(role) {
+    return String(role || 'player')
+        .split('_')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
 }

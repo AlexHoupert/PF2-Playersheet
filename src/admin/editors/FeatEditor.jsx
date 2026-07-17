@@ -5,6 +5,12 @@ import { FEAT_INDEX_FILTER_OPTIONS, fetchFeatDetailBySourceFile } from '../../sh
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 import { buildCatalogEditorOverride, buildCatalogSafeId, getCatalogEditorInitialItem } from '../../shared/catalog/catalogEditorContract';
 import { mergeCatalogDetailIntoEntry } from '../../shared/catalog/catalogDetailMerge';
+import EffectDefinitionEditor from './EffectDefinitionEditor';
+import {
+    readCatalogEffectDefinitions,
+    validateCatalogEffectDefinitions,
+    writeCatalogEffectDefinitions,
+} from '../../shared/rules/catalogEffectDefinitions';
 
 export default function FeatEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'feat', onSave, onCancel, onSaveToDb, onSaveCatalogEntry }) {
     const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
@@ -18,7 +24,8 @@ export default function FeatEditor({ initialItem: initialItemProp, initialPayloa
         actionType: '[one-action]',
         prerequisites: '',
         description: '',
-        sourceFile: null
+        sourceFile: null,
+        effectDefinitions: []
     });
 
     const [isSaving, setIsSaving] = useState(false);
@@ -40,7 +47,8 @@ export default function FeatEditor({ initialItem: initialItemProp, initialPayloa
                 actionType: initialItem.actionType || '',
                 prerequisites: initialItem.prerequisites ? (Array.isArray(initialItem.prerequisites) ? initialItem.prerequisites.join(', ') : initialItem.prerequisites) : '',
                 description: initialItem.description || '',
-                sourceFile: initialItem.sourceFile || initialItem.overrideSourceFile || null
+                sourceFile: initialItem.sourceFile || initialItem.overrideSourceFile || null,
+                effectDefinitions: readCatalogEffectDefinitions(initialItem)
             });
 
             // Fetch full details if sourceFile exists (index items lack description)
@@ -72,11 +80,13 @@ export default function FeatEditor({ initialItem: initialItemProp, initialPayloa
 
     const handleSave = async () => {
         if (!formData.name) return setError("Name is required");
+        const effectValidation = validateCatalogEffectDefinitions(formData.effectDefinitions);
+        if (!effectValidation.valid) return setError(effectValidation.errors.join('; '));
         setIsSaving(true);
         setError(null);
 
         try {
-            const featJson = {
+            const featJson = writeCatalogEffectDefinitions({
                 name: formData.name,
                 type: 'feat',
                 img: initialItem?.img || "systems/pf2e/icons/default-icons/feat.svg",
@@ -92,7 +102,7 @@ export default function FeatEditor({ initialItem: initialItemProp, initialPayloa
                     prerequisites: { value: formData.prerequisites ? [formData.prerequisites] : [] },
                     category: formData.category.toLowerCase() // ancestry, class, etc
                 }
-            };
+            }, formData.effectDefinitions);
 
             let filePath = formData.sourceFile;
             let isNew = !filePath;
@@ -222,6 +232,12 @@ export default function FeatEditor({ initialItem: initialItemProp, initialPayloa
                 <RichTextEditor value={formData.description} onChange={val => handleChange('description', val)} style={{ height: 300 }} />
             </div>
 
+            <EffectDefinitionEditor
+                value={formData.effectDefinitions}
+                onChange={value => handleChange('effectDefinitions', value)}
+                sourceType="feat"
+            />
+
             <div className="form-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #444', paddingTop: 20 }}>
                 <button className="set-btn" style={{ background: '#555' }} onClick={onCancel} disabled={isSaving}>Cancel</button>
                 <button className="set-btn" onClick={handleSave} disabled={isSaving}>
@@ -237,8 +253,9 @@ export default function FeatEditor({ initialItem: initialItemProp, initialPayloa
 
 export function buildFeatOverride(featJson, formData, initialItem, options = {}) {
     const safeId = buildCatalogSafeId(initialItem?.id || initialItem?._id || formData.name || 'feat');
+    const recordWithEffects = writeCatalogEffectDefinitions(featJson, formData.effectDefinitions);
     return buildCatalogEditorOverride(options.catalogType || 'feat', {
-        ...featJson,
+        ...recordWithEffects,
         id: safeId,
         _id: safeId,
         level: parseInt(formData.level) || 0,

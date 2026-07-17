@@ -49,6 +49,7 @@ import {
 import LoreArticleEditor from "./LoreArticleEditor.jsx";
 import LoreGroupDrawer from "./LoreGroupDrawer.jsx";
 import LoreArticleRenderer from "../../shared/lore/LoreArticleRenderer.jsx";
+import LoreContributionInbox from "./LoreContributionInbox.jsx";
 import "./loreAdmin.css";
 
 const AUTOSAVE_DELAY_MS = 850;
@@ -62,6 +63,7 @@ export default function LoreAdminWorkspace({
   confirm,
   notifyError,
   notifySuccess,
+  contributions = [],
 }) {
   const [query, setQuery] = React.useState("");
   const [category, setCategory] = React.useState("all");
@@ -282,6 +284,33 @@ export default function LoreAdminWorkspace({
     notifySuccess("Lore reference copied");
   };
 
+  const archiveContribution = async contribution => {
+    const approved = await confirm({
+      title: "Archive player contribution",
+      message: `Archive “${contribution.title}”? It will no longer be visible to the party.`,
+      confirmLabel: "Archive",
+      danger: true,
+    });
+    if (!approved) return;
+    try {
+      await dataActions.loreContribution.archiveContribution(campaignId, contribution.id);
+      notifySuccess("Player contribution archived");
+    } catch (error) {
+      notifyError(error);
+    }
+  };
+
+  const promoteContribution = async contribution => {
+    try {
+      const articleId = await dataActions.loreContribution.promoteContributionToOfficial(campaignId, contribution.id);
+      setSelectedId(articleId);
+      setMode("edit");
+      notifySuccess("Contribution promoted to an official draft");
+    } catch (error) {
+      notifyError(error);
+    }
+  };
+
   const currentForDisplay = mode === "edit" ? draft : selectedArticle;
   const backlinks = currentForDisplay ? selectLoreBacklinks(articles, "lore", currentForDisplay.id) : [];
   const sharedNotes = (loreStore.sharedNotes || []).filter((note) => note.targetType === "loreArticle" && note.targetId === currentForDisplay?.id);
@@ -315,6 +344,13 @@ export default function LoreAdminWorkspace({
         <span><Bell />{statusCounts.unreadDeliveries} unread releases</span>
         {loreStore.source !== "firestore" && <Badge variant="outline">{loreStore.source === "mixed" ? "Migration in progress" : "Recovery data"}</Badge>}
       </div>
+
+      <LoreContributionInbox
+        contributions={contributions}
+        actors={pcActors}
+        onArchive={archiveContribution}
+        onPromote={promoteContribution}
+      />
 
       <main className={`lore-admin-main lore-admin-main--${mode}`}>
         <section className="lore-admin-table-panel">

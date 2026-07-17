@@ -14,10 +14,13 @@ export default function LoreView({
   initialCreatureId = null,
   onNavigateArticle,
   onNavigateCreature,
+  contributions = [],
+  canAuthorContributions = false,
+  readOnly = false,
 }) {
   const category = String(initialCategory || "history").toLowerCase();
   if (category === "bestiary") {
-    return <PlayerBestiaryLibrary db={db} loreStore={loreStore} campaignId={campaignId} actorId={actorId} dataActions={dataActions} actors={actors} initialCreatureId={initialCreatureId} />;
+    return <PlayerBestiaryLibrary readOnly={readOnly} db={db} loreStore={loreStore} campaignId={campaignId} actorId={actorId} dataActions={dataActions} actors={actors} initialCreatureId={initialCreatureId} />;
   }
-  return <PlayerLoreLibrary db={db} category={category} loreStore={loreStore} campaignId={campaignId} actorId={actorId} dataActions={dataActions} actors={actors} initialArticleId={initialArticleId} onNavigateArticle={onNavigateArticle} onNavigateCreature={onNavigateCreature} />;
+  return <PlayerLoreLibrary readOnly={readOnly} contributions={contributions} canAuthorContributions={canAuthorContributions} db={db} category={category} loreStore={loreStore} campaignId={campaignId} actorId={actorId} dataActions={dataActions} actors={actors} initialArticleId={initialArticleId} onNavigateArticle={onNavigateArticle} onNavigateCreature={onNavigateCreature} />;
 }

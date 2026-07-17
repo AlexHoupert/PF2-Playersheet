@@ -9,6 +9,12 @@ import { IMPULSE_INDEX_FILTER_OPTIONS, fetchImpulseDetailBySourceFile } from '..
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 import { buildCatalogEditorOverride, buildCatalogSafeId, getCatalogEditorInitialItem } from '../../shared/catalog/catalogEditorContract';
 import { mergeCatalogDetailIntoEntry } from '../../shared/catalog/catalogDetailMerge';
+import EffectDefinitionEditor from './EffectDefinitionEditor';
+import {
+    readCatalogEffectDefinitions,
+    validateCatalogEffectDefinitions,
+    writeCatalogEffectDefinitions,
+} from '../../shared/rules/catalogEffectDefinitions';
 
 export default function ImpulseEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'impulse', onSave, onCancel, onSaveToDb, onSaveCatalogEntry }) {
     const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
@@ -27,7 +33,8 @@ export default function ImpulseEditor({ initialItem: initialItemProp, initialPay
         duration: '',
         defense: '',
         description: '',
-        sourceFile: null
+        sourceFile: null,
+        effectDefinitions: []
     });
 
     const [isSaving, setIsSaving] = useState(false);
@@ -50,7 +57,8 @@ export default function ImpulseEditor({ initialItem: initialItemProp, initialPay
                 duration: initialItem.duration || '',
                 defense: initialItem.defense || '',
                 description: initialItem.description || '',
-                sourceFile: initialItem.sourceFile || initialItem.overrideSourceFile || null
+                sourceFile: initialItem.sourceFile || initialItem.overrideSourceFile || null,
+                effectDefinitions: readCatalogEffectDefinitions(initialItem)
             });
 
             // Fetch full details if sourceFile exists (index items lack description, target, etc.)
@@ -84,11 +92,13 @@ export default function ImpulseEditor({ initialItem: initialItemProp, initialPay
 
     const handleSave = async () => {
         if (!formData.name) return setError("Name is required");
+        const effectValidation = validateCatalogEffectDefinitions(formData.effectDefinitions);
+        if (!effectValidation.valid) return setError(effectValidation.errors.join('; '));
         setIsSaving(true);
         setError(null);
 
         try {
-            const impulseJson = {
+            const impulseJson = writeCatalogEffectDefinitions({
                 name: formData.name,
                 type: 'impulse', // Explicit type
                 img: initialItem?.img || "systems/pf2e/icons/default-icons/spell.svg", // Default icon
@@ -108,7 +118,7 @@ export default function ImpulseEditor({ initialItem: initialItemProp, initialPay
                     duration: { value: formData.duration },
                     defense: { save: { statistic: formData.defense } }
                 }
-            };
+            }, formData.effectDefinitions);
 
             let filePath = formData.sourceFile;
             let isNew = !filePath;
@@ -257,6 +267,12 @@ export default function ImpulseEditor({ initialItem: initialItemProp, initialPay
                 <RichTextEditor value={formData.description} onChange={val => handleChange('description', val)} style={{ height: 300 }} />
             </div>
 
+            <EffectDefinitionEditor
+                value={formData.effectDefinitions}
+                onChange={value => handleChange('effectDefinitions', value)}
+                sourceType="impulse"
+            />
+
             <div className="form-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #444', paddingTop: 20 }}>
                 <button className="set-btn" style={{ background: '#555' }} onClick={onCancel} disabled={isSaving}>Cancel</button>
                 <button className="set-btn" onClick={handleSave} disabled={isSaving}>
@@ -272,8 +288,9 @@ export default function ImpulseEditor({ initialItem: initialItemProp, initialPay
 
 export function buildImpulseOverride(impulseJson, formData, initialItem, options = {}) {
     const safeId = buildCatalogSafeId(initialItem?.id || initialItem?._id || formData.name || 'impulse');
+    const recordWithEffects = writeCatalogEffectDefinitions(impulseJson, formData.effectDefinitions);
     return buildCatalogEditorOverride(options.catalogType || 'impulse', {
-        ...impulseJson,
+        ...recordWithEffects,
         id: safeId,
         _id: safeId,
         level: parseInt(formData.level) || 0,

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { combineArmorAndEffectItemAc, getScalySkinAcAdjustment } from '../src/shared/utils/acRules.js';
+import { combineArmorAndEffectItemAc } from '../src/shared/utils/acRules.js';
 import { buildActorRulesContext, buildActorStatsViewModel } from '../src/shared/rules/actorRulesViewModel.js';
+import { buildDerivedSourceEffects } from '../src/shared/rules/derivedSourceEffects.js';
 import {
     resolveDamageEffects,
     resolveEffectModifiers,
@@ -13,7 +14,6 @@ import {
     createPersistentDamageEffectInput,
     createStandardConditionEffectInput,
 } from '../src/shared/rules/conditionEffectRules.js';
-import { createMutagenEffectInput } from '../src/utils/rules/mutagens.js';
 import { calculateStat } from '../src/utils/rules.js';
 import {
     consumeWandCharge,
@@ -26,53 +26,31 @@ import {
 } from '../src/shared/utils/wandUtils.js';
 
 test('scaly skin grants unarmored AC bonus with dex cap', () => {
-    const character = { feats: ['Scaly Skin'] };
+    const lowLevel = buildDerivedSourceEffects({ actor: { id: 'pc', level: 4, feats: ['Scaly Skin'], inventory: [] } });
+    assert.equal(resolveEffectModifiers(lowLevel, 'ac').total, 1);
+    assert.equal(resolveEffectModifiers(lowLevel, 'ac.dex_cap').cap, 3);
 
-    const lowLevel = getScalySkinAcAdjustment({
-        character,
-        equippedArmor: null,
-        profKey: 'Unarmored',
-        level: 4,
-        armorDexCap: 99,
-    });
-    assert.equal(lowLevel.active, true);
-    assert.equal(lowLevel.bonus, 1);
-    assert.equal(lowLevel.dexCap, 3);
-
-    const fifthLevel = getScalySkinAcAdjustment({
-        character,
-        equippedArmor: null,
-        profKey: 'Unarmored',
-        level: 5,
-        armorDexCap: 99,
-    });
-    assert.equal(fifthLevel.bonus, 2);
+    const fifthLevel = buildDerivedSourceEffects({ actor: { id: 'pc', level: 5, feats: ['Scaly Skin'], inventory: [] } });
+    assert.equal(resolveEffectModifiers(fifthLevel, 'ac').total, 2);
 });
 
 test('scaly skin works with explorers clothing but not real armor', () => {
-    const character = { feats: [{ name: 'Scaly Skin' }] };
-
-    const clothing = getScalySkinAcAdjustment({
-        character,
-        equippedArmor: { name: "Explorer's Clothing", category: 'Unarmored' },
-        profKey: 'Unarmored',
-        level: 5,
-        armorDexCap: 5,
+    const clothing = buildDerivedSourceEffects({
+        actor: {
+            id: 'pc', level: 5, feats: [{ name: 'Scaly Skin' }],
+            inventory: [{ name: "Explorer's Clothing", category: 'Unarmored', equipped: true }],
+        },
     });
-    assert.equal(clothing.active, true);
-    assert.equal(clothing.bonus, 2);
-    assert.equal(clothing.dexCap, 3);
+    assert.equal(resolveEffectModifiers(clothing, 'ac').total, 2);
+    assert.equal(resolveEffectModifiers(clothing, 'ac.dex_cap').cap, 3);
 
-    const lightArmor = getScalySkinAcAdjustment({
-        character,
-        equippedArmor: { name: 'Leather Armor', category: 'Light Armor' },
-        profKey: 'Light',
-        level: 5,
-        armorDexCap: 4,
+    const lightArmor = buildDerivedSourceEffects({
+        actor: {
+            id: 'pc', level: 5, feats: [{ name: 'Scaly Skin' }],
+            inventory: [{ name: 'Leather Armor', category: 'Light Armor', equipped: true }],
+        },
     });
-    assert.equal(lightArmor.active, false);
-    assert.equal(lightArmor.bonus, 0);
-    assert.equal(lightArmor.dexCap, 4);
+    assert.equal(lightArmor.length, 0);
 });
 
 test('effect resolver applies typed stacking and caps', () => {
@@ -171,8 +149,12 @@ test('actor rules viewmodel normalizes incomplete actor shapes', () => {
 });
 
 test('mutagen actorEffects provide modifiers and do not stack item AC with armor', () => {
-    const mutagen = createMutagenEffectInput({ name: 'Drakeheart Mutagen', level: 3 }, 'actor1');
-    mutagen.modifiers = [{ selector: 'ac', mode: 'bonus', bonusType: 'item', value: 2, source: 'Drakeheart Mutagen' }];
+    const mutagen = {
+        id: 'mutagen',
+        label: 'Drakeheart Mutagen',
+        category: 'item',
+        modifiers: [{ selector: 'ac', mode: 'bonus', bonusType: 'item', value: 2, source: 'Drakeheart Mutagen' }],
+    };
     const resolved = resolveEffectModifiers([mutagen], 'ac');
     const combined = combineArmorAndEffectItemAc(1, resolved.applied[0].value);
     assert.equal(resolved.total, 2);

@@ -13,7 +13,7 @@ export default function ItemActionsModal(props) {
     );
 }
 
-function ItemActionsModalContent({ mode, item, characters, activeCharIndex, onClose, onBuy, onChangeQty, onTransfer, onUnstack, onLoadSpecial, onUnloadAll, onOpenMode, onEditProficiency }) {
+function ItemActionsModalContent({ mode, item, characters, activeCharIndex, onClose, onBuy, onChangeQty, onTransfer, onUnstack, onLoadSpecial, onUnloadAll, onOpenMode, onEditProficiency, onCustomize }) {
     const [val, setVal] = useState(1);
     const [targetCharId, setTargetCharId] = useState('');
 
@@ -51,6 +51,9 @@ function ItemActionsModalContent({ mode, item, characters, activeCharIndex, onCl
                         <button className="btn-add-condition" onClick={() => onOpenMode('CHANGE_QTY', item)}>Change Amount</button>
                         <button className="btn-add-condition" onClick={() => onOpenMode('BUY_RESTOCK', item)}>Restock</button>
                         <button className="btn-add-condition" onClick={() => onOpenMode('TRANSFER', item)}>Give to Player</button>
+                        {onCustomize && (
+                            <button className="btn-add-condition" onClick={() => onCustomize(item)}>Customize for Campaign</button>
+                        )}
                         {isWeapon && onEditProficiency && (
                             <button className="btn-add-condition" onClick={() => onEditProficiency(item)}>Proficiency</button>
                         )}

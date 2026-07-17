@@ -14,6 +14,7 @@ import {
 } from "../../shared/lore/loreSelectors.js";
 import KnowledgeNoteEditor from "./KnowledgeNoteEditor.jsx";
 import SharedKnowledgeNotes from "./SharedKnowledgeNotes.jsx";
+import PlayerLoreContributions, { buildContributionArticle } from "./PlayerLoreContributions.jsx";
 
 export default function PlayerLoreLibrary({
   db,
@@ -26,10 +27,14 @@ export default function PlayerLoreLibrary({
   initialArticleId = null,
   onNavigateArticle,
   onNavigateCreature,
+  contributions = [],
+  canAuthorContributions = false,
+  readOnly = false,
 }) {
   const [query, setQuery] = React.useState("");
   const [groupId, setGroupId] = React.useState("all");
   const [selectedId, setSelectedId] = React.useState(initialArticleId);
+  const [selectedContributionId, setSelectedContributionId] = React.useState(null);
   const deliveries = loreStore.deliveries || [];
   const groups = loreStore.groups || [];
 
@@ -45,6 +50,7 @@ export default function PlayerLoreLibrary({
     ? selectedDeliveryCandidate
     : null;
   const selectedSnapshot = selectedDelivery?.snapshot || null;
+  const selectedContribution = contributions.find(entry => entry.id === selectedContributionId && entry.status === "active") || null;
   const note = selectOwnKnowledgeNote(loreStore.notes, actorId, "loreArticle", selectedSnapshot?.articleId);
   const partyNotes = selectPartyKnowledgeNotes(loreStore.partyNotes, actorId, "loreArticle", selectedSnapshot?.articleId);
   const categoryGroups = groups.filter((group) => group.category === category && !group.archivedAt);
@@ -85,18 +91,26 @@ export default function PlayerLoreLibrary({
   };
 
   return (
-    <div className={`player-knowledge-library ${selectedSnapshot ? "reading" : ""}`} data-testid={`player-lore-${category}`}>
+    <div className={`player-knowledge-library ${selectedSnapshot || selectedContribution ? "reading" : ""}`} data-testid={`player-lore-${category}`}>
       <aside className="player-knowledge-index">
         <header><div><span className="player-knowledge-eyebrow">Knowledge</span><h2>{getLoreCategoryLabel(category)}</h2></div><Badge variant="outline">{visibleDeliveries.length}</Badge></header>
         <div className="player-knowledge-search"><Search /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${getLoreCategoryLabel(category)}...`} /></div>
         {categoryGroups.length > 0 && <select value={groupId} onChange={(event) => setGroupId(event.target.value)}><option value="all">All groups</option>{categoryGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select>}
+        <PlayerLoreContributions
+          actorId={actorId}
+          canAuthor={canAuthorContributions && !readOnly}
+          category={category}
+          contributions={contributions}
+          onOpen={contribution => { setSelectedContributionId(contribution.id); setSelectedId(null); }}
+          onSave={contribution => dataActions.loreContribution.saveContribution(campaignId, contribution)}
+        />
         <div className="player-knowledge-list">
-          {visibleDeliveries.map((delivery) => <button key={delivery.id} type="button" data-testid={`player-lore-entry-${delivery.articleId}`} className={delivery.articleId === selectedId ? "active" : ""} onClick={() => openDelivery(delivery)}><span className="player-knowledge-list__title">{delivery.snapshot.title}</span><ArticleListMeta snapshot={delivery.snapshot} groups={groups} />{Number(delivery.attentionVersion || 0) > Number(delivery.readVersion || 0) && <span className="player-knowledge-unread" aria-label="Unread release">!</span>}</button>)}
+          {visibleDeliveries.map((delivery) => <button key={delivery.id} type="button" data-testid={`player-lore-entry-${delivery.articleId}`} className={delivery.articleId === selectedId ? "active" : ""} onClick={() => { setSelectedContributionId(null); openDelivery(delivery); }}><span className="player-knowledge-list__title">{delivery.snapshot.title}</span><ArticleListMeta snapshot={delivery.snapshot} groups={groups} />{Number(delivery.attentionVersion || 0) > Number(delivery.readVersion || 0) && <span className="player-knowledge-unread" aria-label="Unread release">!</span>}</button>)}
           {!visibleDeliveries.length && <p className="player-knowledge-empty">No released entries match your search.</p>}
         </div>
       </aside>
       <main className="player-knowledge-reader" data-testid={`player-lore-reader-${category}`}>
-        {selectedSnapshot ? <><Button className="player-knowledge-mobile-back" variant="outline" onClick={() => setSelectedId(null)}><ArrowLeft />Back to index</Button><LoreArticleRenderer article={selectedSnapshot} resolveReference={resolveReference} /><KnowledgeNoteEditor note={note} actorId={actorId} targetType="loreArticle" targetId={selectedSnapshot.articleId} targetSnapshot={{ title: selectedSnapshot.title, category: selectedSnapshot.category, image: selectedSnapshot.image || null }} onSave={(next) => dataActions.lore.saveNote(campaignId, next)} onDelete={(current) => dataActions.lore.deleteNote(campaignId, current.id)} /><SharedKnowledgeNotes notes={partyNotes} actors={actors} /></> : <div className="player-knowledge-reader__empty"><BookOpen /><p>Select an entry to read.</p></div>}
+        {selectedContribution ? <><Button className="player-knowledge-mobile-back" variant="outline" onClick={() => setSelectedContributionId(null)}><ArrowLeft />Back to index</Button><LoreArticleRenderer article={buildContributionArticle(selectedContribution)} /></> : selectedSnapshot ? <><Button className="player-knowledge-mobile-back" variant="outline" onClick={() => setSelectedId(null)}><ArrowLeft />Back to index</Button><LoreArticleRenderer article={selectedSnapshot} resolveReference={resolveReference} /><KnowledgeNoteEditor readOnly={readOnly} note={note} actorId={actorId} targetType="loreArticle" targetId={selectedSnapshot.articleId} targetSnapshot={{ title: selectedSnapshot.title, category: selectedSnapshot.category, image: selectedSnapshot.image || null }} onSave={(next) => dataActions.lore.saveNote(campaignId, next)} onDelete={(current) => dataActions.lore.deleteNote(campaignId, current.id)} /><SharedKnowledgeNotes notes={partyNotes} actors={actors} /></> : <div className="player-knowledge-reader__empty"><BookOpen /><p>Select an entry to read.</p></div>}
       </main>
     </div>
   );

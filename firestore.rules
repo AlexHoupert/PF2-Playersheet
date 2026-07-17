@@ -30,6 +30,33 @@ service cloud.firestore {
       return isCampaignMember(campaignId) && memberData(campaignId).role in ['gm', 'admin'];
     }
 
+    function isAssistantGm(campaignId) {
+      return isCampaignMember(campaignId) && memberData(campaignId).role == 'assistant_gm';
+    }
+
+    function isTrustedPlayer(campaignId) {
+      return isCampaignMember(campaignId) && memberData(campaignId).role == 'trusted_player';
+    }
+
+    function isSpectator(campaignId) {
+      return isCampaignMember(campaignId) && memberData(campaignId).role == 'spectator';
+    }
+
+    function canAuthorCampaignContent(campaignId) {
+      return isCampaignGm(campaignId) || isAssistantGm(campaignId) || isTrustedPlayer(campaignId);
+    }
+
+    function canEditAssignedActor(campaignId, actorId) {
+      return !isSpectator(campaignId) && isAssignedActor(campaignId, actorId);
+    }
+
+    function canApplyEffectFromAssignedActor(campaignId) {
+      return !isSpectator(campaignId)
+        && isAssignedActor(campaignId, request.resource.data.source.actorId)
+        && exists(/databases/$(database)/documents/campaigns/$(campaignId)/actors/$(request.resource.data.targetActorId))
+        && request.resource.data.createdBy == request.auth.token.email;
+    }
+
     function isAssignedCharacter(campaignId, characterId) {
       return isCampaignMember(campaignId) && memberData(campaignId).characterId == characterId;
     }
@@ -58,26 +85,29 @@ service cloud.firestore {
       match /characters/{characterId} {
         allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
         allow create, delete: if isCampaignGm(campaignId) || isGlobalAdmin();
-        allow update: if isCampaignGm(campaignId) || isAssignedCharacter(campaignId, characterId) || isGlobalAdmin();
+        allow update: if isCampaignGm(campaignId)
+          || (!isSpectator(campaignId) && isAssignedCharacter(campaignId, characterId))
+          || isGlobalAdmin();
       }
 
       match /actors/{actorId} {
         allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
         allow create, delete: if isCampaignGm(campaignId) || isGlobalAdmin();
-        allow update: if isCampaignGm(campaignId) || isAssignedActor(campaignId, actorId) || isGlobalAdmin();
+        allow update: if isCampaignGm(campaignId) || canEditAssignedActor(campaignId, actorId) || isGlobalAdmin();
       }
 
       match /actorEffects/{effectId} {
         allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
         allow create: if isCampaignGm(campaignId)
-          || isAssignedActor(campaignId, request.resource.data.targetActorId)
+          || canEditAssignedActor(campaignId, request.resource.data.targetActorId)
+          || canApplyEffectFromAssignedActor(campaignId)
           || isGlobalAdmin();
         allow update: if isCampaignGm(campaignId)
-          || (isAssignedActor(campaignId, resource.data.targetActorId)
-            && isAssignedActor(campaignId, request.resource.data.targetActorId))
+          || (canEditAssignedActor(campaignId, resource.data.targetActorId)
+            && canEditAssignedActor(campaignId, request.resource.data.targetActorId))
           || isGlobalAdmin();
         allow delete: if isCampaignGm(campaignId)
-          || isAssignedActor(campaignId, resource.data.targetActorId)
+          || canEditAssignedActor(campaignId, resource.data.targetActorId)
           || isGlobalAdmin();
       }
 
@@ -94,7 +124,7 @@ service cloud.firestore {
       match /lootBags/{lootBagId} {
         allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
         allow create, delete: if isCampaignGm(campaignId) || isGlobalAdmin();
-        allow update: if isCampaignMember(campaignId) || isGlobalAdmin();
+        allow update: if (isCampaignMember(campaignId) && !isSpectator(campaignId)) || isGlobalAdmin();
       }
 
       match /encounters/{encounterId} {
@@ -123,7 +153,7 @@ service cloud.firestore {
         allow create, delete: if isCampaignGm(campaignId) || isGlobalAdmin();
         allow update: if isCampaignGm(campaignId)
           || isGlobalAdmin()
-          || (isAssignedActor(campaignId, resource.data.actorId)
+          || (canEditAssignedActor(campaignId, resource.data.actorId)
             && request.resource.data.actorId == resource.data.actorId
             && request.resource.data.articleId == resource.data.articleId
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -136,16 +166,84 @@ service cloud.firestore {
           || (isCampaignMember(campaignId) && resource.data.get('sharedWithParty', false) == true)
           || ((isCampaignGm(campaignId) || isGlobalAdmin())
             && resource.data.get('sharedWithGm', false) == true);
-        allow create: if isAssignedActor(campaignId, request.resource.data.actorId)
+        allow create: if canEditAssignedActor(campaignId, request.resource.data.actorId)
           && request.resource.data.get('sharedWithGm', false) is bool
           && request.resource.data.get('sharedWithParty', false) is bool;
-        allow update: if isAssignedActor(campaignId, resource.data.actorId)
+        allow update: if canEditAssignedActor(campaignId, resource.data.actorId)
           && request.resource.data.actorId == resource.data.actorId
           && request.resource.data.targetId == resource.data.targetId
           && request.resource.data.targetType == resource.data.targetType
           && request.resource.data.get('sharedWithGm', false) is bool
           && request.resource.data.get('sharedWithParty', false) is bool;
-        allow delete: if isAssignedActor(campaignId, resource.data.actorId);
+        allow delete: if canEditAssignedActor(campaignId, resource.data.actorId);
+      }
+
+      match /catalogEntries/{entryId} {
+        allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
+        allow create: if isGlobalAdmin()
+          || ((isCampaignGm(campaignId) || isAssistantGm(campaignId))
+            && request.resource.data.campaignId == campaignId)
+          || (isTrustedPlayer(campaignId)
+            && request.resource.data.campaignId == campaignId
+            && request.resource.data.mode == 'custom'
+            && request.resource.data.ownerEmail == request.auth.token.email
+            && request.resource.data.createdBy == request.auth.token.email);
+        allow update: if isGlobalAdmin()
+          || isCampaignGm(campaignId)
+          || isAssistantGm(campaignId)
+          || (isTrustedPlayer(campaignId)
+            && resource.data.mode == 'custom'
+            && request.resource.data.mode == 'custom'
+            && resource.data.ownerEmail == request.auth.token.email
+            && request.resource.data.ownerEmail == request.auth.token.email
+            && request.resource.data.campaignId == resource.data.campaignId);
+        allow delete: if isGlobalAdmin()
+          || isCampaignGm(campaignId)
+          || isAssistantGm(campaignId)
+          || (isTrustedPlayer(campaignId)
+            && resource.data.mode == 'custom'
+            && resource.data.ownerEmail == request.auth.token.email);
+      }
+
+      match /catalogChangeEvents/{eventId} {
+        allow read: if isCampaignGm(campaignId) || isAssistantGm(campaignId) || isGlobalAdmin();
+        allow create: if canAuthorCampaignContent(campaignId)
+          && request.resource.data.campaignId == campaignId
+          && request.resource.data.actorEmail == request.auth.token.email;
+        allow update: if (isCampaignGm(campaignId) || isGlobalAdmin())
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'revertedAt', 'revertedBy', 'revertedByEventId', 'updatedAt', 'schemaVersion'
+          ]);
+        allow delete: if false;
+      }
+
+      match /effectRequests/{requestId} {
+        allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
+        allow create: if !isSpectator(campaignId)
+          && isAssignedActor(campaignId, request.resource.data.sourceActorId)
+          && request.resource.data.requestedBy == request.auth.token.email
+          && request.resource.data.status == 'pending';
+        allow update: if isCampaignGm(campaignId) || isGlobalAdmin();
+        allow delete: if false;
+      }
+
+      match /loreContributions/{contributionId} {
+        allow read: if isCampaignMember(campaignId) || isGlobalAdmin();
+        allow create: if canAuthorCampaignContent(campaignId)
+          && request.resource.data.campaignId == campaignId
+          && request.resource.data.createdBy == request.auth.token.email
+          && request.resource.data.status == 'active'
+          && request.resource.data.isPlayerContribution == true;
+        allow update: if isCampaignGm(campaignId)
+          || isGlobalAdmin()
+          || ((isTrustedPlayer(campaignId) || isAssistantGm(campaignId))
+            && resource.data.createdBy == request.auth.token.email
+            && request.resource.data.createdBy == resource.data.createdBy
+            && request.resource.data.createdByActorId == resource.data.createdByActorId
+            && request.resource.data.campaignId == resource.data.campaignId
+            && request.resource.data.status == 'active'
+            && request.resource.data.get('officialArticleId', null) == null);
+        allow delete: if false;
       }
     }
 

@@ -90,6 +90,35 @@ test("admin fixture route loads campaign, player, items, quests, and encounter s
   await expect(page.getByText("Smoke Goblin", { exact: true })).toBeVisible();
 });
 
+test("campaign roles gate admin surfaces and spectator edits", async ({ page }) => {
+  await gotoFixture(page, "admin=true&e2eRole=assistant_gm");
+  await expectFixtureRoute(page, "admin");
+  await expect(page.getByText("Campaign Changes", { exact: true })).toBeVisible();
+  await expect(page.getByText("Players", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: /Effect Requests/i }).click();
+  await expect(page.getByRole("button", { name: /Approve/i })).toBeDisabled();
+
+  await gotoFixture(page, "admin=true&e2eRole=spectator");
+  await expect(page.getByTestId("route-access-denied")).toBeVisible();
+
+  await gotoFixture(page, "e2eRole=spectator");
+  await expectFixtureRoute(page, "player");
+  await page.getByTestId("player-gold-display").click();
+  await expect(page.getByTestId("gold-modal-input")).toHaveCount(0);
+});
+
+test("GM sees catalog audit and approves a pending creature effect", async ({ page }) => {
+  await gotoFixture(page, "admin=true");
+  await page.getByText("Campaign Changes", { exact: true }).click();
+  await expect(page.getByText("Smoke Campaign Spell", { exact: true })).toBeVisible();
+  await expect(page.locator("small").filter({ hasText: /^trusted_player$/ })).toBeVisible();
+
+  await page.getByRole("button", { name: /Effect Requests/i }).click();
+  await expect(page.getByText("Smoke Bless", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /Approve/i }).click();
+  await expect(page.getByRole("button", { name: /Effect Requests/i })).toHaveCount(0);
+});
+
 test("player HP, gold, and condition edits survive reload in fixture runtime", async ({ page }) => {
   await gotoFixture(page);
   await expectFixtureRoute(page, "player");

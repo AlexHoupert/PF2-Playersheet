@@ -13,6 +13,7 @@ export default function KnowledgeNoteEditor({
   targetSnapshot = null,
   onSave,
   onDelete,
+  readOnly = false,
 }) {
   const [content, setContent] = React.useState(note?.content || "");
   const [sharedWithGm, setSharedWithGm] = React.useState(Boolean(note?.sharedWithGm));
@@ -39,9 +40,9 @@ export default function KnowledgeNoteEditor({
     const persistedContent = noteRef.current?.content || "";
     const persistedSharedWithGm = Boolean(noteRef.current?.sharedWithGm);
     const persistedSharedWithParty = Boolean(noteRef.current?.sharedWithParty);
-    if (content === persistedContent
+    if (readOnly || (content === persistedContent
       && sharedWithGm === persistedSharedWithGm
-      && sharedWithParty === persistedSharedWithParty) return undefined;
+      && sharedWithParty === persistedSharedWithParty)) return undefined;
     if (!actorId || !targetId || (!content.trim() && !noteRef.current)) return undefined;
     setStatus("Saving");
     const timer = window.setTimeout(async () => {
@@ -62,7 +63,7 @@ export default function KnowledgeNoteEditor({
       }
     }, NOTE_AUTOSAVE_MS);
     return () => window.clearTimeout(timer);
-  }, [actorId, content, sharedWithGm, sharedWithParty, targetId, targetType]);
+  }, [actorId, content, readOnly, sharedWithGm, sharedWithParty, targetId, targetType]);
 
   const remove = async () => {
     if (noteRef.current?.id) await deleteRef.current?.(noteRef.current);
@@ -76,10 +77,10 @@ export default function KnowledgeNoteEditor({
     <section className="knowledge-note-editor">
       <div className="knowledge-note-editor__heading">
         <div><h3>Your notes</h3><small>{status}</small></div>
-        {note?.id && <Button size="icon-xs" variant="ghost" title="Delete note" onClick={remove}><Trash2 /></Button>}
+        {!readOnly && note?.id && <Button size="icon-xs" variant="ghost" title="Delete note" onClick={remove}><Trash2 /></Button>}
       </div>
-      <Textarea data-testid="knowledge-note-content" value={content} onChange={(event) => setContent(event.target.value)} placeholder="Record what your character knows, suspects, or wants to investigate..." rows={6} />
-      <div className="knowledge-note-editor__sharing">
+      <Textarea readOnly={readOnly} data-testid="knowledge-note-content" value={content} onChange={(event) => setContent(event.target.value)} placeholder={readOnly ? "No note recorded." : "Record what your character knows, suspects, or wants to investigate..."} rows={6} />
+      {!readOnly && <div className="knowledge-note-editor__sharing">
         <label className="knowledge-note-editor__share">
           <input data-testid="knowledge-note-share" type="checkbox" checked={sharedWithGm} onChange={(event) => setSharedWithGm(event.target.checked)} />
           {sharedWithGm ? <Eye /> : <EyeOff />}
@@ -90,8 +91,8 @@ export default function KnowledgeNoteEditor({
           <Users />
           <span><strong>Share with party</strong><small>Other players can read this note.</small></span>
         </label>
-      </div>
-      <span className="knowledge-note-editor__autosave" data-testid="knowledge-note-status"><Save />{status}. Notes save automatically.</span>
+      </div>}
+      <span className="knowledge-note-editor__autosave" data-testid="knowledge-note-status"><Save />{readOnly ? "Read only." : `${status}. Notes save automatically.`}</span>
     </section>
   );
 }

@@ -1,6 +1,7 @@
 import { getConditionEffects } from '../../utils/rules.js';
 import { getShopIndexItemByName } from '../catalog/shopIndex.js';
-import { combineArmorAndEffectItemAc, getScalySkinAcAdjustment } from '../utils/acRules.js';
+import { combineArmorAndEffectItemAc } from '../utils/acRules.js';
+import { resolveEffectModifiers } from '../rules/effectResolver.js';
 
 export const getArmorClassData = (char) => {
     if (!char) return { totalAC: 10, totalConditionPenalty: 0, shieldRaised: false, shieldName: null };
@@ -56,11 +57,12 @@ export const getArmorClassData = (char) => {
 
     const dexCapVal = equippedArmor?.system?.dex_cap ?? equippedArmor?.dexCap;
     const armorDexCap = (dexCapVal === undefined || dexCapVal === null || dexCapVal === "") ? 99 : Number(dexCapVal);
-    const scalySkin = getScalySkinAcAdjustment({ character: char, equippedArmor, profKey, level, armorDexCap });
-    const scalySkinActive = scalySkin.active;
-    const scalySkinBonus = scalySkin.bonus;
-    const armorItemBonus = baseItemAC + potency + scalySkinBonus;
-    const dexCap = scalySkin.dexCap;
+    const actorEffects = Array.isArray(char?.actorEffects) ? char.actorEffects : [];
+    const dexCapResolution = resolveEffectModifiers(actorEffects, 'ac.dex_cap');
+    const effectDexCap = dexCapResolution.cap;
+    const dexCap = Number.isFinite(Number(effectDexCap))
+        ? Math.min(armorDexCap, Number(effectDexCap))
+        : armorDexCap;
     const dexUsed = Math.min(dexMod, dexCap);
 
     const profRank = getProfValue(profKey);
@@ -98,7 +100,13 @@ export const getArmorClassData = (char) => {
     // We accept `condEffects.total` as the condition-based modifier.
     const condEffects = getConditionEffects(char, "AC", "Dexterity");
     const effectItemBonus = Math.max(0, Number(condEffects.itemBonus) || 0);
-    const { effectiveArmorItemBonus, suppressedEffectItemBonus } = combineArmorAndEffectItemAc(armorItemBonus, effectItemBonus);
+    const itemAcResolution = combineArmorAndEffectItemAc(baseItemAC, effectItemBonus);
+    const effectiveArmorItemBonus = itemAcResolution.effectiveArmorItemBonus + potency;
+    const suppressedEffectItemBonus = itemAcResolution.suppressedEffectItemBonus;
+    const armorItemBonus = baseItemAC + potency;
+    const scalySkinEffect = actorEffects.find(effect => effect?.definitionSnapshot?.id === 'scaly_skin_ac');
+    const scalySkinActive = Boolean(scalySkinEffect);
+    const scalySkinBonus = Number(scalySkinEffect?.modifiers?.find(modifier => modifier.selector === 'ac')?.value) || 0;
     const acAdjustmentWithoutStackedItemBonus = condEffects.total - suppressedEffectItemBonus;
     const baseAC = baseACWithoutArmorItem + effectiveArmorItemBonus;
     const acPenalty = acAdjustmentWithoutStackedItemBonus;

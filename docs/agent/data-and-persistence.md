@@ -1,6 +1,6 @@
 # Data And Persistence
 
-Last updated: 2026-06-28.
+Last updated: 2026-07-17.
 
 ## Mental Model
 
@@ -79,6 +79,10 @@ Campaign subcollections:
 - `loreGroups`
 - `loreDeliveries`
 - `knowledgeNotes`
+- `catalogEntries`
+- `catalogChangeEvents`
+- `effectRequests`
+- `loreContributions`
 
 Helpers:
 
@@ -111,6 +115,15 @@ Runtime write path:
 1. UI calls `CampaignContext.dataActions`.
 2. `createDataActions` selects targeted V2 repositories/transactions.
 3. Firestore snapshots rebuild `v2Store`.
+
+Campaign catalog data merges in this order: static resources, global
+`catalogOverrides`, then campaign-scoped `catalogEntries`. Campaign writes emit
+immutable `catalogChangeEvents`; only an explicit global-admin promotion writes
+back to the global override collection.
+
+Campaign member roles are `player`, `trusted_player`, `assistant_gm`,
+`spectator`, `gm`, and `admin`. Runtime authorization derives capabilities from
+the member role; `?admin=true` only requests an admin route and grants no rights.
 
 Compatibility projection updates:
 
@@ -145,6 +158,10 @@ Files:
 - `src/shared/db/domain/effectActions.js`
 - `src/shared/db/domain/memberActions.js`
 - `src/shared/db/domain/catalogOverrideActions.js`
+- `src/shared/db/domain/campaignCatalogActions.js`
+- `src/shared/db/domain/campaignCatalogReducers.js`
+- `src/shared/db/domain/loreContributionActions.js`
+- `src/shared/db/domain/loreContributionReducers.js`
 - `src/shared/db/domain/campaignReducers.js`
 - `src/shared/db/domain/inventoryReducers.js`
 - `src/shared/db/domain/lootReducers.js`
@@ -214,6 +231,15 @@ Adapter behavior:
 - Firestore v2 mode uses targeted repository updates and transactions.
 - Missing Firestore config no longer creates broad runtime V2 writes; local non-Firestore editing is not the convergence target.
 - Runtime Firestore repositories are injected by `CampaignContext`; tests can inject fake repositories without loading Firebase.
+
+Catalog effect definitions:
+
+- Catalog sources declare safe, serializable rules in `rules.effectDefinitions[]`.
+- Passive definitions are derived at read time from owned or equipped sources. Usable definitions materialize targeted `actorEffects` with a source snapshot, duration, targeting, and idempotent tick state.
+- Definitions support only registered selectors, predicates, scaling modes, modifiers, and apply actions. Executable code and free actor paths are rejected.
+- Creature-combatant activations create campaign `effectRequests`. GM/admin approval validates and applies them atomically; Assistant GMs can inspect but not decide requests.
+- Daily Preparation removes `daily_preparation` effects in the same actor/effect transaction as the preparation update.
+- `npm run backfill:catalog-effects` is dry-run by default and requires both `--write` and `--confirm-write`; write mode creates a migration backup. It is never run during application startup.
 
 Actor and inventory identity:
 

@@ -457,7 +457,7 @@ function AbilityEditor({ data, onSave, onCancel }) {
 
 // ── Condition Adder ──────────────────────────────────────────────────────────
 
-function ConditionAdder({ conditions, onChange }) {
+function ConditionAdder({ conditions, onChange, readOnly = false }) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [value, setValue] = useState(1);
@@ -482,8 +482,8 @@ function ConditionAdder({ conditions, onChange }) {
         <div className="comp-conditions">
             {conditions.map(c => (
                 <div key={c.name} className="comp-condition-pill">
-                    <span onClick={() => remove(c.name)}>{c.name}{c.value != null ? ` ${c.value}` : ''}</span>
-                    {c.value != null && (
+                    <span onClick={() => { if (!readOnly) remove(c.name); }}>{c.name}{c.value != null ? ` ${c.value}` : ''}</span>
+                    {c.value != null && !readOnly && (
                         <div className="comp-cond-controls">
                             <button onClick={() => change(c.name, Math.max(1, c.value - 1))}>−</button>
                             <button onClick={() => change(c.name, c.value + 1)}>+</button>
@@ -491,8 +491,8 @@ function ConditionAdder({ conditions, onChange }) {
                     )}
                 </div>
             ))}
-            <button className="comp-condition-add-btn" onClick={() => setOpen(o => !o)}>+</button>
-            {open && (
+            {!readOnly && <button className="comp-condition-add-btn" onClick={() => setOpen(o => !o)}>+</button>}
+            {open && !readOnly && (
                 <div className="comp-condition-picker">
                     <input autoFocus className="modal-input" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} />
                     {VALUED_CONDITIONS.includes(search) || <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0' }}>
@@ -511,7 +511,7 @@ function ConditionAdder({ conditions, onChange }) {
 
 // ── HP Bar ───────────────────────────────────────────────────────────────────
 
-function HpBar({ current, max, onChange }) {
+function HpBar({ current, max, onChange, readOnly = false }) {
     const [editing, setEditing] = useState(false);
     const [temp, setTemp] = useState('');
     const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
@@ -531,20 +531,20 @@ function HpBar({ current, max, onChange }) {
                 <div className="comp-hp-bar-fill" style={{ width: `${pct}%`, background: color }} />
             </div>
             <div className="comp-hp-controls">
-                <button className="comp-hp-btn" onClick={() => adjust(-5)}>−5</button>
-                <button className="comp-hp-btn" onClick={() => adjust(-1)}>−1</button>
-                {editing ? (
+                {!readOnly && <button className="comp-hp-btn" onClick={() => adjust(-5)}>−5</button>}
+                {!readOnly && <button className="comp-hp-btn" onClick={() => adjust(-1)}>−1</button>}
+                {editing && !readOnly ? (
                     <input autoFocus className="comp-hp-input" value={temp}
                         onChange={e => setTemp(e.target.value)}
                         onBlur={commit}
                         onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false); }} />
                 ) : (
-                    <span className="comp-hp-value" onClick={() => { setTemp(String(current)); setEditing(true); }}>
+                    <span className="comp-hp-value" onClick={() => { if (!readOnly) { setTemp(String(current)); setEditing(true); } }}>
                         {current}<span className="comp-hp-max">/{max}</span>
                     </span>
                 )}
-                <button className="comp-hp-btn" onClick={() => adjust(1)}>+1</button>
-                <button className="comp-hp-btn" onClick={() => adjust(5)}>+5</button>
+                {!readOnly && <button className="comp-hp-btn" onClick={() => adjust(1)}>+1</button>}
+                {!readOnly && <button className="comp-hp-btn" onClick={() => adjust(5)}>+5</button>}
             </div>
         </div>
     );
@@ -620,7 +620,7 @@ function companionFormToActorInput(companion, { ownerActor, existingActor } = {}
     };
 }
 
-export default function CompanionTab({ character, ownerActor, companionActors = [], dataActions, activeCampaignId }) {
+export default function CompanionTab({ character, ownerActor, companionActors = [], dataActions, activeCampaignId, readOnly = false }) {
     const { activeCampaign } = useCampaign();
     const { notifyError } = useAppFeedback();
     const companionActor = companionActors[0] || null;
@@ -630,7 +630,7 @@ export default function CompanionTab({ character, ownerActor, companionActors = 
             .map(condition => ({ ...condition, value: condition.level })),
         [activeCampaign, companionActor?.id]
     );
-    const [showEdit, setShowEdit] = useState(!companion);
+    const [showEdit, setShowEdit] = useState(!readOnly && !companion);
     const [editingMode, setEditingMode] = useState(false);
 
     useEffect(() => {
@@ -638,6 +638,7 @@ export default function CompanionTab({ character, ownerActor, companionActors = 
     }, [companion?.id]);
 
     const save = (data) => {
+        if (readOnly) return;
         if (!activeCampaignId || !ownerActor?.id || !dataActions?.actor) {
             notifyError('No active actor is available for companion updates.');
             return;
@@ -655,6 +656,7 @@ export default function CompanionTab({ character, ownerActor, companionActors = 
     };
 
     const setCompanionField = (fn) => {
+        if (readOnly) return;
         if (!companionActor?.id || !activeCampaignId || !dataActions?.actor) return;
         const nextCompanion = { ...(companion || {}) };
         fn(nextCompanion);
@@ -666,6 +668,7 @@ export default function CompanionTab({ character, ownerActor, companionActors = 
     };
 
     const setCompanionConditions = (conditions) => {
+        if (readOnly) return;
         if (!companionActor?.id || !activeCampaignId || !dataActions?.effect) return;
         const deletes = companionConditions
             .filter(condition => condition.sourceEffectId || condition.id)
@@ -694,7 +697,7 @@ export default function CompanionTab({ character, ownerActor, companionActors = 
         );
     }
 
-    if (!companion) return null;
+    if (!companion) return readOnly ? <div className="comp-tab"><p>No companion assigned.</p></div> : null;
 
     const typeInfo = COMPANION_TYPES.find(t => t.id === companion.type);
     const isFamiliar = isFamiliarType(companion.type);
@@ -718,7 +721,7 @@ export default function CompanionTab({ character, ownerActor, companionActors = 
                     <h2 className="comp-name">{companion.name || 'Unnamed'}</h2>
                     {companion.species && <div className="comp-species">{companion.species}</div>}
                 </div>
-                <button className="comp-btn-edit" onClick={() => setShowEdit(true)}>⚙️</button>
+                {!readOnly && <button className="comp-btn-edit" onClick={() => setShowEdit(true)}>⚙️</button>}
             </div>
 
             {/* ── HP Bar ── */}
@@ -727,6 +730,7 @@ export default function CompanionTab({ character, ownerActor, companionActors = 
                 <HpBar
                     current={companion.hp?.current ?? 0}
                     max={companion.hp?.max ?? 0}
+                    readOnly={readOnly}
                     onChange={v => setCompanionField(c => { c.hp = { ...c.hp, current: v }; })}
                 />
             </div>
@@ -737,6 +741,7 @@ export default function CompanionTab({ character, ownerActor, companionActors = 
                 <ConditionAdder
                     conditions={companionConditions}
                     onChange={setCompanionConditions}
+                    readOnly={readOnly}
                 />
             </div>
 
@@ -834,9 +839,9 @@ export default function CompanionTab({ character, ownerActor, companionActors = 
             )}
 
             {/* ── Footer ── */}
-            <div className="comp-footer">
+            {!readOnly && <div className="comp-footer">
                 <button className="comp-btn-secondary" onClick={() => setShowEdit(true)}>⚙️ Edit Companion</button>
-            </div>
+            </div>}
         </div>
     );
 }

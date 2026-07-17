@@ -1,4 +1,5 @@
 import { applyActorUpdate } from "./actorReducers.js";
+import { selectCampaignCapabilities } from "../../auth/campaignCapabilities.js";
 import { normalizeEmail } from "./campaignReducers.js";
 import { applyCharacterUpdate, cloneValue, createInstanceId } from "./inventoryReducers.js";
 
@@ -9,11 +10,15 @@ export function createActionContext({
   firestore = null,
   createId = () => createInstanceId("item"),
   actorEmail = null,
+  campaignId = null,
+  memberRole = null,
+  isGlobalAdmin = false,
   repositories = {},
 } = {}) {
   const useFirestoreV2 = mode === "firestore-v2" && hasFirestoreConfig(firestore);
   const repos = repositories;
   const actor = normalizeEmail(actorEmail);
+  const capabilities = selectCampaignCapabilities(memberRole || db?.users?.[actor]?.role, { isGlobalAdmin });
 
   const nowIso = () => new Date().toISOString();
   const createDomainId = (prefix) => {
@@ -166,11 +171,13 @@ export function createActionContext({
 
   return {
     actor,
+    capabilities,
     actorDocToCharacter,
     characterToPcActorDoc,
     createDomainId,
     createId,
     db,
+    defaultCampaignId: campaignId,
     firestore,
     mode: useFirestoreV2 ? "firestore-v2" : "legacy",
     nowIso,

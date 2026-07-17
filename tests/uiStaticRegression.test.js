@@ -54,7 +54,7 @@ test('admin actions use database fallback instead of deployed file writes', () =
     assert.match(viewSource, /CatalogAdminTableView/);
     assert.match(viewSource, /getAllActionIndexItems/);
     assert.equal(viewSource.includes('Clone/Override'), false);
-    assert.match(tableSource, /catalogOverride\.saveCatalogOverride/);
+    assert.match(tableSource, /catalog\.saveCatalogOverride/);
     assert.match(tableSource, /buildHideOverride/);
     assert.match(tableSource, /deleteCatalogOverride/);
     assert.match(tableSource, /copyRef/);
@@ -74,7 +74,7 @@ test('admin spells use catalog override fallback instead of deployed-only file w
     assert.match(viewSource, /CatalogAdminTableView/);
     assert.match(viewSource, /spellJsonToEditorFormData/);
     assert.equal(viewSource.includes('Static spell files can only be edited'), false);
-    assert.match(tableSource, /catalogOverride\.saveCatalogOverride/);
+    assert.match(tableSource, /catalog\.saveCatalogOverride/);
     assert.match(editorSource, /onSaveToDb/);
     assert.match(editorSource, /buildSpellOverride/);
     assert.match(editorSource, /catalogType = 'spell'/);
@@ -108,7 +108,7 @@ test('admin feats and impulses use catalog override production editing', () => {
     const tableSource = readSource('src/admin/catalog/CatalogAdminTableView.jsx');
 
     assert.match(featViewSource, /CatalogAdminTableView/);
-    assert.match(tableSource, /catalogOverride\.saveCatalogOverride/);
+    assert.match(tableSource, /catalog\.saveCatalogOverride/);
     assert.match(tableSource, /buildHideOverride/);
     assert.match(featEditorSource, /onSaveToDb/);
     assert.match(featEditorSource, /buildFeatOverride/);
@@ -133,7 +133,7 @@ test('admin item production editing skips file writes and uses database fallback
     assert.match(editorSource, /buildCatalogEditorOverride/);
     assert.match(editorSource, /readJsonApiResponse\(res, 'Save item'\)/);
     assert.match(layoutSource, /onSaveCatalogEntry/);
-    assert.match(layoutSource, /catalogOverride\.saveCatalogOverride/);
+    assert.match(layoutSource, /catalog\.saveCatalogOverride/);
 });
 
 test('catalog editors use the shared catalog editor save contract', () => {
@@ -633,7 +633,7 @@ test('creature and deviant ability admin surfaces keep catalog and pact semantic
     assert.match(bestiarySource, /mergeCreatureDetailIntoEntry/);
     assert.match(creatureEditorSource, /mergeCreatureDetailIntoEntry/);
     assert.match(bestiarySource, /updateCreatureMetadata/);
-    assert.match(bestiarySource, /catalogOverride\.saveCatalogOverride/);
+    assert.match(bestiarySource, /catalog\.saveCatalogOverride/);
     assert.match(deviantSource, /saveDeviantAbility/);
     assert.match(deviantSource, /deleteDeviantAbility/);
     assert.match(deviantSource, /buildDeviantAbilityClone/);

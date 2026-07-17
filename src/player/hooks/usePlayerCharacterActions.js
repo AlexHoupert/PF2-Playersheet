@@ -7,22 +7,26 @@ export function usePlayerCharacterActions({
     activeCharIndex,
     character,
     dataActions,
+    canAuthorCatalog = false,
+    readOnly = false,
     setModalMode,
 }) {
     const { notifyError } = useAppFeedback();
     const runDataAction = React.useCallback((action) => {
-        Promise.resolve(action).catch(err => {
+        return Promise.resolve(action).catch(err => {
             console.error(err);
             notifyError(err);
+            return undefined;
         });
     }, [notifyError]);
 
     const updateCharacter = React.useCallback((updater) => {
+        if (readOnly) return;
         const campaignId = activeCampaign?.id;
         const characterId = character?.id || selectActiveCharacters(activeCampaign)[activeCharIndex]?.id;
         if (!campaignId || !characterId) return;
-        runDataAction(dataActions.character.updateCharacter(campaignId, characterId, updater));
-    }, [activeCampaign, activeCharIndex, character?.id, dataActions, runDataAction]);
+        return runDataAction(dataActions.character.updateCharacter(campaignId, characterId, updater));
+    }, [activeCampaign, activeCharIndex, character?.id, dataActions, readOnly, runDataAction]);
 
     const getTargetIds = React.useCallback(() => {
         const campaignId = activeCampaign?.id;
@@ -32,18 +36,20 @@ export function usePlayerCharacterActions({
     }, [activeCampaign, activeCharIndex, character?.id]);
 
     const runCharacterAction = React.useCallback((actionName, ...args) => {
+        if (readOnly) return;
         const ids = getTargetIds();
         const action = dataActions.character?.[actionName];
         if (!ids || typeof action !== 'function') return;
         runDataAction(action(ids.campaignId, ids.characterId, ...args));
-    }, [dataActions, getTargetIds, runDataAction]);
+    }, [dataActions, getTargetIds, readOnly, runDataAction]);
 
     const runActorAction = React.useCallback((actionName, ...args) => {
+        if (readOnly) return;
         const ids = getTargetIds();
         const action = dataActions.actor?.[actionName] || dataActions.character?.[actionName];
         if (!ids || typeof action !== 'function') return;
         runDataAction(action(ids.campaignId, ids.characterId, ...args));
-    }, [dataActions, getTargetIds, runDataAction]);
+    }, [dataActions, getTargetIds, readOnly, runDataAction]);
 
     const characterActions = React.useMemo(() => ({
         setGold: (amount) => runActorAction('setGold', amount),
@@ -84,6 +90,7 @@ export function usePlayerCharacterActions({
     }, [activeCampaign, dataActions, runDataAction]);
 
     const saveNewAction = React.useCallback((actionData) => {
+        if (readOnly || !canAuthorCatalog) return;
         if (!actionData.name) return;
 
         const finalName = `[gold]${actionData.name}[/gold]`;
@@ -99,9 +106,14 @@ export function usePlayerCharacterActions({
             description: actionData.description
         };
 
-        runDataAction(dataActions.globalContent.saveCustomAction(actionObj));
+        runDataAction(dataActions.catalog.saveCatalogOverride({
+            catalogType: 'action',
+            mode: 'custom',
+            label: actionObj.name,
+            payload: actionObj,
+        }));
         setModalMode(null);
-    }, [dataActions, runDataAction, setModalMode]);
+    }, [canAuthorCatalog, dataActions, readOnly, runDataAction, setModalMode]);
 
     return {
         handleClearNotification,

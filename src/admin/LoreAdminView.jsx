@@ -40,6 +40,7 @@ export default function LoreAdminView({ db }) {
       confirm={confirm}
       notifyError={notifyError}
       notifySuccess={notifySuccess}
+      contributions={activeCampaign?.loreContributions || []}
     />
   );
 }

@@ -9,10 +9,12 @@ export { overrideToCatalogItem } from '../../catalog/catalogEntryModel.js';
 
 export function selectCatalogOverrides(source, catalogType = null) {
     const overrides = source?.catalogOverrides || {};
+    const campaignEntries = source?.catalogEntries || source?.campaignCatalogEntries || {};
     const byId = new Map();
     for (const override of [
         ...Object.values(overrides),
         ...selectLegacyCatalogOverrides(source, catalogType),
+        ...toRecordValues(campaignEntries),
     ]) {
         if (!override?.id) continue;
         byId.set(override.id, override);
@@ -20,6 +22,11 @@ export function selectCatalogOverrides(source, catalogType = null) {
     return [...byId.values()]
         .filter(Boolean)
         .filter((override) => !catalogType || override.catalogType === catalogType);
+}
+
+function toRecordValues(value) {
+    if (Array.isArray(value)) return value;
+    return Object.values(value || {});
 }
 
 export function selectCatalogOverrideEntries(source, catalogType) {

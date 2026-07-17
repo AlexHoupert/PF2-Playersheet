@@ -61,7 +61,7 @@ export default function CatalogAdminTableView({
     prepareEditorItem = defaultPrepareEditorItem,
 }) {
     const { isMobile } = useWindowSize();
-    const { db, dataActions } = useCampaign();
+    const { capabilities, db, dataActions } = useCampaign();
     const { confirm, notifyError, notifySuccess } = useAppFeedback();
 
     const [itemsPerPage, setItemsPerPage] = useState(defaultItemsPerPage);
@@ -186,7 +186,7 @@ export default function CatalogAdminTableView({
     };
 
     const handleSaveCatalogEntry = async (override) => {
-        await dataActions.catalogOverride.saveCatalogOverride(override);
+        await dataActions.catalog.saveCatalogOverride(override);
     };
 
     const handleDelete = async (entryOrState) => {
@@ -194,6 +194,7 @@ export default function CatalogAdminTableView({
         const entry = getCatalogTableEntry(entryOrState) || getCatalogTableEntry(state);
         if (!entry) return;
         const isCustom = state?.status === CATALOG_ENTRY_STATUS.CUSTOM || (entry.isCustom && !entry.overrideSourceFile && !entry.sourceFile);
+        const isCampaignEntry = Boolean(entry.campaignId);
         const overrideId = entry.catalogOverrideId || state?.overrideId;
         const confirmed = await confirm({
             title: `Delete ${title || catalogType}`,
@@ -205,10 +206,10 @@ export default function CatalogAdminTableView({
         });
         if (!confirmed) return;
         try {
-            if (isCustom && overrideId) {
-                await dataActions.catalogOverride.deleteCatalogOverride(overrideId);
+            if (isCustom && isCampaignEntry && overrideId) {
+                await dataActions.catalog.deleteCatalogOverride(overrideId);
             } else {
-                await dataActions.catalogOverride.saveCatalogOverride(buildHideOverride(catalogType, entry));
+                await dataActions.catalog.saveCatalogOverride(buildHideOverride(catalogType, entry));
             }
             notifySuccess(isCustom ? `${entry.name} deleted.` : `${entry.name} hidden.`);
         } catch (err) {
@@ -223,7 +224,25 @@ export default function CatalogAdminTableView({
         if (action.id === 'clone') return table.cloneEntry(state);
         if (action.id === 'delete') return handleDelete(state);
         if (action.id === 'copyReference') return table.copyEntryReference(state);
+        if (action.id === 'promoteGlobal') return handlePromoteGlobal(state);
         return null;
+    };
+
+    const handlePromoteGlobal = async (entryOrState) => {
+        const entry = getCatalogTableEntry(entryOrState);
+        if (!entry?.campaignId || !capabilities?.canPromoteGlobalCatalog) return;
+        const accepted = await confirm({
+            title: 'Promote to global catalog',
+            message: `Make "${entry.name || entry.label}" available outside this campaign?`,
+            confirmLabel: 'Promote',
+        });
+        if (!accepted) return;
+        try {
+            await dataActions.catalog.promoteToGlobalCatalog(entry);
+            notifySuccess(`${entry.name || entry.label} promoted to the global catalog.`);
+        } catch (error) {
+            notifyError(error);
+        }
     };
 
     const editorMode = table.editorMode;
@@ -299,10 +318,17 @@ export default function CatalogAdminTableView({
                         getRowKey={(state, index) => getStateRowKey(state, index)}
                         getRowTestId={(state, index) => `catalog-row-${catalogType}-${getStateTestId(state, index)}`}
                         getCellTestId={(state, column, index) => `catalog-cell-${catalogType}-${getStateTestId(state, index)}-${column.key}`}
-                        getRowActions={(state) => getStandardCatalogContextActions().map((action) => ({
-                            ...action,
-                            onSelect: () => handleContextAction(action, state),
-                        }))}
+                        getRowActions={(state) => {
+                            const entry = getCatalogTableEntry(state);
+                            const actions = [...getStandardCatalogContextActions()];
+                            if (capabilities?.canPromoteGlobalCatalog && entry?.campaignId) {
+                                actions.push({ id: 'promoteGlobal', label: 'Promote to Global' });
+                            }
+                            return actions.map((action) => ({
+                                ...action,
+                                onSelect: () => handleContextAction(action, state),
+                            }));
+                        }}
                         isRowSelected={(state) => isSameCatalogEntry(previewItem, getCatalogTableEntry(state))}
                         rowClassName={(state) => getCatalogTableEntry(state)?.catalogEntryStatus === CATALOG_ENTRY_STATUS.DELETED ? 'opacity-[0.65]' : ''}
                         onRowClick={(_event, state) => {
@@ -315,7 +341,15 @@ export default function CatalogAdminTableView({
                         }}
                         renderCell={({ row: state, column }) => {
                             const entry = getCatalogTableEntry(state);
-                            return renderCell({ entry, state, column });
+                            const content = renderCell({ entry, state, column });
+                            const isPrimaryColumn = column.key === 'name' || column.key === displayedColumns[0]?.key;
+                            if (!entry?.isPlayerAuthored || !isPrimaryColumn) return content;
+                            return (
+                                <span className="inline-flex items-center gap-2">
+                                    <span>{content}</span>
+                                    <span className="rounded border border-emerald-500/50 bg-emerald-500/10 px-1.5 py-0.5 text-[0.68rem] font-semibold uppercase text-emerald-300">Player</span>
+                                </span>
+                            );
                         }}
                     />
                     <AdminPagination

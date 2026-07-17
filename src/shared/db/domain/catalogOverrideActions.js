@@ -1,5 +1,6 @@
 import { createCatalogOverrideRecord } from "./actorReducers.js";
 import { cloneValue } from "./inventoryReducers.js";
+import { assertCatalogEffectDefinitions } from "../../rules/catalogEffectDefinitions.js";
 
 export function createCatalogOverrideActions(context) {
   const {
@@ -11,6 +12,7 @@ export function createCatalogOverrideActions(context) {
   } = context;
 
   const saveCatalogOverride = (overrideInput) => {
+    assertCatalogEffectDefinitions(overrideInput?.payload || overrideInput);
     const override = createCatalogOverrideRecord(overrideInput, {
       createId: () => createDomainId("catalog_override"),
     });

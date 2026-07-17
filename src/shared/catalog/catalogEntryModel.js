@@ -278,6 +278,10 @@ export function overrideToCatalogItem(override) {
         catalogType: override?.catalogType,
         isCustom: override?.mode === 'custom' || Boolean(base.isCustom),
         isOverride: override?.mode === 'override',
+        campaignId: override?.campaignId || null,
+        catalogAuthoredRole: override?.authoredRole || null,
+        catalogOwnerEmail: override?.ownerEmail || override?.createdBy || null,
+        isPlayerAuthored: ['player', 'trusted_player'].includes(override?.authoredRole),
     };
 }
 

@@ -1,6 +1,5 @@
 // Game Rules and Calculation Logic
 
-import { buildMutagenModifiers } from './rules/mutagens.js';
 import { buildStandardConditionModifiers } from '../shared/rules/conditionEffectRules.js';
 import { resolveEffectModifiersForSelectors } from '../shared/rules/effectResolver.js';
 
@@ -97,9 +96,6 @@ function normalizeRuntimeEffect(effect) {
     if (modifiers.length === 0 && effect.category === "condition") {
         modifiers = buildStandardConditionModifiers(label, value);
     }
-    if (modifiers.length === 0 && isMutagenLabel(label)) {
-        modifiers = buildMutagenModifiers(label, value);
-    }
     return {
         ...effect,
         id: effect.id || `effect:${label}`,
@@ -124,10 +120,6 @@ function conditionToRuntimeEffect(condition) {
             ? condition.modifiers
             : buildStandardConditionModifiers(name, value),
     };
-}
-
-function isMutagenLabel(label) {
-    return String(label || "").toLowerCase().includes("mutagen");
 }
 
 function getStatSelectors(statName, attributeName) {

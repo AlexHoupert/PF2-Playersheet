@@ -3,11 +3,12 @@ export function resolveEffectModifiers(effects = [], selector) {
 }
 
 export function resolveEffectModifiersForSelectors(effects = [], selectors = []) {
-    const matching = collectMatchingModifiers(effects, selectors);
+    const matching = resolveDependencyConflicts(collectMatchingModifiers(effects, selectors));
     const breakdown = {};
     const applied = [];
     let total = 0;
     let cap = null;
+    let set = null;
 
     for (const bonusType of ["item", "status", "circumstance", "untyped"]) {
         const typed = matching.filter(modifier =>
@@ -43,10 +44,18 @@ export function resolveEffectModifiersForSelectors(effects = [], selectors = [])
         if (capModifier) applied.push(capModifier);
     }
 
+    const sets = matching.filter(modifier => modifier.mode === "set");
+    if (sets.length > 0) {
+        const setModifier = pickBest(sets, "max");
+        set = toFiniteNumber(setModifier?.value, null);
+        if (setModifier) applied.push(setModifier);
+    }
+
     return {
         total,
         breakdown,
         cap,
+        set,
         applied,
     };
 }
@@ -103,6 +112,25 @@ function collectMatchingModifiers(effects, selector) {
     return collectAllModifiers(effects).filter(modifier =>
         normalizedSelectors.has(String(modifier.selector || "").toLowerCase())
     );
+}
+
+function resolveDependencyConflicts(modifiers) {
+    const independent = modifiers.filter(modifier => !modifier.dependencyKey);
+    const groups = new Map();
+    for (const modifier of modifiers.filter(item => item.dependencyKey)) {
+        const key = String(modifier.dependencyKey);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(modifier);
+    }
+    for (const group of groups.values()) {
+        const positives = group.filter(modifier => toFiniteNumber(modifier.value, 0) >= 0);
+        const negatives = group.filter(modifier => toFiniteNumber(modifier.value, 0) < 0);
+        const bestPositive = pickBest(positives, "max");
+        const worstNegative = pickBest(negatives, "min");
+        if (bestPositive) independent.push(bestPositive);
+        if (worstNegative) independent.push(worstNegative);
+    }
+    return independent;
 }
 
 function collectAllModifiers(effects) {

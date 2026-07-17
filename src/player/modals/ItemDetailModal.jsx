@@ -9,6 +9,7 @@ import { consumeWandCharge, getWandCharges, getWandMaxCharges, getWandSpell, isW
 import { getItemIdentityKey, resolveInventoryItemIdentity } from '../../shared/utils/itemIdentity';
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 import { ModalLayerMount } from '../../shared/overlays/ModalLayerProvider';
+import SourceEffectActivationPanel from '../components/SourceEffectActivationPanel';
 
 export function ItemDetailModal({
     character,
@@ -827,6 +828,8 @@ export function ItemDetailModal({
                         )}
                     </div>
                 )}
+
+                <SourceEffectActivationPanel source={inventoryMatch || modalData} />
 
                 <button onClick={onClose} style={{
                     marginTop: 20, width: '100%', padding: '10px', background: '#c5a059',

@@ -468,11 +468,8 @@ export default function ItemsViewLayout({
                                 initialItem={editingItem.editorMode === 'create' || Object.keys(editingItem).length === 0 ? null : editingItem}
                                 onSave={() => setEditingItem(null)}
                                 onCancel={() => setEditingItem(null)}
-                                onSaveToDb={(dbItem) => {
-                                    return dataActions.globalContent.saveCustomItem(dbItem);
-                                }}
                                 onSaveCatalogEntry={(override) => {
-                                    return dataActions.catalogOverride.saveCatalogOverride(override);
+                                    return dataActions.catalog.saveCatalogOverride(override);
                                 }}
                                 dbOnly
                             />

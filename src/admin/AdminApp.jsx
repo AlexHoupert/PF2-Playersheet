@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
 
 import { selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
 import { useCatalogDetailController } from '../shared/hooks/useCatalogDetailController';
+import { canAccessAdminTab, firstAccessibleAdminTab } from '../shared/auth/campaignCapabilities';
 
 import AdminTabContent from './AdminTabContent';
 import { ModalManager } from '../player/ModalManager';
@@ -11,20 +12,27 @@ import XpOverlay from '../player/components/XpOverlay';
 
 import Sidebar from './components/Sidebar';
 import Breadcrumbs from './components/Breadcrumbs';
+import EffectRequestCenter from './components/EffectRequestCenter';
 
 import '../App.css';
 import './AdminApp.css';
 
 export default function AdminApp() {
-    const { activeCampaign, assignUser, revokeUser, setPartyXp, setXpThreshold, addPartyXp, dataActions, db } = useCampaign();
+    const { activeCampaign, assignUser, revokeUser, setPartyXp, setXpThreshold, addPartyXp, capabilities, dataActions, db } = useCampaign();
     const { notifyError } = useAppFeedback();
-    const [activeTab, setActiveTab] = useState('sessions');
+    const [activeTab, setActiveTab] = useState(() => firstAccessibleAdminTab(capabilities));
     const [playerTabMode, setPlayerTabMode] = useState('cards'); // 'cards' or 'users'
 
     // Modal State
     const [modalMode, setModalMode] = useState(null);
     const [activeCharIndex, setActiveCharIndex] = useState(null); // For context of modal
     const [modalData, setModalData] = useState(null);
+
+    useEffect(() => {
+        if (!canAccessAdminTab(capabilities, activeTab)) {
+            setActiveTab(firstAccessibleAdminTab(capabilities));
+        }
+    }, [activeTab, capabilities]);
 
     const { handleContentLinkClick, shopItemDetailError, shopItemDetailLoading } = useCatalogDetailController({
         db,
@@ -123,6 +131,7 @@ export default function AdminApp() {
 
             {/* XP Overlay */}
             <XpOverlay xpNotification={activeCampaign?.xpNotification} />
+            <EffectRequestCenter />
         </div >
     );
 }

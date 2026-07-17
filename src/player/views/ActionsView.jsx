@@ -5,7 +5,16 @@ import { parseFoundry, ACTION_ICONS } from '../../shared/utils/foundryParser';
 import { LongPressable } from '../../shared/components/LongPressable';
 import CampingView from '../../camping/CampingView';
 
-export function ActionsView({ character, initialTab = 'Combat', onOpenModal, onLongPress, hideTabs = false }) {
+export function ActionsView({
+    character,
+    initialTab = 'Combat',
+    onOpenModal,
+    onLongPress,
+    hideTabs = false,
+    readOnly = false,
+    canAuthorCatalog = false,
+    onAuthorCatalogEntry,
+}) {
     const [activeTab, setActiveTab] = useState(initialTab);
 
     useEffect(() => {
@@ -183,7 +192,7 @@ export function ActionsView({ character, initialTab = 'Combat', onOpenModal, onL
                                 className="item-row"
                                 key={`${action.name}-${action.type}`}
                                 onClick={() => onOpenModal('item', { ...action, _entityType: 'action' })}
-                                onLongPress={() => onLongPress && onLongPress(action, 'action')}
+                                onLongPress={() => { if (!readOnly && onLongPress) onLongPress(action, 'action'); }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                                     <div className="item-row-main" style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
@@ -216,6 +225,16 @@ export function ActionsView({ character, initialTab = 'Combat', onOpenModal, onL
                     })}
                 </div>
             ))}
+            {canAuthorCatalog && activeTab !== 'Camping' && (
+                <button
+                    type="button"
+                    className="btn-add-condition"
+                    style={{ marginTop: 20, width: '100%' }}
+                    onClick={() => onAuthorCatalogEntry?.('action')}
+                >
+                    Create Campaign Action
+                </button>
+            )}
         </div>
     );
 }

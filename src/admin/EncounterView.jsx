@@ -237,14 +237,36 @@ export default function EncounterView({ db }) {
         if (!activeEncounter) return [];
         return getRotatedEncounterTurnOrder(activeEncounter);
     }, [activeEncounter]);
+    const eligibleTurnCombatants = useMemo(() => {
+        if (!activeEncounter) return [];
+        return getRotatedEncounterTurnOrder(activeEncounter, { includeDefeated: false });
+    }, [activeEncounter]);
 
     const endTurn = () => {
         if (!activeEncounter) return;
-        const total = activeEncounter.combatants.length;
-        if (total === 0) return;
+        if (eligibleTurnCombatants.length === 0) return;
         const campaignId = requireCampaignId();
         if (!campaignId) return;
-        runEncounterAction(dataActions.encounter.endTurn(campaignId, activeEncounter.id));
+        const currentCombatant = eligibleTurnCombatants[0];
+        const nextCombatant = eligibleTurnCombatants[1] || eligibleTurnCombatants[0];
+        const turnSequence = Number(activeEncounter.turnSequence) || 0;
+        const currentTargetId = getCombatantEffectTargetId(activeEncounter.id, currentCombatant);
+        const nextTargetId = getCombatantEffectTargetId(activeEncounter.id, nextCombatant);
+        runEncounterAction((async () => {
+            if (currentTargetId) {
+                await dataActions.effect.advanceDuration(campaignId, currentTargetId, {
+                    tick: 'turn_end',
+                    tickKey: `${activeEncounter.id}:turn:${turnSequence}:end:${currentTargetId}`,
+                });
+            }
+            await dataActions.encounter.endTurn(campaignId, activeEncounter.id);
+            if (nextTargetId) {
+                await dataActions.effect.advanceDuration(campaignId, nextTargetId, {
+                    tick: 'turn_start',
+                    tickKey: `${activeEncounter.id}:turn:${turnSequence + 1}:start:${nextTargetId}`,
+                });
+            }
+        })());
     };
 
     const resetRound = () => {

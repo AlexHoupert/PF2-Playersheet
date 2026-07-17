@@ -18,6 +18,7 @@ import PlayerPageCarousel from './navigation/PlayerPageCarousel';
 import { buildPlayerInteractionLockState } from './navigation/playerSubpageSwipe';
 import { usePlayerPageNavigation } from './navigation/usePlayerPageNavigation';
 import PlayerPopupHost from './popups/PlayerPopupHost';
+import PlayerCatalogEditorHost from './components/PlayerCatalogEditorHost';
 import { selectCampaignLoreArticles } from '../shared/db/selectors/loreSelectors';
 import { buildLoreAlertsByPage } from '../shared/lore/loreSelectors';
 import { usePlayerLoreStore } from '../shared/lore/useLoreStores';
@@ -34,7 +35,9 @@ export default function PlayerAppController() {
         lootBags: playerLootBags,
         ownedActors,
         dbMode,
+        capabilities,
     } = useCampaign();
+    const readOnly = Boolean(capabilities?.isReadOnly);
 
     const {
         actionModal,
@@ -55,6 +58,7 @@ export default function PlayerAppController() {
     const [dailyPrepQueue, setDailyPrepQueue] = useState([]);
     const [playerNavDrawerOpen, setPlayerNavDrawerOpen] = useState(false);
     const [loreTarget, setLoreTarget] = useState(null);
+    const [catalogAuthoringRequest, setCatalogAuthoringRequest] = useState(null);
     const ownedCompanionActors = (ownedActors || [])
         .filter(actor => ['animal_companion', 'familiar', 'pet'].includes(actor.kind));
     const playerNotificationQueue = [
@@ -64,7 +68,7 @@ export default function PlayerAppController() {
     const isPlayerInteractionLocked = buildPlayerInteractionLockState({
         modalMode,
         actionModalMode: actionModal.mode,
-        catalogMode,
+        catalogMode: catalogMode || (catalogAuthoringRequest ? 'authoring' : null),
         navDrawerOpen: playerNavDrawerOpen,
         dailyPrepCount: dailyPrepQueue.length,
     });
@@ -102,7 +106,9 @@ export default function PlayerAppController() {
         activeCampaign,
         activeCharIndex,
         character,
+        canAuthorCatalog: Boolean(capabilities?.canCreatePlayerContent),
         dataActions,
+        readOnly,
         setModalMode,
     });
 
@@ -152,6 +158,56 @@ export default function PlayerAppController() {
         setModalMode,
         updateCharacter,
     });
+
+    const openCatalogAuthoring = (catalogType, baseEntry = null, linkOptions = {}) => {
+        if (!capabilities?.canCreatePlayerContent || readOnly) return;
+        setCatalogAuthoringRequest({
+            catalogType,
+            baseEntry,
+            linkInventoryItem: linkOptions?.linkInventoryItem || null,
+            linkImpulse: linkOptions?.linkImpulse || null,
+        });
+    };
+
+    const handleCatalogAuthoringSaved = async ({ entryId, linkInventoryItem, override }) => {
+        if (!activeCampaign?.id || !character?.id || !entryId) return;
+        const payload = override?.payload || {};
+        if (linkInventoryItem) {
+            await runDataAction(dataActions.inventory.updateItem(
+                activeCampaign.id,
+                character.id,
+                linkInventoryItem,
+                current => ({
+                    ...current,
+                    ...payload,
+                    instanceId: current.instanceId,
+                    qty: current.qty,
+                    quantity: current.quantity,
+                    equipped: current.equipped,
+                    catalogEntryId: entryId,
+                    catalogOverrideId: entryId,
+                    isCustom: true,
+                })
+            ));
+        }
+        if (catalogAuthoringRequest?.linkImpulse) {
+            const source = catalogAuthoringRequest.linkImpulse;
+            await updateCharacter(current => {
+                current.impulses = (current.impulses || []).map(impulse => {
+                    const matches = impulse === source
+                        || impulse?.catalogEntryId === source?.catalogEntryId
+                        || impulse?.name === source?.name;
+                    return matches ? {
+                        ...impulse,
+                        ...payload,
+                        name: payload.name || impulse.name,
+                        catalogEntryId: entryId,
+                        catalogOverrideId: entryId,
+                    } : impulse;
+                });
+            });
+        }
+    };
 
     const hasPlayerLoot = (
         character?.inventory?.some(i => i.isLoot) ||
@@ -301,10 +357,10 @@ export default function PlayerAppController() {
                     <small>Level {character.level} | XP: {character.xp.current}</small>
                 </div>
                 <div className="header-controls" style={{ flexShrink: 0, gap: 5, marginRight: -5 }}>
-                    {isGM && <button className="btn-char-switch" onClick={() => {
+                    {capabilities?.canSwitchActors && characters.length > 1 && <button className="btn-char-switch" onClick={() => {
                         setActiveCharIndex((prev) => (prev + 1) % characters.length);
                     }}>👥</button>}
-                    <div className="gold-display" data-testid="player-gold-display" onClick={() => setModalMode('gold')}>
+                    <div className="gold-display" data-testid="player-gold-display" onClick={() => { if (!readOnly) setModalMode('gold'); }}>
                         <span>💰</span> {parseFloat(character.gold).toFixed(2)} <span className="gold-unit">gp</span>
                     </div>
                     {isGM && <button className="btn-char-switch" onClick={() => window.location.search = '?admin=true'} title="GM Screen">GM</button>}
@@ -333,6 +389,7 @@ export default function PlayerAppController() {
                         characterActions,
                         characterConditions,
                         characterEffects,
+                        capabilities,
                         dataActions,
                         db,
                         fireWeapon,
@@ -347,8 +404,10 @@ export default function PlayerAppController() {
                         onNavigateLoreArticle: navigateLoreArticle,
                         onNavigateLoreCreature: navigateLoreCreature,
                         onGoToPage: selectPageId,
+                        onAuthorCatalogEntry: openCatalogAuthoring,
                         ownedCompanionActors,
                         playerQuests,
+                        readOnly,
                         rulesCharacter,
                         runDataAction,
                         setActionModal,
@@ -377,7 +436,7 @@ export default function PlayerAppController() {
             />
 
             {/* Item Actions Modal */}
-            {actionModal.mode !== 'SELECT_SPELL' && (
+            {!readOnly && actionModal.mode !== 'SELECT_SPELL' && (
                 <ItemActionsModal
                     mode={actionModal.mode}
                     item={actionModal.item}
@@ -396,8 +455,19 @@ export default function PlayerAppController() {
                         setModalData({ item, type: 'weapon_prof' }); // Reuse modalData to pass item
                         setModalMode('item_proficiencies');
                     }}
+                    onCustomize={(item) => {
+                        setActionModal({ mode: null, item: null });
+                        openCatalogAuthoring('item', item, { linkInventoryItem: item });
+                    }}
                 />
             )}
+
+            <PlayerCatalogEditorHost
+                request={catalogAuthoringRequest}
+                dataActions={dataActions}
+                onClose={() => setCatalogAuthoringRequest(null)}
+                onSaved={handleCatalogAuthoringSaved}
+            />
 
             {/* Catalog Overlay */}
             {
@@ -496,6 +566,7 @@ export default function PlayerAppController() {
                 removeFromCharacter={removeFromCharacter}
                 saveNewAction={saveNewAction}
                 onDailyPrep={performDailyPrep}
+                readOnly={readOnly}
             />
 
 

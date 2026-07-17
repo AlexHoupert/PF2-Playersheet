@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { useFirestoreV2Db } from './shared/db/v2/useFirestoreV2Db';
 import { CampaignProvider } from './shared/context/CampaignContext';
+import { useCampaign } from './shared/context/CampaignContext';
 import ErrorBoundary from './shared/components/ErrorBoundary';
 import { createE2eRuntimeDb, createE2eV2Store, isE2eFixtureEnabled } from './shared/testing/e2eFixture';
 
@@ -27,7 +28,17 @@ function E2eFixtureApp() {
             return createE2eRuntimeDb();
         }
     });
-    const v2Store = React.useMemo(() => createE2eV2Store(), []);
+    const v2Store = React.useMemo(() => {
+        const store = createE2eV2Store();
+        const params = new URLSearchParams(window.location.search);
+        const requestedRole = params.get('e2eRole');
+        if (requestedRole || params.get('admin') === 'true') {
+            const campaign = Object.values(store.campaigns || {})[0];
+            const member = campaign?.members?.['e2e.player@example.test'];
+            if (member) member.role = requestedRole || 'gm';
+        }
+        return store;
+    }, []);
     React.useEffect(() => {
         localStorage.setItem('pf2:e2e-runtime-db', JSON.stringify(runtimeDb));
     }, [runtimeDb]);
@@ -59,34 +70,52 @@ function AppRoutes({ v2Store, runtimeDb = null, setRuntimeDb = null, dbMode, dbS
 
     if (!v2Store) return <div style={{ color: '#fff' }}>Loading...</div>;
 
-    const isAdmin = queryParams.get('admin') === 'true';
-    const isParty = queryParams.get('party') === 'true';
-    const isCamp  = queryParams.get('camp')  === 'true';
+    const requestedRoute = queryParams.get('party') === 'true'
+        ? 'party'
+        : queryParams.get('camp') === 'true'
+            ? 'camp'
+            : queryParams.get('admin') === 'true'
+                ? 'admin'
+                : 'player';
 
     return (
         <CampaignProvider
             v2Store={v2Store}
             runtimeDb={runtimeDb}
             setRuntimeDb={setRuntimeDb}
-            isAdmin={isAdmin || isParty || isCamp}
             dbMode={dbMode}
             dbStatus={dbStatus}
         >
             <ErrorBoundary>
                 <Suspense fallback={<RouteFallback />}>
-                    <div data-testid={isParty ? "party-route" : isCamp ? "camp-route" : isAdmin ? "admin-route" : "player-route"}>
-                        {isParty
-                            ? <PartyScreen />
-                            : isCamp
-                                ? <CampScreenWrapper />
-                                : isAdmin
-                                    ? <AdminApp />
-                                    : <PlayerApp />
-                        }
-                    </div>
+                    <AuthorizedRoute route={requestedRoute} />
                 </Suspense>
             </ErrorBoundary>
         </CampaignProvider>
+    );
+}
+
+function AuthorizedRoute({ route }) {
+    const { capabilities, userInfo } = useCampaign();
+    if (route === 'admin' && !capabilities?.canAccessAdmin) {
+        return (
+            <div data-testid="route-access-denied" style={{ color: '#ddd', padding: 24 }}>
+                This campaign role cannot open the GM screen.
+            </div>
+        );
+    }
+    if (!userInfo) return <RouteFallback />;
+
+    return (
+        <div data-testid={`${route}-route`}>
+            {route === 'party'
+                ? <PartyScreen />
+                : route === 'camp'
+                    ? <CampScreenWrapper />
+                    : route === 'admin'
+                        ? <AdminApp />
+                        : <PlayerApp />}
+        </div>
     );
 }
 

@@ -315,7 +315,7 @@ export default function AbilitiesView({ db }) {
     const saveCustomAbility = (ability) => {
         const editorMode = abilityForm?.editorMode || (abilityForm?.isCustom ? CATALOG_EDITOR_MODES.EDIT : CATALOG_EDITOR_MODES.CREATE);
         const saved = { ...ability, isCustom: editorMode !== CATALOG_EDITOR_MODES.EDIT || Boolean(abilityForm?.isCustom) };
-        runDataAction(dataActions.catalogOverride.saveCatalogOverride(buildAbilityOverride(saved, abilityForm, {
+        runDataAction(dataActions.catalog.saveCatalogOverride(buildAbilityOverride(saved, abilityForm, {
             editorMode,
             baseEntry: abilityForm,
         })));
@@ -335,18 +335,18 @@ export default function AbilitiesView({ db }) {
         });
         if (!confirmed) return;
         if (isCustom && ability.catalogOverrideId) {
-            runDataAction(dataActions.catalogOverride.deleteCatalogOverride(ability.catalogOverrideId));
+            runDataAction(dataActions.catalog.deleteCatalogOverride(ability.catalogOverrideId));
         } else if (isCustom) {
             runDataAction(dataActions.globalContent.deleteCustomAbility(ability));
         } else {
-            runDataAction(dataActions.catalogOverride.saveCatalogOverride(buildHideOverride('ability', ability)));
+            runDataAction(dataActions.catalog.saveCatalogOverride(buildHideOverride('ability', ability)));
         }
         if (selected?.id === ability.id) setSelected(null);
     };
 
     const cloneAbility = (ability) => {
         const clone = { ...ability, id: `custom-${Date.now()}`, name: `${ability.name} (Copy)`, isCustom: true };
-        runDataAction(dataActions.catalogOverride.saveCatalogOverride(buildAbilityOverride(clone, ability, {
+        runDataAction(dataActions.catalog.saveCatalogOverride(buildAbilityOverride(clone, ability, {
             editorMode: CATALOG_EDITOR_MODES.CLONE,
         })));
         setSelected(clone);

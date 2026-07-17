@@ -21,6 +21,7 @@ export default function PlayerBestiaryLibrary({
   dataActions,
   actors = [],
   initialCreatureId = null,
+  readOnly = false,
 }) {
   const [query, setQuery] = React.useState("");
   const [selectedId, setSelectedId] = React.useState(initialCreatureId);
@@ -90,7 +91,7 @@ export default function PlayerBestiaryLibrary({
         </div>
       </aside>
       <main className="player-knowledge-reader">
-        {selectedCreature ? <><Button className="player-knowledge-mobile-back" variant="outline" onClick={() => setSelectedId(null)}><ArrowLeft />Back to index</Button>{loadedCreatureData ? <CreatureCard creature={{ ...selectedCreature, data: loadedCreatureData }} isGM={false} revealState={selectedCreature.revealState} falseData={selectedCreature.falseData} onAbilityClick={setSelectedAbility} onSkillClick={setSelectedSkill} /> : <div className="player-knowledge-reader__empty"><ShieldQuestion /><p>Loading creature details...</p></div>}<KnowledgeNoteEditor note={note} actorId={actorId} targetType="creature" targetId={selectedCreature.id} targetSnapshot={{ title: selectedVisibleCreature?.name || "Unknown creature", category: "bestiary", image: loadedCreatureData?.img || null }} onSave={(next) => dataActions.lore.saveNote(campaignId, next)} onDelete={(current) => dataActions.lore.deleteNote(campaignId, current.id)} /><SharedKnowledgeNotes notes={partyNotes} actors={actors} /></> : <div className="player-knowledge-reader__empty"><ShieldQuestion /><p>Select a discovered creature.</p></div>}
+        {selectedCreature ? <><Button className="player-knowledge-mobile-back" variant="outline" onClick={() => setSelectedId(null)}><ArrowLeft />Back to index</Button>{loadedCreatureData ? <CreatureCard creature={{ ...selectedCreature, data: loadedCreatureData }} isGM={false} revealState={selectedCreature.revealState} falseData={selectedCreature.falseData} onAbilityClick={setSelectedAbility} onSkillClick={setSelectedSkill} /> : <div className="player-knowledge-reader__empty"><ShieldQuestion /><p>Loading creature details...</p></div>}<KnowledgeNoteEditor readOnly={readOnly} note={note} actorId={actorId} targetType="creature" targetId={selectedCreature.id} targetSnapshot={{ title: selectedVisibleCreature?.name || "Unknown creature", category: "bestiary", image: loadedCreatureData?.img || null }} onSave={(next) => dataActions.lore.saveNote(campaignId, next)} onDelete={(current) => dataActions.lore.deleteNote(campaignId, current.id)} /><SharedKnowledgeNotes notes={partyNotes} actors={actors} /></> : <div className="player-knowledge-reader__empty"><ShieldQuestion /><p>Select a discovered creature.</p></div>}
       </main>
       {selectedAbility && <CreatureAbilityModal ability={selectedAbility} onClose={() => setSelectedAbility(null)} />}
       {selectedSkill && <CreatureSkillDetailDialog skill={selectedSkill} onClose={() => setSelectedSkill(null)} />}

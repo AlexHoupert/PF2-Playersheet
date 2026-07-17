@@ -70,6 +70,12 @@ export function composeV2ViewModelFromDocuments(documents = []) {
         campaign.actorsList = sortByName(Object.values(campaign[V2_COLLECTIONS.actors] || {}));
         campaign.actorEffectsList = sortByName(Object.values(campaign[V2_COLLECTIONS.actorEffects] || {}));
         campaign.effectTemplatesList = sortByName(Object.values(campaign[V2_COLLECTIONS.effectTemplates] || {}));
+        campaign.catalogEntriesList = sortByName(Object.values(campaign[V2_COLLECTIONS.catalogEntries] || {}));
+        campaign.catalogChangeEventsList = Object.values(campaign[V2_COLLECTIONS.catalogChangeEvents] || {})
+            .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+        campaign.effectRequestsList = Object.values(campaign[V2_COLLECTIONS.effectRequests] || {})
+            .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+        campaign.loreContributionsList = sortByTitle(Object.values(campaign[V2_COLLECTIONS.loreContributions] || {}));
         campaign.questsList = sortByTitle(Object.values(campaign[V2_COLLECTIONS.quests] || {}));
         campaign.lootBagsList = sortByName(Object.values(campaign[V2_COLLECTIONS.lootBags] || {}));
         campaign.encountersList = sortByName(Object.values(campaign[V2_COLLECTIONS.encounters] || {}));
@@ -89,6 +95,10 @@ function ensureCampaign(view, campaignId) {
             [V2_COLLECTIONS.actors]: {},
             [V2_COLLECTIONS.actorEffects]: {},
             [V2_COLLECTIONS.effectTemplates]: {},
+            [V2_COLLECTIONS.catalogEntries]: {},
+            [V2_COLLECTIONS.catalogChangeEvents]: {},
+            [V2_COLLECTIONS.effectRequests]: {},
+            [V2_COLLECTIONS.loreContributions]: {},
             [V2_COLLECTIONS.quests]: {},
             [V2_COLLECTIONS.lootBags]: {},
             [V2_COLLECTIONS.encounters]: {},

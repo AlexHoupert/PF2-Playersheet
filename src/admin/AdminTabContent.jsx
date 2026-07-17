@@ -19,6 +19,7 @@ const CampingAdminView = lazy(() => import('../camping/CampingAdminView'));
 const DeviantAbilitiesAdminView = lazy(() => import('../pacts/DeviantAbilitiesAdminView'));
 const PactAdminView = lazy(() => import('../pacts/PactAdminView'));
 const FirebaseMigrator = lazy(() => import('./FirebaseMigrator'));
+const CampaignChangesView = lazy(() => import('./CampaignChangesView'));
 
 export default function AdminTabContent({
     activeTab,
@@ -74,6 +75,7 @@ export default function AdminTabContent({
     if (activeTab === 'abilities') return withAdminSuspense(<AbilitiesView db={db} />);
     if (activeTab === 'quests') return withAdminSuspense(<QuestsView db={db} />);
     if (activeTab === 'lore') return withAdminSuspense(<LoreAdminView db={db} />);
+    if (activeTab === 'campaign_changes') return withAdminSuspense(<CampaignChangesView />);
     if (activeTab === 'maps') return withAdminSuspense(<MapAdminView />);
     if (activeTab === 'progress') return withAdminSuspense(<ProgressAdminView />);
     if (activeTab === 'camping') return withAdminSuspense(<CampingAdminView />);

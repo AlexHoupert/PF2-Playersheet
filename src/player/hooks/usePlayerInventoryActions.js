@@ -4,8 +4,8 @@ import { shouldStack } from '../../shared/utils/inventoryUtils';
 import { getWeaponCapacity, isEquipableInventoryItem } from '../../shared/utils/combatUtils';
 import { findInventoryItemIndex, findStackableInventoryItemIndex, resolveInventoryItemIdentity } from '../../shared/utils/itemIdentity';
 import { consumeWandCharge, isWandItem, rechargeWand } from '../../shared/utils/wandUtils';
-import { createMutagenEffectInput } from '../../utils/rules/mutagens';
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
+import { selectSourceEffectDefinitions } from '../../shared/rules/derivedSourceEffects';
 
 // Swallows the click the browser fires after touchend once a long-press
 // has already been handled (see pressEvents below).
@@ -38,15 +38,27 @@ export function usePlayerInventoryActions({
     }, []);
 
     const handleConsumeItem = (item) => {
-        const name = item.name;
-        const lowerName = String(name || '').toLowerCase();
-        const level = parseInt(item.level) || 1;
-        const createsMutagenEffect = lowerName.includes("mutagen");
         if (isWandItem(item)) {
             updateCharacter(c => {
                 const invIdx = findInventoryItemIndex(c.inventory, item);
                 if (invIdx > -1) consumeWandCharge(c.inventory[invIdx]);
             });
+            return;
+        }
+
+        const consumeEffect = selectSourceEffectDefinitions('item', item)
+            .find(definition => definition.enabled !== false
+                && definition.activation?.mode === 'usable'
+                && definition.activation?.trigger === 'consume');
+        if (consumeEffect && activeCampaign?.id && character?.id && dataActions?.effect?.applySourceEffect) {
+            runDataAction(dataActions.effect.applySourceEffect(
+                activeCampaign.id,
+                character.id,
+                [character.id],
+                item,
+                consumeEffect,
+                { sourceType: 'item' }
+            ));
             return;
         }
 
@@ -58,28 +70,9 @@ export function usePlayerInventoryActions({
                 if (invItem && invItem.qty > 0) {
                     invItem.qty--;
                     if (invItem.qty === 0) c.inventory.splice(invIdx, 1);
-
-                    if (lowerName.includes("mutagen")) {
-                        if (lowerName.includes("juggernaut")) {
-                            let thp = 5;
-                            if (level >= 17) thp = 40;
-                            else if (level >= 11) thp = 30;
-                            else if (level >= 3) thp = 10;
-                            c.stats.hp.temp = Math.max(c.stats.hp.temp || 0, thp);
-                        }
-                        if (lowerName.includes("quicksilver")) {
-                            const charLevel = parseInt(c.level) || 1;
-                            const dmg = charLevel * 2;
-                            c.stats.hp.current = Math.max(0, (c.stats.hp.current || 0) - dmg);
-                        }
-                    }
                 }
             }
         });
-
-        if (createsMutagenEffect && activeCampaign?.id && character?.id && dataActions?.effect?.createEffect) {
-            runDataAction(dataActions.effect.createEffect(activeCampaign.id, character.id, createMutagenEffectInput(item, character.id)));
-        }
     };
 
     const handleItemClick = (item) => {
@@ -189,7 +182,7 @@ export function usePlayerInventoryActions({
         const hasQuickAlchemy = feats.includes("Quick Alchemy");
         const slotKeys = ['f', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
-        updateCharacter(c => {
+        const applyPreparation = c => {
             if (c.magic?.slots) {
                 slotKeys.forEach(k => {
                     const max = c.magic.slots[k + "_max"] || 0;
@@ -228,7 +221,14 @@ export function usePlayerInventoryActions({
                 const vialBase = getShopIndexItemByName('Versatile Vial') || { name: 'Versatile Vial' };
                 c.inventory.push({ ...vialBase, qty: 4, prepared: true, addedAt: Date.now() });
             }
-        });
+            return c;
+        };
+
+        if (activeCampaign?.id && character?.id && dataActions?.effect?.performDailyPreparation) {
+            runDataAction(dataActions.effect.performDailyPreparation(activeCampaign.id, character.id, applyPreparation));
+        } else {
+            updateCharacter(applyPreparation);
+        }
 
         setDailyPrepQueue([]);
         setModalMode(null);
@@ -416,9 +416,15 @@ export function usePlayerInventoryActions({
 
     const addToCharacter = (item, type) => {
         updateCharacter(c => {
-            const newItem = { name: item.name };
+            const sourceRecord = {
+                ...item,
+                name: item.name,
+                catalogEntryId: item.catalogEntryId || item.catalogOverrideId || null,
+            };
+            const newItem = { ...sourceRecord };
             if (type === 'feat') {
-                if (!c.feats.includes(item.name)) c.feats.push(item.name);
+                const known = (c.feats || []).some(feat => (typeof feat === 'string' ? feat : feat?.name) === item.name);
+                if (!known) c.feats.push(sourceRecord);
             } else if (type === 'spell') {
                 if (!c.magic) c.magic = { list: [] };
                 if (!c.magic.list) c.magic.list = [];
@@ -437,7 +443,7 @@ export function usePlayerInventoryActions({
     const removeFromCharacter = (item, type) => {
         updateCharacter(c => {
             if (type === 'feat') {
-                c.feats = c.feats.filter(f => f !== item.name);
+                c.feats = c.feats.filter(f => (typeof f === 'string' ? f : f?.name) !== item.name);
             } else if (type === 'spell') {
                 const idx = c.magic.list.findIndex(s => s.name === item.name && s.level === item.level);
                 if (idx > -1) c.magic.list.splice(idx, 1);
