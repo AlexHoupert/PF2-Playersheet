@@ -169,7 +169,7 @@ export default function PlayerAppController() {
         });
     };
 
-    const handleCatalogAuthoringSaved = async ({ entryId, linkInventoryItem, override }) => {
+    const handleCatalogAuthoringSaved = async ({ entryId, linkInventoryItem, override, addToActor }) => {
         if (!activeCampaign?.id || !character?.id || !entryId) return;
         const payload = override?.payload || {};
         if (linkInventoryItem) {
@@ -206,6 +206,17 @@ export default function PlayerAppController() {
                     } : impulse;
                 });
             });
+        }
+        if (addToActor) {
+            await runDataAction(dataActions.actor.attachCatalogEntry(
+                activeCampaign.id,
+                character.id,
+                {
+                    catalogType: catalogAuthoringRequest?.catalogType,
+                    entryId,
+                    payload,
+                }
+            ));
         }
     };
 

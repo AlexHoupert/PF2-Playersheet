@@ -23,7 +23,8 @@ export function ActionsView({
 
     // 1. Collect Actions: Index based only (File System) & Flatten
     const categorizedActions = useMemo(() => {
-        const allActions = getAllActionIndexItems().map(a => ({
+        const actorActions = Array.isArray(character.actions) ? character.actions : [];
+        const allActions = dedupeActions([...getAllActionIndexItems(), ...actorActions]).map(a => ({
             ...a,
             type: a.userType || a.type || 'Other',
             subtype: a.userSubtype || a.subtype || 'General',
@@ -54,7 +55,7 @@ export function ActionsView({
         });
 
         return result;
-    }, [character.feats]);
+    }, [character.actions, character.feats]);
 
     // Calculate available tabs
     const availableTabs = useMemo(() => {
@@ -237,4 +238,14 @@ export function ActionsView({
             )}
         </div>
     );
+}
+
+function dedupeActions(actions) {
+    const byIdentity = new Map();
+    actions.filter(Boolean).forEach(action => {
+        const identity = action.catalogEntryId || action.catalogOverrideId || action.id || action.name;
+        if (!identity) return;
+        byIdentity.set(identity, action);
+    });
+    return [...byIdentity.values()];
 }

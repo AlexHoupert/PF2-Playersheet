@@ -28,6 +28,7 @@ import {
   removeInventoryItem,
   transferInventoryItem,
 } from "./inventoryReducers.js";
+import { attachCatalogEntryToCharacter } from "./catalogActorReducers.js";
 
 export function createActorActions(context) {
   const {
@@ -253,6 +254,11 @@ export function createActorActions(context) {
     addItem(campaignId, actorId, item, options = {}) {
       return updatePcActorAsCharacter(campaignId, actorId, (character) =>
         addItemToCharacter(character, item, { ...options, createId })
+      );
+    },
+    attachCatalogEntry(campaignId, actorId, entry) {
+      return updatePcActorAsCharacter(campaignId, actorId, (character) =>
+        attachCatalogEntryToCharacter(character, entry, { createId })
       );
     },
     updateItem(campaignId, actorId, item, updater) {
