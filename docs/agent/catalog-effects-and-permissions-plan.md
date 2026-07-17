@@ -127,8 +127,8 @@ Success criteria:
 - [x] Seed declarative Quicksilver Mutagen definitions.
 - [x] Seed Scaly Skin, Bless, and Metal Carapace definitions.
 - [x] Add a dry-run/backfill script with report and backup support.
-- [-] Keep live write behind explicit user approval. The live write has not been
-  run; the offline planner currently reports 27 candidate writes.
+- [x] Keep live write behind explicit user approval. Approval was granted and the
+  write completed on 2026-07-17 with 27 creates, 0 updates, and 0 skips.
 - [x] Remove matching runtime hardcodes only after declarative regression tests
   pass.
 
@@ -158,10 +158,12 @@ Success criteria:
 - Direct party effects write only targeted ActorEffect documents when no actor
   state changes; consumable costs and on-apply actor changes remain transactional.
 - The seed/backfill command is `npm run backfill:catalog-effects`. It is dry-run
-  by default and requires both `--write` and `--confirm-write` for persistence.
-- The authenticated Firestore dry-run was not executed in the final local gate
-  because no migration credentials were present. The command exited before any
-  Firestore read or write; pure planner coverage remains green.
+  by default. Write mode uses the script directly with both `--write` and
+  `--confirm-write` so npm cannot consume the migration flags.
+- Live backup: `catalog-effects-2026-07-17T12-24-48-968Z` in
+  `migrationBackups` for project `pathfinder-companion-4290f`.
+- Read-only verification after the write reported 0 pending writes and skipped
+  all 27 targets with `existing-effect-definitions`, confirming idempotency.
 
 ## Explicit Non-Goals
 

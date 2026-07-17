@@ -239,7 +239,11 @@ Catalog effect definitions:
 - Definitions support only registered selectors, predicates, scaling modes, modifiers, and apply actions. Executable code and free actor paths are rejected.
 - Creature-combatant activations create campaign `effectRequests`. GM/admin approval validates and applies them atomically; Assistant GMs can inspect but not decide requests.
 - Daily Preparation removes `daily_preparation` effects in the same actor/effect transaction as the preparation update.
-- `npm run backfill:catalog-effects` is dry-run by default and requires both `--write` and `--confirm-write`; write mode creates a migration backup. It is never run during application startup.
+- `npm run backfill:catalog-effects` is dry-run by default. The approved
+  2026-07-17 write created 27 overrides and backup
+  `catalog-effects-2026-07-17T12-24-48-968Z`; its read-only verification
+  reported 0 pending writes. Future write mode still requires direct script
+  flags `--write --confirm-write` and is never run during application startup.
 
 Actor and inventory identity:
 
