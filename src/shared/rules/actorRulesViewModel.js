@@ -1,6 +1,7 @@
-import { selectActorEffects, selectConditionViewModels } from "../db/selectors/effectSelectors.js";
+import { selectActorEffects } from "../db/selectors/effectSelectors.js";
 import { normalizeCharacterRuntimeShape } from "../db/domain/characterShape.js";
 import { buildDerivedSourceEffects } from "./derivedSourceEffects.js";
+import { buildStandardConditionModifiers } from "./conditionEffectRules.js";
 import { resolveEffectModifiers } from "./effectResolver.js";
 
 export function buildActorRulesContext({ actor, campaign = null, effects = null, catalog = null } = {}) {
@@ -14,9 +15,11 @@ export function buildActorRulesContext({ actor, campaign = null, effects = null,
     }
 
     const actorId = actor.id;
-    const persistedEffects = Array.isArray(effects)
-        ? effects.map(normalizeEffectInput).filter(Boolean)
-        : selectActorEffects(campaign, actorId);
+    const persistedEffects = (Array.isArray(effects)
+        ? effects
+        : selectActorEffects(campaign, actorId))
+        .map(normalizeEffectInput)
+        .filter(Boolean);
     const derivedEffects = buildDerivedSourceEffects({
         actor,
         campaign,
@@ -24,9 +27,7 @@ export function buildActorRulesContext({ actor, campaign = null, effects = null,
         persistedEffects,
     });
     const resolvedEffects = [...persistedEffects, ...derivedEffects];
-    const conditions = Array.isArray(effects)
-        ? effectsToConditionViewModels(resolvedEffects)
-        : selectConditionViewModels(campaign, actorId);
+    const conditions = effectsToConditionViewModels(resolvedEffects);
 
     return {
         actor,
@@ -137,10 +138,19 @@ function effectsToConditionViewModels(effects = []) {
 function normalizeEffectInput(effect) {
     if (!effect) return null;
     const label = effect.label || effect.name;
+    const category = effect.category || "condition";
+    const rawValue = effect.value ?? effect.level;
+    const value = rawValue && typeof rawValue === "object"
+        ? rawValue
+        : Number.isFinite(Number(rawValue)) ? Number(rawValue) : 1;
+    const modifiers = Array.isArray(effect.modifiers) && effect.modifiers.length > 0
+        ? effect.modifiers
+        : category === "condition" ? buildStandardConditionModifiers(label, value) : [];
     return {
         ...effect,
         label,
-        category: effect.category || "condition",
-        value: Number.isFinite(Number(effect.value ?? effect.level)) ? Number(effect.value ?? effect.level) : 1,
+        category,
+        value,
+        modifiers,
     };
 }

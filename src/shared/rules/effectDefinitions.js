@@ -21,7 +21,17 @@ export const EFFECT_MODES = Object.freeze([
 ]);
 export const EFFECT_BONUS_TYPES = Object.freeze(["item", "status", "circumstance", "untyped"]);
 
-export const EFFECT_SELECTOR_REGISTRY = Object.freeze([
+export const EFFECT_SELECTOR_GROUPS = Object.freeze([
+  { id: "defenses", label: "Defenses", order: 10 },
+  { id: "combat", label: "Combat", order: 20 },
+  { id: "movement", label: "Movement & Perception", order: 30 },
+  { id: "attributes", label: "Attributes", order: 40 },
+  { id: "skills", label: "Skills", order: 50 },
+  { id: "dcs", label: "DCs", order: 60 },
+  { id: "general", label: "General", order: 70 },
+]);
+
+const RAW_EFFECT_SELECTOR_REGISTRY = [
   { value: "ac", label: "Armor Class" },
   { value: "ac.dex_cap", label: "AC Dexterity Cap" },
   { value: "hp.max", label: "Maximum HP" },
@@ -56,7 +66,15 @@ export const EFFECT_SELECTOR_REGISTRY = Object.freeze([
     "intimidation", "medicine", "nature", "occultism", "performance", "religion",
     "society", "stealth", "survival", "thievery",
   ].map(skill => ({ value: `skill.${skill}`, label: skill.charAt(0).toUpperCase() + skill.slice(1) })),
-]);
+];
+
+export const EFFECT_SELECTOR_REGISTRY = Object.freeze(
+  RAW_EFFECT_SELECTOR_REGISTRY.map((entry, order) => Object.freeze({
+    ...entry,
+    group: getEffectSelectorGroup(entry.value),
+    order,
+  }))
+);
 
 const SELECTOR_SET = new Set(EFFECT_SELECTOR_REGISTRY.map(entry => entry.value));
 const VALUE_MODES = new Set(["fixed", "actor_level_multiplier", "actor_level_tiers", "source_level_tiers"]);
@@ -74,6 +92,20 @@ const PREDICATE_TYPES = new Set([
 ]);
 const OPERATORS = new Set(["eq", "neq", "gte", "lte", "includes", "not_includes"]);
 const APPLY_ACTION_TYPES = new Set(["adjust_hp", "ensure_temp_hp", "add_condition", "remove_condition"]);
+
+function getEffectSelectorGroup(selector) {
+  if (["ac", "ac.dex_cap", "hp.max", "save.fortitude", "save.reflex", "save.will"].includes(selector)) return "defenses";
+  if (["speed", "perception"].includes(selector)) return "movement";
+  if (selector.startsWith("attribute.")) return "attributes";
+  if (selector.startsWith("skill.")) return "skills";
+  if (selector === "all.dcs" || selector.endsWith(".dc") || selector === "class.dc") return "dcs";
+  if (
+    selector === "initiative"
+    || selector.endsWith(".attack")
+    || selector.endsWith(".damage")
+  ) return "combat";
+  return "general";
+}
 
 export function normalizeEffectDefinitions(definitions = [], options = {}) {
   return (Array.isArray(definitions) ? definitions : [])

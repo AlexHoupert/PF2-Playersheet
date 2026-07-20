@@ -141,6 +141,20 @@ export function ActorSheetCard({
         setBacklashOpen(false);
     };
 
+    const handleRemoveEffect = (effect) => {
+        if (
+            !resolvedCapabilities.editable
+            || !activeCampaignId
+            || !effect?.id
+            || effect.derived
+            || !dataActions?.effect?.deleteEffect
+        ) return Promise.resolve();
+        return Promise.resolve(dataActions.effect.deleteEffect(activeCampaignId, effect.id)).catch((error) => {
+            console.error(error);
+            notifyError(error);
+        });
+    };
+
     if (!character) return null;
 
     return (
@@ -178,12 +192,14 @@ export function ActorSheetCard({
                         )}
                         <StatsView
                             character={rulesCharacter}
+                            campaign={activeCampaign}
                             rulesViewModel={actorRules}
                             conditions={conditions}
                             displayEffects={displayEffects}
                             characterActions={characterActions}
                             onOpenModal={handleOpenModal}
                             onLongPress={onOpenModalLong}
+                            onRemoveEffect={handleRemoveEffect}
                             readOnly={!resolvedCapabilities.editable}
                         />
                     </>

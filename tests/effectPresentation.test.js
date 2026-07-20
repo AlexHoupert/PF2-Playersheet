@@ -20,12 +20,44 @@ test('effect presentation covers standard, persistent, affliction, and custom ef
   ];
 
   const items = buildEffectPresentationItems(effects);
-  assert.deepEqual(items.map((item) => item.id), ['frightened', 'fire', 'poison', 'glue']);
+  assert.deepEqual(items.map((item) => item.id), ['frightened', 'fire', 'poison', 'item', 'glue']);
   assert.equal(items[0].label, 'Frightened 2');
   assert.equal(items[0].canModifyValue, true);
   assert.match(items[1].description, /DC 15 flat check/i);
   assert.match(items[2].description, /later wave/i);
-  assert.match(items[3].description, /no numerical rules effect/i);
+  assert.equal(items[3].tone, 'item');
+  assert.match(items[4].description, /no numerical rules effect/i);
+});
+
+test('temporary catalog effects use concrete source names and rules-first tones', () => {
+  const items = buildEffectPresentationItems([
+    {
+      id: 'quicksilver',
+      category: 'item',
+      label: 'Quicksilver Mutagen',
+      source: { name: 'Quicksilver Mutagen (Moderate)' },
+      modifiers: [{ mode: 'bonus', bonusType: 'item', value: 2 }],
+    },
+    {
+      id: 'bless',
+      category: 'spell',
+      label: 'Bless',
+      source: { name: 'Bless' },
+      modifiers: [{ mode: 'bonus', bonusType: 'status', value: 1 }],
+    },
+    {
+      id: 'passive',
+      category: 'feat',
+      label: 'Scaly Skin',
+      derived: true,
+      modifiers: [{ mode: 'bonus', bonusType: 'item', value: 1 }],
+    },
+  ]);
+
+  assert.equal(items[0].label, 'Quicksilver Mutagen (Moderate)');
+  assert.equal(items[0].tone, 'item');
+  assert.equal(items[1].tone, 'status');
+  assert.equal(items[2].canRemove, false);
 });
 
 test('party effect presentation excludes hidden effects while actor owners retain them', () => {

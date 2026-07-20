@@ -1,19 +1,36 @@
+const BONUS_TYPES = ["item", "status", "circumstance", "untyped"];
+
 export function resolveEffectModifiers(effects = [], selector) {
     return resolveEffectModifiersForSelectors(effects, [selector]);
 }
 
 export function resolveEffectModifiersForSelectors(effects = [], selectors = []) {
-    const matching = resolveDependencyConflicts(collectMatchingModifiers(effects, selectors));
+    const explained = explainEffectModifiersForSelectors(effects, selectors);
+    return {
+        total: explained.total,
+        breakdown: explained.breakdown,
+        cap: explained.cap,
+        set: explained.set,
+        applied: explained.applied,
+    };
+}
+
+export function explainEffectModifiersForSelectors(effects = [], selectors = []) {
+    const matching = collectMatchingModifiers(effects, selectors);
+    const dependencyResult = resolveDependencyConflicts(matching);
+    const eligible = dependencyResult.eligible;
+    const suppressed = new Map(dependencyResult.suppressed);
+    const appliedKeys = new Set();
     const breakdown = {};
     const applied = [];
     let total = 0;
     let cap = null;
     let set = null;
 
-    for (const bonusType of ["item", "status", "circumstance", "untyped"]) {
-        const typed = matching.filter(modifier =>
-            (modifier.bonusType || "untyped") === bonusType &&
-            ["bonus", "penalty"].includes(modifier.mode || "bonus")
+    for (const bonusType of BONUS_TYPES) {
+        const typed = eligible.filter(modifier =>
+            (modifier.bonusType || "untyped") === bonusType
+            && ["bonus", "penalty"].includes(modifier.mode || "bonus")
         );
         if (typed.length === 0) continue;
 
@@ -21,7 +38,7 @@ export function resolveEffectModifiersForSelectors(effects = [], selectors = [])
             const sum = typed.reduce((acc, modifier) => acc + toFiniteNumber(modifier.value, 0), 0);
             if (sum !== 0) breakdown.untyped = (breakdown.untyped || 0) + sum;
             total += sum;
-            applied.push(...typed);
+            typed.forEach(modifier => markApplied(modifier, appliedKeys, applied));
             continue;
         }
 
@@ -30,25 +47,35 @@ export function resolveEffectModifiersForSelectors(effects = [], selectors = [])
         const bestBonus = pickBest(bonuses, "max");
         const worstPenalty = pickBest(penalties, "min");
 
+        suppressUnselected(bonuses, bestBonus, suppressed, `Lower or equal ${bonusType} bonus`);
+        suppressUnselected(penalties, worstPenalty, suppressed, `Weaker or equal ${bonusType} penalty`);
+
         const typedTotal = toFiniteNumber(bestBonus?.value, 0) + toFiniteNumber(worstPenalty?.value, 0);
         if (typedTotal !== 0) breakdown[bonusType] = typedTotal;
         total += typedTotal;
-        if (bestBonus) applied.push(bestBonus);
-        if (worstPenalty) applied.push(worstPenalty);
+        markApplied(bestBonus, appliedKeys, applied);
+        markApplied(worstPenalty, appliedKeys, applied);
     }
 
-    const caps = matching.filter(modifier => modifier.mode === "cap");
+    const caps = eligible.filter(modifier => modifier.mode === "cap");
     if (caps.length > 0) {
         const capModifier = pickBest(caps, "min");
-        cap = toFiniteNumber(capModifier.value, null);
-        if (capModifier) applied.push(capModifier);
+        cap = toFiniteNumber(capModifier?.value, null);
+        suppressUnselected(caps, capModifier, suppressed, "Higher cap is not restrictive");
+        markApplied(capModifier, appliedKeys, applied);
     }
 
-    const sets = matching.filter(modifier => modifier.mode === "set");
+    const sets = eligible.filter(modifier => modifier.mode === "set");
     if (sets.length > 0) {
         const setModifier = pickBest(sets, "max");
         set = toFiniteNumber(setModifier?.value, null);
-        if (setModifier) applied.push(setModifier);
+        suppressUnselected(sets, setModifier, suppressed, "Lower set value is not selected");
+        markApplied(setModifier, appliedKeys, applied);
+    }
+
+    for (const modifier of eligible) {
+        if (appliedKeys.has(modifier.resolutionKey) || suppressed.has(modifier.resolutionKey)) continue;
+        suppressed.set(modifier.resolutionKey, "Resolved by a dedicated damage rule");
     }
 
     return {
@@ -56,7 +83,21 @@ export function resolveEffectModifiersForSelectors(effects = [], selectors = [])
         breakdown,
         cap,
         set,
-        applied,
+        applied: applied.map(toPublicModifier),
+        contributions: matching.map(modifier => ({
+            ...toPublicModifier(modifier),
+            effectId: modifier.sourceEffectId,
+            modifierId: modifier.id || modifier.resolutionKey,
+            source: modifier.sourceEffect?.source || null,
+            sourceActorId: modifier.sourceEffect?.source?.actorId
+                || modifier.sourceEffect?.application?.sourceActorId
+                || null,
+            category: modifier.sourceEffect?.category || "custom",
+            duration: modifier.sourceEffect?.duration || null,
+            derived: Boolean(modifier.sourceEffect?.derived),
+            applied: appliedKeys.has(modifier.resolutionKey),
+            suppressionReason: suppressed.get(modifier.resolutionKey) || null,
+        })),
     };
 }
 
@@ -115,32 +156,55 @@ function collectMatchingModifiers(effects, selector) {
 }
 
 function resolveDependencyConflicts(modifiers) {
-    const independent = modifiers.filter(modifier => !modifier.dependencyKey);
+    const eligible = modifiers.filter(modifier => !modifier.dependencyKey);
+    const suppressed = new Map();
     const groups = new Map();
     for (const modifier of modifiers.filter(item => item.dependencyKey)) {
         const key = String(modifier.dependencyKey);
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key).push(modifier);
     }
-    for (const group of groups.values()) {
+    for (const [key, group] of groups.entries()) {
         const positives = group.filter(modifier => toFiniteNumber(modifier.value, 0) >= 0);
         const negatives = group.filter(modifier => toFiniteNumber(modifier.value, 0) < 0);
         const bestPositive = pickBest(positives, "max");
         const worstNegative = pickBest(negatives, "min");
-        if (bestPositive) independent.push(bestPositive);
-        if (worstNegative) independent.push(worstNegative);
+        if (bestPositive) eligible.push(bestPositive);
+        if (worstNegative) eligible.push(worstNegative);
+        suppressUnselected(positives, bestPositive, suppressed, `Dependency conflict: ${key}`);
+        suppressUnselected(negatives, worstNegative, suppressed, `Dependency conflict: ${key}`);
     }
-    return independent;
+    return { eligible, suppressed };
 }
 
 function collectAllModifiers(effects) {
     return (effects || [])
         .filter(effect => effect && !effect.disabled)
-        .flatMap(effect => (effect.modifiers || []).map(modifier => ({
+        .flatMap((effect, effectIndex) => (effect.modifiers || []).map((modifier, modifierIndex) => ({
             ...modifier,
+            resolutionKey: `${effect.id || effectIndex}:${modifier.id || modifierIndex}`,
             sourceEffectId: effect.id,
             sourceLabel: effect.label,
+            sourceEffect: effect,
         })));
+}
+
+function markApplied(modifier, appliedKeys, applied) {
+    if (!modifier) return;
+    appliedKeys.add(modifier.resolutionKey);
+    applied.push(modifier);
+}
+
+function suppressUnselected(modifiers, selected, suppressed, reason) {
+    for (const modifier of modifiers) {
+        if (modifier !== selected) suppressed.set(modifier.resolutionKey, reason);
+    }
+}
+
+function toPublicModifier(modifier) {
+    if (!modifier) return null;
+    const { resolutionKey: _resolutionKey, sourceEffect: _sourceEffect, ...publicModifier } = modifier;
+    return publicModifier;
 }
 
 function pickBest(modifiers, mode) {

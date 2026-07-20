@@ -1,13 +1,24 @@
 import React from 'react';
 import { getCondLevel } from '../../utils/rules';
 import { HealthBar } from '../../shared/components/HealthBar';
-import { ConditionList } from '../../shared/components/ConditionList';
+import { ActorEffectsSection } from '../../shared/components/ActorEffectsSection';
 import { DefensesSection } from '../sections/DefensesSection';
 import { AttributesSection } from '../sections/AttributesSection';
 import { SkillsSection } from '../sections/SkillsSection';
 import { buildActorRulesContext, buildActorStatsViewModel } from '../../shared/rules/actorRulesViewModel';
 
-export function StatsView({ character, conditions = [], displayEffects = [], rulesViewModel = null, characterActions, onOpenModal, onLongPress, readOnly = false }) {
+export function StatsView({
+    character,
+    campaign = null,
+    conditions = [],
+    displayEffects = [],
+    rulesViewModel = null,
+    characterActions,
+    onOpenModal,
+    onLongPress,
+    onRemoveEffect,
+    readOnly = false,
+}) {
     if (!character) return null;
 
     const actorRules = rulesViewModel || buildActorStatsViewModel(buildActorRulesContext({
@@ -42,11 +53,14 @@ export function StatsView({ character, conditions = [], displayEffects = [], rul
                 />
             </div>
 
-            <ConditionList
-                conditions={displayEffects}
-                onClick={(effect) => onOpenModal('conditionInfo', effect)}
-                onAdd={() => onOpenModal('conditions', null)}
-                readOnly={readOnly}
+            <ActorEffectsSection
+                actorRules={actorRules}
+                campaign={campaign}
+                displayEffects={displayEffects}
+                canManageEffects={!readOnly}
+                onOpenEffect={(effect) => onOpenModal('conditionInfo', effect)}
+                onAddCondition={() => onOpenModal('conditions', null)}
+                onRemoveEffect={onRemoveEffect}
             />
 
             <DefensesSection

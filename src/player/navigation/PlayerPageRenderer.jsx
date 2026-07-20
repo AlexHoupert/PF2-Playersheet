@@ -80,6 +80,7 @@ export default function PlayerPageRenderer({
         return (
             <StatsView
                 character={rulesCharacter}
+                campaign={activeCampaign}
                 rulesViewModel={actorRules}
                 conditions={characterConditions}
                 displayEffects={characterEffects}
@@ -89,6 +90,10 @@ export default function PlayerPageRenderer({
                     if (data) setModalData(data);
                 }}
                 onLongPress={handleLongPress}
+                onRemoveEffect={(effect) => {
+                    if (readOnly || !activeCampaign?.id || !effect?.id) return Promise.resolve();
+                    return runDataAction(dataActions.effect.deleteEffect(activeCampaign.id, effect.id));
+                }}
                 readOnly={readOnly}
             />
         );

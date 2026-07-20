@@ -133,15 +133,36 @@ test("player HP, gold, and condition edits survive reload in fixture runtime", a
   await page.getByTestId("gold-modal-set").click();
   await expect(page.getByTestId("player-gold-display")).toContainText("15.00");
 
-  await page.getByRole("button", { name: /Frightened/i }).click();
+  await page.getByRole("button", { name: "Frightened", exact: true }).click();
   await page.getByTestId("condition-detail-increase-frightened").click();
   await page.getByRole("button", { name: "Close" }).click();
-  await expect(page.getByRole("button", { name: /Frightened 2/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Frightened 2", exact: true })).toBeVisible();
 
   await reloadFixture(page);
   await expect(page.getByTestId("player-health-text")).toContainText(/21\s*\/\s*30/);
   await expect(page.getByTestId("player-gold-display")).toContainText("15.00");
-  await expect(page.getByRole("button", { name: /Frightened 2/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Frightened 2", exact: true })).toBeVisible();
+});
+
+test("player can inspect and remove an exact persisted effect from the status screen", async ({ page }) => {
+  await gotoFixture(page);
+  await expectFixtureRoute(page, "player");
+
+  await expect(page.getByTestId("condition-badge-e2e-effect-frightened")).toBeVisible();
+  await page.getByTestId("actor-effects-overview-button").click();
+  await expect(page.getByTestId("actor-effects-drawer")).toBeVisible();
+  await expect(page.getByTestId("actor-effects-scope-temporary")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("Frightened", { exact: true }).last()).toBeVisible();
+
+  await page.getByTestId("actor-effects-view-sources").click();
+  await expect(page.getByText(/\[Status\] All Checks/).first()).toBeVisible();
+  await page.getByRole("button", { name: "Close active effects" }).click();
+
+  await page.getByRole("button", { name: "Remove Frightened" }).click();
+  await expect(page.getByTestId("condition-badge-e2e-effect-frightened")).toHaveCount(0);
+
+  await reloadFixture(page);
+  await expect(page.getByTestId("condition-badge-e2e-effect-frightened")).toHaveCount(0);
 });
 
 test("persistent damage is removable by its player and hidden encounter effects stay out of Party view", async ({ page }) => {
@@ -172,10 +193,11 @@ test("persistent damage is removable by its player and hidden encounter effects 
 
   await page.goto("/?e2e=true", { waitUntil: "domcontentloaded" });
   await expectFixtureRoute(page, "player");
-  await page.getByRole("button", { name: /1d6 fire persistent/i }).click();
+  const persistentDamageChip = page.locator(".effect-chip__main").filter({ hasText: "1d6 fire persistent" });
+  await persistentDamageChip.click();
   await expect(page.getByText(/Persistent damage is taken at the end/i)).toBeVisible();
-  await page.getByRole("button", { name: "Remove" }).click();
-  await expect(page.getByRole("button", { name: /1d6 fire persistent/i })).toHaveCount(0);
+  await page.getByRole("button", { name: "Remove", exact: true }).click();
+  await expect(persistentDamageChip).toHaveCount(0);
 });
 
 test("player loot claim and gold split persist without losing remaining state", async ({ page }) => {

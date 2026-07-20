@@ -709,6 +709,26 @@ test('runtime feedback and debug logging use shared helpers in migrated surfaces
     assert.match(debugLogSource, /import\.meta\.env\.DEV/);
 });
 
+test('actor stats use shared closable effect chips and explainable overview drawer', () => {
+    const statsSource = readSource('src/player/views/StatsView.jsx');
+    const sectionSource = readSource('src/shared/components/ActorEffectsSection.jsx');
+    const listSource = readSource('src/shared/components/ConditionList.jsx');
+    const drawerSource = readSource('src/shared/components/ActorEffectsDrawer.jsx');
+    const overviewSource = readSource('src/shared/rules/actorEffectOverview.js');
+
+    assert.match(statsSource, /ActorEffectsSection/);
+    assert.match(sectionSource, /selectEffectChipItems/);
+    assert.match(sectionSource, /actor-effects-overview-button/);
+    assert.match(listSource, /ClosableEffectChip/);
+    assert.match(listSource, /condition-list__add/);
+    assert.match(drawerSource, /actor-effects-scope-temporary/);
+    assert.match(drawerSource, /actor-effects-scope-all/);
+    assert.match(drawerSource, /actor-effects-view-effects/);
+    assert.match(drawerSource, /actor-effects-view-sources/);
+    assert.match(drawerSource, /ModalLayerMount/);
+    assert.match(overviewSource, /explainEffectModifiersForSelectors/);
+});
+
 test('player blocking overlays register with the modal layer', () => {
     const mainSource = readSource('src/main.jsx');
     const modalLayerSource = readSource('src/shared/overlays/ModalLayerProvider.jsx');

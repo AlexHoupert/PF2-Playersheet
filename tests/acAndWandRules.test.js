@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { combineArmorAndEffectItemAc } from '../src/shared/utils/acRules.js';
-import { buildActorRulesContext, buildActorStatsViewModel } from '../src/shared/rules/actorRulesViewModel.js';
+import { buildActorRulesContext, buildActorStatsViewModel, selectActorRulesViewModel } from '../src/shared/rules/actorRulesViewModel.js';
 import { buildDerivedSourceEffects } from '../src/shared/rules/derivedSourceEffects.js';
 import {
+    explainEffectModifiersForSelectors,
     resolveDamageEffects,
     resolveEffectModifiers,
     resolveEffectModifiersForSelectors,
@@ -87,6 +88,22 @@ test('effect resolver keeps highest persistent damage and offsets resistance wea
     });
 });
 
+test('effect resolver explains typed stacking and dependency suppression', () => {
+    const result = explainEffectModifiersForSelectors([
+        { id: 'item1', label: 'Item 1', modifiers: [{ id: 'low', selector: 'ac', mode: 'bonus', bonusType: 'item', value: 1 }] },
+        { id: 'item2', label: 'Item 2', modifiers: [{ id: 'high', selector: 'ac', mode: 'bonus', bonusType: 'item', value: 2 }] },
+        { id: 'dep1', label: 'Dependent 1', modifiers: [{ id: 'dep-low', selector: 'ac', mode: 'bonus', bonusType: 'status', value: 1, dependencyKey: 'shared-status' }] },
+        { id: 'dep2', label: 'Dependent 2', modifiers: [{ id: 'dep-high', selector: 'ac', mode: 'bonus', bonusType: 'status', value: 2, dependencyKey: 'shared-status' }] },
+    ], ['ac']);
+
+    assert.equal(result.total, 4);
+    assert.equal(result.contributions.find((item) => item.effectId === 'item1').applied, false);
+    assert.match(result.contributions.find((item) => item.effectId === 'item1').suppressionReason, /item bonus/i);
+    assert.equal(result.contributions.find((item) => item.effectId === 'item2').applied, true);
+    assert.match(result.contributions.find((item) => item.effectId === 'dep1').suppressionReason, /dependency conflict/i);
+    assert.equal(result.contributions.find((item) => item.effectId === 'dep2').applied, true);
+});
+
 test('standard condition mapping creates value modifiers for core PF2e conditions', () => {
     const frightened = createStandardConditionEffectInput('Frightened', 1);
     const sickened = createStandardConditionEffectInput('Sickened', 2);
@@ -146,6 +163,32 @@ test('actor rules viewmodel normalizes incomplete actor shapes', () => {
     assert.equal(viewModel.character.stats.hp.max, 1);
     assert.equal(viewModel.character.stats.speed.land, 25);
     assert.equal(calculateStat(viewModel.character, 'Stealth', 0).total, 0);
+});
+
+test('actor rules viewmodel hydrates legacy conditions for the shared explanation path', () => {
+  const actor = {
+    id: 'legacy-condition-actor',
+    name: 'Legacy Condition Actor',
+    level: 3,
+    stats: { hp: { current: 20, max: 20, temp: 0 } },
+  };
+  const campaign = {
+    id: 'campaign-legacy-condition',
+    actors: [actor],
+    actorEffects: [{
+      id: 'legacy-frightened',
+      targetActorId: actor.id,
+      category: 'condition',
+      label: 'Frightened',
+      value: 1,
+    }],
+  };
+
+  const rules = selectActorRulesViewModel(campaign, actor.id);
+  const frightened = rules.effects.find((effect) => effect.id === 'legacy-frightened');
+
+  assert.ok(frightened.modifiers.some((modifier) => modifier.selector === 'all.checks'));
+  assert.ok(frightened.modifiers.some((modifier) => modifier.selector === 'ac'));
 });
 
 test('mutagen actorEffects provide modifiers and do not stack item AC with armor', () => {

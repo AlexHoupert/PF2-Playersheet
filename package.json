@@ -15,7 +15,7 @@
     "build:data": "npm run build:shop && npm run build:spells && npm run build:feats && npm run build:actions && npm run build:impulses && npm run build:creatures && npm run build:abilities",
     "build:app": "vite build",
     "build": "npm run build:data && vite build && node scripts/copy_ressources_to_dist.js",
-    "lint": "eslint src/shared/rules src/shared/utils src/shared/hooks src/shared/db/domain src/player/views/StatsView.jsx src/player/sections src/shared/components/ActorSheetCard.jsx src/player/PlayerAppController.jsx src/admin/AdminTabContent.jsx tests --quiet",
+    "lint": "eslint src/shared/rules src/shared/utils src/shared/hooks src/shared/db/domain src/player/views/StatsView.jsx src/player/sections src/shared/components/ActorSheetCard.jsx src/shared/components/ActorEffectsDrawer.jsx src/shared/components/ActorEffectsSection.jsx src/shared/components/ClosableEffectChip.jsx src/shared/components/ConditionList.jsx src/player/PlayerAppController.jsx src/admin/AdminTabContent.jsx tests --quiet",
     "check:broad-writes": "node scripts/check_broad_writes.js",
     "check": "npm test && npm run check:broad-writes && npm run lint && npm run build:app",
     "smoke": "playwright test",
