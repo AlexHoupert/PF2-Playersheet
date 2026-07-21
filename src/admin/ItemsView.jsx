@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { SHOP_INDEX_FILTER_OPTIONS, SHOP_INDEX_ITEMS, fetchShopItemDetailBySourceFile } from '../shared/catalog/shopIndex';
@@ -11,6 +11,7 @@ import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { buildHideOverride, CATALOG_ENTRY_STATUS } from '../shared/catalog/catalogEntryModel';
 import { selectCatalogEntryStates } from '../shared/db/selectors/catalogOverrideSelectors';
 import { copyRef } from '../shared/clipboard/refClipboard';
+import { readItemArmorStats } from '../shared/catalog/itemArmorStats';
 
 const uniqueTypes = SHOP_INDEX_FILTER_OPTIONS.types;
 const uniqueCategories = SHOP_INDEX_FILTER_OPTIONS.categories;
@@ -414,10 +415,11 @@ export default function ItemsView({ db, onInspectItem }) {
         const targets = source === 'global'
             ? (selectedItems.length > 0 ? selectedItems : [contextMenu?.item].filter(Boolean))
             : (selectedSideItems.length > 0 ? selectedSideItems : [contextMenu?.item].filter(Boolean));
+        const primaryTarget = contextMenu?.item || targets[0];
 
-        if (action === 'edit') { setEditingItem({ ...targets[0], editorMode: 'edit' }); return; }
+        if (action === 'edit') { setEditingItem({ ...primaryTarget, editorMode: 'edit' }); return; }
         if (action === 'clone') {
-            const base = targets[0];
+            const base = primaryTarget;
             const openClone = (extra = {}) => setEditingItem({
                 ...base,
                 ...extra,
@@ -438,7 +440,7 @@ export default function ItemsView({ db, onInspectItem }) {
             return;
         }
         if (action === 'copyReference') {
-            const target = targets[0];
+            const target = primaryTarget;
             if (target) {
                 copyRef('item', target);
                 notifySuccess(`Reference copied: ${target.name}`);
@@ -446,7 +448,7 @@ export default function ItemsView({ db, onInspectItem }) {
             return;
         }
         if (action === 'newItem') { setEditingItem({ name: '', isCustom: true, editorMode: 'create' }); return; }
-        if (action === 'inspect' && onInspectItem) { onInspectItem(targets[0]); return; }
+        if (action === 'inspect' && onInspectItem) { onInspectItem(primaryTarget); return; }
 
         // Side panel specific actions
         if (action === 'removeFromSide') {
@@ -639,6 +641,7 @@ function normalizeCatalogShopItem(item, state) {
     if (!item?.name) return null;
     const data = item.data || item;
     const system = item.system || data.system || {};
+    const armorStats = readItemArmorStats(item);
     const type = item.type || data.type || 'item';
     const status = state?.status || item.catalogEntryStatus || CATALOG_ENTRY_STATUS.ORIGINAL;
     const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
@@ -657,6 +660,7 @@ function normalizeCatalogShopItem(item, state) {
         traits: item.traits ?? { value: system.traits?.value || [] },
         description: item.description ?? system.description?.value ?? '',
         bulk: item.bulk ?? system.bulk?.value ?? '',
+        ...armorStats,
         img: item.img || data.img || null,
         sourceFile: item.sourceFile || null,
         overrideSourceFile: item.overrideSourceFile || null,

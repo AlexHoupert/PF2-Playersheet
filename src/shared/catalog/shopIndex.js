@@ -160,6 +160,7 @@ export async function fetchShopItemDetailBySourceFile(sourceFile) {
         speedPenalty: sys.speedPenalty ?? null,
         strength: sys.strength ?? null,
         hardness: sys.hardness ?? null,
-        hp: sys.hp ? (sys.hp.value ?? sys.hp) : null
+        hp: sys.hp ? (sys.hp.value ?? sys.hp) : null,
+        hpMax: sys.hp?.max ?? null
     };
 }

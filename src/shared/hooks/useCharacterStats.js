@@ -1,5 +1,6 @@
 import { getConditionEffects } from '../../utils/rules.js';
 import { getShopIndexItemByName } from '../catalog/shopIndex.js';
+import { readItemArmorStats, resolveArmorDexterityCap } from '../catalog/itemArmorStats.js';
 import { combineArmorAndEffectItemAc } from '../utils/acRules.js';
 import { resolveEffectModifiers } from '../rules/effectResolver.js';
 
@@ -52,17 +53,14 @@ export const getArmorClassData = (char) => {
     const profKey = equippedArmor ? getArmorProfKey(armorCategory) : 'Unarmored';
 
     // AC Bonus
-    const baseItemAC = Number(equippedArmor?.acBonus ?? equippedArmor?.system?.ac?.value ?? equippedArmor?.ac ?? 0);
+    const armorStats = readItemArmorStats(equippedArmor || {});
+    const baseItemAC = armorStats.acBonus ?? 0;
     const potency = Number(equippedArmor?.system?.potencyRune?.value ?? equippedArmor?.system?.runes?.potency ?? 0);
 
-    const dexCapVal = equippedArmor?.system?.dex_cap ?? equippedArmor?.dexCap;
-    const armorDexCap = (dexCapVal === undefined || dexCapVal === null || dexCapVal === "") ? 99 : Number(dexCapVal);
+    const armorDexCap = armorStats.dexCap ?? 99;
     const actorEffects = Array.isArray(char?.actorEffects) ? char.actorEffects : [];
     const dexCapResolution = resolveEffectModifiers(actorEffects, 'ac.dex_cap');
-    const effectDexCap = dexCapResolution.cap;
-    const dexCap = Number.isFinite(Number(effectDexCap))
-        ? Math.min(armorDexCap, Number(effectDexCap))
-        : armorDexCap;
+    const dexCap = resolveArmorDexterityCap(armorDexCap, dexCapResolution.cap);
     const dexUsed = Math.min(dexMod, dexCap);
 
     const profRank = getProfValue(profKey);
@@ -84,7 +82,7 @@ export const getArmorClassData = (char) => {
     }
 
     const shieldRaised = Boolean(char.stats?.ac?.shield_raised);
-    const shieldBase = Number(equippedShield?.system?.ac_bonus ?? equippedShield?.acBonus ?? 2);
+    const shieldBase = readItemArmorStats(equippedShield || {}).acBonus ?? 2;
     const shieldPotency = Number(equippedShield?.system?.runes?.potency ?? 0);
     const shieldItemBonus = shieldBase + shieldPotency;
     const activeShieldBonus = shieldRaised ? shieldItemBonus : 0;

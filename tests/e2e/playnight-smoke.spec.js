@@ -102,6 +102,27 @@ test("encounter creature search includes catalog clones", async ({ page }) => {
   await expect(page.getByText("Smoke Ember Bear", { exact: true }).first()).toBeVisible();
 });
 
+test("armor editor loads and persists AC bonus and Dexterity cap", async ({ page }) => {
+  await gotoFixture(page, "admin=true");
+  await page.getByText("Items", { exact: true }).click();
+  await page.getByPlaceholder("Search items...").fill("Ancestral Embrace");
+
+  const armorRow = page.getByTestId("gm-item-row-ancestral-embrace");
+  await expect(armorRow).toBeVisible();
+  await armorRow.click({ button: "right" });
+  await page.getByText("Edit Item", { exact: true }).click();
+
+  await expect(page.getByTestId("item-editor-acBonus")).toHaveValue("1");
+  await expect(page.getByTestId("item-editor-dexCap")).toHaveValue("4");
+  await page.getByTestId("item-editor-dexCap").fill("3");
+  await page.getByRole("button", { name: "Save Item" }).click();
+
+  await expect(page.getByTestId("item-editor-dexCap")).toHaveCount(0);
+  await armorRow.click({ button: "right" });
+  await page.getByText("Edit Item", { exact: true }).click();
+  await expect(page.getByTestId("item-editor-dexCap")).toHaveValue("3");
+});
+
 test("campaign roles gate admin surfaces and spectator edits", async ({ page }) => {
   await gotoFixture(page, "admin=true&e2eRole=assistant_gm");
   await expectFixtureRoute(page, "admin");

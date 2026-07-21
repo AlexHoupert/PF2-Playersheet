@@ -627,6 +627,10 @@ test('catalog details and item rows use shared reusable controllers', () => {
     assert.match(itemEditorSource, /fetchShopItemDetailBySourceFile/);
     assert.match(itemEditorSource, /mergeCatalogDetailIntoEntry/);
     assert.match(itemEditorSource, /buildItemEditorFormData\(merged\)/);
+    assert.match(itemEditorSource, /Armor & Shield Statistics/);
+    assert.match(itemEditorSource, /field="acBonus"/);
+    assert.match(itemEditorSource, /field="dexCap"/);
+    assert.match(itemEditorSource, /buildItemArmorSystemFields/);
     assert.match(inventorySource, /ItemRow/);
     assert.match(shopSource, /ItemRow/);
     assert.match(itemsLayoutSource, /ItemRow/);

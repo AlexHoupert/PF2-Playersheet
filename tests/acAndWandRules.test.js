@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { combineArmorAndEffectItemAc } from '../src/shared/utils/acRules.js';
+import {
+    buildItemArmorFlatFields,
+    buildItemArmorSystemFields,
+    readItemArmorStats,
+    resolveArmorDexterityCap,
+} from '../src/shared/catalog/itemArmorStats.js';
 import { buildActorRulesContext, buildActorStatsViewModel, selectActorRulesViewModel } from '../src/shared/rules/actorRulesViewModel.js';
 import { buildDerivedSourceEffects } from '../src/shared/rules/derivedSourceEffects.js';
 import {
@@ -93,6 +99,64 @@ test('effect resolver keeps highest persistent damage and offsets resistance wea
         weakness: 4,
         netResistance: 1,
         netWeakness: 0,
+    });
+});
+
+test('armor Dexterity caps survive absent effect caps and preserve a legitimate zero', () => {
+    assert.equal(resolveArmorDexterityCap(4, null), 4);
+    assert.equal(resolveArmorDexterityCap(4, undefined), 4);
+    assert.equal(resolveArmorDexterityCap(4, 3), 3);
+    assert.equal(resolveArmorDexterityCap(0, null), 0);
+    assert.equal(resolveArmorDexterityCap(null, null), 99);
+});
+
+test('armor item helpers read and serialize editable PF2e armor statistics', () => {
+    const fromSystem = readItemArmorStats({
+        type: 'armor',
+        system: {
+            acBonus: 2,
+            dexCap: 0,
+            checkPenalty: -3,
+            speedPenalty: -10,
+            strength: 4,
+            hardness: 9,
+            hp: { value: 40, max: 54 },
+        },
+    });
+    assert.deepEqual(fromSystem, {
+        acBonus: 2,
+        dexCap: 0,
+        checkPenalty: -3,
+        speedPenalty: -10,
+        strength: 4,
+        hardness: 9,
+        hpMax: 54,
+    });
+
+    const editorValues = {
+        acBonus: '1',
+        dexCap: '4',
+        checkPenalty: '-1',
+        speedPenalty: '0',
+        strength: '0',
+        hardness: '',
+        hpMax: '20',
+    };
+    assert.deepEqual(buildItemArmorFlatFields(editorValues), {
+        acBonus: 1,
+        dexCap: 4,
+        checkPenalty: -1,
+        speedPenalty: 0,
+        strength: 0,
+        hpMax: 20,
+    });
+    assert.deepEqual(buildItemArmorSystemFields(editorValues), {
+        acBonus: 1,
+        dexCap: 4,
+        checkPenalty: -1,
+        speedPenalty: 0,
+        strength: 0,
+        hp: { value: 20, max: 20 },
     });
 });
 

@@ -2,8 +2,8 @@
  * ItemDetailContent - Reusable component for displaying item details
  * Can be used standalone in editor preview or wrapped in a modal
  */
-import React from 'react';
 import { parseFoundry } from '../utils/foundryParser';
+import { isArmorOrShieldItem, readItemArmorStats } from '../catalog/itemArmorStats';
 
 // Rarity colors for item names
 const RARITY_COLORS = {
@@ -37,6 +37,7 @@ export default function ItemDetailContent({
     const damage = item.damage;
     const extraDamage = item.extraDamage || item.system?.extraDamage || [];
     const img = item.img;
+    const armorStats = readItemArmorStats(item);
 
     // Format damage string
     const formatDamage = (dmg) => {
@@ -78,6 +79,12 @@ export default function ItemDetailContent({
     if (price) metaItems.push({ label: 'Price', value: `${price} gp` });
     if (bulk !== undefined && bulk !== null && bulk !== '') metaItems.push({ label: 'Bulk', value: bulk });
     if (range) metaItems.push({ label: 'Range', value: `${range} ft` });
+    if (isArmorOrShieldItem(item) && armorStats.acBonus !== null) {
+        metaItems.push({ label: 'AC Bonus', value: formatSigned(armorStats.acBonus) });
+    }
+    if (isArmorOrShieldItem(item) && armorStats.dexCap !== null) {
+        metaItems.push({ label: 'Dex Cap', value: String(armorStats.dexCap) });
+    }
 
     const allDamagesStr = formatAllDamages();
     if (allDamagesStr) metaItems.push({ label: 'Damage', value: allDamagesStr });
@@ -198,4 +205,8 @@ export default function ItemDetailContent({
             )}
         </div>
     );
+}
+
+function formatSigned(value) {
+    return Number(value) >= 0 ? `+${value}` : String(value);
 }

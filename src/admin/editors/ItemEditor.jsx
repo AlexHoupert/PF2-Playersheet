@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import RichTextEditor from '../../shared/components/RichTextEditor';
 import MultiSelectDropdown from '../../shared/components/MultiSelectDropdown';
 import ItemDetailContent from '../../shared/components/ItemDetailContent';
@@ -13,6 +13,12 @@ import {
     getCatalogEditorInitialItem,
 } from '../../shared/catalog/catalogEditorContract';
 import { mergeCatalogDetailIntoEntry } from '../../shared/catalog/catalogDetailMerge';
+import {
+    buildItemArmorFlatFields,
+    buildItemArmorSystemFields,
+    isArmorOrShieldItem,
+    readItemArmorStats,
+} from '../../shared/catalog/itemArmorStats';
 import EffectDefinitionEditor from './EffectDefinitionEditor';
 import {
     readCatalogEffectDefinitions,
@@ -37,6 +43,13 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
         traits: [],
         damages: [], // Array of damage entries
         range: '',
+        acBonus: '',
+        dexCap: '',
+        checkPenalty: '',
+        speedPenalty: '',
+        strength: '',
+        hardness: '',
+        hpMax: '',
         description: '',
         sourceFile: null,
         img: null,
@@ -53,7 +66,7 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
         if (initialItem) {
             setFormData(buildItemEditorFormData(initialItem));
 
-            const sourceFile = initialItem.sourceFile;
+            const sourceFile = initialItem.sourceFile || initialItem.overrideSourceFile;
             if (!sourceFile) {
                 setIsLoading(false);
                 return;
@@ -97,6 +110,9 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
             // For damage, use first entry as primary and store extras
             const primaryDamage = formData.damages[0];
             const extraDamages = formData.damages.slice(1);
+            const armorSystemFields = isArmorOrShieldItem(formData)
+                ? buildItemArmorSystemFields(formData)
+                : {};
 
             const itemJson = writeCatalogEffectDefinitions({
                 name: formData.name,
@@ -118,7 +134,8 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
                     extraDamage: extraDamages.length > 0 ? extraDamages : [],
                     range: parseInt(formData.range) || null,
                     category: formData.category,
-                    group: formData.group
+                    group: formData.group,
+                    ...armorSystemFields,
                 }
             }, formData.effectDefinitions);
 
@@ -430,6 +447,21 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
                     <RichTextEditor value={formData.description} onChange={val => handleChange('description', val)} style={{ height: 300 }} />
                 </div>
 
+                {isArmorOrShieldItem(formData) && (
+                    <div style={{ marginBottom: 20 }}>
+                        <h3 style={{ margin: '0 0 10px', color: '#c5a059' }}>Armor & Shield Statistics</h3>
+                        <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+                            <ItemNumberField label="AC Bonus" field="acBonus" value={formData.acBonus} onChange={handleChange} />
+                            <ItemNumberField label="Dexterity Cap" field="dexCap" value={formData.dexCap} onChange={handleChange} min="0" />
+                            <ItemNumberField label="Check Penalty" field="checkPenalty" value={formData.checkPenalty} onChange={handleChange} />
+                            <ItemNumberField label="Speed Penalty" field="speedPenalty" value={formData.speedPenalty} onChange={handleChange} />
+                            <ItemNumberField label="Strength Requirement" field="strength" value={formData.strength} onChange={handleChange} min="0" />
+                            <ItemNumberField label="Hardness" field="hardness" value={formData.hardness} onChange={handleChange} min="0" />
+                            <ItemNumberField label="Maximum HP" field="hpMax" value={formData.hpMax} onChange={handleChange} min="0" />
+                        </div>
+                    </div>
+                )}
+
                 <EffectDefinitionEditor
                     value={formData.effectDefinitions}
                     onChange={value => handleChange('effectDefinitions', value)}
@@ -479,6 +511,7 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
                             extraDamage: formData.damages.slice(1),
                             category: formData.category,
                             group: formData.group,
+                            ...buildItemArmorFlatFields(formData),
                             description: formData.description,
                             img: formData.img
                         }}
@@ -503,6 +536,7 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
 
 export function buildItemEditorFormData(item = {}) {
     const system = item.system || {};
+    const armorStats = readItemArmorStats(item);
     let damages = [];
     const itemDamage = system.damage || item.damage;
     if (itemDamage) {
@@ -526,6 +560,13 @@ export function buildItemEditorFormData(item = {}) {
         traits: item.traits?.value || system.traits?.value || item.traits || [],
         damages,
         range: item.range || system.range || '',
+        acBonus: armorStats.acBonus ?? '',
+        dexCap: armorStats.dexCap ?? '',
+        checkPenalty: armorStats.checkPenalty ?? '',
+        speedPenalty: armorStats.speedPenalty ?? '',
+        strength: armorStats.strength ?? '',
+        hardness: armorStats.hardness ?? '',
+        hpMax: armorStats.hpMax ?? '',
         description: system.description?.value || item.description?.value || item.description || '',
         sourceFile: item.sourceFile || item.overrideSourceFile || null,
         img: item.img || null,
@@ -535,8 +576,12 @@ export function buildItemEditorFormData(item = {}) {
 
 export function buildItemDbPayload(itemJson, formData, hasDamage = true) {
     const safeId = buildCatalogSafeId(itemJson?.name || formData?.name || 'item');
+    const armorFlatFields = isArmorOrShieldItem(formData)
+        ? buildItemArmorFlatFields(formData)
+        : {};
     return buildLegacyDbCatalogPayload({
         ...itemJson,
+        ...armorFlatFields,
         system: {
             ...itemJson.system,
             level: { value: parseInt(formData.level) },
@@ -548,6 +593,23 @@ export function buildItemDbPayload(itemJson, formData, hasDamage = true) {
         sourceFile: null,
         isCustom: true,
     });
+}
+
+function ItemNumberField({ label, field, value, onChange, min }) {
+    return (
+        <div className="form-group">
+            <label style={{ display: 'block', color: '#888', fontSize: '0.8em', marginBottom: 4 }}>{label}</label>
+            <input
+                type="number"
+                className="modal-input"
+                data-testid={`item-editor-${field}`}
+                value={value}
+                min={min}
+                onChange={(event) => onChange(field, event.target.value)}
+                style={{ width: '100%' }}
+            />
+        </div>
+    );
 }
 
 export function buildItemOverride(itemRecord, formData, initialItem, options = {}) {
