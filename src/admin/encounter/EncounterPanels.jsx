@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import CreatureCard from '../../shared/components/CreatureCard';
 import CreatureAbilityModal from '../../shared/components/CreatureAbilityModal';
 import CreatureSkillDetailDialog from '../../shared/components/CreatureSkillDetailDialog';
@@ -161,6 +161,7 @@ export function EncounterSidebar({
                                     <div
                                         key={c.id}
                                         className="enc-sidebar__search-item"
+                                        data-testid={`encounter-creature-result-${c.id}`}
                                         onClick={() => { addCreatureToEncounter(selectedEncounter.id, c); setCreatureSearch(''); }}
                                     >
                                         <span>

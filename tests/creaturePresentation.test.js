@@ -6,6 +6,11 @@ import {
     buildCreatureViewModel,
     selectVisibleCreatureFields,
 } from '../src/shared/bestiary/creaturePresentation.js';
+import {
+    buildEncounterCreatureCatalog,
+    mergeEncounterCreatureData,
+    resolveEncounterCreatureStaticId,
+} from '../src/shared/encounter/encounterCreatureCatalog.js';
 
 test('creature reveal helper returns precise gm data and redacted player data', () => {
     const creature = buildCreatureViewModel(
@@ -92,4 +97,44 @@ test('creature skill viewmodel handles numeric and object-shaped skills', () => 
     assert.equal(skill.specials[0].bonus, 13);
     assert.equal(skill.specials[0].label, 'in forests');
     assert.equal(skill.notes, 'Ambush predator');
+});
+
+test('encounter creature catalog includes cloned catalog creatures and excludes hidden originals', () => {
+    const staticCreatures = [
+        { id: 'wolf', name: 'Wolf', sourceFile: 'bestiary/wolf.json', level: 1 },
+        { id: 'bear', name: 'Bear', sourceFile: 'bestiary/bear.json', level: 2 },
+    ];
+    const source = {
+        catalogOverrides: {
+            hiddenWolf: {
+                id: 'hiddenWolf',
+                catalogType: 'creature',
+                baseId: 'bestiary/wolf.json',
+                mode: 'hide',
+                label: 'Wolf',
+                payload: { name: 'Wolf', overrideSourceFile: 'bestiary/wolf.json' },
+            },
+            emberBear: {
+                id: 'emberBear',
+                catalogType: 'creature',
+                baseId: null,
+                mode: 'custom',
+                label: 'Ember Bear',
+                payload: {
+                    id: 'ember-bear',
+                    name: 'Ember Bear',
+                    isCustom: true,
+                    data: { name: 'Ember Bear', system: { details: { level: { value: 4 } } } },
+                },
+            },
+        },
+        bestiary: { creatures: {}, customCreatures: {} },
+    };
+
+    const entries = buildEncounterCreatureCatalog(staticCreatures, source);
+    assert.deepEqual(entries.map((entry) => entry.name), ['Bear', 'Ember Bear']);
+    const clone = entries.find((entry) => entry.id === 'ember-bear');
+    assert.equal(clone.level, 4);
+    assert.equal(mergeEncounterCreatureData(clone).name, 'Ember Bear');
+    assert.equal(resolveEncounterCreatureStaticId(entries[0], staticCreatures), 'bear');
 });

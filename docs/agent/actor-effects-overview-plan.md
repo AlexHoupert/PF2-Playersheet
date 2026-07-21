@@ -77,3 +77,10 @@ Status: complete
 - Focused Chromium smoke: Drawer focus, focus return, no `aria-hidden` warning, and mobile left-side geometry passed.
 - Full `npm run check`: passed with 241 unit/static tests, Broad-Write-Guard, lint, and production build.
 - Full `npm run smoke`: passed with 21 Chromium flows, including desktop/mobile Drawer screenshots.
+
+## Follow-up: Selector Inheritance
+
+- [x] Concrete Saves, Skills, Attacks, Perception, AC, and DCs inherit their applicable `all.checks`, `all.dcs`, and attribute selectors in the central resolver.
+- [x] The Drawer resolves general and concrete modifiers in one typed-stacking pass.
+- [x] Regression coverage confirms that Reflex receives Quicksilver `+1 item` and Frightened 2 `-2 status` as a net `-1`.
+- [x] Full `npm run check` passes with 245 unit/static tests; full `npm run smoke` passes with 22 Chromium flows.

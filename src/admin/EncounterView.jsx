@@ -2,13 +2,13 @@
  * EncounterView – GM encounter management tab.
  * Layout: collapsible sidebar | initiative tracker | info panel
  */
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useCampaign } from '../shared/context/CampaignContext';
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { deepClone } from '../shared/utils/deepClone';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
-import { selectBestiaryRevealState, selectCustomCreatureData, selectCustomCreatureList } from '../shared/db/selectors/bestiarySelectors';
+import { selectBestiaryRevealState, selectCustomCreatureData } from '../shared/db/selectors/bestiarySelectors';
 import { selectActiveCharacters } from '../shared/db/selectors/characterSelectors';
 import {
     getCombatantEffectTargetId,
@@ -16,6 +16,11 @@ import {
     selectCombatantEffects
 } from '../shared/db/selectors/effectSelectors';
 import { getRotatedEncounterTurnOrder } from '../shared/encounter/turnOrder';
+import {
+    buildEncounterCreatureCatalog,
+    mergeEncounterCreatureData,
+    resolveEncounterCreatureStaticId,
+} from '../shared/encounter/encounterCreatureCatalog';
 import BottomSheet from '../shared/components/BottomSheet';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import InitiativeCard from './components/InitiativeCard';
@@ -49,23 +54,11 @@ export default function EncounterView({ db }) {
     const selectedEntityId = activeEncounter?.selectedEntityId || null;
 
     // ── Creature catalog for search (static index + custom creatures from DB) ──
-    const allCreatures = useMemo(() => {
-        const indexed = getAllCreatures();
-        const custom = selectCustomCreatureList(db).map(c => ({
-            id: c.id,
-            name: c.name,
-            level: c.data?.system?.details?.level?.value ?? 0,
-            type: c.type || 'npc',
-            img: c.data?.img || '',
-            rarity: c.data?.system?.traits?.rarity || 'common',
-            size: c.data?.system?.traits?.size?.value || 'med',
-            traits: c.data?.system?.traits?.value || [],
-            isCustom: true,
-        }));
-        // Custom creatures first, then deduplicate static ones by name
-        const customNames = new Set(custom.map(c => c.name));
-        return [...custom, ...indexed.filter(c => !customNames.has(c.name))];
-    }, [db]);
+    const staticCreatures = useMemo(() => getAllCreatures(), []);
+    const allCreatures = useMemo(
+        () => buildEncounterCreatureCatalog(staticCreatures, db),
+        [db, staticCreatures]
+    );
 
     const filteredCreatures = useMemo(() => {
         if (!creatureSearch || creatureSearch.length < 2) return [];
@@ -74,22 +67,34 @@ export default function EncounterView({ db }) {
     }, [creatureSearch, allCreatures]);
 
     // ── Load creature data for info panel ──
+    const loadCreatureData = useCallback(async (catalogEntry) => {
+        if (!catalogEntry) return null;
+        const legacyCustomData = selectCustomCreatureData(db, catalogEntry.id);
+        const staticId = resolveEncounterCreatureStaticId(catalogEntry, staticCreatures);
+        const staticData = staticId ? await fetchCreatureData(staticId) : null;
+        return mergeEncounterCreatureData(catalogEntry, staticData || legacyCustomData);
+    }, [db, staticCreatures]);
+
     useEffect(() => {
         if (!activeEncounter) return;
-        activeEncounter.combatants
+        let cancelled = false;
+        const pending = activeEncounter.combatants
             .filter(c => c.type === 'creature' && c.creatureId && !creatureDataCache[c.creatureId])
-            .forEach(c => {
-                // Check custom creatures first (synchronous, no fetch needed)
-                const customData = selectCustomCreatureData(db, c.creatureId);
-                if (customData) {
-                    setCreatureDataCache(prev => ({ ...prev, [c.creatureId]: customData }));
-                    return;
-                }
-                fetchCreatureData(c.creatureId).then(data => {
-                    if (data) setCreatureDataCache(prev => ({ ...prev, [c.creatureId]: data }));
-                });
+            .map(async (combatant) => {
+                const catalogEntry = allCreatures.find((creature) => creature.id === combatant.creatureId)
+                    || { id: combatant.creatureId, data: selectCustomCreatureData(db, combatant.creatureId) };
+                const data = await loadCreatureData(catalogEntry);
+                return data ? [combatant.creatureId, data] : null;
             });
-    }, [activeEncounter?.combatants?.length]);
+        Promise.all(pending).then((loaded) => {
+            if (cancelled) return;
+            const entries = loaded.filter(Boolean);
+            if (entries.length > 0) {
+                setCreatureDataCache((previous) => ({ ...previous, ...Object.fromEntries(entries) }));
+            }
+        });
+        return () => { cancelled = true; };
+    }, [activeEncounter, allCreatures, creatureDataCache, db, loadCreatureData]);
 
     // ── Domain action runner ──
     const runEncounterAction = useCallback((action) => {
@@ -151,7 +156,7 @@ export default function EncounterView({ db }) {
     };
 
     // ── Combatant management ──
-    const addCreatureToEncounter = (encId, catalogEntry) => {
+    const addCreatureToEncounter = async (encId, catalogEntry) => {
         const applyData = (data) => {
             const campaignId = requireCampaignId();
             if (!campaignId) return;
@@ -160,16 +165,8 @@ export default function EncounterView({ db }) {
             setCreatureDataCache(prev => ({ ...prev, [catalogEntry.id]: data }));
         };
 
-        if (catalogEntry.isCustom) {
-            // Custom creatures are already in DB — no async fetch needed
-            const customData = selectCustomCreatureData(db, catalogEntry.id);
-            if (customData) applyData(deepClone(customData));
-            return;
-        }
-
-        fetchCreatureData(catalogEntry.id).then(data => {
-            if (data) applyData(data);
-        });
+        const data = await loadCreatureData(catalogEntry);
+        if (data) applyData(deepClone(data));
     };
 
     const addAllPlayers = (encId) => {

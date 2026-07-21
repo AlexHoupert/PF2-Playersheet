@@ -137,3 +137,32 @@ test('source actor attribution requires an external actor and explicit activatio
     source: { ...cast.source, actorId: 'hero' },
   }, campaign), null);
 });
+
+test('overview combines all-check penalties with concrete save bonuses', () => {
+  const overview = buildActorEffectOverview({
+    actorRules: {
+      effects: [
+        {
+          id: 'quicksilver-reflex',
+          category: 'item',
+          label: 'Quicksilver Mutagen (Lesser)',
+          modifiers: [{ id: 'reflex', selector: 'save.reflex', mode: 'bonus', bonusType: 'item', value: 1 }],
+        },
+        {
+          id: 'frightened',
+          category: 'condition',
+          label: 'Frightened',
+          value: 2,
+          modifiers: [{ id: 'checks', selector: 'all.checks', mode: 'penalty', bonusType: 'status', value: -2 }],
+        },
+      ],
+    },
+  });
+  const defenses = overview.effectGroups.find((group) => group.id === 'defenses');
+  const reflex = defenses.rows.find((row) => row.id === 'save.reflex');
+
+  assert.equal(reflex.total, -1);
+  assert.equal(reflex.breakdown.item, 1);
+  assert.equal(reflex.breakdown.status, -2);
+  assert.deepEqual(new Set(reflex.contributions.map((entry) => entry.effectId)), new Set(['quicksilver-reflex', 'frightened']));
+});

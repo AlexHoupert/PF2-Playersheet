@@ -4,6 +4,44 @@ const SELECTOR_ALIASES = Object.freeze({
     "ranged.attack": "attack.ranged",
 });
 
+const SKILL_ATTRIBUTE_SELECTORS = Object.freeze({
+    acrobatics: "attribute.dexterity",
+    arcana: "attribute.intelligence",
+    athletics: "attribute.strength",
+    crafting: "attribute.intelligence",
+    deception: "attribute.charisma",
+    diplomacy: "attribute.charisma",
+    intimidation: "attribute.charisma",
+    medicine: "attribute.wisdom",
+    nature: "attribute.wisdom",
+    occultism: "attribute.intelligence",
+    performance: "attribute.charisma",
+    religion: "attribute.wisdom",
+    society: "attribute.intelligence",
+    stealth: "attribute.dexterity",
+    survival: "attribute.wisdom",
+    thievery: "attribute.dexterity",
+});
+
+const SELECTOR_PARENTS = Object.freeze({
+    ac: ["attribute.dexterity", "all.dcs"],
+    perception: ["attribute.wisdom", "all.checks"],
+    initiative: ["all.checks"],
+    "save.fortitude": ["attribute.constitution", "all.checks"],
+    "save.reflex": ["attribute.dexterity", "all.checks"],
+    "save.will": ["attribute.wisdom", "all.checks"],
+    "attack.all": ["all.checks"],
+    "attack.strength": ["attack.all", "all.checks"],
+    "attack.dexterity": ["attack.all", "all.checks"],
+    "attack.melee": ["attack.all", "all.checks"],
+    "attack.ranged": ["attack.all", "all.checks"],
+    "spell.attack": ["attack.all", "all.checks"],
+    "impulse.attack": ["attack.all", "all.checks"],
+    "spell.dc": ["all.dcs"],
+    "impulse.dc": ["all.dcs"],
+    "class.dc": ["all.dcs"],
+});
+
 export function resolveEffectModifiers(effects = [], selector) {
     return resolveEffectModifiersForSelectors(effects, [selector]);
 }
@@ -149,14 +187,29 @@ export function resolveResistanceWeakness(effects = []) {
 }
 
 function collectMatchingModifiers(effects, selector) {
-    const normalizedSelectors = new Set(
-        (Array.isArray(selector) ? selector : [selector])
-            .map(normalizeSelector)
-            .filter(Boolean)
-    );
+    const normalizedSelectors = new Set(expandEffectResolutionSelectors(selector));
     return collectAllModifiers(effects).filter(modifier =>
         normalizedSelectors.has(normalizeSelector(modifier.selector))
     );
+}
+
+export function expandEffectResolutionSelectors(selectors = []) {
+    const expanded = new Set();
+    const visit = (rawSelector) => {
+        const selector = normalizeSelector(rawSelector);
+        if (!selector || expanded.has(selector)) return;
+        expanded.add(selector);
+
+        const skillName = selector.startsWith("skill.") ? selector.slice("skill.".length) : null;
+        if (skillName) {
+            visit("all.checks");
+            visit(SKILL_ATTRIBUTE_SELECTORS[skillName]);
+        }
+        for (const parent of SELECTOR_PARENTS[selector] || []) visit(parent);
+    };
+
+    for (const selector of Array.isArray(selectors) ? selectors : [selectors]) visit(selector);
+    return [...expanded];
 }
 
 function normalizeSelector(selector) {

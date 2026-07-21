@@ -457,6 +457,13 @@ test('encounter effect UI uses actor effects instead of prompt condition writes'
     assert.match(dialogSource, /Add Affliction/);
 });
 
+test('encounter creature selection uses effective catalog entries', () => {
+    const encounterSource = readSource('src/admin/EncounterView.jsx');
+    assert.match(encounterSource, /buildEncounterCreatureCatalog/);
+    assert.match(encounterSource, /mergeEncounterCreatureData/);
+    assert.equal(encounterSource.includes('selectCustomCreatureList'), false);
+});
+
 test('v2 runtime actions do not inject or call characterRepo', () => {
     const actionSource = readSource('src/shared/db/domain/createDataActions.js');
     const contextSource = readSource('src/shared/context/CampaignContext.jsx');

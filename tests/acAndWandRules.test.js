@@ -5,6 +5,7 @@ import { buildActorRulesContext, buildActorStatsViewModel, selectActorRulesViewM
 import { buildDerivedSourceEffects } from '../src/shared/rules/derivedSourceEffects.js';
 import {
     explainEffectModifiersForSelectors,
+    expandEffectResolutionSelectors,
     resolveDamageEffects,
     resolveEffectModifiers,
     resolveEffectModifiersForSelectors,
@@ -122,6 +123,24 @@ test('standard condition mapping creates value modifiers for core PF2e condition
     assert.equal(resolveEffectModifiersForSelectors([clumsy], ['ac', 'attribute.dexterity']).total, -1);
     assert.equal(resolveEffectModifiersForSelectors([offGuard], ['ac']).total, -2);
     assert.equal(quickened.modifiers.length, 0);
+});
+
+test('concrete checks inherit attribute and all-check modifiers in one resolution', () => {
+    const quicksilver = {
+        id: 'quicksilver',
+        modifiers: [{ id: 'reflex', selector: 'save.reflex', mode: 'bonus', bonusType: 'item', value: 1 }],
+    };
+    const frightened = createStandardConditionEffectInput('Frightened', 2);
+
+    assert.deepEqual(
+        new Set(expandEffectResolutionSelectors('save.reflex')),
+        new Set(['save.reflex', 'attribute.dexterity', 'all.checks'])
+    );
+    const reflex = explainEffectModifiersForSelectors([quicksilver, frightened], ['save.reflex']);
+    assert.equal(reflex.total, -1);
+    assert.equal(reflex.breakdown.item, 1);
+    assert.equal(reflex.breakdown.status, -2);
+    assert.equal(reflex.contributions.length, 2);
 });
 
 test('Prone and Grabbed expose the same rule hierarchy consumed by the resolver', () => {

@@ -5,6 +5,7 @@ export const E2E_CAMPAIGN_ID = "e2e_campaign";
 export const E2E_ACTOR_ID = "e2e_actor_nimwe";
 export const E2E_CUSTOM_SPELL_ID = "spell_uplifting_overture_e2e";
 export const E2E_CUSTOM_ITEM_ID = "item_smoke_custom_charm";
+export const E2E_CUSTOM_CREATURE_ID = "creature_smoke_ember_bear";
 const E2E_UPLIFTING_OVERTURE_SOURCE = "spells/focus/uplifting-overture.json";
 
 export function isE2eFixtureEnabled() {
@@ -358,6 +359,39 @@ export function createE2eV2Store() {
           description: "E2E override spell.",
           sourceFile: null,
           overrideSourceFile: E2E_UPLIFTING_OVERTURE_SOURCE,
+        },
+      },
+      [E2E_CUSTOM_CREATURE_ID]: {
+        id: E2E_CUSTOM_CREATURE_ID,
+        catalogType: "creature",
+        baseId: null,
+        mode: "custom",
+        label: "Smoke Ember Bear",
+        payload: {
+          id: "smoke-ember-bear",
+          name: "Smoke Ember Bear",
+          type: "npc",
+          isCustom: true,
+          sourceFile: null,
+          data: {
+            id: "smoke-ember-bear",
+            name: "Smoke Ember Bear",
+            type: "npc",
+            system: {
+              details: { level: { value: 4 } },
+              attributes: {
+                hp: { max: 44 },
+                ac: { value: 21 },
+                perception: { value: 12 },
+              },
+              saves: {
+                fortitude: { value: 13 },
+                reflex: { value: 10 },
+                will: { value: 9 },
+              },
+              traits: { value: ["animal", "fire"], rarity: "uncommon", size: { value: "large" } },
+            },
+          },
         },
       },
     },

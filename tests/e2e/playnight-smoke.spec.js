@@ -90,6 +90,18 @@ test("admin fixture route loads campaign, player, items, quests, and encounter s
   await expect(page.getByText("Smoke Goblin", { exact: true })).toBeVisible();
 });
 
+test("encounter creature search includes catalog clones", async ({ page }) => {
+  await gotoFixture(page, "admin=true");
+  await page.getByText("Encounters", { exact: true }).click();
+
+  await page.getByPlaceholder("Search creatures...").fill("Smoke Ember Bear");
+  const clone = page.getByTestId("encounter-creature-result-smoke-ember-bear");
+  await expect(clone).toContainText("Smoke Ember Bear");
+  await clone.click();
+
+  await expect(page.getByText("Smoke Ember Bear", { exact: true }).first()).toBeVisible();
+});
+
 test("campaign roles gate admin surfaces and spectator edits", async ({ page }) => {
   await gotoFixture(page, "admin=true&e2eRole=assistant_gm");
   await expectFixtureRoute(page, "admin");
