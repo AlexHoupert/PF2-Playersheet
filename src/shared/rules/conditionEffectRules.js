@@ -22,16 +22,14 @@ export const DAMAGE_TYPES = [
 const OFF_GUARD_AC_CONDITIONS = new Set([
   "off-guard",
   "blinded",
-  "grabbed",
   "paralyzed",
-  "prone",
   "restrained",
   "unconscious",
 ]);
 
 const ABILITY_SELECTORS = {
-  strength: ["attribute.strength", "skill.athletics", "melee.attack"],
-  dexterity: ["attribute.dexterity", "save.reflex", "skill.acrobatics", "skill.stealth", "skill.thievery", "ranged.attack"],
+  strength: ["attribute.strength", "skill.athletics", "attack.strength"],
+  dexterity: ["attribute.dexterity", "save.reflex", "skill.acrobatics", "skill.stealth", "skill.thievery", "attack.dexterity"],
   constitution: ["attribute.constitution", "save.fortitude"],
   intelligence: ["attribute.intelligence", "skill.arcana", "skill.crafting", "skill.occultism", "skill.society"],
   wisdom: ["attribute.wisdom", "save.will", "perception", "skill.medicine", "skill.nature", "skill.religion", "skill.survival"],
@@ -114,28 +112,32 @@ export function createCustomBadgeEffectInput(label, options = {}) {
 }
 
 export function buildStandardConditionModifiers(conditionName, value = 1) {
+  return flattenConditionRuleModifiers(buildStandardConditionRuleTree(conditionName, value));
+}
+
+export function buildStandardConditionRuleTree(conditionName, value = 1) {
   const canonicalName = getCanonicalConditionName(conditionName);
   const lowerName = canonicalName.toLowerCase();
   const val = normalizeConditionValue(canonicalName, value);
   const source = isConditionValued(canonicalName) ? `${canonicalName} ${val}` : canonicalName;
-  const modifiers = [];
+  const root = createRuleNode(`condition:${slugify(canonicalName)}`, source, "condition");
 
   if (lowerName === "frightened" || lowerName === "sickened") {
-    addPenalty(modifiers, ["all.checks", "all.dcs", "ac"], -val, "status", source);
+    addPenalty(root, ["all.checks", "all.dcs", "ac"], -val, "status", source);
   }
 
   if (lowerName === "clumsy") {
-    addPenalty(modifiers, ABILITY_SELECTORS.dexterity, -val, "status", source);
-    addPenalty(modifiers, ["ac"], -val, "status", source);
+    addPenalty(root, ABILITY_SELECTORS.dexterity, -val, "status", source);
+    addPenalty(root, ["ac"], -val, "status", source);
   }
 
   if (lowerName === "enfeebled") {
-    addPenalty(modifiers, ABILITY_SELECTORS.strength, -val, "status", source);
+    addPenalty(root, ABILITY_SELECTORS.strength, -val, "status", source);
   }
 
   if (lowerName === "drained") {
-    addPenalty(modifiers, ABILITY_SELECTORS.constitution, -val, "status", source);
-    modifiers.push({
+    addPenalty(root, ABILITY_SELECTORS.constitution, -val, "status", source);
+    addModifier(root, {
       selector: "hp.max",
       mode: "penalty",
       bonusType: "status",
@@ -146,19 +148,19 @@ export function buildStandardConditionModifiers(conditionName, value = 1) {
   }
 
   if (lowerName === "stupefied") {
-    addPenalty(modifiers, ABILITY_SELECTORS.intelligence, -val, "status", source);
-    addPenalty(modifiers, ABILITY_SELECTORS.wisdom, -val, "status", source);
-    addPenalty(modifiers, ABILITY_SELECTORS.charisma, -val, "status", source);
-    addPenalty(modifiers, ["spell.attack", "spell.dc"], -val, "status", source);
+    addPenalty(root, ABILITY_SELECTORS.intelligence, -val, "status", source);
+    addPenalty(root, ABILITY_SELECTORS.wisdom, -val, "status", source);
+    addPenalty(root, ABILITY_SELECTORS.charisma, -val, "status", source);
+    addPenalty(root, ["spell.attack", "spell.dc"], -val, "status", source);
   }
 
   if (lowerName === "fatigued") {
-    addPenalty(modifiers, ["ac", "save.fortitude", "save.reflex", "save.will"], -1, "status", source);
+    addPenalty(root, ["ac", "save.fortitude", "save.reflex", "save.will"], -1, "status", source);
   }
 
   if (lowerName === "encumbered") {
-    addPenalty(modifiers, ABILITY_SELECTORS.dexterity, -1, "status", source);
-    modifiers.push({
+    addPenalty(root, ABILITY_SELECTORS.dexterity, -1, "status", source);
+    addModifier(root, {
       selector: "speed",
       mode: "penalty",
       bonusType: "status",
@@ -169,22 +171,53 @@ export function buildStandardConditionModifiers(conditionName, value = 1) {
   }
 
   if (lowerName === "blinded") {
-    addPenalty(modifiers, ["perception"], -4, "status", source);
+    addPenalty(root, ["perception"], -4, "status", source);
   }
 
   if (lowerName === "deafened") {
-    addPenalty(modifiers, ["perception"], -2, "status", source);
+    addPenalty(root, ["perception"], -2, "status", source);
   }
 
   if (lowerName === "unconscious") {
-    addPenalty(modifiers, ["perception"], -4, "status", source);
+    addPenalty(root, ["perception"], -4, "status", source);
   }
 
   if (OFF_GUARD_AC_CONDITIONS.has(lowerName)) {
-    addPenalty(modifiers, ["ac"], -2, "circumstance", "Off-Guard");
+    addPenalty(root, ["ac"], -2, "circumstance", "Off-Guard");
   }
 
-  return modifiers;
+  if (lowerName === "grabbed") {
+    const offGuard = createRuleNode(`${root.id}:off-guard`, "Off-Guard", "derived_condition");
+    addPenalty(offGuard, ["ac"], -2, "circumstance", "Off-Guard");
+    const immobilized = createRuleNode(`${root.id}:immobilized`, "Immobilized", "derived_condition");
+    addModifier(immobilized, {
+      selector: "speed",
+      mode: "set",
+      bonusType: "untyped",
+      value: 0,
+      source: "Immobilized",
+      stackingKey: "condition:immobilized:speed",
+    });
+    root.children.push(offGuard, immobilized);
+  }
+
+  if (lowerName === "prone") {
+    const offGuard = createRuleNode(`${root.id}:off-guard`, "Off-Guard", "derived_condition");
+    addPenalty(offGuard, ["ac"], -2, "circumstance", "Off-Guard");
+    const attackPenalty = createRuleNode(`${root.id}:attack-penalty`, "Attack Penalty", "rule_consequence");
+    addPenalty(attackPenalty, ["attack.all"], -2, "circumstance", "Prone");
+    root.children.push(offGuard, attackPenalty);
+  }
+
+  return root;
+}
+
+export function flattenConditionRuleModifiers(ruleTree) {
+  if (!ruleTree) return [];
+  return [
+    ...(ruleTree.modifiers || []),
+    ...(ruleTree.children || []).flatMap(flattenConditionRuleModifiers),
+  ];
 }
 
 export function getCanonicalConditionName(conditionName) {
@@ -208,9 +241,22 @@ export function diceAverage(count, size) {
   return Math.max(1, Number(count) || 1) * ((Math.max(2, Number(size) || 6) + 1) / 2);
 }
 
-function addPenalty(modifiers, selectors, value, bonusType, source) {
+function createRuleNode(id, label, kind) {
+  return { id, label, kind, modifiers: [], children: [] };
+}
+
+function addModifier(node, modifier) {
+  const index = node.modifiers.length;
+  node.modifiers.push({
+    id: modifier.id || `${node.id}:modifier:${index}`,
+    ruleNodeId: node.id,
+    ...modifier,
+  });
+}
+
+function addPenalty(node, selectors, value, bonusType, source) {
   for (const selector of selectors) {
-    modifiers.push({
+    addModifier(node, {
       selector,
       mode: "penalty",
       bonusType,

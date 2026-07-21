@@ -1,4 +1,8 @@
 const BONUS_TYPES = ["item", "status", "circumstance", "untyped"];
+const SELECTOR_ALIASES = Object.freeze({
+    "melee.attack": "attack.melee",
+    "ranged.attack": "attack.ranged",
+});
 
 export function resolveEffectModifiers(effects = [], selector) {
     return resolveEffectModifiersForSelectors(effects, [selector]);
@@ -147,12 +151,17 @@ export function resolveResistanceWeakness(effects = []) {
 function collectMatchingModifiers(effects, selector) {
     const normalizedSelectors = new Set(
         (Array.isArray(selector) ? selector : [selector])
-            .map(item => String(item || "").toLowerCase())
+            .map(normalizeSelector)
             .filter(Boolean)
     );
     return collectAllModifiers(effects).filter(modifier =>
-        normalizedSelectors.has(String(modifier.selector || "").toLowerCase())
+        normalizedSelectors.has(normalizeSelector(modifier.selector))
     );
+}
+
+function normalizeSelector(selector) {
+    const normalized = String(selector || "").toLowerCase();
+    return SELECTOR_ALIASES[normalized] || normalized;
 }
 
 function resolveDependencyConflicts(modifiers) {

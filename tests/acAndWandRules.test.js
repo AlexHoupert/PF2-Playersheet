@@ -11,11 +11,18 @@ import {
     resolveResistanceWeakness,
 } from '../src/shared/rules/effectResolver.js';
 import {
+    buildStandardConditionRuleTree,
     createCustomBadgeEffectInput,
     createPersistentDamageEffectInput,
     createStandardConditionEffectInput,
+    flattenConditionRuleModifiers,
 } from '../src/shared/rules/conditionEffectRules.js';
-import { calculateStat } from '../src/utils/rules.js';
+import {
+    calculateImpulseAttackAndClassDC,
+    calculateSpellAttackAndDC,
+    calculateStat,
+    getConditionEffects,
+} from '../src/utils/rules.js';
 import {
     consumeWandCharge,
     getWandCharges,
@@ -115,6 +122,56 @@ test('standard condition mapping creates value modifiers for core PF2e condition
     assert.equal(resolveEffectModifiersForSelectors([clumsy], ['ac', 'attribute.dexterity']).total, -1);
     assert.equal(resolveEffectModifiersForSelectors([offGuard], ['ac']).total, -2);
     assert.equal(quickened.modifiers.length, 0);
+});
+
+test('Prone and Grabbed expose the same rule hierarchy consumed by the resolver', () => {
+    const proneTree = buildStandardConditionRuleTree('Prone', 1);
+    const grabbedTree = buildStandardConditionRuleTree('Grabbed', 1);
+    const proneModifiers = flattenConditionRuleModifiers(proneTree);
+    const grabbedModifiers = flattenConditionRuleModifiers(grabbedTree);
+
+    assert.deepEqual(proneTree.children.map((node) => node.label), ['Off-Guard', 'Attack Penalty']);
+    assert.equal(resolveEffectModifiers([{ id: 'prone', modifiers: proneModifiers }], 'ac').total, -2);
+    assert.equal(resolveEffectModifiers([{ id: 'prone', modifiers: proneModifiers }], 'attack.all').total, -2);
+    assert.deepEqual(grabbedTree.children.map((node) => node.label), ['Off-Guard', 'Immobilized']);
+    assert.equal(resolveEffectModifiers([{ id: 'grabbed', modifiers: grabbedModifiers }], 'ac').total, -2);
+    assert.equal(resolveEffectModifiers([{ id: 'grabbed', modifiers: grabbedModifiers }], 'speed').set, 0);
+});
+
+test('canonical attack selectors separate attack geometry from attack attribute', () => {
+    const character = {
+        level: 1,
+        stats: {
+            attributes: {
+                strength: 3,
+                dexterity: 3,
+                intelligence: 3,
+                constitution: 3,
+            },
+            impulse_proficiency: 2,
+        },
+        magic: { attribute: 'Intelligence', proficiency: 2 },
+        actorEffects: [
+            createStandardConditionEffectInput('Clumsy', 1),
+            createStandardConditionEffectInput('Prone', 1),
+            {
+                id: 'legacy-ranged',
+                category: 'item',
+                label: 'Legacy ranged bonus',
+                modifiers: [{ selector: 'ranged.attack', mode: 'bonus', bonusType: 'item', value: 1 }],
+            },
+        ],
+    };
+
+    assert.equal(getConditionEffects(character, 'Melee Attack', 'Strength').total, -2);
+    assert.equal(getConditionEffects(character, 'Melee Attack', 'Dexterity').total, -3);
+    assert.equal(getConditionEffects(character, 'Ranged Attack', 'Dexterity').total, -2);
+    const spell = calculateSpellAttackAndDC(character);
+    const impulse = calculateImpulseAttackAndClassDC(character);
+    assert.equal(spell.attack.penalty, -2);
+    assert.equal(spell.dc.penalty, 0);
+    assert.equal(impulse.attack.penalty, -2);
+    assert.equal(impulse.classDC.penalty, 0);
 });
 
 test('actor rules viewmodel applies actorEffects to skills and saves', () => {

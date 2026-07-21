@@ -98,7 +98,7 @@ export function createBestialDefinition() {
   return createMutagenDefinition({
     id: "bestial_mutagen",
     label: "Bestial Mutagen",
-    bonuses: ["skill.athletics", "melee.attack"],
+    bonuses: ["skill.athletics", "attack.strength"],
     penalties: [
       { selectors: ["ac"], value: 1 },
       { selectors: ["save.reflex"], value: 2 },
@@ -123,7 +123,7 @@ export function createQuicksilverDefinition() {
   const definition = createMutagenDefinition({
     id: "quicksilver_mutagen",
     label: "Quicksilver Mutagen",
-    bonuses: ["skill.acrobatics", "skill.stealth", "skill.thievery", "save.reflex", "ranged.attack"],
+    bonuses: ["skill.acrobatics", "skill.stealth", "skill.thievery", "save.reflex", "attack.dexterity"],
     onApply: [{
       id: "quicksilver_hp_current",
       type: "adjust_hp",
@@ -172,7 +172,7 @@ export function createSereneDefinition() {
     bonuses: ["save.will", "skill.medicine", "skill.nature", "skill.religion", "skill.survival"],
     penalties: [{
       selectors: [
-        "melee.attack", "ranged.attack", "spell.attack", "impulse.attack",
+        "attack.all", "spell.attack", "impulse.attack",
         "melee.damage", "ranged.damage", "spell.damage", "impulse.damage",
       ],
       value: 1,
@@ -198,7 +198,7 @@ export function createCognitiveDefinition() {
     label: "Cognitive Mutagen",
     bonuses: ["skill.arcana", "skill.crafting", "skill.lore", "skill.occultism", "skill.society"],
     penalties: [{
-      selectors: ["skill.athletics", "skill.acrobatics", "melee.attack", "ranged.attack", "spell.attack", "impulse.attack"],
+      selectors: ["skill.athletics", "skill.acrobatics", "attack.all", "spell.attack", "impulse.attack"],
       value: 2,
     }],
   });
@@ -254,8 +254,7 @@ export function createBlessDefinition() {
     duration: { unit: "minutes", value: 1, tick: "turn_end" },
     predicates: { all: [], any: [] },
     modifiers: [
-      { id: "bless_melee", selector: "melee.attack", mode: "bonus", bonusType: "status", value: 1, stackingKey: "bless" },
-      { id: "bless_ranged", selector: "ranged.attack", mode: "bonus", bonusType: "status", value: 1, stackingKey: "bless" },
+      { id: "bless_weapon", selector: "attack.all", mode: "bonus", bonusType: "status", value: 1, stackingKey: "bless" },
       { id: "bless_spell", selector: "spell.attack", mode: "bonus", bonusType: "status", value: 1, stackingKey: "bless" },
       { id: "bless_impulse", selector: "impulse.attack", mode: "bonus", bonusType: "status", value: 1, stackingKey: "bless" },
     ],

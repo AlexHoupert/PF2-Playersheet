@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { Plus, Trash2, Zap } from "lucide-react";
 
 import {
@@ -185,7 +185,7 @@ function ModifierEditor({ modifier, onChange }) {
       <Field label="Selector">
         <select value={modifier.selector} onChange={event => onChange({ ...modifier, selector: event.target.value })}>
           <option value="">Choose value</option>
-          {EFFECT_SELECTOR_REGISTRY.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+          {EFFECT_SELECTOR_REGISTRY.filter(option => option.showInEditor !== false).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
       </Field>
       <Field label="Mode">

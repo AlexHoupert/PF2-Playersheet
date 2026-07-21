@@ -92,10 +92,12 @@ function normalizeRuntimeEffect(effect) {
     if (!effect) return null;
     const label = effect.label || effect.name || "";
     const value = Number.isFinite(Number(effect.value)) ? Number(effect.value) : 1;
-    let modifiers = Array.isArray(effect.modifiers) ? effect.modifiers : [];
-    if (modifiers.length === 0 && effect.category === "condition") {
-        modifiers = buildStandardConditionModifiers(label, value);
-    }
+    const canonicalConditionModifiers = effect.category === "condition"
+        ? buildStandardConditionModifiers(label, value)
+        : [];
+    const modifiers = canonicalConditionModifiers.length > 0
+        ? canonicalConditionModifiers
+        : Array.isArray(effect.modifiers) ? effect.modifiers : [];
     return {
         ...effect,
         id: effect.id || `effect:${label}`,
@@ -139,18 +141,36 @@ function getStatSelectors(statName, attributeName) {
     } else if (stat === "Perception") {
         selectors.add("perception");
         selectors.add("all.checks");
+    } else if (stat === "Spell Attack") {
+        selectors.add("attack.all");
+        selectors.add("spell.attack");
+        selectors.add("all.checks");
+    } else if (stat === "Spell DC") {
+        selectors.add("spell.dc");
+        selectors.add("all.dcs");
     } else if (stat === "Spell") {
+        selectors.add("attack.all");
         selectors.add("spell.attack");
         selectors.add("spell.dc");
         selectors.add("all.checks");
         selectors.add("all.dcs");
+    } else if (stat === "Impulse Attack") {
+        selectors.add("attack.all");
+        selectors.add("impulse.attack");
+        selectors.add("all.checks");
+    } else if (stat === "Impulse DC") {
+        selectors.add("impulse.dc");
+        selectors.add("all.dcs");
     } else if (stat === "Impulse") {
+        selectors.add("attack.all");
         selectors.add("impulse.attack");
         selectors.add("impulse.dc");
         selectors.add("all.checks");
         selectors.add("all.dcs");
     } else if (stat.includes("Attack")) {
-        selectors.add(lowerStat.includes("ranged") ? "ranged.attack" : "melee.attack");
+        selectors.add("attack.all");
+        selectors.add(lowerStat.includes("ranged") ? "attack.ranged" : "attack.melee");
+        if (lowerAttr === "strength" || lowerAttr === "dexterity") selectors.add(`attack.${lowerAttr}`);
         selectors.add("all.checks");
     } else if (stat) {
         selectors.add(`skill.${lowerStat}`);
@@ -235,14 +255,15 @@ export function calculateSpellAttackAndDC(character) {
     const level = parseInt(character.level) || 0;
 
     const baseAttack = Math.floor(attrMod + prof + (prof > 0 ? level : 0));
-    const cond = getConditionEffects(character, "Spell", attrName);
-    const totalAttack = baseAttack + cond.total;
+    const attackEffects = getConditionEffects(character, "Spell Attack", attrName);
+    const dcEffects = getConditionEffects(character, "Spell DC", attrName);
+    const totalAttack = baseAttack + attackEffects.total;
+    const totalDc = 10 + baseAttack + dcEffects.total;
 
-    const breakdown = {
+    const baseBreakdown = {
         attribute: attrMod,
         proficiency: prof,
         ...(prof > 0 ? { level } : {}),
-        ...cond.breakdown
     };
 
     const source = {
@@ -253,8 +274,19 @@ export function calculateSpellAttackAndDC(character) {
     };
 
     return {
-        attack: { total: totalAttack, breakdown, source, penalty: cond.total },
-        dc: { total: 10 + totalAttack, base: 10, breakdown, source, penalty: cond.total }
+        attack: {
+            total: totalAttack,
+            breakdown: { ...baseBreakdown, ...attackEffects.breakdown },
+            source,
+            penalty: attackEffects.total,
+        },
+        dc: {
+            total: totalDc,
+            base: 10,
+            breakdown: { ...baseBreakdown, ...dcEffects.breakdown },
+            source,
+            penalty: dcEffects.total,
+        }
     };
 }
 
@@ -271,14 +303,15 @@ export function calculateImpulseAttackAndClassDC(character) {
     const conMod = parseInt(character.stats?.attributes?.constitution) || 0;
 
     const baseAttack = conMod + (prof > 0 ? (level + prof) : 0);
-    const cond = getConditionEffects(character, "Impulse", "Constitution");
-    const totalAttack = baseAttack + cond.total;
+    const attackEffects = getConditionEffects(character, "Impulse Attack", "Constitution");
+    const dcEffects = getConditionEffects(character, "Impulse DC", "Constitution");
+    const totalAttack = baseAttack + attackEffects.total;
+    const totalDc = 10 + baseAttack + dcEffects.total;
 
-    const breakdown = {
+    const baseBreakdown = {
         attribute: conMod,
         proficiency: prof,
         ...(prof > 0 ? { level } : {}),
-        ...cond.breakdown
     };
 
     const source = {
@@ -289,7 +322,18 @@ export function calculateImpulseAttackAndClassDC(character) {
     };
 
     return {
-        attack: { total: totalAttack, breakdown, source, penalty: cond.total },
-        classDC: { total: 10 + totalAttack, base: 10, breakdown, source, penalty: cond.total }
+        attack: {
+            total: totalAttack,
+            breakdown: { ...baseBreakdown, ...attackEffects.breakdown },
+            source,
+            penalty: attackEffects.total,
+        },
+        classDC: {
+            total: totalDc,
+            base: 10,
+            breakdown: { ...baseBreakdown, ...dcEffects.breakdown },
+            source,
+            penalty: dcEffects.total,
+        }
     };
 }

@@ -721,11 +721,16 @@ test('actor stats use shared closable effect chips and explainable overview draw
     assert.match(sectionSource, /actor-effects-overview-button/);
     assert.match(listSource, /ClosableEffectChip/);
     assert.match(listSource, /condition-list__add/);
-    assert.match(drawerSource, /actor-effects-scope-temporary/);
     assert.match(drawerSource, /actor-effects-scope-all/);
     assert.match(drawerSource, /actor-effects-view-effects/);
     assert.match(drawerSource, /actor-effects-view-sources/);
     assert.match(drawerSource, /ModalLayerMount/);
+    assert.match(drawerSource, /DrawerTrigger asChild/);
+    assert.match(drawerSource, /<Switch/);
+    assert.match(drawerSource, /<Accordion/);
+    assert.match(drawerSource, /direction=\{isMobile \? 'left' : 'right'\}/);
+    assert.match(overviewSource, /ATTRIBUTABLE_TRIGGERS/);
+    assert.match(overviewSource, /showInOverview !== false/);
     assert.match(overviewSource, /explainEffectModifiersForSelectors/);
 });
 

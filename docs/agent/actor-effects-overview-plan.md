@@ -56,3 +56,24 @@ Status: complete
 - Derived Effects are read-only and must be changed through their source.
 - Rules-first tones use harmful/persistent semantics first, then PF2 bonus type.
 - No Firestore migration is required.
+
+## Refinement: Compact Drawer and Rule Hierarchies
+
+- [x] Mobile drawer opens from the left at `min(90vw, 420px)` and uses the full dynamic viewport height.
+- [x] Passive Effects use one `Include passive effects` switch instead of scope tabs.
+- [x] The overview button is the real Drawer trigger; focus enters the Drawer and returns to the trigger without an `aria-hidden` warning.
+- [x] Effect and Source rows are closed, independently expandable shadcn Accordions.
+- [x] Persistent Damage renders once per effective damage type as its formula, never as its average roll.
+- [x] Manual Encounter Effects no longer attribute the target Actor as their source.
+- [x] Actor attribution is limited to external `cast`, `activate`, and `consume` sources.
+- [x] Prone and Grabbed expose rule trees consumed by both the resolver and Source hierarchy.
+- [x] Attack selectors distinguish all/Strength/Dexterity/Melee/Ranged dimensions while preserving legacy aliases.
+- [x] Spell and Impulse attack modifiers are resolved independently from their DC modifiers.
+- [x] AC Dexterity Cap remains effective in rules but is excluded from the Drawer.
+
+### Refinement Verification
+
+- Focused unit/static suite: passed with 59 tests.
+- Focused Chromium smoke: Drawer focus, focus return, no `aria-hidden` warning, and mobile left-side geometry passed.
+- Full `npm run check`: passed with 241 unit/static tests, Broad-Write-Guard, lint, and production build.
+- Full `npm run smoke`: passed with 21 Chromium flows, including desktop/mobile Drawer screenshots.

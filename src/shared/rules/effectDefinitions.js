@@ -33,7 +33,7 @@ export const EFFECT_SELECTOR_GROUPS = Object.freeze([
 
 const RAW_EFFECT_SELECTOR_REGISTRY = [
   { value: "ac", label: "Armor Class" },
-  { value: "ac.dex_cap", label: "AC Dexterity Cap" },
+  { value: "ac.dex_cap", label: "AC Dexterity Cap", showInOverview: false },
   { value: "hp.max", label: "Maximum HP" },
   { value: "speed", label: "Land Speed" },
   { value: "perception", label: "Perception" },
@@ -48,8 +48,13 @@ const RAW_EFFECT_SELECTOR_REGISTRY = [
   { value: "attribute.intelligence", label: "Intelligence" },
   { value: "attribute.wisdom", label: "Wisdom" },
   { value: "attribute.charisma", label: "Charisma" },
-  { value: "melee.attack", label: "Melee Attacks" },
-  { value: "ranged.attack", label: "Ranged Attacks" },
+  { value: "attack.all", label: "All Attacks" },
+  { value: "attack.strength", label: "Strength-based Attacks" },
+  { value: "attack.dexterity", label: "Dexterity-based Attacks" },
+  { value: "attack.melee", label: "Melee Attacks" },
+  { value: "attack.ranged", label: "Ranged Attacks" },
+  { value: "melee.attack", label: "Melee Attacks", legacy: true, showInEditor: false, showInOverview: false },
+  { value: "ranged.attack", label: "Ranged Attacks", legacy: true, showInEditor: false, showInOverview: false },
   { value: "spell.attack", label: "Spell Attacks" },
   { value: "spell.dc", label: "Spell DC" },
   { value: "impulse.attack", label: "Impulse Attacks" },
@@ -101,6 +106,7 @@ function getEffectSelectorGroup(selector) {
   if (selector === "all.dcs" || selector.endsWith(".dc") || selector === "class.dc") return "dcs";
   if (
     selector === "initiative"
+    || selector.startsWith("attack.")
     || selector.endsWith(".attack")
     || selector.endsWith(".damage")
   ) return "combat";
@@ -297,6 +303,8 @@ export function materializeEffectDefinition(definitionInput, context = {}) {
       appliedBy: context.appliedBy || null,
       sourceActorId: context.sourceActorId || context.actor?.id || null,
       targetActorId: context.targetActorId || context.actor?.id || null,
+      parentEffectId: context.parentEffectId || null,
+      relation: context.parentEffectId ? "caused_by" : null,
       activationKey: context.activationKey || null,
       lastTickKey: null,
     },
@@ -320,12 +328,19 @@ export function applyEffectOnApplyActions(actor, effect, options = {}) {
       const hp = readHp(nextActor);
       writeHp(nextActor, { ...hp, temp: Math.max(hp.temp, value) });
     } else if (action.type === "add_condition") {
-      additionalEffects.push(createStandardConditionEffectInput(action.conditionName, value || 1, {
+      const additionalEffect = createStandardConditionEffectInput(action.conditionName, value || 1, {
         sourceType: effect?.source?.type,
         sourceId: effect?.source?.id,
         sourceName: effect?.source?.name,
         actorId: effect?.source?.actorId,
-      }));
+      });
+      additionalEffect.application = {
+        parentEffectId: effect?.id || null,
+        relation: effect?.id ? "caused_by" : null,
+        sourceActorId: effect?.application?.sourceActorId || effect?.source?.actorId || null,
+        targetActorId: effect?.application?.targetActorId || effect?.targetActorId || null,
+      };
+      additionalEffects.push(additionalEffect);
     } else if (action.type === "remove_condition") {
       removedTemplateIds.push(`condition:${slugify(action.conditionName)}`);
     }

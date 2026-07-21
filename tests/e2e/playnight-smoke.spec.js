@@ -144,25 +144,58 @@ test("player HP, gold, and condition edits survive reload in fixture runtime", a
   await expect(page.getByRole("button", { name: "Frightened 2", exact: true })).toBeVisible();
 });
 
-test("player can inspect and remove an exact persisted effect from the status screen", async ({ page }) => {
+test("player can inspect and remove an exact persisted effect from the status screen", async ({ page }, testInfo) => {
+  const accessibilityWarnings = [];
+  page.on("console", (message) => {
+    if (/Blocked aria-hidden/i.test(message.text())) accessibilityWarnings.push(message.text());
+  });
   await gotoFixture(page);
   await expectFixtureRoute(page, "player");
 
   await expect(page.getByTestId("condition-badge-e2e-effect-frightened")).toBeVisible();
   await page.getByTestId("actor-effects-overview-button").click();
-  await expect(page.getByTestId("actor-effects-drawer")).toBeVisible();
-  await expect(page.getByTestId("actor-effects-scope-temporary")).toHaveAttribute("aria-pressed", "true");
+  const drawer = page.getByTestId("actor-effects-drawer");
+  await expect(drawer).toBeVisible();
+  await expect(page.getByTestId("actor-effects-scope-all")).not.toBeChecked();
+  await expect.poll(() => drawer.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   await expect(page.getByText("Frightened", { exact: true }).last()).toBeVisible();
 
   await page.getByTestId("actor-effects-view-sources").click();
+  await page.getByTestId("actor-effect-source-e2e_effect_frightened").click();
   await expect(page.getByText(/\[Status\] All Checks/).first()).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("actor-effects-desktop-sources.png") });
   await page.getByRole("button", { name: "Close active effects" }).click();
+  await expect(page.getByTestId("actor-effects-overview-button")).toBeFocused();
+  expect(accessibilityWarnings).toEqual([]);
 
   await page.getByRole("button", { name: "Remove Frightened" }).click();
   await expect(page.getByTestId("condition-badge-e2e-effect-frightened")).toHaveCount(0);
 
   await reloadFixture(page);
   await expect(page.getByTestId("condition-badge-e2e-effect-frightened")).toHaveCount(0);
+});
+
+test("mobile actor effects drawer opens from the left and keeps focus contained", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await gotoFixture(page);
+  await expectFixtureRoute(page, "player");
+
+  const trigger = page.getByTestId("actor-effects-overview-button");
+  await trigger.click();
+  const drawer = page.getByTestId("actor-effects-drawer");
+  await expect(drawer).toBeVisible();
+  await expect.poll(async () => (await drawer.boundingBox())?.x ?? -999).toBeGreaterThanOrEqual(-1);
+  const box = await drawer.boundingBox();
+
+  expect(box.x).toBeLessThanOrEqual(1);
+  expect(box.width).toBeGreaterThanOrEqual(340);
+  expect(box.width).toBeLessThanOrEqual(420);
+  expect(box.height).toBeGreaterThanOrEqual(840);
+  await expect.poll(() => drawer.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("actor-effects-mobile-left.png") });
+
+  await page.getByRole("button", { name: "Close active effects" }).click();
+  await expect(trigger).toBeFocused();
 });
 
 test("persistent damage is removable by its player and hidden encounter effects stay out of Party view", async ({ page }) => {
@@ -193,6 +226,14 @@ test("persistent damage is removable by its player and hidden encounter effects 
 
   await page.goto("/?e2e=true", { waitUntil: "domcontentloaded" });
   await expectFixtureRoute(page, "player");
+  await page.getByTestId("actor-effects-overview-button").click();
+  const effectDrawer = page.getByTestId("actor-effects-drawer");
+  await expect(effectDrawer.getByText("1d6 fire", { exact: true })).toBeVisible();
+  await expect(effectDrawer.getByText("3.5", { exact: true })).toHaveCount(0);
+  await page.getByTestId("actor-effects-view-sources").click();
+  await expect(effectDrawer.getByText("1d6 fire", { exact: true })).toBeVisible();
+  await expect(effectDrawer.getByText(/Applied by Nimwe/i)).toHaveCount(0);
+  await page.getByRole("button", { name: "Close active effects" }).click();
   const persistentDamageChip = page.locator(".effect-chip__main").filter({ hasText: "1d6 fire persistent" });
   await persistentDamageChip.click();
   await expect(page.getByText(/Persistent damage is taken at the end/i)).toBeVisible();

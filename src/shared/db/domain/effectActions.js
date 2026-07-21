@@ -84,7 +84,7 @@ export function createEffectActions(context) {
     createEffect(campaignId, targetActorId, {
       ...createStandardConditionEffectInput(conditionName, value, {
       ...options,
-      actorId: options.actorId || targetActorId,
+      actorId: options.actorId || null,
       }),
       hidden: Boolean(options.hidden),
     });
@@ -93,7 +93,7 @@ export function createEffectActions(context) {
     createEffect(campaignId, targetActorId, {
       ...createPersistentDamageEffectInput(payload, {
       ...options,
-      actorId: options.actorId || targetActorId,
+      actorId: options.actorId || null,
       }),
       hidden: Boolean(options.hidden),
     });
@@ -102,7 +102,7 @@ export function createEffectActions(context) {
     createEffect(campaignId, targetActorId, {
       ...createCustomBadgeEffectInput(label, {
       ...options,
-      actorId: options.actorId || targetActorId,
+      actorId: options.actorId || null,
       }),
       hidden: Boolean(options.hidden),
     });

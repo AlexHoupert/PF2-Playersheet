@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CircleHelp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { selectEffectChipItems } from '../rules/actorEffectOverview';
@@ -40,16 +40,25 @@ export function ActorEffectsSection({
     <section className="actor-effects-section">
       <h3>Conditions & Effects</h3>
       <div className="actor-effects-section__content">
-        <Button
-          type="button"
-          variant="outline"
-          className="actor-effects-section__overview"
-          data-testid="actor-effects-overview-button"
-          aria-label="Open active effects overview"
-          onClick={() => setDrawerOpen(true)}
-        >
-          <CircleHelp />
-        </Button>
+        <ActorEffectsDrawer
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          trigger={(
+            <Button
+              type="button"
+              variant="outline"
+              className="actor-effects-section__overview"
+              data-testid="actor-effects-overview-button"
+              aria-label="Open active effects overview"
+            >
+              <CircleHelp />
+            </Button>
+          )}
+          actorRules={actorRules}
+          campaign={campaign}
+          canManageEffects={canManageEffects}
+          onRemoveEffect={onRemoveEffect}
+        />
         <ConditionList
           conditions={chipItems}
           onClick={onOpenEffect}
@@ -59,14 +68,6 @@ export function ActorEffectsSection({
           readOnly={!canManageEffects}
         />
       </div>
-      <ActorEffectsDrawer
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        actorRules={actorRules}
-        campaign={campaign}
-        canManageEffects={canManageEffects}
-        onRemoveEffect={onRemoveEffect}
-      />
     </section>
   );
 }

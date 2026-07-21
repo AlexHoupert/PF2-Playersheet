@@ -1,7 +1,10 @@
 import { selectActorEffects } from "../db/selectors/effectSelectors.js";
 import { normalizeCharacterRuntimeShape } from "../db/domain/characterShape.js";
 import { buildDerivedSourceEffects } from "./derivedSourceEffects.js";
-import { buildStandardConditionModifiers } from "./conditionEffectRules.js";
+import {
+    buildStandardConditionModifiers,
+    buildStandardConditionRuleTree,
+} from "./conditionEffectRules.js";
 import { resolveEffectModifiers } from "./effectResolver.js";
 
 export function buildActorRulesContext({ actor, campaign = null, effects = null, catalog = null } = {}) {
@@ -143,14 +146,22 @@ function normalizeEffectInput(effect) {
     const value = rawValue && typeof rawValue === "object"
         ? rawValue
         : Number.isFinite(Number(rawValue)) ? Number(rawValue) : 1;
-    const modifiers = Array.isArray(effect.modifiers) && effect.modifiers.length > 0
-        ? effect.modifiers
-        : category === "condition" ? buildStandardConditionModifiers(label, value) : [];
+    const canonicalConditionModifiers = category === "condition"
+        ? buildStandardConditionModifiers(label, value)
+        : [];
+    const modifiers = canonicalConditionModifiers.length > 0
+        ? canonicalConditionModifiers
+        : Array.isArray(effect.modifiers) && effect.modifiers.length > 0
+            ? effect.modifiers
+            : [];
     return {
         ...effect,
         label,
         category,
         value,
         modifiers,
+        ruleTree: category === "condition"
+            ? buildStandardConditionRuleTree(label, value)
+            : effect.ruleTree || null,
     };
 }
