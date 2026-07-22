@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { getAllAbilities, ABILITY_INDEX_FILTER_OPTIONS } from '../shared/catalog/abilityIndex';
+import { normalizeAbilityCatalogEntry } from '../shared/catalog/abilityModel';
 import { parseFoundry } from '../shared/utils/foundryParser';
 import MultiSelectDropdown from '../shared/components/MultiSelectDropdown';
 import BottomSheet from '../shared/components/BottomSheet';
@@ -497,23 +498,18 @@ function getAbilitySortValue(ability, key) {
 }
 
 function normalizeAbilityEntry(ability, state) {
-    if (!ability?.name) return null;
+    const normalized = normalizeAbilityCatalogEntry(ability);
+    if (!normalized) return null;
     const status = state?.status || ability.catalogEntryStatus || CATALOG_ENTRY_STATUS.ORIGINAL;
     return {
-        ...ability,
-        id: ability.id || ability._id || ability.name,
-        _id: ability._id || ability.id || ability.name,
-        typeCode: ability.typeCode || 'P',
-        traits: ability.traits || [],
-        category: ability.category || '',
-        description: ability.description || '',
+        ...normalized,
         catalogEntryStatus: status,
         catalogStatusLabel: status.charAt(0).toUpperCase() + status.slice(1),
-        catalogOverrideId: ability.catalogOverrideId || state?.overrideId || null,
-        catalogEntryKey: ability.catalogEntryKey || state?.key || null,
-        isCustom: status === CATALOG_ENTRY_STATUS.CUSTOM || Boolean(ability.isCustom),
-        isOverride: status === CATALOG_ENTRY_STATUS.EDITED || Boolean(ability.isOverride),
-        isDeleted: status === CATALOG_ENTRY_STATUS.DELETED || Boolean(ability.isDeleted),
+        catalogOverrideId: normalized.catalogOverrideId || state?.overrideId || null,
+        catalogEntryKey: normalized.catalogEntryKey || state?.key || null,
+        isCustom: status === CATALOG_ENTRY_STATUS.CUSTOM || Boolean(normalized.isCustom),
+        isOverride: status === CATALOG_ENTRY_STATUS.EDITED || Boolean(normalized.isOverride),
+        isDeleted: status === CATALOG_ENTRY_STATUS.DELETED || Boolean(normalized.isDeleted),
     };
 }
 

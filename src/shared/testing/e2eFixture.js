@@ -334,6 +334,19 @@ export function createE2eV2Store() {
         ],
       },
       notificationQueue: [],
+      abilities: {
+        custom: {
+          e2e_legacy_ability: {
+            id: "e2e_legacy_ability",
+            name: "Legacy Smoke Aura",
+            system: {
+              actionType: { value: "passive" },
+              description: { value: "A legacy ability without a traits field." },
+            },
+          },
+        },
+        deviant: {},
+      },
       bestiary: {
         creatures: {
           fLLKuOXwPq1Iq0U4: {

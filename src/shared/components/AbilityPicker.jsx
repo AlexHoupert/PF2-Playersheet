@@ -5,6 +5,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import { getAllAbilities, ABILITY_INDEX_FILTER_OPTIONS } from '../catalog/abilityIndex';
+import { normalizeAbilityCatalogList } from '../catalog/abilityModel';
 import { parseFoundry } from '../utils/foundryParser';
 import MultiSelectDropdown from './MultiSelectDropdown';
 
@@ -52,11 +53,12 @@ const PAGE_SIZE = 100;
 export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = null, customAbilities = [] }) {
     // Merge custom abilities (from DB) with the static index; custom takes priority by name
     const allAbilities = useMemo(() => {
-        const indexed = getAllAbilities();
-        const customNames = new Set(customAbilities.map(a => a.name));
+        const indexed = normalizeAbilityCatalogList(getAllAbilities());
+        const custom = normalizeAbilityCatalogList(customAbilities);
+        const customNames = new Set(custom.map(a => a.name.toLowerCase()));
         return [
-            ...customAbilities.map(a => ({ ...a, isCustom: true })),
-            ...indexed.filter(a => !customNames.has(a.name)),
+            ...custom.map(a => ({ ...a, isCustom: true })),
+            ...indexed.filter(a => !customNames.has(a.name.toLowerCase())),
         ];
     }, [customAbilities]);
     const [search, setSearch]         = useState('');
@@ -147,7 +149,7 @@ export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = n
                         </div>
                         {pageItems.map(a => (
                             <div
-                                key={a.name}
+                                key={a.id || a.name}
                                 onClick={() => setPreview(a)}
                                 onDoubleClick={() => handleSelect(a)}
                                 style={{

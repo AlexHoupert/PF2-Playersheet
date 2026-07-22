@@ -102,6 +102,26 @@ test("encounter creature search includes catalog clones", async ({ page }) => {
   await expect(page.getByText("Smoke Ember Bear", { exact: true }).first()).toBeVisible();
 });
 
+test("creature ability library tolerates incomplete legacy abilities", async ({ page }) => {
+  await gotoFixture(page, "admin=true");
+  await page.getByText("Creatures", { exact: true }).click();
+  await page.getByPlaceholder("Search creatures...").fill("Smoke Ember Bear");
+
+  const creatureRow = page.getByText("Smoke Ember Bear", { exact: true }).first();
+  await expect(creatureRow).toBeVisible();
+  await creatureRow.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: /From Library/i }).first().click();
+
+  await expect(page.getByRole("heading", { name: "Ability Library" })).toBeVisible();
+  const legacyAbility = page.getByText("Legacy Smoke Aura", { exact: false }).first();
+  await expect(legacyAbility).toBeVisible();
+  await legacyAbility.click();
+  await expect(page.getByText("A legacy ability without a traits field.")).toBeVisible();
+  await page.getByRole("button", { name: "Add to Creature" }).click();
+  await expect(page.locator('input[value="Legacy Smoke Aura"]')).toBeVisible();
+});
+
 test("armor editor loads and persists AC bonus and Dexterity cap", async ({ page }) => {
   await gotoFixture(page, "admin=true");
   await page.getByText("Items", { exact: true }).click();
