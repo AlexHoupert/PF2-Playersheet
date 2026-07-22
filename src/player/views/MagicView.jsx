@@ -263,7 +263,7 @@ export const MagicView = ({
                         style={{ marginTop: 10, width: '100%' }}
                         onClick={() => onAuthorCatalogEntry?.('spell')}
                     >
-                        Create Campaign Spell
+                        Create Spell
                     </button>
                 )}
             </div>

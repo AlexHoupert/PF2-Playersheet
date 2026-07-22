@@ -6,32 +6,35 @@ import {
     getFormulaItemType,
 } from '../utils/formulaBookUtils';
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
-
-function isAmmoItem(item) {
-    return (item?.type || '').toLowerCase() === 'ammunition' ||
-        (item?.category || '').toLowerCase().includes('ammo') ||
-        (item?.group || '').toLowerCase() === 'ammunition' ||
-        /arrow|bolt|round|cartridge|shot/i.test(item?.name || '');
-}
+import { findInventoryItemIndex } from '../../shared/utils/itemIdentity';
+import { isAmmunitionItem } from '../../shared/utils/ammunitionUtils';
 
 export function FormulaBookModal({
     character,
     updateCharacter,
     characterActions,
-    dailyPrepQueue,
+    dailyPrepQueue = [],
     setDailyPrepQueue,
     setModalData,
     setModalMode,
-    onClose
+    onClose,
+    mode = 'book',
+    title = 'Formula Book',
 }) {
     const formulas = character.formulaBook || [];
+    const isVersatileVialMode = mode === 'versatile_vial';
     const [typeFilter, setTypeFilter] = useState('all');
     const [highestLevelOnly, setHighestLevelOnly] = useState(false);
     const { confirm, notifySuccess, prompt } = useAppFeedback();
 
     // Resolve all formula items once
     const formulaItems = useMemo(() =>
-        formulas.map(fName => getShopIndexItemByName(fName) || { name: fName }),
+        formulas.map(formula => {
+            const name = typeof formula === 'string' ? formula : formula?.name;
+            const catalogItem = getShopIndexItemByName(name);
+            const formulaData = typeof formula === 'object' && formula ? formula : {};
+            return catalogItem ? { ...catalogItem, ...formulaData } : { ...formulaData, name };
+        }).filter(item => item.name),
         [formulas]
     );
 
@@ -65,6 +68,26 @@ export function FormulaBookModal({
     const maxBatches = Number.isFinite(storedMaxBatches) ? storedMaxBatches : 5;
     const currentBatches = dailyPrepQueue.reduce((acc, i) => acc + (i.batches || 1), 0);
 
+    const selectVersatileVialFormula = (formulaItem) => {
+        const qty = isAmmunitionItem(formulaItem) ? 4 : 1;
+        updateCharacter(c => {
+            const vialIdx = findInventoryItemIndex(c.inventory, { name: 'Versatile Vial' });
+            if (vialIdx < 0) return;
+
+            const vialQty = c.inventory[vialIdx].qty || 1;
+            if (vialQty <= 1) c.inventory.splice(vialIdx, 1);
+            else c.inventory[vialIdx] = { ...c.inventory[vialIdx], qty: vialQty - 1 };
+
+            c.inventory.push({
+                ...formulaItem,
+                qty,
+                prepared: true,
+                addedAt: Date.now(),
+            });
+        });
+        onClose();
+    };
+
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -79,9 +102,9 @@ export function FormulaBookModal({
                 overflowY: 'auto',
                 display: 'flex',
                 flexDirection: 'column'
-            }} onClick={e => e.stopPropagation()}>
+            }} onClick={e => e.stopPropagation()} data-testid="formula-book-modal">
 
-                <h2>Formula Book ({formulas.length})</h2>
+                <h2>{title} ({formulas.length})</h2>
                 {formulas.length === 0 && <div style={{ color: '#888', fontStyle: 'italic' }}>No known formulas. Buy them effectively from the shop.</div>}
 
                 {formulas.length > 0 && (
@@ -112,7 +135,7 @@ export function FormulaBookModal({
                                 checked={highestLevelOnly}
                                 onChange={e => setHighestLevelOnly(e.target.checked)}
                             />
-                            Nur höchstes Lvl
+                            Highest level only
                         </label>
                     </div>
                 )}
@@ -127,7 +150,10 @@ export function FormulaBookModal({
                         return (
                             <div key={item.name}
                                 style={{ background: '#333', padding: 8, borderRadius: 4, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
-                                onClick={() => { setModalData(item); setModalMode('item'); }}
+                                onClick={() => {
+                                    if (isVersatileVialMode) selectVersatileVialFormula(item);
+                                    else { setModalData(item); setModalMode('item'); }
+                                }}
                             >
                                 {item.img ? (
                                     <img src={`ressources/${item.img}`} style={{ width: 32, height: 32, objectFit: 'contain' }} alt="" />
@@ -140,11 +166,15 @@ export function FormulaBookModal({
                                 </div>
 
                                 {/* Prepare Button */}
-                                {canDailyCraft && (
+                                {isVersatileVialMode ? (
+                                    <span style={{ color: '#c5a059', fontSize: '0.8em', fontWeight: 'bold', flexShrink: 0 }}>
+                                        Select +{isAmmunitionItem(item) ? 4 : 1}
+                                    </span>
+                                ) : canDailyCraft && (
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            const batchSize = isAmmoItem(item) ? 4 : 1;
+                                            const batchSize = isAmmunitionItem(item) ? 4 : 1;
 
                                             // Add to queue logic
                                             setDailyPrepQueue(prev => {
@@ -168,7 +198,7 @@ export function FormulaBookModal({
                                         title="Prepare Batch (Use Daily Crafting)"
                                     >
                                         <span style={{ fontSize: '1.1em' }}>⚡</span>
-                                        Prep +{isAmmoItem(item) ? 4 : 1}
+                                        Prep +{isAmmunitionItem(item) ? 4 : 1}
                                     </button>
                                 )}
                             </div>
@@ -177,7 +207,7 @@ export function FormulaBookModal({
                 </div>
 
                 {/* Daily Preparation Section */}
-                {canDailyCraft && (
+                {!isVersatileVialMode && canDailyCraft && (
                     <div style={{ marginTop: 20, borderTop: '2px dashed #555', paddingTop: 15 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                             <h3 style={{ margin: 0, color: '#b39ddb' }}>Daily Preparation</h3>
@@ -209,7 +239,7 @@ export function FormulaBookModal({
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                                 {dailyPrepQueue.map((qItem, idx) => {
-                                    const effectiveBatchSize = isAmmoItem(qItem) ? 4 : 1;
+                                    const effectiveBatchSize = isAmmunitionItem(qItem) ? 4 : 1;
                                     return (
                                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#30204a', padding: '5px 8px', borderRadius: 4 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -247,7 +277,7 @@ export function FormulaBookModal({
                                         if (!confirmed) return;
                                         updateCharacter(c => {
                                             dailyPrepQueue.forEach(qItem => {
-                                                const effectiveBatchSize = isAmmoItem(qItem) ? 4 : 1;
+                                                const effectiveBatchSize = isAmmunitionItem(qItem) ? 4 : 1;
                                                 const totalQty = qItem.batches * effectiveBatchSize;
                                                 c.inventory.push({
                                                     ...qItem,

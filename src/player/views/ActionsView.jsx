@@ -233,7 +233,7 @@ export function ActionsView({
                     style={{ marginTop: 20, width: '100%' }}
                     onClick={() => onAuthorCatalogEntry?.('action')}
                 >
-                    Create Campaign Action
+                    Create Action
                 </button>
             )}
         </div>

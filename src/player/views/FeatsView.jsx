@@ -72,7 +72,7 @@ export const FeatsView = ({
                     style={{ marginTop: 10, width: '100%' }}
                     onClick={() => onAuthorCatalogEntry?.('feat')}
                 >
-                    Create Campaign Feat
+                    Create Feat
                 </button>
             )}
         </div>

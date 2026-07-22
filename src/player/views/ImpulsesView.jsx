@@ -129,7 +129,7 @@ export const ImpulsesView = ({
                         style={{ marginTop: 20, width: '100%' }}
                         onClick={() => onAuthorCatalogEntry?.('impulse')}
                     >
-                        Create Campaign Impulse
+                        Create Impulse
                     </button>
                 )}
             </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ModalLayerMount } from '../shared/overlays/ModalLayerProvider';
 import { shouldStack } from '../shared/utils/inventoryUtils';
+import { isAmmunitionItem, isBasicAmmunitionItem } from '../shared/utils/ammunitionUtils';
 
 // MODES: 'BUY', 'QTY', 'TRANSFER', 'CONTEXT'
 
@@ -18,8 +19,7 @@ function ItemActionsModalContent({ mode, item, characters, activeCharIndex, onCl
     const [targetCharId, setTargetCharId] = useState('');
 
     const character = characters[activeCharIndex];
-    if (!character) return null; // Guard
-    const inventory = character.inventory || [];
+    const inventory = character?.inventory || [];
 
     useEffect(() => {
         if (mode === 'CHANGE_QTY') {
@@ -32,6 +32,8 @@ function ItemActionsModalContent({ mode, item, characters, activeCharIndex, onCl
     const otherCharacters = useMemo(() => {
         return characters.map((c, i) => ({ name: c.name, index: i })).filter((c, i) => i !== activeCharIndex);
     }, [characters, activeCharIndex]);
+
+    if (!character) return null;
 
     // --- CONTEXT MENU ---
     if (mode === 'CONTEXT') {
@@ -52,7 +54,7 @@ function ItemActionsModalContent({ mode, item, characters, activeCharIndex, onCl
                         <button className="btn-add-condition" onClick={() => onOpenMode('BUY_RESTOCK', item)}>Restock</button>
                         <button className="btn-add-condition" onClick={() => onOpenMode('TRANSFER', item)}>Give to Player</button>
                         {onCustomize && (
-                            <button className="btn-add-condition" onClick={() => onCustomize(item)}>Customize for Campaign</button>
+                            <button className="btn-add-condition" onClick={() => onCustomize(item)}>Customize</button>
                         )}
                         {isWeapon && onEditProficiency && (
                             <button className="btn-add-condition" onClick={() => onEditProficiency(item)}>Proficiency</button>
@@ -82,20 +84,15 @@ function ItemActionsModalContent({ mode, item, characters, activeCharIndex, onCl
     if (mode === 'LOAD_AMMO') {
         // Filter inventory for ammo
         const ammoList = inventory.filter(i => {
-            const type = (i.type || '').toLowerCase();
-            const category = (i.category || '').toLowerCase();
-            const traits = (i.traits?.value || []);
-            const name = i.name.toLowerCase();
-
             // Exclude Basic Ammo
-            if (name.includes('arrow') || name.includes('bolt') || name.startsWith('rounds (')) return false;
+            if (isBasicAmmunitionItem(i)) return false;
 
             // Include Valid Ammo Types
             // Bomb is technically a weapon but treated as special ammo often? 
             // User said: "available are bombs but not the special ammo types" -> implied bombs ARE showing but shouldn't?
             // "just show every item that is Type: Ammo and not named..."
             // So if type is ammo, show it (unless excluded above).
-            return category === 'ammo' || type === 'ammunition' || type === 'ammo' || traits.includes('ammunition');
+            return isAmmunitionItem(i);
         });
 
         return (
@@ -148,8 +145,7 @@ function ItemActionsModalContent({ mode, item, characters, activeCharIndex, onCl
         else if (mode === 'TRANSFER') onTransfer(item, targetCharId, val);
     };
 
-    const isBasicAmmo = /^(arrows?|bolts?|rounds?\s*\()/i.test(item?.name || '') ||
-        ((item?.type || '').toLowerCase() === 'ammunition' && /\b(arrow|bolt|round)\b/i.test(item?.name || ''));
+    const isBasicAmmo = isBasicAmmunitionItem(item);
 
     const price = item.price || 0;
     const totalCost = (price * val).toFixed(2);

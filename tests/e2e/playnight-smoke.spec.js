@@ -70,6 +70,31 @@ test("player fixture route loads character, quests, loot, shop, and spell overri
   await expect(page.getByText("Show all available Items")).toBeVisible();
 });
 
+test("universal rounds load a slide pistol and versatile vials reuse formula filters", async ({ page }) => {
+  await gotoFixture(page);
+
+  await openPlayerPage(page, "Items", "items.equipment");
+  const ammoSlot = page.getByTestId("weapon-ammo-slot-e2e_item_slide_pistol-0");
+  await expect(ammoSlot).toHaveAttribute("title", "Empty Slot (Tap to Load)");
+  await ammoSlot.click();
+  await expect(ammoSlot).toHaveAttribute("title", "Loaded: Rounds (Universal)");
+
+  await openPlayerPage(page, "Items", "items.consumables");
+  await page.getByTestId("inventory-item-e2e_item_versatile_vial").dblclick();
+  const formulaModal = page.getByTestId("formula-book-modal");
+  await expect(formulaModal.getByRole("heading", { name: /Versatile Vial - Select Formula/ })).toBeVisible();
+  await expect(formulaModal.getByRole("combobox")).toBeVisible();
+  await expect(formulaModal.getByText("Highest level only", { exact: true })).toBeVisible();
+  await expect(formulaModal.getByText("Daily Preparation", { exact: true })).toHaveCount(0);
+
+  await formulaModal.getByLabel("Highest level only").check();
+  await expect(formulaModal.getByText("Alchemist's Fire (Lesser)", { exact: true })).toHaveCount(0);
+  await formulaModal.getByText("Alchemist's Fire (Moderate)", { exact: true }).click();
+  await expect(page.getByRole("heading", { name: /Versatile Vial - Select Formula/ })).toHaveCount(0);
+  await openPlayerPage(page, "Items", "items.equipment");
+  await expect(page.locator(".item-name").filter({ hasText: "Alchemist's Fire (Moderate)" })).toBeVisible();
+});
+
 test("admin fixture route loads campaign, player, items, quests, and encounter surfaces", async ({ page }) => {
   await gotoFixture(page, "admin=true");
   await expectFixtureRoute(page, "admin");

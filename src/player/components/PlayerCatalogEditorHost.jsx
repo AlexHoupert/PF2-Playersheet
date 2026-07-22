@@ -14,6 +14,11 @@ const EDITORS = {
     action: React.lazy(() => import('../../admin/editors/ActionEditor')),
 };
 
+function capitalize(value) {
+    const text = String(value || 'entry');
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 export default function PlayerCatalogEditorHost({ request, dataActions, onClose, onSaved }) {
     const { notifySuccess } = useAppFeedback();
     const savedEntryIdRef = useRef(null);
@@ -40,7 +45,7 @@ export default function PlayerCatalogEditorHost({ request, dataActions, onClose,
     };
 
     const finish = async result => {
-        notifySuccess(`${request.catalogType} saved for this campaign.`);
+        notifySuccess(`${capitalize(request.catalogType)} saved.`);
         await onSaved?.({
             catalogType: request.catalogType,
             entryId: savedEntryIdRef.current,

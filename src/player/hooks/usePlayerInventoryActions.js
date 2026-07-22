@@ -6,6 +6,11 @@ import { findInventoryItemIndex, findStackableInventoryItemIndex, resolveInvento
 import { consumeWandCharge, isWandItem, rechargeWand } from '../../shared/utils/wandUtils';
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 import { selectSourceEffectDefinitions } from '../../shared/rules/derivedSourceEffects';
+import {
+    getWeaponAmmunitionKind,
+    isBasicAmmunitionItem,
+    isCompatibleAmmunition,
+} from '../../shared/utils/ammunitionUtils';
 
 // Swallows the click the browser fires after touchend once a long-press
 // has already been handled (see pressEvents below).
@@ -173,10 +178,6 @@ export function usePlayerInventoryActions({
         };
     };
 
-    const isBasicAmmo = (item) =>
-        /^(arrows?|bolts?|rounds?\s*\()/i.test(item?.name || '') ||
-        ((item?.type || '').toLowerCase() === 'ammunition' && /\b(arrow|bolt|round)\b/i.test(item?.name || ''));
-
     const performDailyPrep = () => {
         const feats = character.feats || [];
         const hasQuickAlchemy = feats.includes("Quick Alchemy");
@@ -239,7 +240,7 @@ export function usePlayerInventoryActions({
             const cost = (item.price || 0) * qty;
             if (c.gold >= cost) {
                 c.gold -= cost;
-                const receivedQty = isBasicAmmo(item) ? qty * 10 : qty;
+                const receivedQty = isBasicAmmunitionItem(item) ? qty * 10 : qty;
                 const stackable = shouldStack(item);
                 const existingIndex = stackable ? findStackableInventoryItemIndex(c.inventory, item) : -1;
                 const existing = existingIndex >= 0 ? c.inventory[existingIndex] : null;
@@ -282,36 +283,11 @@ export function usePlayerInventoryActions({
             if (!w) return;
             if (!w.loaded) w.loaded = [];
 
-            const tags = (w.tags || []).map(t => t.toLowerCase());
-            const traits = (w.traits?.value || []).map(t => t.toLowerCase());
-            const allTags = [...tags, ...traits];
-
-            let requiredKeyword = null;
-            if (allTags.includes('crossbow') || w.name.toLowerCase().includes('crossbow')) requiredKeyword = 'bolt';
-            else if (allTags.includes('bow') || w.name.toLowerCase().includes('bow') || allTags.includes('shortbow') || allTags.includes('longbow')) requiredKeyword = 'arrow';
-            else if (allTags.includes('firearm') || w.name.toLowerCase().includes('gun') || w.name.toLowerCase().includes('pistol') || w.name.toLowerCase().includes('musket')) requiredKeyword = 'round';
+            const requiredKeyword = getWeaponAmmunitionKind(w);
 
             let ammoToLoad = ammoItem;
             if (!ammoToLoad) {
-                if (requiredKeyword) {
-                    ammoToLoad = c.inventory.find(i =>
-                        i.qty > 0 &&
-                        (i.category === 'ammo' || i.type === 'ammunition' || (i.traits?.value || []).includes('ammunition') || i.name.toLowerCase().includes('ammo')) &&
-                        i.name.toLowerCase().includes(requiredKeyword)
-                    );
-                }
-                if (!ammoToLoad && !requiredKeyword) {
-                    const universal = c.inventory.find(i => i.name.toLowerCase() === "rounds (universal)" && i.qty > 0);
-                    if (universal) ammoToLoad = universal;
-                    else {
-                        const compatible = c.inventory.find(i =>
-                            i.name.toLowerCase().includes('round') &&
-                            i.qty > 0 &&
-                            (i.category === 'ammo' || i.type === 'ammunition' || (i.traits?.value || []).includes('ammunition'))
-                        );
-                        if (compatible) ammoToLoad = compatible;
-                    }
-                }
+                ammoToLoad = c.inventory.find(i => isCompatibleAmmunition(w, i));
             }
 
             if (!ammoToLoad) {
@@ -325,9 +301,7 @@ export function usePlayerInventoryActions({
                 invAmmo.qty--;
                 if (invAmmo.qty <= 0) c.inventory.splice(ammoIdx, 1);
 
-                const isStandard = requiredKeyword
-                    ? ammoToLoad.name.toLowerCase().includes(requiredKeyword)
-                    : /^(rounds \(universal\)|rounds?|bolts?|arrows?)/i.test(ammoToLoad.name);
+                const isStandard = isBasicAmmunitionItem(ammoToLoad);
 
                 w.loaded[slotIndex] = {
                     name: ammoToLoad.name,

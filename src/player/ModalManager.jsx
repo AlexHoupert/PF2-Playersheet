@@ -215,6 +215,8 @@ function ModalManagerContent({
                 setModalData={setModalData}
                 setModalMode={setModalMode}
                 onClose={onClose}
+                mode={modalData?.mode || 'book'}
+                title={modalData?.title || 'Formula Book'}
             />
         );
     }
