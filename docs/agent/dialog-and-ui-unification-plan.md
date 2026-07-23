@@ -89,7 +89,7 @@ Ability authoring is an actual modal workflow and therefore uses the shared `For
 - [x] Dialog focus, background scroll lock, Escape, and reference Back navigation are verified.
 - [x] No new hand-built fixed dialog backdrop is introduced.
 - [x] `npm run check`, `npm run smoke`, and `git diff --check` pass.
-- [ ] Functional changes are committed and pushed to `main`.
+- [x] Functional changes are committed and pushed to `main` (`124d3c4f`).
 
 ## Verification
 
