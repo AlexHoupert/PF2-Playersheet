@@ -61,38 +61,37 @@ export default function PlayerCatalogEditorHost({ request, dataActions, onClose,
             id={`player-catalog-editor-${request.catalogType}`}
             active
             onEscape={onClose}
-            contentStyle={{ width: 'min(1120px, 100%)', height: 'calc(100dvh - 24px)', maxHeight: 'calc(100dvh - 24px)' }}
-            contentClassName="p-0"
+            contentStyle={{ width: 'min(1120px, 100%)', height: 'calc(100dvh - 24px)', maxHeight: 'calc(100dvh - 24px)', background: 'var(--background)' }}
+            contentClassName="h-full p-0"
+            contentBodyStyle={{ height: '100%', overflow: 'hidden' }}
         >
-            <div className="flex h-full min-h-0 flex-col bg-[#222]">
-                {!request.baseEntry && (
-                    <div className="flex items-center gap-3 border-b border-border bg-background/95 px-5 py-3">
-                        <Checkbox
-                            id="player-catalog-add-to-actor"
-                            data-testid="player-catalog-add-to-actor"
-                            checked={addToActor}
-                            onCheckedChange={checked => setAddToActor(checked === true)}
-                        />
-                        <Label htmlFor="player-catalog-add-to-actor" className="cursor-pointer text-sm font-medium">
-                            {PLAYER_CATALOG_ATTACH_LABELS[request.catalogType] || 'Add to my character'}
-                        </Label>
-                    </div>
-                )}
-                <div className="min-h-0 flex-1">
-                    <Suspense fallback={<div className="p-6 text-muted-foreground">Loading editor...</div>}>
-                        <Editor
-                            catalogType={request.catalogType}
-                            editorMode={editorMode}
-                            baseEntry={request.baseEntry || null}
-                            initialItem={request.baseEntry || null}
-                            onSave={finish}
-                            onCancel={onClose}
-                            onSaveCatalogEntry={saveEntry}
-                            onSaveToDb={saveEntry}
-                            dbOnly
-                        />
-                    </Suspense>
-                </div>
+            <div className="h-full min-h-0 bg-background">
+                <Suspense fallback={<div className="p-6 text-muted-foreground">Loading editor...</div>}>
+                    <Editor
+                        catalogType={request.catalogType}
+                        editorMode={editorMode}
+                        baseEntry={request.baseEntry || null}
+                        initialItem={request.baseEntry || null}
+                        headerAction={!request.baseEntry ? (
+                            <div className="flex max-w-[50vw] items-center gap-2">
+                                <Checkbox
+                                    id="player-catalog-add-to-actor"
+                                    data-testid="player-catalog-add-to-actor"
+                                    checked={addToActor}
+                                    onCheckedChange={checked => setAddToActor(checked === true)}
+                                />
+                                <Label htmlFor="player-catalog-add-to-actor" className="cursor-pointer text-right text-sm font-medium leading-tight">
+                                    {PLAYER_CATALOG_ATTACH_LABELS[request.catalogType] || 'Add to my character'}
+                                </Label>
+                            </div>
+                        ) : null}
+                        onSave={finish}
+                        onCancel={onClose}
+                        onSaveCatalogEntry={saveEntry}
+                        onSaveToDb={saveEntry}
+                        dbOnly
+                    />
+                </Suspense>
             </div>
         </OverlaySurface>
     );

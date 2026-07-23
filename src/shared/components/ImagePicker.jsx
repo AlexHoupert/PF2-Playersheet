@@ -9,12 +9,18 @@ const IMAGE_EXTENSIONS = ['.webp', '.png', '.jpg', '.jpeg', '.gif', '.svg'];
 const ICON_CATALOG_URL = new URL('../../data/icon_catalog.json', import.meta.url).href;
 const STATIC_RESOURCE_BASE_URL = import.meta.env.PROD ? '/ressources' : '/api/static';
 
-export default function ImagePicker({ isOpen, onClose, onSelect, initialPath = 'ressources' }) {
+export default function ImagePicker({ isOpen, onClose, onSelect, initialPath = 'ressources/icons' }) {
     const [currentPath, setCurrentPath] = useState(initialPath);
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        setCurrentPath(initialPath);
+        setSelectedItem(null);
+    }, [initialPath, isOpen]);
 
     // Load directory contents
     useEffect(() => {

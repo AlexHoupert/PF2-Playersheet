@@ -9,6 +9,7 @@ export default function OverlaySurface({
     children,
     className = '',
     contentClassName = '',
+    contentBodyStyle,
     contentStyle,
     onBackdropClick,
     onEscape,
@@ -77,7 +78,10 @@ export default function OverlaySurface({
                     onMouseDown={(event) => event.stopPropagation()}
                     style={contentStyle}
                 >
-                    <div className={`modal-layer-scroll-body ${contentClassName}`.trim()}>
+                    <div
+                        className={`modal-layer-scroll-body ${contentClassName}`.trim()}
+                        style={contentBodyStyle}
+                    >
                         {children}
                     </div>
                 </div>
@@ -85,4 +89,3 @@ export default function OverlaySurface({
         </ModalLayerMount>
     );
 }
-

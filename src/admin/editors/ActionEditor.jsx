@@ -7,7 +7,7 @@ import { buildCatalogEditorOverride, buildCatalogSafeId, getCatalogEditorInitial
 import { mergeCatalogDetailIntoEntry } from '../../shared/catalog/catalogDetailMerge';
 import CatalogEditorShell from '../components/editor/CatalogEditorShell';
 
-export default function ActionEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'action', onSave, onCancel, onSaveToDb, onSaveCatalogEntry, dbOnly = false }) {
+export default function ActionEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'action', headerAction, onSave, onCancel, onSaveToDb, onSaveCatalogEntry, dbOnly = false }) {
     const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
     const saveCatalogEntry = onSaveCatalogEntry || onSaveToDb;
     const [formData, setFormData] = useState({
@@ -222,7 +222,7 @@ export default function ActionEditor({ initialItem: initialItemProp, initialPayl
     ];
 
     return (
-        <CatalogEditorShell title={initialItem?.id || initialItem?.sourceFile ? 'Edit Action' : 'Create Action'} loadingMessage={isLoading ? 'Loading action details...' : ''} error={error} pending={isSaving} saveLabel="Save Action" onSave={handleSave} onCancel={onCancel}>
+        <CatalogEditorShell title={initialItem?.id || initialItem?.sourceFile ? 'Edit Action' : 'Create Action'} headerAction={headerAction} loadingMessage={isLoading ? 'Loading action details...' : ''} error={error} pending={isSaving} saveLabel="Save Action" onSave={handleSave} onCancel={onCancel}>
 
             <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 20 }}>
                 <div className="form-group">

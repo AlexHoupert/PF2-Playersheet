@@ -255,6 +255,57 @@ test("shared form dialogs keep their header and footer reachable on a short mobi
   await expect(dialog).toHaveCount(0);
 });
 
+test("mobile player catalog editor scrolls its form and keeps attach controls in the header", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  await gotoFixture(page, "e2eRole=trusted_player");
+
+  await page
+    .getByRole("navigation", { name: "Player navigation" })
+    .getByRole("button", { name: /Items$/i })
+    .click();
+  await page
+    .getByRole("region", { name: "Items pages" })
+    .getByRole("button", { name: "Equipment", exact: true })
+    .click();
+  await page.locator("button:visible").filter({ hasText: /^Create Item$/ }).first().click();
+
+  const editor = page.getByTestId("catalog-editor-shell");
+  const header = page.getByTestId("catalog-editor-header");
+  const body = page.getByTestId("catalog-editor-body");
+  const attach = page.getByTestId("player-catalog-add-to-actor");
+  await expect(editor).toBeVisible();
+  await expect(header.getByRole("heading", { name: "Create Item" })).toBeVisible();
+  await expect(attach).toBeChecked();
+
+  const outerScrollBody = page.locator(".modal-layer-scroll-body").filter({ has: editor });
+  expect(await outerScrollBody.evaluate(element => getComputedStyle(element).overflowY)).toBe("hidden");
+  expect(await body.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+  expect(await body.evaluate(element => {
+    element.scrollTop = 180;
+    return element.scrollTop;
+  })).toBeGreaterThan(0);
+
+  const [headingBox, attachBox] = await Promise.all([
+    header.getByRole("heading", { name: "Create Item" }).boundingBox(),
+    attach.boundingBox(),
+  ]);
+  expect(headingBox).not.toBeNull();
+  expect(attachBox).not.toBeNull();
+  expect(attachBox.x).toBeGreaterThan(headingBox.x);
+  expect(Math.abs((attachBox.y + attachBox.height / 2) - (headingBox.y + headingBox.height / 2))).toBeLessThan(24);
+
+  await testInfo.attach("mobile-player-item-editor", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  });
+
+  await page.getByRole("button", { name: "Browse...", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Select Image" })).toBeVisible();
+  await expect(page.getByText("ressources/icons", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).last().click();
+  await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+});
+
 test("player can inspect and remove an exact persisted effect from the status screen", async ({ page }, testInfo) => {
   const accessibilityWarnings = [];
   page.on("console", (message) => {

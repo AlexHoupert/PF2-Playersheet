@@ -29,7 +29,7 @@ import CatalogEditorShell from '../components/editor/CatalogEditorShell';
 
 const STATIC_RESOURCE_BASE_URL = import.meta.env.PROD ? '/ressources' : '/api/static';
 
-export default function ItemEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'item', onSave, onCancel, onSaveToDb, onSaveCatalogEntry, dbOnly = false }) {
+export default function ItemEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'item', headerAction, onSave, onCancel, onSaveToDb, onSaveCatalogEntry, dbOnly = false }) {
     const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
     const [formData, setFormData] = useState({
         name: '',
@@ -268,7 +268,7 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
     return (
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100%', overflow: 'hidden' }}>
             {/* Left: Editor Form */}
-            <CatalogEditorShell className="min-w-0 flex-1" title={initialItem?.name ? 'Edit Item' : 'Create Item'} loadingMessage={isLoading ? 'Loading item details...' : ''} error={error} pending={isSaving} saveLabel="Save Item" onSave={handleSave} onCancel={onCancel}>
+            <CatalogEditorShell className="min-w-0 flex-1" title={initialItem?.name ? 'Edit Item' : 'Create Item'} headerAction={headerAction} loadingMessage={isLoading ? 'Loading item details...' : ''} error={error} pending={isSaving} saveLabel="Save Item" onSave={handleSave} onCancel={onCancel}>
 
                 {/* Basic Info Grid */}
                 <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10, marginBottom: 20 }}>
@@ -519,7 +519,7 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
                 isOpen={showImagePicker}
                 onClose={() => setShowImagePicker(false)}
                 onSelect={(path) => handleChange('img', path)}
-                initialPath="ressources"
+                initialPath="ressources/icons"
             />
         </div>
     );

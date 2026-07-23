@@ -68,3 +68,15 @@ test('catalog editors use a shared shell or the shared form-dialog composition',
     }
     assert.match(readSource('src/admin/AbilitiesView.jsx'), /FormDialog/);
 });
+
+test('player catalog editors keep one scroll owner and render attach controls in the editor header', () => {
+    const hostSource = readSource('src/player/components/PlayerCatalogEditorHost.jsx');
+    const shellSource = readSource('src/admin/components/editor/CatalogEditorShell.jsx');
+    const imagePickerSource = readSource('src/shared/components/ImagePicker.jsx');
+
+    assert.match(hostSource, /contentBodyStyle=\{\{ height: '100%', overflow: 'hidden' \}\}/);
+    assert.match(hostSource, /headerAction=/);
+    assert.match(shellSource, /data-testid="catalog-editor-body"/);
+    assert.match(shellSource, /\[touch-action:pan-y\]/);
+    assert.match(imagePickerSource, /initialPath = 'ressources\/icons'/);
+});

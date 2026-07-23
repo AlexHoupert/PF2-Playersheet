@@ -13,7 +13,7 @@ import {
 } from '../../shared/rules/catalogEffectDefinitions';
 import CatalogEditorShell from '../components/editor/CatalogEditorShell';
 
-export default function FeatEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'feat', onSave, onCancel, onSaveToDb, onSaveCatalogEntry }) {
+export default function FeatEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'feat', headerAction, onSave, onCancel, onSaveToDb, onSaveCatalogEntry }) {
     const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
     const saveCatalogEntry = onSaveCatalogEntry || onSaveToDb;
     const [formData, setFormData] = useState({
@@ -185,7 +185,7 @@ export default function FeatEditor({ initialItem: initialItemProp, initialPayloa
     const CATEGORY_OPTIONS = ['Ancestry', 'Class', 'General', 'Skill', 'Bonus'];
 
     return (
-        <CatalogEditorShell title={initialItem ? 'Edit Feat' : 'Create Feat'} loadingMessage={isLoading ? 'Loading feat details...' : ''} error={error} pending={isSaving} saveLabel="Save Feat" onSave={handleSave} onCancel={onCancel}>
+        <CatalogEditorShell title={initialItem ? 'Edit Feat' : 'Create Feat'} headerAction={headerAction} loadingMessage={isLoading ? 'Loading feat details...' : ''} error={error} pending={isSaving} saveLabel="Save Feat" onSave={handleSave} onCancel={onCancel}>
 
             <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 20 }}>
                 <div className="form-group">
