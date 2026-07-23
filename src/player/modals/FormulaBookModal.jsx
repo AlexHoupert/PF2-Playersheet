@@ -9,7 +9,41 @@ import {
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 import { findInventoryItemIndex } from '../../shared/utils/itemIdentity';
 import { isAmmunitionItem } from '../../shared/utils/ammunitionUtils';
+import { resolveCatalogImageUrl } from '../../shared/catalog/catalogDetailViewModel';
 import AppDialogShell from '../../shared/components/dialogs/AppDialogShell';
+
+function FormulaItemIcon({ item, size = 32 }) {
+    const baseSrc = resolveCatalogImageUrl(item?.img || item?.image);
+    const [retry, setRetry] = useState(false);
+    const [failed, setFailed] = useState(false);
+
+    if (!baseSrc || failed) {
+        return (
+            <div
+                aria-hidden="true"
+                style={{ width: size, height: size, background: '#444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2em', flexShrink: 0 }}
+            >
+                ?
+            </div>
+        );
+    }
+
+    const src = retry
+        ? `${baseSrc}${baseSrc.includes('?') ? '&' : '?'}asset_retry=1`
+        : baseSrc;
+
+    return (
+        <img
+            src={src}
+            style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }}
+            alt=""
+            onError={() => {
+                if (!retry) setRetry(true);
+                else setFailed(true);
+            }}
+        />
+    );
+}
 
 export function FormulaBookModal({
     character,
@@ -122,6 +156,7 @@ export function FormulaBookModal({
             description={`${formulas.length} known formula${formulas.length === 1 ? '' : 's'}`}
             size="md"
             contentProps={{ 'data-testid': 'formula-book-modal' }}
+            bodyClassName={isVersatileVialMode ? 'flex min-h-0 flex-col overflow-hidden' : undefined}
             footer={!isVersatileVialMode && canDailyCraft && dailyPrepQueue.length > 0 ? (
                 <Button type="button" onClick={finishPreparation}>Finish Preparation</Button>
             ) : null}
@@ -161,7 +196,12 @@ export function FormulaBookModal({
                     </div>
                 )}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10, maxHeight: '40vh', overflowY: 'auto' }}>
+                <div
+                    data-testid="formula-book-list"
+                    className={isVersatileVialMode
+                        ? 'mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto'
+                        : 'mt-2 flex max-h-[40vh] flex-col gap-2 overflow-y-auto'}
+                >
                     {visibleItems.length === 0 && formulas.length > 0 && (
                         <div style={{ color: '#888', fontStyle: 'italic', padding: 10, textAlign: 'center' }}>
                             No formulas match the current filters.
@@ -176,11 +216,7 @@ export function FormulaBookModal({
                                     else { setModalData({ ...item, _entityType: 'item' }); setModalMode('catalog_detail'); }
                                 }}
                             >
-                                {item.img ? (
-                                    <img src={`ressources/${item.img}`} style={{ width: 32, height: 32, objectFit: 'contain' }} alt="" />
-                                ) : (
-                                    <div style={{ width: 32, height: 32, background: '#444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2em' }}>📜</div>
-                                )}
+                                <FormulaItemIcon item={item} />
                                 <div style={{ flex: 1 }}>
                                     <div style={{ fontWeight: 'bold' }}>{item.name}</div>
                                     <div style={{ fontSize: '0.8em', color: '#aaa' }}>Level {item.level || '?'} • {item.price || '?'} gp</div>
@@ -264,7 +300,7 @@ export function FormulaBookModal({
                                     return (
                                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#30204a', padding: '5px 8px', borderRadius: 4 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            {qItem.img && <img src={`ressources/${qItem.img}`} style={{ width: 24, height: 24 }} alt="" />}
+                                            {(qItem.img || qItem.image) && <FormulaItemIcon item={qItem} size={24} />}
                                             <div>
                                                 <div style={{ fontSize: '0.95em' }}>{qItem.name}</div>
                                                 <div style={{ fontSize: '0.75em', color: '#bbb' }}>{qItem.batches} batch(es) x {effectiveBatchSize} = <span style={{ color: '#fff' }}>{qItem.batches * effectiveBatchSize} items</span></div>

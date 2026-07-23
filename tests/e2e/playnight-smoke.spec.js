@@ -87,6 +87,15 @@ test("universal rounds load a slide pistol and versatile vials reuse formula fil
   await expect(formulaModal.getByText("Highest level only", { exact: true })).toBeVisible();
   await expect(formulaModal.getByText("Daily Preparation", { exact: true })).toHaveCount(0);
 
+  const formulaList = formulaModal.getByTestId("formula-book-list");
+  const [listBox, footerBox] = await Promise.all([
+    formulaList.boundingBox(),
+    formulaModal.locator("[data-app-dialog-footer]").boundingBox(),
+  ]);
+  expect(listBox).not.toBeNull();
+  expect(footerBox).not.toBeNull();
+  expect(footerBox.y - (listBox.y + listBox.height)).toBeLessThan(40);
+
   await formulaModal.getByLabel("Highest level only").check();
   await expect(formulaModal.getByText("Alchemist's Fire (Lesser)", { exact: true })).toHaveCount(0);
   await formulaModal.getByText("Alchemist's Fire (Moderate)", { exact: true }).click();

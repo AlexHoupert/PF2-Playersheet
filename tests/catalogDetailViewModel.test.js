@@ -1,6 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildCatalogDetailViewModel, normalizeTraits } from '../src/shared/catalog/catalogDetailViewModel.js';
+import {
+    buildCatalogDetailViewModel,
+    normalizeTraits,
+    resolveCatalogImageUrl,
+} from '../src/shared/catalog/catalogDetailViewModel.js';
+
+test('catalog image URLs resolve against the deployed ressources directory', () => {
+    const iconPath = 'icons/equipment/alchemical-items/alchemical-bombs/blight-bomb.webp';
+
+    assert.equal(resolveCatalogImageUrl(iconPath, { isProd: true }), `/ressources/${iconPath}`);
+    assert.equal(resolveCatalogImageUrl(`/ressources/${iconPath}`, { isProd: true }), `/ressources/${iconPath}`);
+    assert.equal(resolveCatalogImageUrl(iconPath, { isProd: false }), `/api/static/${iconPath}`);
+});
 
 test('normalizes shared catalog metadata for spells', () => {
     const model = buildCatalogDetailViewModel({

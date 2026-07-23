@@ -43,13 +43,16 @@ export function normalizeTraits(traits) {
     return [...new Set(values.map((trait) => String(trait || '').trim()).filter(Boolean))];
 }
 
-export function resolveCatalogImageUrl(path) {
+export function resolveCatalogImageUrl(path, { isProd = Boolean(import.meta.env?.PROD) } = {}) {
     if (!path) return null;
     const value = String(path).trim();
     if (!value) return null;
     if (/^(?:data:|blob:|https?:\/\/)/i.test(value)) return value;
-    const cleanPath = value.replace(/^systems\/pf2e\//, '').replace(/^ressources\//, '').replace(/^\/+/, '');
-    const baseUrl = import.meta.env?.PROD ? '' : '/api/static';
+    const cleanPath = value
+        .replace(/^\/+/, '')
+        .replace(/^systems\/pf2e\//, '')
+        .replace(/^ressources\//, '');
+    const baseUrl = isProd ? '/ressources' : '/api/static';
     return `${baseUrl}/${cleanPath}`;
 }
 
