@@ -93,7 +93,7 @@ export const ImpulsesView = ({
                         <LongPressable
                             className="spell-row"
                             key={imp.name}
-                            onClick={() => { setModalData(imp); setModalMode('item'); }}
+                            onClick={() => { setModalData({ ...imp, _entityType: 'impulse' }); setModalMode('catalog_detail'); }}
                             onLongPress={() => { if (!readOnly) onLongPress(imp, 'impulse'); }}
                         >
                             <div style={{ fontWeight: 'bold', color: '#ccc', display: 'flex', alignItems: 'center' }}>

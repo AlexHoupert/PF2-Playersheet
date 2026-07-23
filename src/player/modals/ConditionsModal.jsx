@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
+import AppDialogShell from '../../shared/components/dialogs/AppDialogShell';
 import { getConditionImgSrc, getConditionCatalogEntry, isConditionValued } from '../../shared/constants/conditionsCatalog';
 import { getConditionIcon, NEG_CONDS, POS_CONDS, VIS_CONDS } from '../../shared/constants/conditions';
 import { parseFoundry } from '../../shared/utils/foundryParser';
@@ -132,11 +133,6 @@ export function ConditionsModal({
         const image = isStandardCondition ? getConditionImgSrc(selectedEffect.name) : null;
         return (
             <>
-                <div className="conditions-modal__header">
-                    <button type="button" className="conditions-modal__back" onClick={returnToList}>Back</button>
-                    <h2>{selectedEffect.label}</h2>
-                    <span aria-hidden="true" />
-                </div>
                 <div className="conditions-modal__detail-controls">
                     {image ? <img src={image} alt="" /> : <span className="conditions-modal__effect-icon">{getEffectIcon(selectedEffect)}</span>}
                     {isStandardCondition && selectedEffect.canModifyValue && !readOnly && (
@@ -189,7 +185,6 @@ export function ConditionsModal({
         const active = activeTab === 'ACTIVE';
         return (
             <>
-                <div className="conditions-modal__header conditions-modal__header--list"><h2>Conditions</h2></div>
                 <div className="conditions-modal__tabs" role="tablist" aria-label="Condition categories">
                     {visibleTabs.map((tab) => (
                         <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? 'is-active' : ''} onClick={() => setActiveTab(tab)}>{tab}</button>
@@ -216,14 +211,18 @@ export function ConditionsModal({
     };
 
     return (
-        <div className="conditions-modal__overlay" data-player-interaction-lock="true" onClick={(event) => {
-            if (event.target === event.currentTarget) onClose();
-        }}>
-            <section className="conditions-modal" role="dialog" aria-modal="true" aria-label="Conditions">
-                <div className="conditions-modal__content">{selectedEffect ? renderDetail() : renderList()}</div>
-                <footer className="conditions-modal__footer"><button type="button" onClick={onClose}>Close</button></footer>
-            </section>
-        </div>
+        <AppDialogShell
+            open
+            onOpenChange={(open) => { if (!open) onClose?.(); }}
+            layerId="conditions-dialog"
+            title={selectedEffect?.label || 'Conditions'}
+            description={selectedEffect ? 'Condition and effect details' : 'Manage active conditions and effects'}
+            backAction={selectedEffect ? { label: 'Back to conditions', onClick: returnToList } : null}
+            size="md"
+            bodyClassName="overflow-hidden p-0"
+        >
+            <div className="conditions-modal__content">{selectedEffect ? renderDetail() : renderList()}</div>
+        </AppDialogShell>
     );
 }
 

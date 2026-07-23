@@ -57,6 +57,6 @@ export function resolveContentLink(type, name, findIndexItemByType = () => null)
     type: catalogType,
     name,
     sourceFile: indexItem?.sourceFile || null,
-    modalMode: "item",
+    modalMode: "catalog_detail",
   };
 }

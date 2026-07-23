@@ -1,6 +1,27 @@
 import React, { useState } from 'react';
 import { getCondLevel } from '../../utils/rules';
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
+import AppDialogShell from '../../shared/components/dialogs/AppDialogShell';
+
+function SimpleCharacterDialog({ onClose, children }) {
+    const nodes = React.Children.toArray(children);
+    const headingIndex = nodes.findIndex((node) => React.isValidElement(node) && node.type === 'h2');
+    const heading = headingIndex >= 0 ? nodes[headingIndex] : null;
+    const body = headingIndex >= 0 ? nodes.filter((_node, index) => index !== headingIndex) : nodes;
+
+    return (
+        <AppDialogShell
+            open
+            onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}
+            layerId="character-form"
+            title={heading?.props?.children || 'Character Settings'}
+            size="sm"
+            bodyClassName="text-center"
+        >
+            {body}
+        </AppDialogShell>
+    );
+}
 
 const ARMOR_RANKS = [
     { value: 0, label: 'Untrained (+0)' },
@@ -26,16 +47,7 @@ export function EditGoldModal({ character, characterActions, onClose }) {
         characterActions?.adjustGold(amount);
     };
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2>Manage Gold</h2>
                 <p style={{ textAlign: 'center', color: '#888' }}>Current: <span data-testid="gold-modal-current" style={{ color: 'var(--text-gold)', fontWeight: 'bold' }}>{currentGold.toFixed(2)} gp</span></p>
                 <div className="qty-control-box">
@@ -48,8 +60,7 @@ export function EditGoldModal({ character, characterActions, onClose }) {
                     setEditVal("");
                     onClose();
                 }}>Set to Value</button>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }
 
@@ -63,16 +74,7 @@ export function EditGoldModal({ character, characterActions, onClose }) {
  */
 export function EditLevelModal({ character, updateCharacter, onClose }) {
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2>Edit Level</h2>
                 <div className="qty-control-box">
                     <button className="qty-btn" onClick={() => updateCharacter(c => {
@@ -83,9 +85,7 @@ export function EditLevelModal({ character, updateCharacter, onClose }) {
                         c.level = (c.level || 1) + 1;
                     })}>+</button>
                 </div>
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }
 
@@ -100,25 +100,14 @@ export function EditLevelModal({ character, updateCharacter, onClose }) {
 export function EditHPModal({ character, characterActions, onClose }) {
     const maxHp = character?.stats?.hp?.max ?? 1;
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2>Edit Max HP</h2>
                 <div className="qty-control-box">
                     <button className="qty-btn" onClick={() => characterActions?.adjustMaxHp(-1)}>-</button>
                     <span style={{ fontSize: '2em', width: 80, textAlign: 'center' }}>{maxHp}</span>
                     <button className="qty-btn" onClick={() => characterActions?.adjustMaxHp(1)}>+</button>
                 </div>
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }
 
@@ -133,16 +122,7 @@ export function EditHPModal({ character, characterActions, onClose }) {
 export function EditSpeedModal({ character, characterActions, onClose }) {
     const speed = character?.stats?.speed || { land: 25 };
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2>Edit Speed</h2>
                 {Object.entries(speed).map(([k, v]) => (
                     <div key={k} className="modal-form-group">
@@ -154,9 +134,7 @@ export function EditSpeedModal({ character, characterActions, onClose }) {
                         </div>
                     </div>
                 ))}
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }
 
@@ -180,25 +158,14 @@ export function EditAttributeModal({ character, characterActions, onClose, modal
     };
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2>Edit {label}</h2>
                 <div className="qty-control-box">
                     <button className="qty-btn" onClick={() => updateAttribute(-1)}>-</button>
                     <span style={{ fontSize: '2em', width: 60, textAlign: 'center' }}>{val >= 0 ? `+${val}` : val}</span>
                     <button className="qty-btn" onClick={() => updateAttribute(1)}>+</button>
                 </div>
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }
 
@@ -226,16 +193,7 @@ export function EditProficiencyModal({ character, characterActions, onClose, mod
     const isCustomLore = isSkill && key.startsWith('Lore');
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2>Edit {modalData?.item?.name || (isImpulse ? "Impulse Proficiency" : "Proficiency")}</h2>
                 {isSkill || isSave || isImpulse ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -270,10 +228,7 @@ export function EditProficiencyModal({ character, characterActions, onClose, mod
                         Remove Skill
                     </button>
                 )}
-
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }
 
@@ -320,16 +275,7 @@ export function AddLoreModal({ updateCharacter, onClose }) {
     };
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2>Add Lore Skill</h2>
 
                 <div className="modal-form-group">
@@ -367,9 +313,7 @@ export function AddLoreModal({ updateCharacter, onClose }) {
                 >
                     Add Skill
                 </button>
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 10, background: '#444' }}>Cancel</button>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }
 
@@ -385,16 +329,7 @@ export function EditArmorProficiencyModal({ character, characterActions, onClose
     const ARMOR_PROF_KEYS = ['Unarmored', 'Light', 'Medium', 'Heavy'];
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2>Armor Proficiencies</h2>
                 <div className="prof-list" style={{ marginTop: 20 }}>
                     {ARMOR_PROF_KEYS.map(key => {
@@ -415,9 +350,7 @@ export function EditArmorProficiencyModal({ character, characterActions, onClose
                         );
                     })}
                 </div>
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }
 
@@ -432,16 +365,7 @@ export function EditArmorProficiencyModal({ character, characterActions, onClose
 export function EditLanguagesModal({ character, updateCharacter, onClose }) {
     const [langs, setLangs] = useState((Array.isArray(character?.languages) ? character.languages : []).join(', '));
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '400px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2>Edit Languages</h2>
                 <textarea
                     className="modal-input"
@@ -456,10 +380,8 @@ export function EditLanguagesModal({ character, updateCharacter, onClose }) {
                         });
                         onClose();
                     }}>Save</button>
-                    <button className="set-btn" onClick={onClose} style={{ background: '#444' }}>Cancel</button>
                 </div>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }
 
@@ -482,16 +404,7 @@ export function EditItemProficienciesModal({ character, characterActions, onClos
     const uniqueKeys = [...new Set(keys)];
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2>Weapon Proficiencies</h2>
                 <div style={{ color: '#888', marginBottom: 15, textAlign: 'center' }}>{item.name}</div>
                 {uniqueKeys.length === 0 && <div>No proficiency categories found for this item.</div>}
@@ -520,9 +433,7 @@ export function EditItemProficienciesModal({ character, characterActions, onClos
                 <div style={{ marginTop: 20, textAlign: 'center', fontSize: '0.8em', color: '#666' }}>
                     Proficiency is usually derived from your Class. Editing this overrides derived values if implemented in stats.
                 </div>
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }
 
@@ -537,16 +448,7 @@ export function EditItemProficienciesModal({ character, characterActions, onClos
 export function EditPerceptionModal({ character, characterActions, onClose }) {
     const currentVal = character.stats.perception || 0;
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2>Edit Perception</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {ARMOR_RANKS.map(r => (
@@ -561,9 +463,7 @@ export function EditPerceptionModal({ character, characterActions, onClose }) {
                         </button>
                     ))}
                 </div>
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }
 
@@ -582,21 +482,10 @@ export function ManageHPModal({ character, characterActions, onClose }) {
     // Safety check: if no character is provided, show a message instead of crashing
     if (!character || !character.stats || !character.stats.hp) {
         return (
-            <div style={{
-                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-                display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-            }} onClick={onClose}>
-                <div style={{
-                    backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                    padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                    color: '#e0e0e0', textAlign: 'center'
-                }} onClick={e => e.stopPropagation()}>
-                    <h2>No Character Selected</h2>
-                    <p style={{ color: '#888' }}>Please select a character first.</p>
-                    <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
-                </div>
-            </div>
+            <SimpleCharacterDialog onClose={onClose}>
+                <h2>No Character Selected</h2>
+                <p style={{ color: '#888' }}>Please select a character first.</p>
+            </SimpleCharacterDialog>
         );
     }
 
@@ -605,16 +494,7 @@ export function ManageHPModal({ character, characterActions, onClose }) {
     const editAmount = () => parseInt(editVal, 10) || 0;
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2>Manage Hit Points</h2>
                 <p style={{ textAlign: 'center', color: '#888' }}>
                     Current HP: <span style={{ color: 'var(--text-gold)', fontWeight: 'bold' }}>{hp.current}</span>
@@ -651,9 +531,7 @@ export function ManageHPModal({ character, characterActions, onClose }) {
                         <button className="set-btn" onClick={() => { characterActions?.setTempHp(editAmount()); setEditVal(""); onClose(); }}>Set Temp to Value</button>
                     </div>
                 )}
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }
 
@@ -668,16 +546,7 @@ export function AddActionModal({ onSave, onClose }) {
     const [newAction, setNewAction] = useState({ name: '', type: 'Combat', subtype: 'Basic', skill: '', feat: '', description: '' });
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2>Create New Action</h2>
                 <div className="modal-form-group">
                     <label>Name</label>
@@ -704,9 +573,7 @@ export function AddActionModal({ onSave, onClose }) {
                     <textarea className="modal-input" style={{ height: 100, fontFamily: 'inherit', resize: 'vertical' }} value={newAction.description} onChange={e => setNewAction({ ...newAction, description: e.target.value })} placeholder="Action description..." />
                 </div>
                 <button className="set-btn" onClick={() => onSave(newAction)}>Save Action</button>
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 10, background: '#444' }}>Cancel</button>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }
 
@@ -737,16 +604,7 @@ export function ContextModal({ character, modalData, updateCharacter, onClose, s
     };
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
+        <SimpleCharacterDialog onClose={onClose}>
                 <h2 style={{ margin: '0 0 10px 0', color: 'var(--text-gold)', fontFamily: 'Cinzel, serif' }}>{title}</h2>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -811,8 +669,6 @@ export function ContextModal({ character, modalData, updateCharacter, onClose, s
                         <button className="set-btn" onClick={() => setModalMode('edit_spell_slots')}>Edit Spell Slots</button>
                     )}
                 </div>
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
-            </div>
-        </div>
+        </SimpleCharacterDialog>
     );
 }

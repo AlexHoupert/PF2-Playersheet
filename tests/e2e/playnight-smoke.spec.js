@@ -202,6 +202,12 @@ test("player HP, gold, and condition edits survive reload in fixture runtime", a
   await expectFixtureRoute(page, "player");
 
   await page.getByTestId("player-health-bar").click();
+  const sharedDialog = page.locator("[data-app-dialog-shell]");
+  await expect(sharedDialog).toBeVisible();
+  await expect(sharedDialog.locator("[data-app-dialog-header]")).toBeVisible();
+  await expect(sharedDialog.locator("[data-app-dialog-footer]")).toBeVisible();
+  await expect.poll(() => sharedDialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  await expect.poll(() => sharedDialog.locator("[data-app-dialog-body]").evaluate((element) => getComputedStyle(element).overflowY)).toBe("auto");
   await page.getByTestId("hp-modal-input").fill("21");
   await page.getByTestId("hp-modal-set").click();
   await expect(page.getByTestId("player-health-text")).toContainText(/21\s*\/\s*30/);
@@ -220,6 +226,24 @@ test("player HP, gold, and condition edits survive reload in fixture runtime", a
   await expect(page.getByTestId("player-health-text")).toContainText(/21\s*\/\s*30/);
   await expect(page.getByTestId("player-gold-display")).toContainText("15.00");
   await expect(page.getByRole("button", { name: "Frightened 2", exact: true })).toBeVisible();
+});
+
+test("shared form dialogs keep their header and footer reachable on a short mobile viewport", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 640 });
+  await gotoFixture(page);
+  await expectFixtureRoute(page, "player");
+
+  await page.getByTestId("player-health-bar").click();
+  const dialog = page.locator("[data-app-dialog-shell]");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator("[data-app-dialog-header]")).toBeInViewport();
+  await expect(dialog.locator("[data-app-dialog-footer]")).toBeInViewport();
+  await testInfo.attach("shared-form-dialog-mobile", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  });
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
 });
 
 test("player can inspect and remove an exact persisted effect from the status screen", async ({ page }, testInfo) => {

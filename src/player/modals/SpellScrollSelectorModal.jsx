@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
+import { Input } from '@/components/ui/input';
 import { SPELL_INDEX_ITEMS } from '../../shared/catalog/spellIndex';
 import { mergeCatalogIndexWithOverrides } from '../../shared/db/selectors/catalogOverrideSelectors';
-import { ModalLayerMount } from '../../shared/overlays/ModalLayerProvider';
+import PickerDialog from '../../shared/components/dialogs/PickerDialog';
 
 export default function SpellScrollSelectorModal({ rank, type, db, onSelect, onCancel, ignoreAvailability = false }) {
     const [search, setSearch] = useState('');
@@ -26,37 +27,25 @@ export default function SpellScrollSelectorModal({ rank, type, db, onSelect, onC
     }, [rank, type, search, ignoreAvailability, spellItems]);
 
     return (
-        <ModalLayerMount id={`spell-scroll-selector-${type}-${rank}`}>
-        <div data-player-interaction-lock="true" style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20,
-            overscrollBehavior: 'contain',
-            touchAction: 'none'
-        }} onClick={onCancel}>
-            <div role="dialog" aria-modal="true" style={{
-                backgroundColor: '#2b2b2e', border: '1px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '500px', width: '100%',
-                maxHeight: '80vh', display: 'flex', flexDirection: 'column',
-                overscrollBehavior: 'contain',
-                touchAction: 'pan-y'
-            }} onClick={e => e.stopPropagation()}>
-                <h3 style={{ marginTop: 0, color: '#e0e0e0', borderBottom: '1px solid #444', paddingBottom: 10 }}>
-                    Select Spell for {type === 'scroll' ? 'Scroll' : 'Wand'} (Rank {rank})
-                </h3>
-
-                <input
+        <PickerDialog
+            open
+            onOpenChange={(open) => { if (!open) onCancel?.(); }}
+            layerId={`spell-scroll-selector-${type}-${rank}`}
+            title={`Select Spell for ${type === 'scroll' ? 'Scroll' : 'Wand'}`}
+            description={`Rank ${rank}`}
+            size="md"
+            showConfirm={false}
+            cancelLabel="Cancel"
+            bodyClassName="flex min-h-0 flex-col gap-3"
+        >
+                <Input
                     autoFocus
                     placeholder="Search Spells..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    style={{
-                        background: '#111', border: '1px solid #444', color: '#e0e0e0',
-                        padding: 8, borderRadius: 4, marginBottom: 10, width: '100%'
-                    }}
                 />
 
-                <div style={{ flex: 1, overflowY: 'auto', minHeight: 200 }}>
+                <div className="min-h-48 flex-1 overflow-y-auto overscroll-contain rounded-md border border-border/60">
                     {availableSpells.length === 0 ? (
                         <div style={{ color: '#777', fontStyle: 'italic', textAlign: 'center', marginTop: 20 }}>
                             No {type === 'scroll' ? 'scrolls' : 'wands'} available for Rank {rank}.
@@ -65,16 +54,11 @@ export default function SpellScrollSelectorModal({ rank, type, db, onSelect, onC
                         </div>
                     ) : (
                         availableSpells.map(spell => (
-                            <div
+                            <button
                                 key={spell.name}
+                                type="button"
                                 onClick={() => onSelect(spell)}
-                                style={{
-                                    padding: '8px 10px', borderBottom: '1px solid #333',
-                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
-                                    transition: 'background 0.2s'
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.background = '#333'}
-                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                className="flex w-full items-center gap-3 border-b border-border/50 px-3 py-2 text-left transition-colors last:border-b-0 hover:bg-muted"
                             >
                                 {spell.img && (
                                     <img src={`ressources/${spell.img}`} alt="" style={{ width: 24, height: 24 }} />
@@ -85,21 +69,11 @@ export default function SpellScrollSelectorModal({ rank, type, db, onSelect, onC
                                         {spell.traditions.join(', ')}
                                     </div>
                                 </div>
-                            </div>
+                            </button>
                         ))
                     )}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 15 }}>
-                    <button onClick={onCancel} style={{
-                        background: 'transparent', color: '#aaa', border: '1px solid #555',
-                        padding: '6px 12px', borderRadius: 4, cursor: 'pointer'
-                    }}>
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        </div>
-        </ModalLayerMount>
+        </PickerDialog>
     );
 }

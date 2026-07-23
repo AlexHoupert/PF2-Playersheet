@@ -53,7 +53,7 @@ test("catalog detail controller decides when indexed details should load", () =>
 test("catalog detail controller resolves content links", () => {
   const action = resolveContentLink("action", "Strike", findIndexItemByType);
   assert.equal(action.type, "action");
-  assert.equal(action.modalMode, "item");
+  assert.equal(action.modalMode, "catalog_detail");
   assert.equal(action.sourceFile, "actions/strike.json");
 
   const condition = resolveContentLink("condition", "Frightened", findIndexItemByType);

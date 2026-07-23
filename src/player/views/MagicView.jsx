@@ -122,7 +122,7 @@ export const MagicView = ({
                         if (event) event.stopPropagation();
                         if (!wandCasts?.openItem) return;
                         setModalData({ ...wandCasts.openItem, _entityType: 'item' });
-                        setModalMode('item');
+                        setModalMode('catalog_detail');
                     };
                     const openSpell = () => {
                         if (spell._wandOnly && wandCasts?.openItem) {
@@ -130,7 +130,7 @@ export const MagicView = ({
                             return;
                         }
                         setModalData(spell);
-                        setModalMode('item');
+                        setModalMode('catalog_detail');
                     };
 
                     // Meta info

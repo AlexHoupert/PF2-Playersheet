@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { calculateStat } from '../utils/rules';
+import AppDialogShell from '../shared/components/dialogs/AppDialogShell';
 
 const ATTRIBUTES = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"];
 const SAVES = ["Fortitude", "Reflex", "Will"];
@@ -238,13 +239,16 @@ export default function QuickSheetModal({ character, updateCharacter, characterA
     };
 
     return (
-        <div className="qs-overlay" onClick={onClose}>
-            <div className="qs-modal" onClick={e => e.stopPropagation()}>
-                <div className="qs-header">
-                    <h2>Quick Sheet</h2>
-                    <button className="qs-close-btn" onClick={onClose}>×</button>
-                </div>
-
+        <AppDialogShell
+            open
+            onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}
+            layerId="quick-sheet"
+            title="Quick Sheet"
+            description="Adjust core character values and proficiencies."
+            size="lg"
+            bodyClassName="overflow-hidden p-0"
+        >
+            <div className="flex h-full min-h-0 flex-col">
                 <div className="qs-tabs">
                     <button className={`qs-tab ${tab === 'main' ? 'active' : ''}`} onClick={() => setTab('main')}>Core</button>
                     <button className={`qs-tab ${tab === 'proficiencies' ? 'active' : ''}`} onClick={() => setTab('proficiencies')}>Profs</button>
@@ -258,11 +262,6 @@ export default function QuickSheetModal({ character, updateCharacter, characterA
                 </div>
 
                 <style>{`
-                    .qs-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-                    .qs-modal { background: #1a1a1d; border: 1px solid #c5a059; width: 100%; max-width: 500px; max-height: 90vh; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
-                    .qs-header { background: #111; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
-                    .qs-header h2 { margin: 0; color: #c5a059; font-family: 'Cinzel', serif; }
-                    .qs-close-btn { background: none; border: none; color: #888; font-size: 1.5em; cursor: pointer; }
                     .qs-tabs { display: flex; background: #222; }
                     .qs-tab { flex: 1; background: none; border: none; padding: 12px; color: #888; cursor: pointer; border-bottom: 2px solid transparent; font-weight: bold; }
                     .qs-tab.active { color: #c5a059; border-bottom-color: #c5a059; background: #2a2a2d; }
@@ -299,7 +298,7 @@ export default function QuickSheetModal({ character, updateCharacter, characterA
                     .qs-switch.active .qs-slider { left: 17px; background: #000; }
                 `}</style>
             </div>
-        </div>
+        </AppDialogShell>
     );
 }
 

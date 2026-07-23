@@ -7,6 +7,7 @@ import React, { useMemo, useState } from 'react';
 import { getAllAbilities, ABILITY_INDEX_FILTER_OPTIONS } from '../catalog/abilityIndex';
 import { normalizeAbilityCatalogList } from '../catalog/abilityModel';
 import { parseFoundry } from '../utils/foundryParser';
+import PickerDialog from './dialogs/PickerDialog';
 import MultiSelectDropdown from './MultiSelectDropdown';
 
 const TYPE_TABS = [
@@ -87,27 +88,19 @@ export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = n
     };
 
     return (
-        <div
-            style={{
-                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000,
-            }}
-            onClick={onClose}
+        <PickerDialog
+            open
+            onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}
+            layerId="ability-library"
+            title="Ability Library"
+            description="Browse, preview, and add an ability to the creature."
+            size="viewport"
+            showConfirm={false}
+            bodyClassName="p-0"
         >
             <div
-                style={{
-                    background: '#1e1e21', border: '2px solid #c9a86c', borderRadius: 8,
-                    width: '90vw', maxWidth: 900, height: '80vh',
-                    display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                }}
-                onClick={e => e.stopPropagation()}
+                className="flex h-full min-h-0 flex-col overflow-hidden"
             >
-                {/* Header */}
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-                    <h3 style={{ margin: 0, color: '#f5deb3' }}>Ability Library</h3>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', fontSize: '1.5em', cursor: 'pointer', lineHeight: 1 }}>×</button>
-                </div>
-
                 {/* Filters */}
                 <div style={{ padding: '8px 16px', borderBottom: '1px solid #333', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
                     <input
@@ -237,6 +230,6 @@ export default function AbilityPicker({ onSelect, onClose, defaultTypeFilter = n
                     </div>
                 </div>
             </div>
-        </div>
+        </PickerDialog>
     );
 }

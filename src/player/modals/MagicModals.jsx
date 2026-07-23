@@ -1,6 +1,8 @@
 import React from 'react';
-import { StatBreakdown } from '../components/StatBreakdown';
 import { calculateImpulseAttackAndClassDC, calculateSpellAttackAndDC } from '../../utils/rules';
+import FormDialog from '../../shared/components/dialogs/FormDialog';
+import AppDialogShell from '../../shared/components/dialogs/AppDialogShell';
+import { StatBreakdownContent } from './StatBreakdownModal';
 
 const ARMOR_RANKS = [
     { value: 0, label: 'Untrained (+0)' },
@@ -24,21 +26,20 @@ export function EditSpellProficiencyModal({ character, characterActions, onClose
     const currentProf = magic.proficiency || 0;
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
-                <h2>Edit Spell Proficiency</h2>
-                <div style={{ marginBottom: 20 }}>
-                    <label style={{ display: 'block', marginBottom: 5, color: '#aaa' }}>Key Attribute</label>
+        <FormDialog
+            open
+            onOpenChange={(open) => { if (!open) onClose?.(); }}
+            layerId="edit-spell-proficiency"
+            title="Edit Spell Proficiency"
+            description="Choose the key attribute and proficiency rank."
+            size="sm"
+            showSubmit={false}
+            cancelLabel="Close"
+        >
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">Key Attribute</label>
                     <select
-                        className="prof-select"
+                        className="prof-select w-full"
                         value={currentAttr}
                         onChange={(e) => characterActions?.setMagicAttribute(e.target.value)}
                     >
@@ -47,10 +48,10 @@ export function EditSpellProficiencyModal({ character, characterActions, onClose
                         ))}
                     </select>
                 </div>
-                <div>
-                    <label style={{ display: 'block', marginBottom: 5, color: '#aaa' }}>Proficiency Rank</label>
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">Proficiency Rank</label>
                     <select
-                        className="prof-select"
+                        className="prof-select w-full"
                         value={currentProf}
                         onChange={(e) => characterActions?.setMagicProficiency(parseInt(e.target.value))}
                     >
@@ -59,9 +60,7 @@ export function EditSpellProficiencyModal({ character, characterActions, onClose
                         ))}
                     </select>
                 </div>
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
-            </div>
-        </div>
+        </FormDialog>
     );
 }
 
@@ -77,34 +76,26 @@ export function EditSpellProficiencyModal({ character, characterActions, onClose
 export function EditSpellSlotsModal({ character, characterActions, onClose, modalData }) {
     const item = modalData?.item || {};
     const levelKey = item.level || '1';
-    const setModalData = modalData.setModalData; // We need to handle this pattern or change it.
-    // In PlayerApp, setModalData was passed directly? No, it used the state setter.
-    // The Original Code: onChange={(e) => setModalData({ ...modalData, item: { ...item, level: e.target.value } })}
-    // So this modal needs internal state for the selected level if we want to change it.
-    // Or we pass `setModalData` as a prop if we want to persist it in parent state (which was modalData).
-
-    // Better: use internal state for the level since it's just navigation within the modal.
     const [selectedLevel, setSelectedLevel] = React.useState(levelKey);
     const slotKey = selectedLevel + "_max";
 
     const SLOT_LEVELS = ['f', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '300px', width: '100%',
-                color: '#e0e0e0', textAlign: 'center'
-            }} onClick={e => e.stopPropagation()}>
-                <h2>Edit Spell Slots</h2>
-                <div style={{ marginBottom: 20 }}>
-                    <label style={{ display: 'block', marginBottom: 5, color: '#aaa' }}>Slot Level</label>
+        <FormDialog
+            open
+            onOpenChange={(open) => { if (!open) onClose?.(); }}
+            layerId="edit-spell-slots"
+            title="Edit Spell Slots"
+            description="Select a slot level and set its maximum."
+            size="sm"
+            showSubmit={false}
+            cancelLabel="Close"
+        >
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">Slot Level</label>
                     <select
-                        className="prof-select"
+                        className="prof-select w-full"
                         value={selectedLevel}
                         onChange={(e) => setSelectedLevel(e.target.value)}
                     >
@@ -115,7 +106,7 @@ export function EditSpellSlotsModal({ character, characterActions, onClose, moda
                     </select>
                 </div>
 
-                <div className="qty-control-box">
+                <div className="qty-control-box mt-5">
                     <button className="qty-btn" onClick={() => {
                         const cur = character?.magic?.slots?.[slotKey] || 0;
                         characterActions?.setMagicSlot(slotKey, Math.max(0, cur - 1));
@@ -128,9 +119,7 @@ export function EditSpellSlotsModal({ character, characterActions, onClose, moda
                         characterActions?.setMagicSlot(slotKey, cur + 1);
                     }}>+</button>
                 </div>
-                <button className="set-btn" onClick={onClose} style={{ marginTop: 20 }}>Close</button>
-            </div>
-        </div>
+        </FormDialog>
     );
 }
 
@@ -159,51 +148,28 @@ export function SpellStatInfoModal({ character, modalData, onClose }) {
         ? (isDc ? 'Class DC Breakdown' : 'Impulse Attack Breakdown')
         : (isDc ? 'Spell DC Breakdown' : 'Spell Attack Breakdown');
 
-    const rows = [
-        { label: isDc ? 'Base' : null, val: isDc ? 10 : null },
-        { label: `${activeCalc.source?.attrFull || 'Attribute'} (${activeCalc.breakdown?.attribute ?? 0})`, val: activeCalc.breakdown?.attribute ?? 0 },
-        { label: `Proficiency (${activeCalc.source?.profName || 'Unknown'})`, val: activeCalc.breakdown?.proficiency ?? 0 },
-        { label: activeCalc.breakdown?.level !== undefined ? 'Level' : null, val: activeCalc.breakdown?.level },
-        { label: activeCalc.breakdown?.status !== undefined ? 'Status' : null, val: activeCalc.breakdown?.status },
-        { label: activeCalc.breakdown?.circumstance !== undefined ? 'Circumstance' : null, val: activeCalc.breakdown?.circumstance }
-    ].filter(r => r.label !== null);
-
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                borderRadius: '8px', maxWidth: '400px', width: '100%',
-                color: '#e0e0e0',
-                padding: 20
-            }} onClick={e => e.stopPropagation()}>
-
-                <h2 style={{ fontSize: '1.4em', marginBottom: 20, textAlign: 'center', color: 'var(--text-gold)', fontFamily: 'Cinzel, serif', borderBottom: '1px solid #5c4033', paddingBottom: 10 }}>{title}</h2>
-
-                <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                    <div style={{ fontSize: '2.5em', color: 'var(--text-gold)', fontWeight: 'bold', lineHeight: 1 }}>
-                        {isDc ? activeCalc.total : (activeCalc.total >= 0 ? `+${activeCalc.total}` : activeCalc.total)}
-                    </div>
-                    <div style={{ fontSize: '1em', color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
-                        {isDc ? 'Difficulty Class' : 'Attack Bonus'}
-                    </div>
-                </div>
-
-                <StatBreakdown
-                    rows={rows}
-                    total={activeCalc.total}
-                    totalLabel="Total"
-                />
-
-                <button onClick={onClose} style={{
-                    marginTop: 20, width: '100%', padding: '10px', background: '#c5a059',
-                    border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', color: '#1a1a1d',
-                    fontSize: '0.9em'
-                }}>Close</button>
-            </div>
-        </div>
+        <AppDialogShell
+            open
+            onOpenChange={(open) => { if (!open) onClose?.(); }}
+            layerId="spell-stat-breakdown"
+            title={title}
+            description="Calculated value breakdown"
+            size="sm"
+        >
+            <StatBreakdownContent
+                modalData={{
+                    title,
+                    total: activeCalc.total,
+                    base: isDc ? 10 : 0,
+                    breakdown: activeCalc.breakdown,
+                    source: {
+                        attrName: activeCalc.source?.attrFull,
+                        profName: activeCalc.source?.profName,
+                    },
+                }}
+                isWeapon={!isDc}
+            />
+        </AppDialogShell>
     );
 }

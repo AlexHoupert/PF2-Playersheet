@@ -18,6 +18,8 @@ import {
     CATALOG_EDITOR_MODES,
 } from '../shared/catalog/catalogEditorContract';
 import { AdminPagination, AdminTableSurface, AdminTableToolbar } from './components/table';
+import FormDialog from '../shared/components/dialogs/FormDialog';
+import PickerDialog from '../shared/components/dialogs/PickerDialog';
 
 const DEFAULT_PAGE_SIZE = 100;
 
@@ -79,19 +81,19 @@ function AbilityFormModal({ initial, onSave, onClose }) {
     const valid = form.name.trim().length > 0;
 
     return (
-        <div
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3100 }}
-            onClick={onClose}
+        <FormDialog
+            open
+            onOpenChange={(open) => { if (!open) onClose?.(); }}
+            layerId="ability-editor"
+            title={initial.editorMode === CATALOG_EDITOR_MODES.CREATE || !initial.name ? 'New Ability' : 'Edit Ability'}
+            description="Configure the ability and its action metadata."
+            size="md"
+            submitLabel="Save"
+            submitDisabled={!valid}
+            onSubmit={() => valid && onSave(form)}
+            cancelLabel="Cancel"
         >
-            <div
-                style={{ background: '#1e1e21', border: '1px solid #c9a86c', borderRadius: 8, width: 'min(560px, 95vw)', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-                onClick={event => event.stopPropagation()}
-            >
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, color: '#f5deb3' }}>{initial.editorMode === CATALOG_EDITOR_MODES.CREATE || !initial.name ? 'New Ability' : 'Edit Ability'}</h3>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', fontSize: '1.4em', cursor: 'pointer' }}>x</button>
-                </div>
-                <div style={{ padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="flex flex-col gap-3">
                     <div>
                         <label style={{ color: '#888', fontSize: '0.8em', display: 'block', marginBottom: 4 }}>Name *</label>
                         <input className="modal-input" value={form.name} onChange={event => set('name', event.target.value)} style={{ width: '100%' }} autoFocus />
@@ -127,18 +129,7 @@ function AbilityFormModal({ initial, onSave, onClose }) {
                         />
                     </div>
                 </div>
-                <div style={{ padding: '10px 16px', borderTop: '1px solid #333', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                    <button onClick={onClose} style={{ padding: '6px 16px', background: '#333', border: '1px solid #555', color: '#ccc', borderRadius: 4, cursor: 'pointer' }}>Cancel</button>
-                    <button
-                        onClick={() => valid && onSave(form)}
-                        disabled={!valid}
-                        style={{ padding: '6px 16px', background: valid ? '#c9a86c' : '#555', border: 'none', color: valid ? '#111' : '#888', borderRadius: 4, cursor: valid ? 'pointer' : 'default', fontWeight: 'bold' }}
-                    >
-                        Save
-                    </button>
-                </div>
-            </div>
-        </div>
+        </FormDialog>
     );
 }
 
@@ -148,18 +139,7 @@ function CreaturePickerModal({ db, onPick, onClose }) {
     const filtered = creatures.filter(creature => creature.name.toLowerCase().includes(search.toLowerCase()));
 
     return (
-        <div
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3100 }}
-            onClick={onClose}
-        >
-            <div
-                style={{ background: '#1e1e21', border: '1px solid #c9a86c', borderRadius: 8, width: 'min(420px, 95vw)', maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-                onClick={event => event.stopPropagation()}
-            >
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, color: '#f5deb3' }}>Give to Creature</h3>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', fontSize: '1.4em', cursor: 'pointer' }}>x</button>
-                </div>
+        <PickerDialog open onOpenChange={(open) => { if (!open) onClose?.(); }} layerId="ability-creature-picker" title="Give to Creature" description="Select a custom creature." size="sm" showConfirm={false} cancelLabel="Cancel" bodyClassName="flex min-h-0 flex-col p-0">
                 <div style={{ padding: '8px 16px', borderBottom: '1px solid #222' }}>
                     <input className="modal-input" placeholder="Search creatures..." value={search} onChange={event => setSearch(event.target.value)} style={{ width: '100%' }} autoFocus />
                 </div>
@@ -180,8 +160,7 @@ function CreaturePickerModal({ db, onPick, onClose }) {
                         </div>
                     ))}
                 </div>
-            </div>
-        </div>
+        </PickerDialog>
     );
 }
 

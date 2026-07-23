@@ -10,6 +10,7 @@ export function getRunes(item) {
     const runes = {
         potency: 0,
         striking: 0,
+        resilient: 0,
         property: []
     };
 
@@ -18,6 +19,7 @@ export function getRunes(item) {
     // 1. System Data (if available/migrated)
     if (item.system?.runes) {
         runes.potency = parseInt(item.system.runes.potency) || 0;
+        runes.resilient = parseInt(item.system.runes.resilient) || 0;
         const striking = String(item.system.runes.striking || "").toLowerCase();
         if (striking.includes("major")) runes.striking = 3;
         else if (striking.includes("greater")) runes.striking = 2;

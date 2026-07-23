@@ -97,7 +97,7 @@ export function usePlayerInventoryActions({
             tapRef.current = { id: item.name, time: now };
             tapTimeout.current = setTimeout(() => {
                 setModalData(item);
-                setModalMode('item');
+                setModalMode('catalog_detail');
                 tapRef.current = { id: null, time: 0 };
             }, 300);
         }
@@ -489,7 +489,7 @@ export function usePlayerInventoryActions({
         const merged = fromIndex ? { ...fromIndex, ...item, qty: item.qty || 1 } : { ...item };
         if (item._index !== undefined) merged._index = item._index;
         setModalData(merged);
-        setModalMode('item');
+        setModalMode('catalog_detail');
     };
 
     const toggleInventoryEquipped = async (targetItem) => {

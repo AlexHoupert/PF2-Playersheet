@@ -1,6 +1,6 @@
 .conditions-modal__overlay { position: fixed; inset: 0; z-index: 11000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.82); overscroll-behavior: contain; touch-action: none; }
 .conditions-modal { display: flex; flex-direction: column; width: min(500px, 100%); height: min(80dvh, 720px); max-height: calc(100dvh - 32px); overflow: hidden; border: 2px solid #c5a059; border-radius: 8px; background: #2b2b2e; color: #e0e0e0; box-shadow: 0 20px 54px rgba(0, 0, 0, 0.6); touch-action: pan-y; }
-.conditions-modal__content { display: flex; min-height: 0; flex: 1; flex-direction: column; overflow: hidden; }
+.conditions-modal__content { display: flex; min-height: 0; height: 100%; flex: 1; flex-direction: column; overflow: hidden; padding-top: 16px; }
 .conditions-modal__header { display: grid; grid-template-columns: minmax(72px, 1fr) minmax(0, 2fr) minmax(72px, 1fr); align-items: center; gap: 8px; padding: 18px 20px 12px; }
 .conditions-modal__header--list { display: block; text-align: center; }
 .conditions-modal__header h2 { margin: 0; color: #f0d18a; font-size: 1.25rem; text-align: center; }

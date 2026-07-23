@@ -22,7 +22,7 @@ export function useCatalogDetailController({
   const [detailError, setDetailError] = useState(null);
 
   useEffect(() => {
-    if (!modalData || !["item", "spell", "feat", "impulse"].includes(modalMode)) {
+    if (!modalData || !["catalog_detail", "item", "spell", "feat", "impulse"].includes(modalMode)) {
       setDetailLoading(false);
       setDetailError(null);
       return;

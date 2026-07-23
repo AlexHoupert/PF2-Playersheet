@@ -10,6 +10,7 @@ import {
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { BACKLASH_COLORS, BACKLASH_LABELS, BACKLASH_TIERS, ELEMENTS, summarizeBacklashTier } from './pactsData';
+import DeviantAbilityDetailDialog from './DeviantAbilityDetailDialog';
 
 export default function PactOfferModal({
     character,
@@ -203,10 +204,9 @@ export default function PactOfferModal({
             </div>
             )}
             {detailAbility && (
-                <DeviantAbilityDetailModal
+                <DeviantAbilityDetailDialog
                     ability={detailAbility}
                     pact={pact}
-                    isMobile={isMobile}
                     onClose={() => setDetailAbility(null)}
                 />
             )}
@@ -247,50 +247,6 @@ function BacklashSummary({ pact }) {
                     </div>
                 );
             })}
-        </div>
-    );
-}
-
-function DeviantAbilityDetailModal({ ability, pact, isMobile = false, onClose }) {
-    const el = ELEMENTS[pact.element] || ELEMENTS.Fire;
-    return (
-        <div
-            role="dialog"
-            aria-modal="true"
-            style={{
-                ...modalStyle,
-                width: isMobile ? '100%' : modalStyle.width,
-                maxWidth: isMobile ? '100%' : 620,
-                borderColor: el.color,
-                zIndex: 12050,
-            }}
-        >
-            <h2 style={{ margin: 0, color: el.color, fontFamily: 'Cinzel, serif' }}>{ability.name}</h2>
-            <div style={{ color: '#888', fontSize: '0.85em', marginBottom: 12 }}>
-                Deviant Ability - Level {ability.level} - {pact.name}
-            </div>
-            {ability.description && (
-                <div style={richTextStyle} dangerouslySetInnerHTML={{ __html: ability.description }} />
-            )}
-            {[1, 2].map(index => {
-                const awakening = ability[`awakening${index}`];
-                if (!awakening?.name && !awakening?.description) return null;
-                return (
-                    <section key={index} style={awakeningStyle}>
-                        <h3 style={{ margin: '0 0 6px', color: '#81c784', fontSize: '0.98em' }}>
-                            Awakening {index}: {awakening.name || 'Unnamed'}
-                        </h3>
-                        {awakening.levelNote && <div style={{ color: '#777', fontSize: '0.8em', marginBottom: 6 }}>{awakening.levelNote}</div>}
-                        {awakening.description && <div style={richTextStyle} dangerouslySetInnerHTML={{ __html: awakening.description }} />}
-                    </section>
-                );
-            })}
-            <div style={{ marginTop: 12, color: '#ef9a9a', fontSize: '0.82em' }}>
-                Backlash risk is governed by {pact.name}.
-            </div>
-            <div style={actionsStyle}>
-                <button type="button" onClick={onClose} style={secondaryButtonStyle}>Close</button>
-            </div>
         </div>
     );
 }
@@ -362,18 +318,4 @@ const abilityButtonStyle = {
     display: 'flex',
     flexDirection: 'column',
     gap: 3,
-};
-
-const richTextStyle = {
-    color: '#ccc',
-    lineHeight: 1.5,
-    fontSize: '0.88em',
-};
-
-const awakeningStyle = {
-    marginTop: 12,
-    background: '#151b15',
-    border: '1px solid #2f4a2f',
-    borderRadius: 6,
-    padding: 10,
 };

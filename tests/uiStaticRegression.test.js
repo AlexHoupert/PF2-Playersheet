@@ -753,6 +753,7 @@ test('player blocking overlays register with the modal layer', () => {
     const itemActionsSource = readSource('src/player/ItemActionsModal.jsx');
     const itemDetailSource = readSource('src/player/modals/ItemDetailModal.jsx');
     const spellSelectorSource = readSource('src/player/modals/SpellScrollSelectorModal.jsx');
+    const appDialogSource = readSource('src/shared/components/dialogs/AppDialogShell.jsx');
     const pactOfferSource = readSource('src/pacts/PactOfferModal.jsx');
     const feedbackSource = readSource('src/shared/feedback/AppFeedback.jsx');
     const bottomSheetSource = readSource('src/shared/components/BottomSheet.jsx');
@@ -767,10 +768,11 @@ test('player blocking overlays register with the modal layer', () => {
     assert.match(modalLayerSource, /registerModal/);
     assert.match(modalLayerSource, /modalLayerGesturesSuspended/);
     assert.match(overlaySurfaceSource, /modal-layer-scroll-body/);
+    assert.match(appDialogSource, /ModalLayerMount/);
     assert.match(modalManagerSource, /ModalLayerMount/);
     assert.match(itemActionsSource, /ModalLayerMount/);
-    assert.match(itemDetailSource, /ModalLayerMount/);
-    assert.match(spellSelectorSource, /ModalLayerMount/);
+    assert.match(itemDetailSource, /CatalogDetailDialog/);
+    assert.match(spellSelectorSource, /PickerDialog/);
     assert.match(pactOfferSource, /ModalLayerMount/);
     assert.match(feedbackSource, /OverlaySurface/);
     assert.match(bottomSheetSource, /ModalLayerMount/);

@@ -16,6 +16,7 @@ import {
     getCatalogEditorInitialItem,
     isStaticCatalogEdit,
 } from '../../shared/catalog/catalogEditorContract';
+import CatalogEditorShell from '../components/editor/CatalogEditorShell';
 
 const AbilityPicker = React.lazy(() => import('../../shared/components/AbilityPicker'));
 
@@ -490,10 +491,7 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
         <>
         <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
             {/* Left: Editor Form */}
-            <div style={{ flex: 1, padding: 20, background: '#222', overflowY: 'auto' }}>
-                <h2>{initialCreature?.id ? 'Edit Creature' : 'Create Creature'}</h2>
-
-                {error && <div style={{ background: '#d32f2f', color: '#fff', padding: 10, marginBottom: 10 }}>{error}</div>}
+            <CatalogEditorShell className="min-w-0 flex-1" title={initialCreature?.id ? 'Edit Creature' : 'Create Creature'} error={error} pending={isSaving} saveLabel="Save Creature" onSave={handleSave} onCancel={onCancel}>
 
                 {/* Basic Info */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10, marginBottom: 20 }}>
@@ -793,14 +791,7 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
                     <RichTextEditor value={description} onChange={setDescription} style={{ height: 150 }} />
                 </div>
 
-                {/* Actions */}
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #444', paddingTop: 20 }}>
-                    <button className="set-btn" style={{ background: '#555' }} onClick={onCancel} disabled={isSaving}>Cancel</button>
-                    <button className="set-btn" onClick={handleSave} disabled={isSaving}>
-                        {isSaving ? 'Saving...' : 'Save Creature'}
-                    </button>
-                </div>
-            </div>
+            </CatalogEditorShell>
 
             {/* Right: Live Preview — hidden on mobile */}
             {!isMobile && <div style={{ width: 400, minWidth: 350, borderLeft: '1px solid #444', overflowY: 'auto', padding: 16, background: '#1a1a1a' }}>

@@ -52,7 +52,7 @@ export const FeatsView = ({
                             className="item-row"
                             key={feat.catalogEntryId || feat.catalogOverrideId || feat.name}
                             onLongPress={() => { if (!readOnly) onLongPress(feat, 'feat'); }}
-                            onClick={() => { setModalData(feat); setModalMode('item'); }}
+                            onClick={() => { setModalData({ ...feat, _entityType: 'feat' }); setModalMode('catalog_detail'); }}
                         >
                             <span className="item-name">{feat.name}</span>
                         </LongPressable>

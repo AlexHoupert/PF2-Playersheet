@@ -94,11 +94,11 @@ export default function AdminApp() {
                             db={db}
                             handleContentLinkClick={handleContentLinkClick}
                             handleRebuild={handleRebuild}
-                            onInspectAction={(i) => { setModalData(i); setModalMode('item'); }}
-                            onInspectFeat={(i) => { setModalData(i); setModalMode('feat'); }}
-                            onInspectImpulse={(i) => { setModalData(i); setModalMode('impulse'); }}
-                            onInspectItem={(i) => { setModalData(i); setModalMode('item'); }}
-                            onInspectSpell={(i) => { setModalData(i); setModalMode('spell'); }}
+                            onInspectAction={(i) => { setModalData({ ...i, _entityType: 'action' }); setModalMode('catalog_detail'); }}
+                            onInspectFeat={(i) => { setModalData({ ...i, _entityType: 'feat' }); setModalMode('catalog_detail'); }}
+                            onInspectImpulse={(i) => { setModalData({ ...i, _entityType: 'impulse' }); setModalMode('catalog_detail'); }}
+                            onInspectItem={(i) => { setModalData({ ...i, _entityType: 'item' }); setModalMode('catalog_detail'); }}
+                            onInspectSpell={(i) => { setModalData({ ...i, _entityType: 'spell' }); setModalMode('catalog_detail'); }}
                             playerTabMode={playerTabMode}
                             rebuildStatus={rebuildStatus}
                             revokeUser={revokeUser}

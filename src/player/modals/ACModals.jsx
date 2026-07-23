@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { getArmorClassData } from '../../shared/hooks/useCharacterStats';
 import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
+import AppDialogShell from '../../shared/components/dialogs/AppDialogShell';
 
 const ARMOR_RANKS = [
     { value: 0, label: 'Untrained (+0)' },
@@ -22,24 +23,9 @@ export function ACModal({ character, characterActions, onClose }) {
     // Safety check: if no character is provided, show a message
     if (!character) {
         return (
-            <div style={{
-                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1100,
-                display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-            }} onClick={onClose}>
-                <div style={{
-                    backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                    borderRadius: '8px', maxWidth: '400px', width: '100%',
-                    color: '#e0e0e0', padding: 20, textAlign: 'center'
-                }} onClick={e => e.stopPropagation()}>
-                    <h2>No Character Selected</h2>
-                    <p style={{ color: '#888' }}>Please select a character first.</p>
-                    <button onClick={onClose} style={{
-                        marginTop: 20, width: '100%', padding: '10px', background: '#c5a059',
-                        border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', color: '#1a1a1d'
-                    }}>Close</button>
-                </div>
-            </div>
+            <AppDialogShell open onOpenChange={(open) => { if (!open) onClose?.(); }} layerId="armor-class" title="No Character Selected" size="sm">
+                <p className="text-muted-foreground">Please select a character first.</p>
+            </AppDialogShell>
         );
     }
 
@@ -150,27 +136,7 @@ export function ACModal({ character, characterActions, onClose }) {
     };
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                borderRadius: '8px', maxWidth: '400px', width: '100%',
-                color: '#e0e0e0',
-                padding: 20,
-                display: 'flex', flexDirection: 'column',
-                maxHeight: '90vh', overflowY: 'auto'
-            }} onClick={e => e.stopPropagation()}>
-
-                <h2 style={{
-                    fontSize: '1.4em', marginBottom: 20, textAlign: 'center',
-                    color: 'var(--text-gold)', fontFamily: 'Cinzel, serif',
-                    borderBottom: '1px solid #5c4033', paddingBottom: 10
-                }}>
-                    Armor Class
-                </h2>
+        <AppDialogShell open onOpenChange={(open) => { if (!open) onClose?.(); }} layerId="armor-class" title="Armor Class" description="Armor Class breakdown and equipment state" size="sm">
 
                 <div style={{
                     marginTop: 15,
@@ -259,15 +225,7 @@ export function ACModal({ character, characterActions, onClose }) {
                     </div>
                 </div>
 
-                <div style={{ marginTop: 20 }}>
-                    <button onClick={onClose} style={{
-                        width: '100%', padding: '10px', background: '#c5a059',
-                        border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', color: '#1a1a1d',
-                        fontSize: '0.9em'
-                    }}>Close</button>
-                </div>
-            </div>
-        </div>
+        </AppDialogShell>
     );
 }
 
@@ -285,24 +243,9 @@ export function ShieldModal({ character, characterActions, onClose }) {
     // Safety check: if no character is provided, show a message
     if (!character || !character.inventory) {
         return (
-            <div style={{
-                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1100,
-                display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-            }} onClick={onClose}>
-                <div style={{
-                    backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                    borderRadius: '8px', maxWidth: '400px', width: '100%',
-                    color: '#e0e0e0', padding: 20, textAlign: 'center'
-                }} onClick={e => e.stopPropagation()}>
-                    <h2>No Character Selected</h2>
-                    <p style={{ color: '#888' }}>Please select a character first.</p>
-                    <button onClick={onClose} style={{
-                        marginTop: 20, width: '100%', padding: '10px', background: '#c5a059',
-                        border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', color: '#1a1a1d'
-                    }}>Close</button>
-                </div>
-            </div>
+            <AppDialogShell open onOpenChange={(open) => { if (!open) onClose?.(); }} layerId="shield-status" title="No Character Selected" size="sm">
+                <p className="text-muted-foreground">Please select a character first.</p>
+            </AppDialogShell>
         );
     }
 
@@ -393,25 +336,8 @@ export function ShieldModal({ character, characterActions, onClose }) {
     }
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                borderRadius: '8px', maxWidth: '400px', width: '100%',
-                color: '#e0e0e0',
-                padding: 20
-            }} onClick={e => e.stopPropagation()}>
-                <h2 style={{ textAlign: 'center', color: 'var(--text-gold)', marginBottom: 20 }}>Shield Status</h2>
+        <AppDialogShell open onOpenChange={(open) => { if (!open) onClose?.(); }} layerId="shield-status" title="Shield Status" description="Manage equipped shield durability" size="sm">
                 {content}
-                <button onClick={onClose} style={{
-                    marginTop: 20, width: '100%', padding: '10px', background: '#c5a059',
-                    border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', color: '#1a1a1d',
-                    fontSize: '0.9em'
-                }}>Close</button>
-            </div>
-        </div>
+        </AppDialogShell>
     );
 }

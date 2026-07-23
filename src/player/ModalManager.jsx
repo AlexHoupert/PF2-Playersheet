@@ -58,6 +58,8 @@ export function ModalManager(props) {
     const { modalMode } = props;
     if (!modalMode) return null;
 
+    if (modalMode === 'catalog_detail') return <ModalManagerContent {...props} />;
+
     return (
         <ModalLayerMount id={`player-modal-${modalMode}`}>
             <ModalManagerContent {...props} />
@@ -231,7 +233,7 @@ function ModalManagerContent({
         );
     }
 
-    if (modalMode === 'item') {
+    if (modalMode === 'catalog_detail' || modalMode === 'item' || modalMode === 'spell' || modalMode === 'feat' || modalMode === 'impulse') {
         // Calculate ItemDetailModal props logic that was inline in PlayerApp
         // We'll trust ModalManager is receiving the raw modalData.
 

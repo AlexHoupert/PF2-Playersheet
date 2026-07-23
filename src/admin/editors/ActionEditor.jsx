@@ -5,6 +5,7 @@ import { ACTION_INDEX_FILTER_OPTIONS, fetchActionDetailBySourceFile } from '../.
 import { readJsonApiResponse } from '../../shared/utils/apiResponse';
 import { buildCatalogEditorOverride, buildCatalogSafeId, getCatalogEditorInitialItem } from '../../shared/catalog/catalogEditorContract';
 import { mergeCatalogDetailIntoEntry } from '../../shared/catalog/catalogDetailMerge';
+import CatalogEditorShell from '../components/editor/CatalogEditorShell';
 
 export default function ActionEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'action', onSave, onCancel, onSaveToDb, onSaveCatalogEntry, dbOnly = false }) {
     const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
@@ -221,10 +222,7 @@ export default function ActionEditor({ initialItem: initialItemProp, initialPayl
     ];
 
     return (
-        <div className="editor-container" style={{ padding: 20, background: '#222', height: '100%', overflowY: 'auto' }}>
-            <h2>{initialItem?.id || initialItem?.sourceFile ? 'Edit Action' : 'Create Action'}</h2>
-
-            {error && <div className="error-banner" style={{ background: '#d32f2f', color: '#fff', padding: 10, marginBottom: 10 }}>{error}</div>}
+        <CatalogEditorShell title={initialItem?.id || initialItem?.sourceFile ? 'Edit Action' : 'Create Action'} loadingMessage={isLoading ? 'Loading action details...' : ''} error={error} pending={isSaving} saveLabel="Save Action" onSave={handleSave} onCancel={onCancel}>
 
             <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 20 }}>
                 <div className="form-group">
@@ -279,16 +277,10 @@ export default function ActionEditor({ initialItem: initialItemProp, initialPayl
                 <RichTextEditor value={formData.description} onChange={val => handleChange('description', val)} style={{ height: 300 }} />
             </div>
 
-            <div className="form-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #444', paddingTop: 20 }}>
-                <button className="set-btn" style={{ background: '#555' }} onClick={onCancel} disabled={isSaving}>Cancel</button>
-                <button className="set-btn" onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? 'Saving...' : 'Save Action'}
-                </button>
-            </div>
             <style>{`
                 .form-group label { display: block; color: #888; font-size: 0.8em; marginBottom: 4px; }
             `}</style>
-        </div>
+        </CatalogEditorShell>
     );
 }
 

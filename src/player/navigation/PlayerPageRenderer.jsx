@@ -241,7 +241,7 @@ export default function PlayerPageRenderer({
                 db={db}
                 onInspectItem={(item) => {
                     setModalData(item);
-                    setModalMode('item');
+                    setModalMode('catalog_detail');
                 }}
                 onBuyItem={(item) => {
                     if (readOnly) return;

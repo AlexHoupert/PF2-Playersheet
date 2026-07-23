@@ -11,6 +11,7 @@ import {
     validateCatalogEffectDefinitions,
     writeCatalogEffectDefinitions,
 } from '../../shared/rules/catalogEffectDefinitions';
+import CatalogEditorShell from '../components/editor/CatalogEditorShell';
 
 export default function SpellEditor({ initialItem: initialItemProp, initialPayload, baseEntry, editorMode, catalogType = 'spell', onSave, onCancel, onSaveToDb, onSaveCatalogEntry }) {
     const initialItem = getCatalogEditorInitialItem({ initialItem: initialItemProp, initialPayload, baseEntry });
@@ -196,11 +197,7 @@ export default function SpellEditor({ initialItem: initialItemProp, initialPaylo
     };
 
     return (
-        <div className="editor-container" style={{ padding: 20, background: '#222', height: '100%', overflowY: 'auto' }}>
-            <h2>{initialItem ? 'Edit Spell' : 'Create Spell'}</h2>
-
-            {isLoading && <div style={{ color: '#c5a059', marginBottom: 10 }}>Loading spell details...</div>}
-            {error && <div className="error-banner" style={{ background: '#d32f2f', color: '#fff', padding: 10, marginBottom: 10 }}>{error}</div>}
+        <CatalogEditorShell title={initialItem ? 'Edit Spell' : 'Create Spell'} loadingMessage={isLoading ? 'Loading spell details...' : ''} error={error} pending={isSaving} saveLabel="Save Spell" saveTestId="spell-editor-save" onSave={handleSave} onCancel={onCancel}>
 
             <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 20 }}>
                 <div className="form-group">
@@ -277,16 +274,10 @@ export default function SpellEditor({ initialItem: initialItemProp, initialPaylo
                 sourceType="spell"
             />
 
-            <div className="form-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #444', paddingTop: 20 }}>
-                <button className="set-btn" style={{ background: '#555' }} onClick={onCancel} disabled={isSaving}>Cancel</button>
-                <button data-testid="spell-editor-save" className="set-btn" onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? 'Saving...' : 'Save Spell'}
-                </button>
-            </div>
             <style>{`
                 .form-group label { display: block; color: #888; font-size: 0.8em; marginBottom: 4px; }
             `}</style>
-        </div>
+        </CatalogEditorShell>
     );
 }
 

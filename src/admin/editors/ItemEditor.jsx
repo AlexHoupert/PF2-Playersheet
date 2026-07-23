@@ -25,6 +25,7 @@ import {
     validateCatalogEffectDefinitions,
     writeCatalogEffectDefinitions,
 } from '../../shared/rules/catalogEffectDefinitions';
+import CatalogEditorShell from '../components/editor/CatalogEditorShell';
 
 const STATIC_RESOURCE_BASE_URL = import.meta.env.PROD ? '/ressources' : '/api/static';
 
@@ -267,11 +268,7 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
     return (
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100%', overflow: 'hidden' }}>
             {/* Left: Editor Form */}
-            <div className="editor-container" style={{ flex: 1, padding: 20, background: '#222', overflowY: 'auto', minHeight: 0 }}>
-                <h2>{initialItem?.name ? 'Edit Item' : 'Create Item'}</h2>
-
-                {error && <div style={{ background: '#d32f2f', color: '#fff', padding: 10, marginBottom: 10, borderRadius: 4 }}>{error}</div>}
-                {isLoading && <div style={{ color: '#aaa', fontSize: '0.85em', marginBottom: 10 }}>Loading item details...</div>}
+            <CatalogEditorShell className="min-w-0 flex-1" title={initialItem?.name ? 'Edit Item' : 'Create Item'} loadingMessage={isLoading ? 'Loading item details...' : ''} error={error} pending={isSaving} saveLabel="Save Item" onSave={handleSave} onCancel={onCancel}>
 
                 {/* Basic Info Grid */}
                 <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10, marginBottom: 20 }}>
@@ -469,13 +466,7 @@ export default function ItemEditor({ initialItem: initialItemProp, initialPayloa
                     sourceSubtype={`${formData.type} ${formData.category} ${formData.group}`}
                 />
 
-                <div className="form-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #444', paddingTop: 20 }}>
-                    <button className="set-btn" style={{ background: '#555' }} onClick={onCancel} disabled={isSaving}>Cancel</button>
-                    <button className="set-btn" onClick={handleSave} disabled={isSaving}>
-                        {isSaving ? 'Saving...' : 'Save Item'}
-                    </button>
-                </div>
-            </div>
+            </CatalogEditorShell>
 
             {/* Right: Live Preview */}
             <div style={{

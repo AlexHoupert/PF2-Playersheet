@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { StatBreakdown } from '../components/StatBreakdown';
+import AppDialogShell from '../../shared/components/dialogs/AppDialogShell';
 
 /**
  * @typedef {Object} BreakdownData
@@ -29,7 +30,7 @@ import { StatBreakdown } from '../components/StatBreakdown';
  * @param {Function} props.onClose - Handler to close the modal.
  * @param {boolean} [props.isWeapon] - Whether this is a weapon breakdown (slightly different display).
  */
-export function StatBreakdownModal({ modalData, onClose, isWeapon = false }) {
+export function StatBreakdownContent({ modalData, isWeapon = false }) {
 
     // Logic to construct rows from breakdown data
     const rows = useMemo(() => {
@@ -83,37 +84,15 @@ export function StatBreakdownModal({ modalData, onClose, isWeapon = false }) {
         return r;
     }, [modalData]);
 
-    const title = modalData.title || modalData.item?.name || (isWeapon ? 'Weapon Attack' : 'Stat Detail');
     const subTitle = isWeapon ? 'Attack Bonus' : 'Total Bonus';
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1100,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                borderRadius: '8px', maxWidth: '400px', width: '100%',
-                color: '#e0e0e0',
-                padding: 20,
-                display: 'flex', flexDirection: 'column',
-                boxShadow: '0 0 20px rgba(0,0,0,0.8)'
-            }} onClick={e => e.stopPropagation()}>
-
-                <h2 style={{
-                    fontSize: '1.4em', marginBottom: 20, textAlign: 'center',
-                    color: 'var(--text-gold)', fontFamily: 'Cinzel, serif',
-                    borderBottom: '1px solid #5c4033', paddingBottom: 10
-                }}>
-                    {title}
-                </h2>
-
-                <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                    <div style={{ fontSize: '2.5em', color: 'var(--text-gold)', fontWeight: 'bold', lineHeight: 1 }}>
+        <div className="space-y-5">
+                <div className="text-center">
+                    <div className="text-4xl font-bold leading-none text-primary">
                         {modalData.total >= 0 ? `+${modalData.total}` : modalData.total}
                     </div>
-                    <div style={{ fontSize: '1em', color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    <div className="mt-2 text-sm uppercase text-muted-foreground">
                         {subTitle}
                     </div>
                 </div>
@@ -124,21 +103,28 @@ export function StatBreakdownModal({ modalData, onClose, isWeapon = false }) {
                         total={modalData.total}
                     />
                 ) : (
-                    <div style={{
-                        whiteSpace: 'pre-wrap', lineHeight: '1.6', color: '#ccc',
-                        background: '#222', padding: 15, borderRadius: 8, fontStyle: 'italic'
-                    }}>
+                    <div className="whitespace-pre-wrap rounded-md bg-muted p-4 text-sm italic leading-6 text-muted-foreground">
                         {modalData.breakdown || "No specific breakdown available."}
                     </div>
                 )}
-
-                <button onClick={onClose} style={{
-                    marginTop: 20, width: '100%', padding: '10px', background: '#c5a059',
-                    border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', color: '#1a1a1d',
-                    fontSize: '0.9em'
-                }}>Close</button>
-
-            </div>
         </div>
+    );
+}
+
+export function StatBreakdownModal({ modalData, onClose, isWeapon = false }) {
+    if (!modalData) return null;
+    const title = modalData.title || modalData.item?.name || (isWeapon ? 'Weapon Attack' : 'Stat Detail');
+
+    return (
+        <AppDialogShell
+            open={Boolean(modalData)}
+            onOpenChange={(open) => { if (!open) onClose?.(); }}
+            layerId="stat-breakdown-detail"
+            title={title}
+            description="Calculated value breakdown"
+            size="sm"
+        >
+            <StatBreakdownContent modalData={modalData} isWeapon={isWeapon} />
+        </AppDialogShell>
     );
 }

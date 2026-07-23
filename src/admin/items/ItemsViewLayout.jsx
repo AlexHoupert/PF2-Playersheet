@@ -7,7 +7,7 @@ import SpellScrollSelectorModal from '../../player/modals/SpellScrollSelectorMod
 import { deepClone } from '../../shared/utils/deepClone';
 import { getItemIdentityKey } from '../../shared/utils/itemIdentity';
 import { Button } from '@/components/ui/button';
-import { AdminPagination, AdminTableToolbar } from '../components/table';
+import { AdminPagination, AdminTableSurface, AdminTableToolbar } from '../components/table';
 
 const Card = ({ children, style, className, ...rest }) => (
     <div className={className} style={{
@@ -101,7 +101,10 @@ export default function ItemsViewLayout({
     sortedGlobalItems,
     totalPages,
     visibleColumns,}) {
-    const tableColumns = ['Available', 'Formula', ...visibleColumns];
+    const tableColumns = useMemo(
+        () => ['Available', 'Formula', ...visibleColumns],
+        [visibleColumns]
+    );
     const availableItems = shopState?.availableItems || [];
     const availableFormulas = shopState?.availableFormulas || [];
     const traders = shopState?.traders || [];
@@ -114,6 +117,13 @@ export default function ItemsViewLayout({
         () => Object.entries(COLUMNS_CONFIG).map(([key, config]) => ({ key, label: config.label || key })),
         [COLUMNS_CONFIG]
     );
+    const itemTableColumns = useMemo(() => tableColumns.map((key) => ({
+        key,
+        label: key === 'Available' ? 'Av' : key === 'Formula' ? 'Fm' : COLUMNS_CONFIG[key]?.label || key,
+        sortable: key !== 'Available' && key !== 'Formula',
+        filterable: key !== 'Available' && key !== 'Formula',
+        priority: { category: 3, group: 3, rarity: 2, traits: 2, damage: 2, range: 2, bulk: 3 }[key],
+    })), [COLUMNS_CONFIG, tableColumns]);
     const itemFilters = useMemo(
         () => buildItemFilterDefinitions(filterOptions, COLUMNS_CONFIG),
         [COLUMNS_CONFIG, filterOptions]
@@ -192,49 +202,58 @@ export default function ItemsViewLayout({
 
                 {/* MAIN TABLE CARD */}
                 <Card style={{ minHeight: 0 }} onDrop={e => handleDrop(e, 'global')} onDragOver={e => e.preventDefault()}>
-                    <div className="items-view-scroll" style={{ flex: 1, overflow: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
-                            <thead style={{ position: 'sticky', top: 0, background: '#242424', zIndex: 10 }}>
-                                <tr>
-                                    {tableColumns.map(col => {
-                                        const isMeta = col === 'Available' || col === 'Formula';
-                                        // Hide less important columns on smaller screens
-                                        const priority = { category: 3, group: 3, rarity: 2, traits: 2, damage: 2, range: 2, bulk: 3 }[col];
-                                        return (
-                                            <th key={col} data-priority={priority} style={{ padding: 8, textAlign: 'left', cursor: !isMeta ? 'pointer' : 'default', color: '#aaa', whiteSpace: 'nowrap' }} onClick={() => !isMeta && handleSort(col)}>
-                                                {col === 'Available' ? 'Av' : col === 'Formula' ? 'Fm' : COLUMNS_CONFIG[col]?.label || col}
-                                                {!isMeta && sortConfig.key === col && (sortConfig.direction === 'asc' ? ' ▲' : ' ▼')}
-                                            </th>
-                                        );
-                                    })}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {paginatedItems.map((item, idx) => (
-                                    <tr
-                                        key={item.instanceId || idx}
-                                        data-testid={`gm-item-row-${toTestId(item.name || item.instanceId || idx)}`}
-                                        draggable
-                                        onDragStart={e => handleDragStart(e, item, 'global')}
-                                        onContextMenu={e => handleContextMenu(e, item, 'global')}
-                                        onClick={e => handleSelect(e, item, idx)}
-                                        onDoubleClick={() => handleDoubleClick(item)}
-                                        style={{
-                                            background: isSelected(item) ? 'rgba(59, 130, 246, 0.24)' : '#1a1a1a',
-                                            cursor: 'pointer'
+                    <AdminTableSurface
+                        className="items-view-scroll rounded-none border-0"
+                        columns={itemTableColumns}
+                        rows={paginatedItems}
+                        getRowKey={(item, index) => item.instanceId || `${item.name}-${index}`}
+                        getRowTestId={(item, index) => `gm-item-row-${toTestId(item.name || item.instanceId || index)}`}
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                        onRowClick={(event, item, index) => handleSelect(event, item, index)}
+                        onRowDoubleClick={(_event, item) => handleDoubleClick(item)}
+                        onRowContextMenu={(event, item) => handleContextMenu(event, item, 'global')}
+                        isRowSelected={isSelected}
+                        getRowProps={(item) => ({
+                            draggable: true,
+                            onDragStart: (event) => handleDragStart(event, item, 'global'),
+                        })}
+                        renderCell={({ row: item, column }) => {
+                            if (column.key === 'Available') {
+                                const checked = availableItems.includes(item.name);
+                                return (
+                                    <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        aria-label={`${checked ? 'Make unavailable' : 'Make available'}: ${item.name}`}
+                                        onChange={(event) => {
+                                            event.stopPropagation();
+                                            performAction(checked ? 'makeUnavailable' : 'makeAvailable');
                                         }}
-                                    >
-                                        {tableColumns.map(col => {
-                                            const priority = { category: 3, group: 3, rarity: 2, traits: 2, damage: 2, range: 2, bulk: 3 }[col];
-                                            if (col === 'Available') return <td key={col} data-priority={priority} style={{ padding: 8 }}><input type="checkbox" checked={availableItems.includes(item.name)} onChange={(e) => { e.stopPropagation(); performAction(availableItems.includes(item.name) ? 'makeUnavailable' : 'makeAvailable'); }} onClick={e => e.stopPropagation()} /></td>;
-                                            if (col === 'Formula') return <td key={col} data-priority={priority} style={{ padding: 8 }}><input type="checkbox" checked={availableFormulas.includes(item.name)} onChange={(e) => { e.stopPropagation(); performAction(availableFormulas.includes(item.name) ? 'removeFormula' : 'addFormula'); }} onClick={e => e.stopPropagation()} /></td>;
-                                            return <td key={col} data-priority={priority} style={{ padding: 8, color: '#ddd' }}>{item[col]}</td>;
-                                        })}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                        onClick={(event) => event.stopPropagation()}
+                                    />
+                                );
+                            }
+                            if (column.key === 'Formula') {
+                                const checked = availableFormulas.includes(item.name);
+                                return (
+                                    <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        aria-label={`${checked ? 'Remove formula' : 'Add formula'}: ${item.name}`}
+                                        onChange={(event) => {
+                                            event.stopPropagation();
+                                            performAction(checked ? 'removeFormula' : 'addFormula');
+                                        }}
+                                        onClick={(event) => event.stopPropagation()}
+                                    />
+                                );
+                            }
+                            return item[column.key];
+                        }}
+                        emptyLabel="No items match the current filters."
+                        tableTestId="gm-items-table"
+                    />
                     {/* Pagination */}
                     <AdminPagination
                         page={page}

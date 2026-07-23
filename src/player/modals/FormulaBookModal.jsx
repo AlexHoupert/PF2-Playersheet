@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
 import { getShopIndexItemByName } from '../../shared/catalog/shopIndex';
 import {
     filterFormulaItemsByType,
@@ -8,6 +9,7 @@ import {
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
 import { findInventoryItemIndex } from '../../shared/utils/itemIdentity';
 import { isAmmunitionItem } from '../../shared/utils/ammunitionUtils';
+import AppDialogShell from '../../shared/components/dialogs/AppDialogShell';
 
 export function FormulaBookModal({
     character,
@@ -88,23 +90,42 @@ export function FormulaBookModal({
         onClose();
     };
 
-    return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20
-        }} onClick={onClose}>
-            <div style={{
-                backgroundColor: '#2b2b2e', border: '2px solid #c5a059',
-                padding: '20px', borderRadius: '8px', maxWidth: '500px', width: '100%',
-                color: '#e0e0e0',
-                maxHeight: '85vh',
-                overflowY: 'auto',
-                display: 'flex',
-                flexDirection: 'column'
-            }} onClick={e => e.stopPropagation()} data-testid="formula-book-modal">
+    const finishPreparation = async () => {
+        const confirmed = await confirm({
+            title: 'Finish preparation',
+            message: `Create ${currentBatches} batches of items?`,
+            confirmLabel: 'Create',
+        });
+        if (!confirmed) return;
+        updateCharacter((draft) => {
+            dailyPrepQueue.forEach((queuedItem) => {
+                const effectiveBatchSize = isAmmunitionItem(queuedItem) ? 4 : 1;
+                draft.inventory.push({
+                    ...queuedItem,
+                    qty: queuedItem.batches * effectiveBatchSize,
+                    prepared: true,
+                    addedAt: Date.now(),
+                });
+            });
+        });
+        setDailyPrepQueue([]);
+        notifySuccess('Daily preparation complete. Items added to inventory.');
+        setModalMode(null);
+    };
 
-                <h2>{title} ({formulas.length})</h2>
+    return (
+        <AppDialogShell
+            open
+            onOpenChange={(open) => { if (!open) onClose?.(); }}
+            layerId="formula-book"
+            title={title}
+            description={`${formulas.length} known formula${formulas.length === 1 ? '' : 's'}`}
+            size="md"
+            contentProps={{ 'data-testid': 'formula-book-modal' }}
+            footer={!isVersatileVialMode && canDailyCraft && dailyPrepQueue.length > 0 ? (
+                <Button type="button" onClick={finishPreparation}>Finish Preparation</Button>
+            ) : null}
+        >
                 {formulas.length === 0 && <div style={{ color: '#888', fontStyle: 'italic' }}>No known formulas. Buy them effectively from the shop.</div>}
 
                 {formulas.length > 0 && (
@@ -152,7 +173,7 @@ export function FormulaBookModal({
                                 style={{ background: '#333', padding: 8, borderRadius: 4, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
                                 onClick={() => {
                                     if (isVersatileVialMode) selectVersatileVialFormula(item);
-                                    else { setModalData(item); setModalMode('item'); }
+                                    else { setModalData({ ...item, _entityType: 'item' }); setModalMode('catalog_detail'); }
                                 }}
                             >
                                 {item.img ? (
@@ -265,46 +286,10 @@ export function FormulaBookModal({
                                     );
                                 })}
 
-                                <button
-                                    className="btn-buy"
-                                    style={{ marginTop: 10, background: '#673ab7', width: '100%' }}
-                                    onClick={async () => {
-                                        const confirmed = await confirm({
-                                            title: "Finish preparation",
-                                            message: `Create ${currentBatches} batches of items?`,
-                                            confirmLabel: "Create",
-                                        });
-                                        if (!confirmed) return;
-                                        updateCharacter(c => {
-                                            dailyPrepQueue.forEach(qItem => {
-                                                const effectiveBatchSize = isAmmunitionItem(qItem) ? 4 : 1;
-                                                const totalQty = qItem.batches * effectiveBatchSize;
-                                                c.inventory.push({
-                                                    ...qItem,
-                                                    qty: totalQty,
-                                                    prepared: true,
-                                                    addedAt: Date.now()
-                                                });
-                                            });
-                                        });
-                                        setDailyPrepQueue([]);
-                                        notifySuccess("Daily preparation complete. Items added to inventory.");
-                                        setModalMode(null);
-                                    }}
-                                >
-                                    Finish Preparation
-                                </button>
                             </div>
                         )}
                     </div>
                 )}
-
-                <button onClick={onClose} style={{
-                    marginTop: 20, width: '100%', padding: '10px', background: '#c5a059',
-                    border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', color: '#1a1a1d',
-                    flexShrink: 0
-                }}>Close</button>
-            </div>
-        </div>
+        </AppDialogShell>
     );
 }
