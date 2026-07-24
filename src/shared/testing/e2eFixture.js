@@ -32,7 +32,14 @@ export function createE2eV2Store() {
             campaignId: E2E_CAMPAIGN_ID,
             name: "Nimwe Smoke",
             level: 5,
-            sheet: {},
+            sheet: {
+              impulses: [{
+                id: "e2e_impulse_elemental_blast",
+                name: "Elemental Blast",
+                level: 1,
+                range: "30 feet",
+              }],
+            },
             stats: {
               hp: { current: 24, max: 30, temp: 0 },
               attributes: { str: 0, dex: 3, con: 1, int: 2, wis: 1, cha: 2 },

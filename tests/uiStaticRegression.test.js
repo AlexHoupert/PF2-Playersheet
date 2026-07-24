@@ -122,6 +122,14 @@ test('admin feats and impulses use catalog override production editing', () => {
     assert.equal(impulseEditorSource.includes('Deployed impulse overrides are not enabled yet'), false);
 });
 
+test('player impulse authoring keeps the customize action separate from impulse names', () => {
+    const source = readSource('src/player/views/ImpulsesView.jsx');
+
+    assert.match(source, /aria-label=\{`Customize \$\{imp\.name\}`\}/);
+    assert.match(source, /<Pencil aria-hidden="true"/);
+    assert.equal(/>\s*Fork\s*</.test(source), false);
+});
+
 test('admin item production editing skips file writes and uses database fallback', () => {
     const editorSource = readSource('src/admin/editors/ItemEditor.jsx');
     const layoutSource = readSource('src/admin/items/ItemsViewLayout.jsx');

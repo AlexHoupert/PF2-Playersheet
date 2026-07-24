@@ -1,7 +1,11 @@
 import React from 'react';
+import { Pencil } from 'lucide-react';
 import { calculateImpulseAttackAndClassDC } from '../../utils/rules';
 import { parseFoundry, ACTION_ICONS } from '../../shared/utils/foundryParser';
 import { LongPressable } from '../../shared/components/LongPressable';
+import { Button } from '@/components/ui/button';
+
+const stopImpulseRowInteraction = event => event.stopPropagation();
 
 export const ImpulsesView = ({
     character,
@@ -99,17 +103,26 @@ export const ImpulsesView = ({
                             <div style={{ fontWeight: 'bold', color: '#ccc', display: 'flex', alignItems: 'center' }}>
                                 {imp.name}
                                 {canAuthorCatalog && (
-                                    <button
+                                    <Button
                                         type="button"
-                                        className="btn-inline-action"
-                                        style={{ marginLeft: 'auto' }}
+                                        variant="outline"
+                                        size="icon-sm"
+                                        className="ml-auto border-border/70 text-muted-foreground hover:text-primary"
+                                        aria-label={`Customize ${imp.name}`}
+                                        title={`Customize ${imp.name}`}
+                                        onMouseDown={stopImpulseRowInteraction}
+                                        onMouseUp={stopImpulseRowInteraction}
+                                        onTouchStart={stopImpulseRowInteraction}
+                                        onTouchEnd={stopImpulseRowInteraction}
+                                        onTouchCancel={stopImpulseRowInteraction}
+                                        onContextMenu={stopImpulseRowInteraction}
                                         onClick={event => {
                                             event.stopPropagation();
                                             onAuthorCatalogEntry?.('impulse', imp, { linkImpulse: imp });
                                         }}
                                     >
-                                        Fork
-                                    </button>
+                                        <Pencil aria-hidden="true" />
+                                    </Button>
                                 )}
                             </div>
                             <div className="spell-meta">

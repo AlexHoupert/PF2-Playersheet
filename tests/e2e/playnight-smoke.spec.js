@@ -104,6 +104,20 @@ test("universal rounds load a slide pistol and versatile vials reuse formula fil
   await expect(page.locator(".item-name").filter({ hasText: "Alchemist's Fire (Moderate)" })).toBeVisible();
 });
 
+test("trusted player impulse customization stays separate from the impulse name", async ({ page }) => {
+  await gotoFixture(page, "e2eRole=trusted_player");
+  await expectFixtureRoute(page, "player");
+
+  await openPlayerPage(page, "Character", "character.impulses");
+  const impulseRow = page.locator(".spell-row").filter({ hasText: "Elemental Blast" }).first();
+  await expect(impulseRow.getByText("Elemental Blast", { exact: true })).toBeVisible();
+  await expect(impulseRow.getByText("Fork", { exact: true })).toHaveCount(0);
+
+  await impulseRow.getByRole("button", { name: "Customize Elemental Blast" }).click();
+  await expect(page.getByRole("heading", { name: "Edit Impulse", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+});
+
 test("admin fixture route loads campaign, player, items, quests, and encounter surfaces", async ({ page }) => {
   await gotoFixture(page, "admin=true");
   await expectFixtureRoute(page, "admin");
