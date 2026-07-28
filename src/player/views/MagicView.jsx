@@ -268,6 +268,7 @@ export const MagicView = ({
                         onAdd={() => setCatalogMode('spell')}
                         createLabel="Create Spell"
                         onCreate={canAuthorCatalog ? () => onAuthorCatalogEntry?.('spell') : undefined}
+                        editLabel="Edit Spells"
                         editMode={editMode}
                         onEditModeChange={canAuthorCatalog ? setEditMode : undefined}
                     />

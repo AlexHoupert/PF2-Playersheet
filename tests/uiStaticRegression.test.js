@@ -135,9 +135,18 @@ test('player catalog lists share add create and edit controls', () => {
 
     viewSources.forEach(source => assert.match(source, /PlayerCatalogActionBar/));
     viewSources.forEach(source => assert.match(source, /PlayerCatalogEditMarker/));
-    assert.match(actionBarSource, /<Plus data-icon="inline-start"/);
+    assert.match(actionBarSource, /grid-flow-col auto-cols-fr/);
+    assert.match(actionBarSource, /variant="outline"/);
+    assert.match(actionBarSource, /<Plus data-icon="inline-start" className="text-\[var\(--accent-green\)\]"/);
     assert.match(actionBarSource, /<Pencil data-icon="inline-start"/);
+    assert.match(editMarkerSource, /ml-2 inline-flex size-4/);
+    assert.match(editMarkerSource, /<Pencil className="size-3"/);
     assert.match(editMarkerSource, /aria-label=\{`Edit \$\{label\}`\}/);
+    assert.match(viewSources[0], /editLabel="Edit Feats"/);
+    assert.match(viewSources[1], /editLabel="Edit Spells"/);
+    assert.match(viewSources[2], /editLabel="Edit Impulses"/);
+    assert.match(viewSources[3], /editLabel="Edit Actions"/);
+    assert.match(viewSources[4], /editLabel="Edit Items"/);
     assert.equal(viewSources.some(source => source.includes('Customize')), false);
 });
 

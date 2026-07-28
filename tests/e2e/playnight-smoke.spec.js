@@ -113,8 +113,32 @@ test("trusted player edits impulses through the shared list edit mode", async ({
   await expect(impulseRow.getByText("Elemental Blast", { exact: true })).toBeVisible();
   await expect(impulseRow.getByText("Fork", { exact: true })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Edit", exact: true }).last().click();
-  await expect(impulseRow.getByLabel("Edit Elemental Blast")).toBeVisible();
+  const actionBars = page.getByTestId("player-catalog-action-bar");
+  let actionBar = null;
+  for (let index = 0; index < await actionBars.count(); index += 1) {
+    const candidate = actionBars.nth(index);
+    if (await candidate.isVisible()) actionBar = candidate;
+  }
+  expect(actionBar).not.toBeNull();
+  const actionButtons = actionBar.getByRole("button");
+  await expect(actionButtons).toHaveCount(3);
+  const buttonWidths = await actionButtons.evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().width));
+  expect(Math.max(...buttonWidths) - Math.min(...buttonWidths)).toBeLessThan(1);
+
+  const addButton = actionBar.getByRole("button", { name: "Add Impulse", exact: true });
+  const createButton = actionBar.getByRole("button", { name: "Create Impulse", exact: true });
+  expect(await addButton.evaluate(element => getComputedStyle(element).backgroundColor))
+    .toBe(await createButton.evaluate(element => getComputedStyle(element).backgroundColor));
+  expect(await addButton.locator("svg").evaluate(element => getComputedStyle(element).color)).toBe("rgb(46, 125, 50)");
+
+  const rowHeightBeforeEdit = (await impulseRow.boundingBox()).height;
+  await actionBar.getByRole("button", { name: "Edit Impulses", exact: true }).click();
+  const editMarker = impulseRow.getByLabel("Edit Elemental Blast");
+  await expect(editMarker).toBeVisible();
+  const markerBox = await editMarker.boundingBox();
+  expect(markerBox.width).toBeLessThanOrEqual(16.5);
+  expect(Number.parseFloat(await editMarker.evaluate(element => getComputedStyle(element).marginLeft))).toBeGreaterThanOrEqual(6);
+  expect(Math.abs((await impulseRow.boundingBox()).height - rowHeightBeforeEdit)).toBeLessThan(1);
   await impulseRow.click();
   await expect(page.getByRole("heading", { name: "Edit Impulse", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();

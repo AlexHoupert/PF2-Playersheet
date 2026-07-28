@@ -85,6 +85,7 @@ export const FeatsView = ({
                     onAdd={() => setCatalogMode('feat')}
                     createLabel="Create Feat"
                     onCreate={canAuthorCatalog ? () => onAuthorCatalogEntry?.('feat') : undefined}
+                    editLabel="Edit Feats"
                     editMode={editMode}
                     onEditModeChange={canAuthorCatalog ? setEditMode : undefined}
                 />

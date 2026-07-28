@@ -748,6 +748,7 @@ export function InventoryView({
                     ]}
                     createLabel="Create Item"
                     onCreate={canAuthorCatalog ? () => onAuthorCatalogEntry?.('item') : undefined}
+                    editLabel="Edit Items"
                     editMode={editMode}
                     onEditModeChange={canAuthorCatalog ? setEditMode : undefined}
                 />

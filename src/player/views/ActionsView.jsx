@@ -247,6 +247,7 @@ export function ActionsView({
                     onAdd={() => setCatalogMode?.('action')}
                     createLabel="Create Action"
                     onCreate={canAuthorCatalog ? () => onAuthorCatalogEntry?.('action') : undefined}
+                    editLabel="Edit Actions"
                     editMode={editMode}
                     onEditModeChange={canAuthorCatalog ? setEditMode : undefined}
                 />

@@ -130,6 +130,7 @@ export const ImpulsesView = ({
                         onAdd={() => setCatalogMode('impulse')}
                         createLabel="Create Impulse"
                         onCreate={canAuthorCatalog ? () => onAuthorCatalogEntry?.('impulse') : undefined}
+                        editLabel="Edit Impulses"
                         editMode={editMode}
                         onEditModeChange={canAuthorCatalog ? setEditMode : undefined}
                     />
