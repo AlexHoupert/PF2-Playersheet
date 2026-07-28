@@ -7,6 +7,7 @@ import {
   removeItemsFromLootBag,
   setLootItemQuantity,
   splitLootGoldState,
+  updateLootItem,
   updateCampaignLootBag,
 } from "./lootReducers.js";
 
@@ -18,6 +19,7 @@ export function createLootActions(actionContext) {
     db,
     firestore,
     getActivePcActorIds,
+    nowIso,
     repos,
     updateCampaignLegacy,
     useFirestoreV2,
@@ -202,6 +204,16 @@ export function createLootActions(actionContext) {
     },
     setItemQuantity(campaignId, lootBagId, items, qty) {
       return updateLootBag(campaignId, lootBagId, (lootBag) => setLootItemQuantity(lootBag, items, qty, { createId }));
+    },
+    updateItem(campaignId, lootBagId, item, updater) {
+      return updateLootBag(campaignId, lootBagId, (lootBag) => updateLootItem(lootBag, item, updater, { createId }));
+    },
+    softDeleteLootBag(campaignId, lootBagId) {
+      return updateLootBag(campaignId, lootBagId, (lootBag) => ({
+        ...lootBag,
+        deletedAt: nowIso(),
+        deletedBy: actionContext.actor || null,
+      }));
     },
     claimItem,
     claimGold,

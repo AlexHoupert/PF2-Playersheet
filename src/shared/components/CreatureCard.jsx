@@ -21,6 +21,7 @@ import {
 } from '../../utils/bestiaryUtils';
 import { parseFoundry, ACTION_ICONS } from '../utils/foundryParser';
 import { buildCreatureSkillViewModel, normalizeCreatureRevealState } from '../bestiary/creaturePresentation';
+import { buildCreatureSpellcastingModel } from '../bestiary/creatureSpellcasting';
 
 export default function CreatureCard({
     creature,
@@ -30,6 +31,7 @@ export default function CreatureCard({
     onRevealChange,
     onAbilityClick,
     onSkillClick,
+    onSpellClick,
     viewerMode
 }) {
     const [contextMenu, setContextMenu] = useState(null);
@@ -82,6 +84,7 @@ export default function CreatureCard({
         const rawItems = data?.items || [];
         return [...rawItems].sort((a, b) => getAbilitySortPriority(a) - getAbilitySortPriority(b));
     }, [data?.items]);
+    const spellcastingEntries = useMemo(() => buildCreatureSpellcastingModel(data?.items || []), [data?.items]);
 
     // Hazard-specific
     const stealth = data?.system?.attributes?.stealth ?? data?.attributes?.stealth;
@@ -219,7 +222,7 @@ export default function CreatureCard({
 
     // Render abilities
     const renderAbility = (item) => {
-        if (item.type === 'melee' || item.type === 'ranged') return null;
+        if (['melee', 'ranged', 'spell', 'spellcastingEntry'].includes(item.type)) return null;
         if (!gmView && reveal.abilities === 'hidden') return null;
 
         const icon = getActionIcon(item);
@@ -239,6 +242,49 @@ export default function CreatureCard({
                 )}
             </div>
         );
+    };
+
+    const renderSpellcasting = () => {
+        if (!spellcastingEntries.length || (!gmView && reveal.abilities === 'hidden')) return null;
+        return spellcastingEntries.map(entry => {
+            const spellsByRank = entry.spells.reduce((groups, spell) => {
+                const rank = spell.rank ?? 0;
+                groups[rank] = [...(groups[rank] || []), spell];
+                return groups;
+            }, {});
+            return (
+                <div key={entry.id} className="creature-spellcasting">
+                    <div>
+                        <strong>{entry.name}</strong>
+                        {' '}DC {entry.dc}, attack {formatBonus(entry.attack)}
+                        <span className="ability-traits"> ({entry.mode}, {entry.tradition})</span>
+                    </div>
+                    {Object.entries(spellsByRank)
+                        .sort(([left], [right]) => Number(right) - Number(left))
+                        .map(([rank, spells]) => (
+                            <div key={rank} className="creature-spell-rank">
+                                <strong>{Number(rank) === 0 ? 'Cantrips' : `Rank ${rank}`}</strong>{' '}
+                                {spells.map((spell, index) => (
+                                    <React.Fragment key={spell.id}>
+                                        {index > 0 ? ', ' : ''}
+                                        <button
+                                            type="button"
+                                            className="creature-spell-link"
+                                            onClick={() => onSpellClick?.(spell.snapshot || spell)}
+                                            disabled={!onSpellClick}
+                                        >
+                                            {spell.name}
+                                            {entry.mode === 'prepared' && spell.preparedCount > 1 ? ` ×${spell.preparedCount}` : ''}
+                                            {entry.mode === 'innate' && spell.atWill ? ' (at will)' : ''}
+                                            {entry.mode === 'innate' && !spell.atWill && spell.usesPerDay ? ` (${spell.usesPerDay}/day)` : ''}
+                                        </button>
+                                    </React.Fragment>
+                                ))}
+                            </div>
+                        ))}
+                </div>
+            );
+        });
     };
 
     // Render speed
@@ -465,6 +511,7 @@ export default function CreatureCard({
             {/* Abilities */}
             <div className="creature-section abilities" onContextMenu={(e) => handleContextMenu(e, 'abilities')}>
                 {items.filter(i => i.type !== 'melee' && i.type !== 'ranged').map(renderAbility)}
+                {renderSpellcasting()}
             </div>
 
             {/* Hazard routine/reset */}

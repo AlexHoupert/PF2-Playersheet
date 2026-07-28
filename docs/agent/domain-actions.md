@@ -1,6 +1,6 @@
 # Domain Actions
 
-Last updated: 2026-07-08.
+Last updated: 2026-07-28.
 
 ## Purpose
 
@@ -135,7 +135,9 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `s
 
 - `createLootBag(campaignId, lootBag)`
 - `updateLootBag(campaignId, lootBagId, updater)`
+- `softDeleteLootBag(campaignId, lootBagId)`
 - `addItems(campaignId, lootBagId, items)`
+- `updateItem(campaignId, lootBagId, itemOrIdentity, updater)`
 - `removeItems(campaignId, lootBagId, items)`
 - `setItemQuantity(campaignId, lootBagId, items, qty)`
 - `claimItem(campaignId, lootBagId, item, characterId)`
@@ -281,9 +283,21 @@ Global-facing reads for shop, pacts, abilities, lore, and bestiary should use `s
 - `deleteTrader(traderId)`
 - `setTraderHidden(traderId, hidden)`
 - `addItemsToTrader(traderId, items)`
+- `updateTraderItem(traderId, itemOrIdentity, updater)`
 - `removeItemsFromTrader(traderId, items)`
 - `setItemAvailable(itemName, available)`
 - `setFormulaAvailable(itemName, available)`
+
+The GM Items workspace routes target edits, occurrence-only customization, and
+inline Loot quantity changes through these actions. Loot identity is resolved
+by `instanceId`; legacy Trader name entries remain readable and are normalized
+to structured entries when customized.
+
+The GM Creature Encounter workspace composes existing `dataActions.encounter`
+and campaign Catalog actions. Dropping a Creature creates a normal combatant;
+Encounter-local Customize creates a linked-only campaign Creature fork and then
+updates exactly that combatant reference. No broad Encounter or Catalog write
+contract is introduced by the workspace.
 
 ## Catalog Admin Override Semantics
 

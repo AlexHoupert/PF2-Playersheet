@@ -13,7 +13,24 @@ import CREATURE_INDEX from '../../data/creature_index.json';
 
 // Decode index item to lightweight object for listing
 function decodeIndexItem(item) {
-    const [id, name, img, sourceFile, typeIdx, level, rarityIdx, sizeIdx, traitsIdx] = item;
+    const [
+        id, name, img, sourceFile, typeIdx, level, rarityIdx, sizeIdx, traitsIdx,
+        ac = 10, hp = 0, fortitude = 0, reflex = 0, will = 0, perception = 0, speed = 0,
+        resistanceValues = [], weaknessValues = [], immunityValues = [], skillValues = [], flags = 0,
+        spellModeValues = [],
+    ] = item;
+    const decodeTypedValues = values => (values || []).map(([valueIdx, value]) => ({
+        type: CREATURE_INDEX.dict.dt?.[valueIdx] || '',
+        value,
+    })).filter(entry => entry.type);
+    const skills = (skillValues || []).map(([skillIdx, bonus]) => {
+        const key = CREATURE_INDEX.dict.sk?.[skillIdx] || '';
+        return {
+            key,
+            label: key.replace(/[-_]+/g, ' ').replace(/\b\w/g, character => character.toUpperCase()),
+            bonus,
+        };
+    }).filter(skill => skill.key);
     return {
         id,
         name,
@@ -24,6 +41,23 @@ function decodeIndexItem(item) {
         rarity: CREATURE_INDEX.dict.r?.[rarityIdx] || 'common',
         size: CREATURE_INDEX.dict.s?.[sizeIdx] || 'med',
         traits: (traitsIdx || []).map(i => CREATURE_INDEX.dict.tr?.[i] || '').filter(Boolean),
+        ac,
+        hp,
+        fortitude,
+        reflex,
+        will,
+        perception,
+        speed,
+        resistances: decodeTypedValues(resistanceValues),
+        weaknesses: decodeTypedValues(weaknessValues),
+        immunities: (immunityValues || []).map(valueIdx => ({ type: CREATURE_INDEX.dict.dt?.[valueIdx] || '' })).filter(entry => entry.type),
+        skills,
+        highestSkillBonus: skills.length ? Math.max(...skills.map(skill => skill.bonus)) : null,
+        hasMelee: Boolean(flags & 1),
+        hasRanged: Boolean(flags & 2),
+        hasMagic: Boolean(flags & 4),
+        hasShield: Boolean(flags & 8),
+        spellcastingModes: (spellModeValues || []).map(modeIdx => CREATURE_INDEX.dict.sm?.[modeIdx] || '').filter(Boolean),
     };
 }
 

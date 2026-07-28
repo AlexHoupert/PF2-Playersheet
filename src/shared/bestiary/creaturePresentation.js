@@ -1,4 +1,5 @@
 import { CATALOG_ENTRY_STATUS } from '../catalog/catalogEntryModel.js';
+import { buildCreatureTableSummary } from './creatureTableSummary.js';
 
 export const DEFAULT_CREATURE_REVEAL_STATE = {
     name: 'hidden',
@@ -31,6 +32,9 @@ export function buildCreatureViewModel(creature, metadata = {}, options = {}) {
     const details = system.details || data.details || {};
     const isCustom = Boolean(options.isCustom ?? creature?.isCustom);
     const id = options.id || creature?.id || creature?._id || data._id || data.name;
+    const summary = buildCreatureTableSummary(creature?.data || options.data
+        ? { ...creature, data: creature?.data || options.data }
+        : creature);
 
     return {
         id,
@@ -40,12 +44,16 @@ export function buildCreatureViewModel(creature, metadata = {}, options = {}) {
         catalogEntryStatus: creature?.catalogEntryStatus || CATALOG_ENTRY_STATUS.ORIGINAL,
         catalogStatusLabel: creature?.catalogStatusLabel || 'Original',
         isDeleted: Boolean(creature?.isDeleted),
+        linkedOnly: Boolean(creature?.linkedOnly || data?.linkedOnly),
+        origin: creature?.origin || data?.origin || null,
+        originMetadata: creature?.originMetadata || data?.originMetadata || null,
         type: options.type || creature?.type || data.type || 'npc',
         name: creature?.name || data.name || 'Unknown',
         unknownName: creature?.unknownName || data.unknownName || metadata.unknownName || '???',
         level: creature?.level ?? details.level?.value ?? 0,
         rarity: creature?.rarity || traits.rarity || 'common',
         traits: creature?.traits || traits.value || [],
+        ...summary,
         group: metadata.group || creature?.group || 'Uncategorized',
         bestiary: Boolean(metadata.bestiary ?? creature?.bestiary),
         revealState: normalizeCreatureRevealState(metadata.revealState || creature?.revealState),

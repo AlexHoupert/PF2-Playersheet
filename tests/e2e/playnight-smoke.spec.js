@@ -164,6 +164,133 @@ test("admin fixture route loads campaign, player, items, quests, and encounter s
   await expect(page.getByText("Smoke Goblin", { exact: true })).toBeVisible();
 });
 
+test("GM item workspace persists resizing and edits loot quantity inline", async ({ page }) => {
+  await gotoFixture(page, "admin=true");
+  await page.getByRole("button", { name: /Items$/ }).first().click();
+  await page.getByTestId("gm-items-side-loot").click();
+
+  const targetRow = page.getByTestId("gm-items-loot-target-row-e2e-loot");
+  await expect(targetRow).toContainText("Smoke Loot");
+  await targetRow.click();
+
+  const contentTable = page.getByTestId("gm-items-loot-contents");
+  const lootRow = contentTable.locator("tbody tr").filter({ hasText: "Healing Potion (Minor)" });
+  await expect(lootRow).toBeVisible();
+  await lootRow.getByRole("button", { name: "1", exact: true }).click();
+  const quantityInput = lootRow.getByRole("spinbutton");
+  await quantityInput.fill("3");
+  await quantityInput.press("Enter");
+  await expect(lootRow.getByRole("button", { name: "3", exact: true })).toBeVisible();
+
+  const workspace = page.locator('[data-admin-resource-workspace="desktop"]');
+  const mainPanel = workspace.locator('[data-slot="resizable-panel"]').first();
+  const separator = workspace.locator('[data-slot="resizable-handle"]').first();
+  const before = await mainPanel.boundingBox();
+  const handle = await separator.boundingBox();
+  expect(before).not.toBeNull();
+  expect(handle).not.toBeNull();
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handle.x + 90, handle.y + handle.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(async () => page.evaluate(() => localStorage.getItem("gm-items-loot:horizontal"))).not.toBeNull();
+  const resizedWidth = (await mainPanel.boundingBox()).width;
+  expect(Math.abs(resizedWidth - before.width)).toBeGreaterThan(20);
+
+  await reloadFixture(page, "admin=true");
+  await page.getByRole("button", { name: /Items$/ }).first().click();
+  await page.getByTestId("gm-items-side-loot").click();
+  const restoredWidth = (await page.locator('[data-admin-resource-workspace="desktop"] [data-slot="resizable-panel"]').first().boundingBox()).width;
+  expect(Math.abs(restoredWidth - resizedWidth)).toBeLessThan(6);
+});
+
+test("mobile GM resource workspace uses a focused subtable sheet", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await gotoFixture(page, "admin=true");
+  await page.getByRole("button", { name: /Items$/ }).first().click();
+  await page.getByTestId("gm-items-side-loot").click();
+
+  const mobileWorkspace = page.locator('[data-admin-resource-workspace="mobile"]');
+  const sheet = page.getByRole("dialog").filter({ hasText: "Loot Bags / Contents" });
+  await expect(mobileWorkspace).toBeVisible();
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByTestId("gm-items-loot-target-row-e2e-loot")).toContainText("Smoke Loot");
+
+  await sheet.getByTestId("gm-items-loot-target-row-e2e-loot").click({ position: { x: 16, y: 12 } });
+  await expect(sheet.getByTestId("gm-items-loot-content-row-e2e-loot-item")).toContainText("Healing Potion (Minor)");
+  await sheet.getByRole("button", { name: "Loot Bags", exact: true }).click();
+  await expect(sheet.getByTestId("gm-items-loot-target-row-e2e-loot")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("items-resource-workspace-mobile.png"), fullPage: false });
+});
+
+test("GM assembles and customizes an encounter from the creature workspace", async ({ page }, testInfo) => {
+  await gotoFixture(page, "admin=true");
+  await page.getByRole("button", { name: /Creatures$/ }).first().click();
+  await expect(page.getByTestId("gm-bestiary-mode-encounters")).toBeVisible();
+  await page.getByTestId("gm-bestiary-mode-encounters").click();
+  await page.getByPlaceholder("Search creatures...").fill("Smoke Ember Bear");
+
+  const creatureRow = page.getByTestId("gm-creature-row-smoke-ember-bear");
+  const encounterRow = page.getByTestId("gm-encounter-row-e2e_encounter");
+  await expect(creatureRow).toBeVisible();
+  await expect(encounterRow).toContainText("Smoke Encounter");
+  await creatureRow.dragTo(encounterRow);
+
+  const combatantTable = page.getByTestId("gm-bestiary-encounter-creatures-table");
+  const addedRow = combatantTable.locator("tbody tr").filter({ hasText: "Smoke Ember Bear" });
+  await expect(addedRow).toBeVisible();
+
+  await addedRow.click({ button: "right" });
+  await page.getByTestId("gm-encounter-combatant-action-customize").click();
+  await expect(page.getByRole("heading", { name: "Edit Creature" })).toBeVisible();
+  await page.getByTestId("creature-editor-name").fill("Smoke Ember Bear Veteran");
+  await page.getByRole("button", { name: "Save Creature", exact: true }).click();
+  await expect(page.getByText("Smoke Ember Bear Veteran", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("gm-creature-row-smoke-ember-bear")).toContainText("Smoke Ember Bear");
+
+  await encounterRow.click({ button: "right" });
+  await page.getByTestId("gm-encounter-action-show-main").click();
+  await expect(page.getByRole("button", { name: /Smoke Encounter/ })).toBeVisible();
+
+  const customizedRow = combatantTable.locator("tbody tr").filter({ hasText: "Smoke Ember Bear Veteran" });
+  await customizedRow.click({ button: "right" });
+  await page.getByTestId("gm-encounter-combatant-action-remove").click();
+  await expect(customizedRow).toHaveCount(0);
+  await page.screenshot({ path: testInfo.outputPath("bestiary-encounter-workspace.png"), fullPage: false });
+});
+
+test("creature spellcasting modes survive save and reload", async ({ page }) => {
+  await gotoFixture(page, "admin=true");
+  await page.getByRole("button", { name: /Creatures$/ }).first().click();
+  await page.getByPlaceholder("Search creatures...").fill("Smoke Ember Bear");
+  const creatureRow = page.getByTestId("gm-creature-row-smoke-ember-bear");
+  await creatureRow.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+  const spellcastingToggle = page.getByTestId("creature-editor-toggle-spellcasting");
+  if (await spellcastingToggle.getAttribute("aria-expanded") !== "true") await spellcastingToggle.click();
+
+  const addEntry = page.getByTestId("creature-spellcasting-add-entry");
+  for (let index = 0; index < 4; index += 1) await addEntry.click();
+  const modes = ["prepared", "spontaneous", "innate", "focus"];
+  for (let index = 0; index < modes.length; index += 1) {
+    await page.getByTestId(`creature-spellcasting-entry-${index}`).getByLabel("Mode").selectOption(modes[index]);
+  }
+  await page.getByRole("button", { name: "Save Creature", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Edit Creature" })).toHaveCount(0);
+
+  await reloadFixture(page, "admin=true");
+  await page.getByRole("button", { name: /Creatures$/ }).first().click();
+  await page.getByPlaceholder("Search creatures...").fill("Smoke Ember Bear");
+  await page.getByTestId("gm-creature-row-smoke-ember-bear").click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+  const reloadedToggle = page.getByTestId("creature-editor-toggle-spellcasting");
+  await expect(reloadedToggle).toContainText("Spellcasting (4)");
+  if (await reloadedToggle.getAttribute("aria-expanded") !== "true") await reloadedToggle.click();
+  for (let index = 0; index < modes.length; index += 1) {
+    await expect(page.getByTestId(`creature-spellcasting-entry-${index}`).getByLabel("Mode")).toHaveValue(modes[index]);
+  }
+});
+
 test("encounter creature search includes catalog clones", async ({ page }) => {
   await gotoFixture(page, "admin=true");
   await page.getByText("Encounters", { exact: true }).click();
@@ -482,7 +609,7 @@ test("GM creates lootbag and gives custom item that player sees after reload", a
   await page.getByTestId("gm-items-create-loot").click();
   await page.getByTestId("app-feedback-input").fill("Smoke Created Loot");
   await page.getByTestId("app-feedback-confirm").click();
-  await expect(page.getByText("Smoke Created Loot", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("gm-items-loot-targets").getByRole("cell", { name: "Smoke Created Loot", exact: true })).toBeVisible();
 
   await page.getByPlaceholder("Search items...").fill("Smoke Custom Charm");
   const customItemRow = page.getByTestId("gm-item-row-smoke-custom-charm");
@@ -804,6 +931,32 @@ test("admin catalog table toolbar, drawer, and context menu keep stable layout",
   const menuContent = page.locator('[data-slot="context-menu-content"]');
   await expect(menuContent).toBeVisible();
   await expect(menuContent).toHaveClass(/zoom-in-100/);
+});
+
+test("nested item context menus stay inside the lower-right viewport edge", async ({ page }) => {
+  await gotoFixture(page, "admin=true");
+  await page.getByRole("button", { name: /Items$/ }).first().click();
+  const table = page.getByTestId("gm-items-table");
+  const surface = table.locator("xpath=..");
+  await surface.evaluate(element => { element.scrollTop = element.scrollHeight; });
+  const row = table.locator("tbody tr").last();
+  await row.scrollIntoViewIfNeeded();
+  const lastCell = row.locator("td").last();
+  const cellBox = await lastCell.boundingBox();
+  expect(cellBox).not.toBeNull();
+  await lastCell.click({ button: "right", position: { x: cellBox.width - 4, y: cellBox.height / 2 } });
+  const submenuTrigger = page.getByTestId("gm-items-add-loot");
+  await expect(submenuTrigger).toBeVisible();
+  await submenuTrigger.hover();
+  const submenu = page.locator('[data-slot="context-menu-sub-content"]');
+  await expect(submenu).toBeVisible();
+  const submenuBox = await submenu.boundingBox();
+  const viewport = page.viewportSize();
+  expect(submenuBox).not.toBeNull();
+  expect(submenuBox.x).toBeGreaterThanOrEqual(0);
+  expect(submenuBox.y).toBeGreaterThanOrEqual(0);
+  expect(submenuBox.x + submenuBox.width).toBeLessThanOrEqual(viewport.width);
+  expect(submenuBox.y + submenuBox.height).toBeLessThanOrEqual(viewport.height);
 });
 
 async function expectShellLayoutStable(shellLocator, beforeBox) {

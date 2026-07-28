@@ -303,3 +303,28 @@
 .condition-link:hover {
     color: #a5d6a7;
 }
+
+.creature-spellcasting {
+    margin-top: 0.45rem;
+}
+
+.creature-spell-rank {
+    margin-left: 0.8rem;
+    color: var(--text-secondary, #c8c8c8);
+}
+
+.creature-spell-link {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.creature-spell-link:disabled {
+    text-decoration: none;
+    cursor: default;
+}

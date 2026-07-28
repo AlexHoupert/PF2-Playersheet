@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { buildDictionary, getFilesRecursively, writeJsonOutput } from './buildUtils.js';
+import { buildCreatureTableSummary } from '../src/shared/bestiary/creatureTableSummary.js';
 
 const SOURCE_DIR = './ressources/bestiary';
 const OUTPUT_FILE = './src/data/creature_catalog.json';
@@ -24,6 +25,7 @@ if (fs.existsSync(SOURCE_DIR)) {
             // Determine type (npc or hazard)
             const isHazard = data.type === 'hazard';
 
+            const summary = buildCreatureTableSummary(data);
             const creature = {
                 id: data._id || path.basename(file, '.json'),
                 sourceFile: path.relative('./ressources', file).replace(/\\/g, '/'),
@@ -32,14 +34,9 @@ if (fs.existsSync(SOURCE_DIR)) {
                 type: isHazard ? 'hazard' : 'npc',
                 level: sys.details?.level?.value ?? 0,
                 rarity: sys.traits?.rarity || 'common',
-                size: sys.traits?.size?.value || 'med',
+                size: summary.size,
                 traits: sys.traits?.value || [],
-                ac: sys.attributes?.ac?.value ?? 10,
-                hp: sys.attributes?.hp?.max ?? 0,
-                fortitude: sys.saves?.fortitude?.value ?? 0,
-                reflex: sys.saves?.reflex?.value ?? 0,
-                will: sys.saves?.will?.value ?? 0,
-                perception: sys.perception?.mod ?? 0,
+                ...summary,
             };
 
             catalog.push({
@@ -57,6 +54,7 @@ if (fs.existsSync(SOURCE_DIR)) {
                 rarity: creature.rarity,
                 size: creature.size,
                 traits: creature.traits,
+                ...summary,
             });
         } catch (err) {
             console.error(`Error parsing ${file}:`, err);
@@ -71,11 +69,29 @@ const typeDict = buildDictionary(indexEntries.map(e => e.type));
 const rarityDict = buildDictionary(indexEntries.map(e => e.rarity));
 const sizeDict = buildDictionary(indexEntries.map(e => e.size));
 const traitDict = buildDictionary(indexEntries.flatMap(e => e.traits || []));
+const defenseTypeDict = buildDictionary(indexEntries.flatMap(entry => [
+    ...(entry.resistances || []).map(value => value.type),
+    ...(entry.weaknesses || []).map(value => value.type),
+    ...(entry.immunities || []).map(value => value.type),
+]));
+const skillDict = buildDictionary(indexEntries.flatMap(entry => (entry.skills || []).map(skill => skill.key)));
+const spellModeDict = buildDictionary(indexEntries.flatMap(entry => entry.spellcastingModes || []));
 
 const items = [];
 
 indexEntries.forEach((entry) => {
     const traitsIdx = (entry.traits || []).map(t => traitDict.map.get(t) ?? 0);
+    const typedValues = values => (values || []).map(value => [
+        defenseTypeDict.map.get(value.type) ?? 0,
+        value.value ?? 0,
+    ]);
+    const immunities = (entry.immunities || []).map(value => defenseTypeDict.map.get(value.type) ?? 0);
+    const skills = (entry.skills || []).map(skill => [skillDict.map.get(skill.key) ?? 0, skill.bonus]);
+    const flags = (entry.hasMelee ? 1 : 0)
+        | (entry.hasRanged ? 2 : 0)
+        | (entry.hasMagic ? 4 : 0)
+        | (entry.hasShield ? 8 : 0);
+    const spellModes = (entry.spellcastingModes || []).map(mode => spellModeDict.map.get(mode) ?? 0);
 
     items.push([
         entry.id,
@@ -87,16 +103,32 @@ indexEntries.forEach((entry) => {
         rarityDict.map.get(entry.rarity) ?? 0,
         sizeDict.map.get(entry.size) ?? 0,
         traitsIdx,
+        entry.ac,
+        entry.hp,
+        entry.fortitude,
+        entry.reflex,
+        entry.will,
+        entry.perception,
+        entry.speed,
+        typedValues(entry.resistances),
+        typedValues(entry.weaknesses),
+        immunities,
+        skills,
+        flags,
+        spellModes,
     ]);
 });
 
 const compactIndex = {
-    v: 1,
+    v: 2,
     dict: {
         t: typeDict.list,      // type
         r: rarityDict.list,    // rarity
         s: sizeDict.list,      // size
         tr: traitDict.list,    // traits
+        dt: defenseTypeDict.list, // resistance / weakness / immunity types
+        sk: skillDict.list,    // skill keys
+        sm: spellModeDict.list, // spellcasting modes
     },
     items,
 };

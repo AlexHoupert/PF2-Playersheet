@@ -1,6 +1,9 @@
 export { default as AdminActiveFilterChips } from './AdminActiveFilterChips.jsx';
 export { default as AdminColumnMenu } from './AdminColumnMenu.jsx';
 export { default as AdminContextMenu } from './AdminContextMenu.jsx';
+export { default as AdminResourceWorkspace, readStoredLayout } from './AdminResourceWorkspace.jsx';
+export { default as AdminSubtable } from './AdminSubtable.jsx';
+export { filterAndSortSubtableRows } from './adminSubtableModel.js';
 export { default as AdminFilterDrawer } from './AdminFilterDrawer.jsx';
 export { default as AdminPagination, getVisiblePages } from './AdminPagination.jsx';
 export { default as AdminTableSurface } from './AdminTableSurface.jsx';

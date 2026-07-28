@@ -27,6 +27,7 @@ import {
     updateBestiaryRevealStateInDb,
     updateCreatureMetadataInDb,
     updateCustomCreatureInDb,
+    updateTraderItemInDb,
     updateTraderInDb,
 } from '../src/shared/db/domain/globalContentReducers.js';
 
@@ -84,6 +85,24 @@ test('shop reducers manage traders and availability lists', () => {
     assert.deepEqual(removed.shop.traders[0].inventory, ['Torch']);
     assert.deepEqual(formula.shop.availableItems, ['Torch']);
     assert.deepEqual(formula.shop.availableFormulas, ['Alchemist Fire']);
+});
+
+test('trader occurrence customization normalizes a legacy name reference into structured data', () => {
+    const initial = createTraderInDb({}, {
+        id: 'trader1',
+        name: 'Market',
+        inventory: ['Rope', 'Torch'],
+        category: 'General',
+    });
+    const customized = updateTraderItemInDb(initial, 'trader1', 'Rope', {
+        name: 'Reinforced Rope',
+        level: 2,
+    });
+
+    assert.deepEqual(customized.shop.traders[0].inventory, [
+        { name: 'Reinforced Rope', level: 2 },
+        'Torch',
+    ]);
 });
 
 test('bestiary reveal reducer stores field-level reveal state', () => {

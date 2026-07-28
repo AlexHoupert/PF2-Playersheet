@@ -31,6 +31,7 @@ import {
   updateCreatureMetadataInDb,
   updateCustomCreatureInDb,
   updateTraderInDb,
+  updateTraderItemInDb,
 } from "./globalContentReducers.js";
 
 export function createGlobalContentActions(actionContext) {
@@ -337,6 +338,8 @@ export function createGlobalContentActions(actionContext) {
     updateGlobalConfig((current) => addItemsToTraderInDb(current, traderId, items));
   const removeItemsFromTrader = (traderId, items) =>
     updateGlobalConfig((current) => removeItemsFromTraderInDb(current, traderId, items));
+  const updateTraderItem = (traderId, item, updater) =>
+    updateGlobalConfig((current) => updateTraderItemInDb(current, traderId, item, updater));
   const setItemAvailable = (itemName, available) =>
     updateGlobalConfig((current) => setShopItemAvailableInDb(current, itemName, available));
   const setFormulaAvailable = (itemName, available) =>
@@ -381,6 +384,7 @@ export function createGlobalContentActions(actionContext) {
       setTraderHidden,
       addItemsToTrader,
       removeItemsFromTrader,
+      updateTraderItem,
       setItemAvailable,
       setFormulaAvailable,
     },

@@ -26,7 +26,9 @@ import {
     applyLootBagUpdate,
     claimLootGoldState,
     claimLootItemState,
+    setLootItemQuantity,
     splitLootGoldState,
+    updateLootItem,
 } from '../src/shared/db/domain/lootReducers.js';
 import {
     addPartyXpInCampaign,
@@ -256,6 +258,24 @@ test('record updaters still allow object return replacements', () => {
 
     assert.equal(character.gold, 5);
     assert.equal(character.id, 'char1');
+});
+
+test('loot quantity and customization target one stable item instance', () => {
+    const bag = {
+        id: 'loot1',
+        items: [
+            { instanceId: 'first', name: 'Healing Potion', qty: 2, level: 1 },
+            { instanceId: 'second', name: 'Healing Potion', qty: 4, level: 1 },
+        ],
+    };
+
+    const withQuantity = setLootItemQuantity(bag, { instanceId: 'second' }, 7);
+    const customized = updateLootItem(withQuantity, { instanceId: 'first' }, { name: 'Marked Potion', level: 3 });
+
+    assert.equal(customized.items.find(item => item.instanceId === 'first').name, 'Marked Potion');
+    assert.equal(customized.items.find(item => item.instanceId === 'first').level, 3);
+    assert.equal(customized.items.find(item => item.instanceId === 'second').name, 'Healing Potion');
+    assert.equal(customized.items.find(item => item.instanceId === 'second').qty, 7);
 });
 
 test('claims loot once and records the claimant without duplicating inventory', () => {

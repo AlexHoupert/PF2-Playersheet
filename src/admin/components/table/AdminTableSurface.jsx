@@ -48,6 +48,7 @@ export default function AdminTableSurface({
                         const rowTestId = getRowTestId?.(row, index);
                         const selected = Boolean(isRowSelected?.(row, index));
                         const rowProps = getRowProps?.(row, index) || {};
+                        const actions = getRowActions?.(row, index) || [];
                         const rowNode = (
                             <tr
                                 key={rowKey}
@@ -60,6 +61,7 @@ export default function AdminTableSurface({
                                 onClick={(event) => onRowClick?.(event, row, index)}
                                 onDoubleClick={(event) => onRowDoubleClick?.(event, row, index)}
                                 onContextMenu={(event) => onRowContextMenu?.(event, row, index)}
+                                tabIndex={actions.length ? 0 : undefined}
                                 {...rowProps}
                             >
                                 {columns.map((column) => {
@@ -79,7 +81,6 @@ export default function AdminTableSurface({
                             </tr>
                         );
 
-                        const actions = getRowActions?.(row, index) || [];
                         if (!actions.length) return rowNode;
                         return (
                             <AdminContextMenu key={rowKey} actions={actions} actionTestIdPrefix={actionTestIdPrefix}>

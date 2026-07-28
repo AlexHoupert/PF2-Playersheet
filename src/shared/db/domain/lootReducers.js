@@ -95,6 +95,22 @@ export function setLootItemQuantity(lootBag, items, qty, options = {}) {
   return next;
 }
 
+export function updateLootItem(lootBag, itemTarget, updater, options = {}) {
+  const next = normalizeLootBag(lootBag, options);
+  const itemIndex = findLootItemIndex(next.items, itemTarget);
+  if (itemIndex < 0) throw new Error("Loot item was not found.");
+  const current = cloneValue(next.items[itemIndex]);
+  const updated = typeof updater === "function"
+    ? updater(current)
+    : { ...current, ...cloneValue(updater) };
+  next.items[itemIndex] = ensureInventoryItemIdentity({
+    ...current,
+    ...cloneValue(updated),
+    instanceId: current.instanceId,
+  }, options);
+  return next;
+}
+
 export function claimLootItemState(lootBag, character, itemTarget, options = {}) {
   const {
     createId = () => createInstanceId("loot"),

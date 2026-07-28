@@ -231,6 +231,26 @@ export function removeItemsFromTraderInDb(db, traderId, items) {
   }));
 }
 
+export function updateTraderItemInDb(db, traderId, itemTarget, updater) {
+  const targetName = itemName(itemTarget);
+  if (!targetName) return db;
+  return updateTraderInDb(db, traderId, (trader) => ({
+    ...trader,
+    inventory: (trader.inventory || []).map((entry) => {
+      if (itemName(entry) !== targetName) return entry;
+      const current = typeof entry === "string" ? { name: entry } : cloneValue(entry);
+      const updated = typeof updater === "function"
+        ? updater(current)
+        : { ...current, ...cloneValue(updater) };
+      return {
+        ...current,
+        ...updated,
+        name: updated?.name || current.name,
+      };
+    }),
+  }));
+}
+
 export function setShopItemAvailableInDb(db, itemNameValue, available) {
   return updateShopList(db, "availableItems", itemNameValue, available);
 }

@@ -13,18 +13,31 @@ import BottomSheet from '../shared/components/BottomSheet';
 import CreatureCard from '../shared/components/CreatureCard';
 import CreatureAbilityModal from '../shared/components/CreatureAbilityModal';
 import CreatureSkillDetailDialog from '../shared/components/CreatureSkillDetailDialog';
+import { CatalogDetailDialog } from '../shared/components/catalog-detail';
 import CreatureEditor from './editors/CreatureEditor';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { generateFalseData } from '../utils/bestiaryUtils';
 import { deepClone } from '../shared/utils/deepClone';
 import { getAllCreatures, fetchCreatureData } from '../shared/catalog/creatureIndex';
+import { SPELL_INDEX_ITEMS } from '../shared/catalog/spellIndex';
 import { mergeCreatureDetailIntoEntry } from '../shared/catalog/catalogDetailMerge';
 import { selectCustomAbilityList } from '../shared/db/selectors/abilitySelectors';
 import { selectBestiaryCreatureMetadata, selectCustomCreatures } from '../shared/db/selectors/bestiarySelectors';
 import { DEFAULT_CREATURE_REVEAL_STATE, buildBestiaryCreatureEntries } from '../shared/bestiary/creaturePresentation';
 import { buildHideOverride } from '../shared/catalog/catalogEntryModel';
-import { selectCatalogEntryStates } from '../shared/db/selectors/catalogOverrideSelectors';
-import { AdminPagination, AdminTableSurface, AdminTableToolbar } from './components/table';
+import { selectCatalogEntryStates, selectVisibleCatalogEntries } from '../shared/db/selectors/catalogOverrideSelectors';
+import {
+    AdminPagination,
+    AdminResourceWorkspace,
+    AdminSubtable,
+    AdminTableSurface,
+    AdminTableToolbar,
+} from './components/table';
+import { matchesKeyedNumberRange, matchesNumberRange } from './components/table/adminTableFilters';
+import {
+    formatTypedCreatureValues,
+    getCreatureSkillBonus,
+} from '../shared/bestiary/creatureTableSummary';
 import { selectCampaignLoreArticles } from '../shared/db/selectors/loreSelectors';
 import { selectLoreBacklinks } from '../shared/lore/loreSelectors';
 import { useLoreAdminStore } from '../shared/lore/useLoreStores';
@@ -63,6 +76,11 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     const [visibleColumns, setVisibleColumns] = useState(['name', 'level', 'type', 'group', 'bestiary']);
     const [filterOpen, setFilterOpen] = useState(false);
     const [focusFilterId, setFocusFilterId] = useState(null);
+    const [resourceMode, setResourceMode] = useState('creatures');
+    const [selectedEncounterId, setSelectedEncounterId] = useState(null);
+    const [mobileWorkspaceOpen, setMobileWorkspaceOpen] = useState(false);
+    const [mobileWorkspaceMode, setMobileWorkspaceMode] = useState('upper');
+    const [focusScope, setFocusScope] = useState(null);
 
     // ── Selection / context menu / toast ────────────────────────────────────
     const [, setContextMenu] = useState(null);
@@ -117,6 +135,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     const [loadedCreatureData, setLoadedCreatureData] = useState(null);
     const [selectedAbility, setSelectedAbility] = useState(null);
     const [selectedSkill, setSelectedSkill] = useState(null);
+    const [selectedSpell, setSelectedSpell] = useState(null);
     const loreBacklinks = useMemo(() => previewCreature?.id
         ? selectLoreBacklinks(loreStore.articles, 'creature', previewCreature.id)
         : [], [loreStore.articles, previewCreature?.id]);
@@ -156,16 +175,66 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     }, [editingCreature?.id, db]);
 
     // ── Data: merge index + custom creatures ─────────────────────────────────
-    const creatures = useMemo(() => {
+    const allCreatureEntries = useMemo(() => {
         return buildBestiaryCreatureEntries({
             entryStates: selectCatalogEntryStates(getAllCreatures(), db, 'creature'),
             metadata: selectBestiaryCreatureMetadata(db),
             includeUnpublished: true,
         });
     }, [db]);
+    const creatures = useMemo(
+        () => allCreatureEntries.filter(creature => !creature.linkedOnly),
+        [allCreatureEntries]
+    );
+    const spellCatalog = useMemo(
+        () => selectVisibleCatalogEntries(SPELL_INDEX_ITEMS, db, 'spell'),
+        [db]
+    );
+    const encounters = useMemo(
+        () => (activeCampaign?.encounters || []).filter(encounter => !encounter.deletedAt),
+        [activeCampaign?.encounters]
+    );
+    const selectedEncounter = useMemo(
+        () => encounters.find(encounter => encounter.id === selectedEncounterId)
+            || encounters.find(encounter => encounter.isActive)
+            || encounters[0]
+            || null,
+        [encounters, selectedEncounterId]
+    );
+    const encounterCreatureCombatants = useMemo(
+        () => (selectedEncounter?.combatants || []).filter(combatant => combatant.type === 'creature'),
+        [selectedEncounter]
+    );
+    const encounterRows = useMemo(() => encounters.map(encounter => ({
+        ...encounter,
+        creatureCount: (encounter.combatants || []).filter(combatant => combatant.type === 'creature').length,
+        playerCount: (encounter.combatants || []).filter(combatant => combatant.type === 'player').length,
+    })), [encounters]);
+    const encounterCombatantRows = useMemo(() => encounterCreatureCombatants.map(combatant => {
+        const creature = allCreatureEntries.find(entry => entry.id === combatant.creatureId)
+            || allCreatureEntries.find(entry => entry.name === combatant.name);
+        const maxHp = combatant.maxHp ?? combatant.hp?.max ?? combatant.hp ?? 0;
+        const currentHp = combatant.currentHp ?? combatant.hp?.current ?? combatant.hp ?? maxHp;
+        return {
+            ...combatant,
+            catalogCreature: creature || null,
+            displayName: combatant.instanceLabel > 1 ? `${combatant.name} ${combatant.instanceLabel}` : combatant.name,
+            level: creature?.level ?? '-',
+            currentHp,
+            maxHp,
+            hpDisplay: `${currentHp}/${maxHp}`,
+            defeated: Boolean(combatant.defeatedAt || currentHp <= 0),
+        };
+    }), [allCreatureEntries, encounterCreatureCombatants]);
+
+    useEffect(() => {
+        if (selectedEncounter && selectedEncounter.id !== selectedEncounterId) {
+            setSelectedEncounterId(selectedEncounter.id);
+        }
+    }, [selectedEncounter, selectedEncounterId]);
 
     // ── Filter options ────────────────────────────────────────────────────────
-    const uniqueTypes    = useMemo(() => ['creature', 'hazard'], []);
+    const uniqueTypes    = useMemo(() => [...new Set(creatures.map(creature => creature.type))].filter(Boolean).sort(), [creatures]);
     const uniqueRarities = useMemo(() => ['common', 'uncommon', 'rare', 'unique'], []);
     const uniqueTraits   = useMemo(() => {
         const s = new Set(); creatures.forEach(c => c.traits?.forEach(t => s.add(t))); return [...s].sort();
@@ -173,25 +242,72 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     const uniqueGroups   = useMemo(() => {
         const s = new Set(); creatures.forEach(c => s.add(c.group || 'Uncategorized')); return [...s].sort();
     }, [creatures]);
+    const uniqueSizes = useMemo(() => [...new Set(creatures.map(creature => creature.size))].filter(Boolean).sort(), [creatures]);
+    const uniqueDefenseTypes = useMemo(() => [...new Set(creatures.flatMap(creature => [
+        ...(creature.resistances || []).map(entry => entry.type),
+        ...(creature.weaknesses || []).map(entry => entry.type),
+        ...(creature.immunities || []).map(entry => entry.type),
+    ]))].filter(Boolean).sort(), [creatures]);
+    const uniqueSkills = useMemo(() => [...new Set(creatures.flatMap(creature => (creature.skills || []).map(skill => skill.key)))].filter(Boolean).sort(), [creatures]);
 
     const tableFilters = useMemo(() => ([
         { id: 'type', label: 'Type', options: uniqueTypes },
         { id: 'rarity', label: 'Rarity', options: uniqueRarities },
         { id: 'traits', label: 'Traits', options: uniqueTraits },
         { id: 'group', label: 'Group', options: uniqueGroups },
+        { id: 'size', label: 'Size', options: uniqueSizes },
+        { id: 'levelRange', label: 'Level', type: 'number-range' },
+        { id: 'acRange', label: 'AC', type: 'number-range' },
+        { id: 'hpRange', label: 'HP', type: 'number-range' },
+        { id: 'speedRange', label: 'Speed', type: 'number-range' },
+        { id: 'perceptionRange', label: 'Perception', type: 'number-range' },
+        { id: 'fortitudeRange', label: 'Fortitude', type: 'number-range' },
+        { id: 'reflexRange', label: 'Reflex', type: 'number-range' },
+        { id: 'willRange', label: 'Will', type: 'number-range' },
+        { id: 'resistanceRange', label: 'Resistance', type: 'keyed-number-range', options: uniqueDefenseTypes },
+        { id: 'weaknessRange', label: 'Weakness', type: 'keyed-number-range', options: uniqueDefenseTypes },
+        { id: 'immunities', label: 'Immunities', options: uniqueDefenseTypes },
+        { id: 'skillRange', label: 'Skill Bonus', type: 'keyed-number-range', options: uniqueSkills },
+        { id: 'hasMelee', label: 'Has Melee', type: 'boolean' },
+        { id: 'hasRanged', label: 'Has Ranged', type: 'boolean' },
+        { id: 'hasMagic', label: 'Has Magic', type: 'boolean' },
+        { id: 'hasShield', label: 'Has Shield', type: 'boolean' },
+        { id: 'spellcastingModes', label: 'Spellcasting Mode', options: ['prepared', 'spontaneous', 'innate', 'focus'] },
         { id: 'CatalogStatus', label: 'Catalog Status', options: ['Original', 'Edited', 'Custom', 'Deleted'] },
         { id: 'bestiary', label: 'In Bestiary', type: 'boolean' },
-    ]), [uniqueTypes, uniqueRarities, uniqueTraits, uniqueGroups]);
+    ]), [uniqueTypes, uniqueRarities, uniqueTraits, uniqueGroups, uniqueSizes, uniqueDefenseTypes, uniqueSkills]);
 
     // ── Filtering ────────────────────────────────────────────────────────────
     const filteredCreatures = useMemo(() => {
         const q = search.trim().toLowerCase();
-        return creatures.filter(c => {
-            const { type, rarity, traits, group, bestiary, CatalogStatus } = activeFilters;
+        const scopedCreatures = focusScope?.entryIds?.length
+            ? allCreatureEntries
+                .filter(creature => focusScope.entryIds.includes(creature.id))
+                .map(creature => ({ ...creature, instanceCount: focusScope.entryCounts?.[creature.id] || 1 }))
+            : creatures;
+        return scopedCreatures.filter(c => {
+            const { type, rarity, traits, group, size, bestiary, CatalogStatus } = activeFilters;
             if (type?.length && !type.includes(c.type)) return false;
             if (rarity?.length && !rarity.includes(c.rarity)) return false;
             if (traits?.length && !traits.every(t => c.traits?.includes(t))) return false;
             if (group?.length && !group.includes(c.group)) return false;
+            if (size?.length && !size.includes(c.size)) return false;
+            if (activeFilters.levelRange && !matchesNumberRange(c.level, activeFilters.levelRange)) return false;
+            if (activeFilters.acRange && !matchesNumberRange(c.ac, activeFilters.acRange)) return false;
+            if (activeFilters.hpRange && !matchesNumberRange(c.hp, activeFilters.hpRange)) return false;
+            if (activeFilters.speedRange && !matchesNumberRange(c.speed, activeFilters.speedRange)) return false;
+            if (activeFilters.perceptionRange && !matchesNumberRange(c.perception, activeFilters.perceptionRange)) return false;
+            if (activeFilters.fortitudeRange && !matchesNumberRange(c.fortitude, activeFilters.fortitudeRange)) return false;
+            if (activeFilters.reflexRange && !matchesNumberRange(c.reflex, activeFilters.reflexRange)) return false;
+            if (activeFilters.willRange && !matchesNumberRange(c.will, activeFilters.willRange)) return false;
+            if (activeFilters.resistanceRange && !matchesKeyedNumberRange(c.resistances, activeFilters.resistanceRange)) return false;
+            if (activeFilters.weaknessRange && !matchesKeyedNumberRange(c.weaknesses, activeFilters.weaknessRange)) return false;
+            if (activeFilters.skillRange && !matchesKeyedNumberRange(c.skills, activeFilters.skillRange)) return false;
+            if (activeFilters.immunities?.length && !activeFilters.immunities.every(typeValue => c.immunities?.some(entry => entry.type === typeValue))) return false;
+            for (const flag of ['hasMelee', 'hasRanged', 'hasMagic', 'hasShield']) {
+                if (typeof activeFilters[flag] === 'boolean' && Boolean(c[flag]) !== activeFilters[flag]) return false;
+            }
+            if (activeFilters.spellcastingModes?.length && !activeFilters.spellcastingModes.some(mode => c.spellcastingModes?.includes(mode))) return false;
             if (CatalogStatus?.length) {
                 if (!CatalogStatus.includes(c.catalogStatusLabel)) return false;
             } else if (c.isDeleted) {
@@ -199,16 +315,22 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
             }
             if (bestiary === true && !c.bestiary) return false;
             if (bestiary === false && c.bestiary) return false;
-            return !q || c.name.toLowerCase().includes(q);
+            return !q || [
+                c.name,
+                ...(c.traits || []),
+                ...(c.skills || []).map(skill => skill.label),
+                ...(c.resistances || []).map(entry => entry.type),
+                ...(c.weaknesses || []).map(entry => entry.type),
+            ].some(value => String(value || '').toLowerCase().includes(q));
         });
-    }, [creatures, search, activeFilters]);
+    }, [allCreatureEntries, creatures, focusScope, search, activeFilters]);
 
     // ── Sorting ──────────────────────────────────────────────────────────────
     const sortedCreatures = useMemo(() => {
         const items = [...filteredCreatures];
         items.sort((a, b) => {
-            let valA = a[sortConfig.key];
-            let valB = b[sortConfig.key];
+            let valA = getCreatureTableSortValue(a, sortConfig.key);
+            let valB = getCreatureTableSortValue(b, sortConfig.key);
             if (Array.isArray(valA)) valA = valA.join(', ');
             if (Array.isArray(valB)) valB = valB.join(', ');
             if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -230,6 +352,205 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
     // ── Handlers ─────────────────────────────────────────────────────────────
     const handleSort = (key) => {
         setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
+    };
+
+    const handleHeaderFilter = (column) => {
+        const directMap = {
+            catalogStatusLabel: 'CatalogStatus',
+            level: 'levelRange',
+            ac: 'acRange',
+            hp: 'hpRange',
+            speed: 'speedRange',
+            perception: 'perceptionRange',
+            fortitude: 'fortitudeRange',
+            reflex: 'reflexRange',
+            will: 'willRange',
+            resistances: 'resistanceRange',
+            weaknesses: 'weaknessRange',
+        };
+        const filterId = column.key.startsWith('skill:') ? 'skillRange' : (directMap[column.key] || column.key);
+        if (!tableFilters.some(filter => filter.id === filterId)) return;
+        if (column.key.startsWith('skill:')) {
+            setActiveFilters(current => ({
+                ...current,
+                skillRange: { ...(current.skillRange || {}), key: column.key.slice('skill:'.length) },
+            }));
+        }
+        setFocusFilterId(filterId);
+        setFilterOpen(true);
+    };
+
+    const resolveCreatureForCombatant = (combatant) => allCreatureEntries.find(creature => creature.id === combatant?.creatureId)
+        || allCreatureEntries.find(creature => creature.name === combatant?.name)
+        || null;
+
+    const loadEffectiveCreatureData = async (creature) => {
+        if (!creature) return null;
+        if (creature.data) return mergeCreatureDetailIntoEntry(creature.data, creature).data;
+        const fetched = await fetchCreatureData(creature.id);
+        return fetched ? mergeCreatureDetailIntoEntry(fetched, creature).data : null;
+    };
+
+    const addCreatureToEncounter = async (creatureId, encounterId) => {
+        if (!activeCampaignId || !encounterId) return;
+        const creature = allCreatureEntries.find(entry => entry.id === creatureId);
+        if (!creature) return notifyError('Creature not found');
+        const data = await loadEffectiveCreatureData(creature);
+        if (!data) return notifyError('Failed to load creature data');
+        await dataActions.encounter.addCombatant(activeCampaignId, encounterId, 'creature', {
+            ...data,
+            id: creature.id,
+            _catalogId: creature.id,
+            name: creature.name,
+        });
+        setSelectedEncounterId(encounterId);
+        notifySuccess(`${creature.name} added to encounter`);
+    };
+
+    const readDraggedCreatureId = (event) => event.dataTransfer.getData('application/x-pf2-creature')
+        || event.dataTransfer.getData('text/plain');
+
+    const handleCreateEncounter = async () => {
+        const name = await prompt({
+            title: 'Create encounter',
+            message: 'Name the encounter.',
+            inputLabel: 'Name',
+            initialValue: 'New Encounter',
+            confirmLabel: 'Create',
+        });
+        if (!name?.trim()) return;
+        const id = await dataActions.encounter.createEncounter(activeCampaignId, name.trim());
+        if (id) {
+            setSelectedEncounterId(id);
+            setResourceMode('encounters');
+        }
+    };
+
+    const handleEditEncounter = async (encounter) => {
+        const name = await prompt({
+            title: 'Edit encounter',
+            message: 'Update the encounter name.',
+            inputLabel: 'Name',
+            initialValue: encounter.name,
+            confirmLabel: 'Save',
+        });
+        if (!name?.trim()) return;
+        await dataActions.encounter.updateEncounter(activeCampaignId, encounter.id, current => ({ ...current, name: name.trim() }));
+    };
+
+    const handleDeleteEncounter = async (encounter) => {
+        const accepted = await confirm({
+            title: 'Delete encounter',
+            message: `Delete "${encounter.name}"?`,
+            confirmLabel: 'Delete',
+            danger: true,
+        });
+        if (!accepted) return;
+        await dataActions.encounter.softDeleteEncounter(activeCampaignId, encounter.id);
+        if (selectedEncounterId === encounter.id) setSelectedEncounterId(null);
+    };
+
+    const showEncounterInMainTable = (encounter) => {
+        const counts = (encounter.combatants || [])
+            .filter(combatant => combatant.type === 'creature' && combatant.creatureId)
+            .reduce((next, combatant) => ({
+                ...next,
+                [combatant.creatureId]: (next[combatant.creatureId] || 0) + 1,
+            }), {});
+        setFocusScope({
+            type: 'encounter',
+            id: encounter.id,
+            label: encounter.name,
+            entryIds: Object.keys(counts),
+            entryCounts: counts,
+        });
+        setPage(1);
+    };
+
+    const handleViewCombatant = async (combatant) => {
+        const creature = resolveCreatureForCombatant(combatant);
+        if (!creature) return notifyError('Creature catalog entry not found');
+        const data = await loadEffectiveCreatureData(creature);
+        setPreviewCreature(creature);
+        if (data) setLoadedCreatureData(data);
+    };
+
+    const handleCustomizeCombatant = async (combatant) => {
+        const creature = resolveCreatureForCombatant(combatant);
+        if (!creature) return notifyError('Creature catalog entry not found');
+        const data = await loadEffectiveCreatureData(creature);
+        if (!data) return notifyError('Failed to load creature data');
+        const alreadyLinked = Boolean(creature.linkedOnly);
+        const forkId = alreadyLinked ? creature.id : `encounter-creature-${combatant.id}`;
+        setEditingCreature({
+            ...creature,
+            id: forkId,
+            _id: forkId,
+            catalogOverrideId: alreadyLinked ? creature.catalogOverrideId : null,
+            sourceFile: alreadyLinked ? creature.sourceFile : null,
+            editorMode: alreadyLinked ? 'edit' : 'clone',
+            data: { ...deepClone(data), _id: forkId, id: forkId },
+            _combatantContext: {
+                campaignId: activeCampaignId,
+                encounterId: selectedEncounter.id,
+                combatantId: combatant.id,
+                sourceCreatureId: combatant.sourceCreatureId || combatant.creatureId,
+            },
+        });
+    };
+
+    const saveEncounterCreatureFork = async (override, context) => {
+        const payload = {
+            ...(override.payload || {}),
+            id: override.payload?.id || override.payload?._id,
+            _id: override.payload?._id || override.payload?.id,
+            linkedOnly: true,
+            cleanupCandidateAt: null,
+            originMetadata: {
+                type: 'encounter_combatant',
+                encounterId: context.encounterId,
+                combatantId: context.combatantId,
+                sourceCreatureId: context.sourceCreatureId,
+            },
+        };
+        const catalogEntryId = await dataActions.catalog.saveCatalogEntry({
+            ...override,
+            catalogType: 'creature',
+            mode: 'custom',
+            baseId: context.sourceCreatureId,
+            origin: 'fork',
+            payload,
+        }, { campaignId: context.campaignId });
+        await dataActions.encounter.updateCombatant(context.campaignId, context.encounterId, context.combatantId, current => ({
+            ...current,
+            creatureId: payload.id,
+            sourceCreatureId: context.sourceCreatureId,
+            catalogEntryId,
+            name: payload.name || current.name,
+            maxHp: payload.system?.attributes?.hp?.max ?? current.maxHp ?? current.hp?.max ?? current.hp ?? 0,
+            currentHp: Math.min(
+                current.currentHp ?? current.hp?.current ?? current.hp ?? current.maxHp ?? 0,
+                payload.system?.attributes?.hp?.max ?? current.maxHp ?? current.hp?.max ?? current.hp ?? 0
+            ),
+        }));
+    };
+
+    const handleRemoveCombatant = async (combatant) => {
+        await dataActions.encounter.removeCombatant(activeCampaignId, selectedEncounter.id, combatant.id);
+        const creature = resolveCreatureForCombatant(combatant);
+        const rawEntry = creature?.catalogOverrideId
+            ? activeCampaign?.catalogEntries?.[creature.catalogOverrideId]
+            : null;
+        if (rawEntry?.payload?.linkedOnly) {
+            await dataActions.catalog.saveCatalogEntry({
+                ...rawEntry,
+                payload: {
+                    ...rawEntry.payload,
+                    cleanupCandidateAt: new Date().toISOString(),
+                    cleanupReason: 'encounter_combatant_removed',
+                },
+            }, { campaignId: activeCampaignId });
+        }
     };
 
     const handleRowClick = (creature) => {
@@ -391,21 +712,49 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
 
     const tableColumns = useMemo(() => ([
         { key: 'name', label: 'Name' },
+        ...(focusScope ? [{ key: 'instanceCount', label: 'Instances' }] : []),
         { key: 'level', label: 'Level' },
         { key: 'type', label: 'Type' },
         { key: 'group', label: 'Group' },
         { key: 'rarity', label: 'Rarity' },
+        { key: 'size', label: 'Size' },
+        { key: 'ac', label: 'AC' },
+        { key: 'hp', label: 'HP' },
+        { key: 'speed', label: 'Speed' },
+        { key: 'perception', label: 'Perception' },
+        { key: 'fortitude', label: 'Fortitude' },
+        { key: 'reflex', label: 'Reflex' },
+        { key: 'will', label: 'Will' },
+        { key: 'resistances', label: 'Resistances' },
+        { key: 'weaknesses', label: 'Weaknesses' },
+        { key: 'immunities', label: 'Immunities' },
+        { key: 'skills', label: 'Skills' },
+        ...uniqueSkills.map(skill => ({ key: `skill:${skill}`, label: skill.replace(/[-_]+/g, ' ').replace(/\b\w/g, character => character.toUpperCase()) })),
+        { key: 'hasMelee', label: 'Melee' },
+        { key: 'hasRanged', label: 'Ranged' },
+        { key: 'hasMagic', label: 'Magic' },
+        { key: 'hasShield', label: 'Shield' },
+        { key: 'spellcastingModes', label: 'Spellcasting' },
         { key: 'traits', label: 'Traits' },
         { key: 'catalogStatusLabel', label: 'Catalog Status' },
         { key: 'bestiary', label: 'Bestiary' },
-    ]), []);
+    ]), [focusScope, uniqueSkills]);
     const visibleTableColumns = useMemo(
-        () => tableColumns.filter(column => visibleColumns.includes(column.key)),
+        () => tableColumns.filter(column => column.key === 'instanceCount' || visibleColumns.includes(column.key)),
         [tableColumns, visibleColumns]
     );
     const getCreatureRowActions = (creature) => ([
         { id: 'copy-reference', label: 'Copy Reference', onSelect: () => copyCreatureRef(creature) },
         { id: 'set-group', label: 'Set Group', onSelect: () => handleSetGroup(creature) },
+        resourceMode === 'encounters' && encounters.length > 0 ? {
+            id: 'add-to-encounter',
+            label: 'Add to Encounter',
+            children: encounters.map(encounter => ({
+                id: `add-to-encounter-${encounter.id}`,
+                label: encounter.name || 'Unnamed Encounter',
+                onSelect: () => addCreatureToEncounter(creature.id, encounter.id).catch(notifyError),
+            })),
+        } : null,
         creature.isCustom ? {
             id: 'paste-ability',
             label: 'Paste Referenced Ability',
@@ -419,6 +768,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
 
     // ── Render editor ─────────────────────────────────────────────────────────
     if (editingCreature) {
+        const combatantContext = editingCreature._combatantContext;
         return (
             <CreatureEditor
                 initialCreature={editingCreature}
@@ -426,6 +776,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                 editorMode={editingCreature.editorMode || (editingCreature.sourceFile || editingCreature.catalogOverrideId ? 'edit' : 'create')}
                 baseEntry={editingCreature.editorMode === 'create' ? null : editingCreature}
                 customAbilities={selectCustomAbilityList(db)}
+                spellCatalog={spellCatalog}
                 onSave={() => {
                     setEditingCreature(null);
                 }}
@@ -433,7 +784,9 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                 onSaveToDb={(creatureData) => {
                     return dataActions.bestiary.saveCustomCreature(creatureData);
                 }}
-                onSaveCatalogEntry={(override) => dataActions.catalog.saveCatalogOverride(override)}
+                onSaveCatalogEntry={(override) => combatantContext
+                    ? saveEncounterCreatureFork(override, combatantContext)
+                    : dataActions.catalog.saveCatalogOverride(override)}
             />
         );
     }
@@ -490,6 +843,7 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                         onRevealChange={(field, state) => updateRevealState(previewCreature.id, field, state)}
                         onAbilityClick={(ability) => setSelectedAbility(ability)}
                         onSkillClick={(skill) => setSelectedSkill(skill)}
+                        onSpellClick={(spell) => setSelectedSpell({ ...spell, _entityType: 'spell' })}
                     />
                 ) : (
                     <div style={{ padding: 20, textAlign: 'center', color: '#888' }}>Loading creature data...</div>
@@ -505,6 +859,160 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
             </div>
         </div>
     ) : null;
+
+    const mainTableContent = (
+        <div className="flex h-full min-h-0 flex-col overflow-hidden p-2">
+            <AdminTableSurface
+                columns={visibleTableColumns}
+                rows={paginatedCreatures}
+                tableTestId="gm-bestiary-creatures-table"
+                getRowKey={(creature) => creature.id}
+                getRowTestId={(creature) => `gm-creature-row-${creature.id}`}
+                sortConfig={sortConfig}
+                onSort={handleSort}
+                onHeaderFilter={handleHeaderFilter}
+                isRowSelected={(creature) => previewCreature?.id === creature.id}
+                onRowClick={(_event, creature) => handleRowClick(creature)}
+                onRowDoubleClick={(_event, creature) => handleRowDoubleClick(creature)}
+                getRowActions={getCreatureRowActions}
+                getRowProps={(creature) => ({
+                    draggable: resourceMode === 'encounters',
+                    onDragStart: (event) => {
+                        event.dataTransfer.effectAllowed = 'copy';
+                        event.dataTransfer.setData('application/x-pf2-creature', creature.id);
+                        event.dataTransfer.setData('text/plain', creature.id);
+                    },
+                })}
+                renderCell={({ row, column }) => renderCreatureTableCell(row, column, toggleBestiary)}
+                emptyLabel="No creatures found."
+            />
+            <AdminPagination
+                page={currentPage}
+                totalPages={totalPages}
+                total={sortedCreatures.length}
+                pageSize={itemsPerPage}
+                pageSizeOptions={[25, 50, 100]}
+                label="creatures"
+                onPageChange={setPage}
+                onPageSizeChange={(nextSize) => { setItemsPerPage(nextSize); setPage(1); }}
+            />
+        </div>
+    );
+
+    const encounterUpperContent = (
+        <AdminSubtable
+            title="Encounters"
+            tableTestId="gm-bestiary-encounters-table"
+            columns={[
+                { key: 'name', label: 'Name' },
+                { key: 'isActive', label: 'Active' },
+                { key: 'roundNumber', label: 'Round' },
+                { key: 'creatureCount', label: 'Creatures' },
+                { key: 'playerCount', label: 'Players' },
+            ]}
+            rows={encounterRows}
+            getRowKey={encounter => encounter.id}
+            getRowTestId={encounter => `gm-encounter-row-${encounter.id}`}
+            actionTestIdPrefix="gm-encounter-action"
+            isRowSelected={encounter => encounter.id === selectedEncounter?.id}
+            onRowClick={(_event, encounter) => setSelectedEncounterId(encounter.id)}
+            getRowProps={(encounter) => ({
+                onDragOver: event => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'copy';
+                },
+                onDrop: event => {
+                    event.preventDefault();
+                    const creatureId = readDraggedCreatureId(event);
+                    if (creatureId) addCreatureToEncounter(creatureId, encounter.id).catch(notifyError);
+                },
+            })}
+            renderCell={({ row, column }) => {
+                if (column.key === 'isActive') {
+                    return (
+                        <input
+                            type="checkbox"
+                            checked={row.isActive}
+                            onClick={event => event.stopPropagation()}
+                            onChange={event => {
+                                const action = event.target.checked
+                                    ? dataActions.encounter.activateEncounter(activeCampaignId, row.id)
+                                    : dataActions.encounter.updateEncounter(activeCampaignId, row.id, current => ({ ...current, isActive: false }));
+                                Promise.resolve(action).catch(notifyError);
+                            }}
+                        />
+                    );
+                }
+                return row[column.key] ?? '-';
+            }}
+            getRowActions={encounter => [
+                { id: 'delete', label: 'Delete', danger: true, onSelect: () => handleDeleteEncounter(encounter) },
+                { id: 'edit', label: 'Edit', onSelect: () => handleEditEncounter(encounter) },
+                { id: 'show-main', label: 'Show in Main table', onSelect: () => showEncounterInMainTable(encounter) },
+            ]}
+            actions={<Button type="button" size="sm" onClick={handleCreateEncounter}>+ Encounter</Button>}
+            searchPlaceholder="Search encounters..."
+            emptyLabel="No encounters."
+        />
+    );
+
+    const encounterLowerContent = (
+        <AdminSubtable
+            title={selectedEncounter ? `${selectedEncounter.name} creatures` : 'Encounter creatures'}
+            tableTestId="gm-bestiary-encounter-creatures-table"
+            columns={[
+                { key: 'displayName', label: 'Creature' },
+                { key: 'level', label: 'Level' },
+                { key: 'hpDisplay', label: 'HP' },
+                { key: 'initiative', label: 'Initiative' },
+                { key: 'visible', label: 'Visible' },
+                { key: 'defeated', label: 'Defeated' },
+            ]}
+            rows={encounterCombatantRows}
+            getRowKey={combatant => combatant.id}
+            getRowTestId={combatant => `gm-encounter-combatant-row-${combatant.id}`}
+            actionTestIdPrefix="gm-encounter-combatant-action"
+            searchFields={['displayName', 'level', 'hpDisplay']}
+            renderCell={({ row, column }) => {
+                if (column.key === 'visible') {
+                    return (
+                        <input
+                            type="checkbox"
+                            checked={row.visible !== false}
+                            onClick={event => event.stopPropagation()}
+                            onChange={event => Promise.resolve(dataActions.encounter.updateCombatant(
+                                activeCampaignId,
+                                selectedEncounter.id,
+                                row.id,
+                                current => ({ ...current, visible: event.target.checked })
+                            )).catch(notifyError)}
+                        />
+                    );
+                }
+                if (column.key === 'defeated') return row.defeated ? '✓' : '';
+                return row[column.key] ?? '-';
+            }}
+            onRowDoubleClick={(_event, combatant) => handleViewCombatant(combatant)}
+            getRowActions={combatant => [
+                { id: 'view-detail', label: 'View Detail', onSelect: () => handleViewCombatant(combatant) },
+                { id: 'customize', label: 'Customize', onSelect: () => handleCustomizeCombatant(combatant) },
+                { id: 'remove', label: 'Remove', danger: true, onSelect: () => handleRemoveCombatant(combatant) },
+            ]}
+            onDragOver={event => {
+                if (!selectedEncounter) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'copy';
+            }}
+            onDrop={event => {
+                if (!selectedEncounter) return;
+                event.preventDefault();
+                const creatureId = readDraggedCreatureId(event);
+                if (creatureId) addCreatureToEncounter(creatureId, selectedEncounter.id).catch(notifyError);
+            }}
+            searchPlaceholder="Search combatants..."
+            emptyLabel={selectedEncounter ? 'Drop creatures here.' : 'Select an encounter.'}
+        />
+    );
 
     // ── Render list view ──────────────────────────────────────────────────────
     return (
@@ -523,6 +1031,22 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                 visibleColumns={visibleColumns}
                 onVisibleColumnsChange={setVisibleColumns}
                 resultMeta={`${sortedCreatures.length} creatures`}
+                leftControls={(
+                    <div className="flex rounded-md border border-border/70 p-0.5">
+                        <Button data-testid="gm-bestiary-mode-creatures" type="button" size="sm" variant={resourceMode === 'creatures' ? 'default' : 'ghost'} onClick={() => setResourceMode('creatures')}>Creatures</Button>
+                        <Button data-testid="gm-bestiary-mode-encounters" type="button" size="sm" variant={resourceMode === 'encounters' ? 'default' : 'ghost'} onClick={() => setResourceMode('encounters')}>Encounters</Button>
+                    </div>
+                )}
+                secondaryActions={(
+                    <>
+                        {focusScope ? (
+                            <Button type="button" variant="secondary" size="sm" onClick={() => { setFocusScope(null); setPage(1); }}>{focusScope.label} ×</Button>
+                        ) : null}
+                        {isMobile && resourceMode === 'encounters' ? (
+                            <Button type="button" variant="outline" size="sm" onClick={() => setMobileWorkspaceOpen(true)}>Encounter lists</Button>
+                        ) : null}
+                    </>
+                )}
                 primaryActions={(
                     <>
                         <Button
@@ -545,12 +1069,28 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
             />
 
             {/* ── Table + Side panel ── */}
+            {resourceMode === 'encounters' ? (
+                <AdminResourceWorkspace
+                    storageKey="gm-creature-encounter-workspace"
+                    main={mainTableContent}
+                    upper={encounterUpperContent}
+                    lower={encounterLowerContent}
+                    isMobile={isMobile}
+                    mobileMode={mobileWorkspaceMode}
+                    onMobileModeChange={setMobileWorkspaceMode}
+                    mobileOpen={mobileWorkspaceOpen}
+                    onMobileOpenChange={setMobileWorkspaceOpen}
+                    upperLabel="Encounters"
+                    lowerLabel="Creatures"
+                />
+            ) : (
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                 <div style={{ flex: 1, display: 'flex', minWidth: 0, flexDirection: 'column', overflow: 'hidden', padding: 10 }}>
                     <AdminTableSurface
                         columns={visibleTableColumns}
                         rows={paginatedCreatures}
                         getRowKey={(creature) => creature.id}
+                        getRowTestId={(creature) => `gm-creature-row-${creature.id}`}
                         sortConfig={sortConfig}
                         onSort={handleSort}
                         onHeaderFilter={(column) => {
@@ -591,6 +1131,8 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                 )}
             </div>
 
+            )}
+
             {/* ── Mobile preview BottomSheet ── */}
             {isMobile && (
                 <BottomSheet
@@ -619,6 +1161,14 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                 />
             )}
 
+            <CatalogDetailDialog
+                open={Boolean(selectedSpell)}
+                onOpenChange={(open) => { if (!open) setSelectedSpell(null); }}
+                entry={selectedSpell}
+                catalogType="spell"
+                onContentLinkClick={onContentLinkClick}
+            />
+
             {/* Toast */}
             {toast && (
                 <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: '#2b2b2e', border: '1px solid #c9a86c', color: '#f5deb3', padding: '8px 20px', borderRadius: 6, zIndex: 4000, fontSize: '0.9em', pointerEvents: 'none' }}>
@@ -644,8 +1194,42 @@ function renderCreatureTableCell(creature, column, toggleBestiary) {
         const traits = creature.traits || [];
         return <span className="text-muted-foreground">{traits.slice(0, 3).join(', ')}{traits.length > 3 ? '...' : ''}</span>;
     }
+    if (column.key === 'resistances' || column.key === 'weaknesses' || column.key === 'immunities') {
+        return <span className="text-muted-foreground">{formatTypedCreatureValues(creature[column.key]) || '-'}</span>;
+    }
+    if (column.key === 'skills') {
+        const skills = creature.skills || [];
+        return (
+            <span className="text-muted-foreground">
+                {skills.slice(0, 3).map(skill => `${skill.label} ${skill.bonus >= 0 ? '+' : ''}${skill.bonus}`).join(', ') || '-'}
+                {skills.length > 3 ? '…' : ''}
+            </span>
+        );
+    }
+    if (column.key.startsWith('skill:')) {
+        const bonus = getCreatureSkillBonus(creature, column.key.slice('skill:'.length));
+        return bonus == null ? '-' : `${bonus >= 0 ? '+' : ''}${bonus}`;
+    }
+    if (['hasMelee', 'hasRanged', 'hasMagic', 'hasShield'].includes(column.key)) {
+        return creature[column.key] ? '✓' : '';
+    }
+    if (column.key === 'spellcastingModes') {
+        return (creature.spellcastingModes || []).join(', ') || '-';
+    }
     if (column.key === 'catalogStatusLabel') {
         return <span className="text-muted-foreground">{creature.catalogStatusLabel || 'Original'}</span>;
     }
     return creature[column.key] ?? '-';
+}
+
+function getCreatureTableSortValue(creature, key) {
+    if (key.startsWith('skill:')) {
+        return getCreatureSkillBonus(creature, key.slice('skill:'.length)) ?? Number.NEGATIVE_INFINITY;
+    }
+    if (key === 'skills') return creature.highestSkillBonus ?? Number.NEGATIVE_INFINITY;
+    if (['resistances', 'weaknesses', 'immunities'].includes(key)) {
+        return formatTypedCreatureValues(creature[key]);
+    }
+    if (key === 'spellcastingModes') return (creature.spellcastingModes || []).join(', ');
+    return creature[key] ?? '';
 }

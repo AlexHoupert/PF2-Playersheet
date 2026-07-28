@@ -84,6 +84,8 @@ export default function ItemsView({ db, onInspectItem }) {
 
     // Mobile: show side panel in bottom sheet
     const [mobileSideOpen, setMobileSideOpen] = useState(false);
+    const [mobileWorkspaceMode, setMobileWorkspaceMode] = useState('upper');
+    const [focusScope, setFocusScope] = useState(null);
 
     // Columns
     const [visibleColumns, setVisibleColumns] = useState(() => {
@@ -110,7 +112,6 @@ export default function ItemsView({ db, onInspectItem }) {
 
     const [editingItem, setEditingItem] = useState(null);
     const [contextMenu, setContextMenu] = useState(null);
-    const [contextSubMenu, setContextSubMenu] = useState(null);
     const [pendingSpellAction, setPendingSpellAction] = useState(null);
     const [lootGoldDrafts, setLootGoldDrafts] = useState({});
 
@@ -179,8 +180,12 @@ export default function ItemsView({ db, onInspectItem }) {
     };
 
     const filteredGlobalItems = useMemo(() => {
-        return globalItems.filter(i => filterItem(i, activeFilters, search));
-    }, [globalItems, activeFilters, search, shopState]);
+        const focusedNames = focusScope ? new Set(focusScope.entryIds.map(String)) : null;
+        return globalItems.filter((item) => {
+            if (focusedNames && !focusedNames.has(String(item.id)) && !focusedNames.has(String(item.name))) return false;
+            return filterItem(item, activeFilters, search);
+        });
+    }, [globalItems, activeFilters, focusScope, search, shopState]);
 
     const sortedGlobalItems = useMemo(() => {
         return [...filteredGlobalItems].sort((a, b) => {
@@ -329,7 +334,6 @@ export default function ItemsView({ db, onInspectItem }) {
 
     // --- CONTEXT MENU ---
     const handleContextMenu = (e, item, source) => {
-        e.preventDefault();
         if (source === 'global') {
             if (!selectedItems.some(i => i.name === item.name)) setSelectedItems([item]);
         } else {
@@ -337,10 +341,9 @@ export default function ItemsView({ db, onInspectItem }) {
             if (!selectedSideItems.some(i => getItemIdentityKey(i) === key)) setSelectedSideItems([item]);
         }
         setContextMenu({ x: e.clientX, y: e.clientY, item, source });
-        setContextSubMenu(null);
     };
 
-    const closeContextMenu = () => { setContextMenu(null); setContextSubMenu(null); };
+    const closeContextMenu = () => setContextMenu(null);
 
     // Helper: detect scroll/wand items that need spell selection
     const detectScrollWand = (item) => {
@@ -409,13 +412,14 @@ export default function ItemsView({ db, onInspectItem }) {
         notifySuccess(`${item.name} hidden.`);
     };
 
-    const performAction = async (action, arg) => {
+    const performAction = async (action, arg, explicitContext = null) => {
+        const actionContext = explicitContext || contextMenu;
         closeContextMenu();
-        const source = contextMenu?.source || 'global';
+        const source = actionContext?.source || 'global';
         const targets = source === 'global'
-            ? (selectedItems.length > 0 ? selectedItems : [contextMenu?.item].filter(Boolean))
-            : (selectedSideItems.length > 0 ? selectedSideItems : [contextMenu?.item].filter(Boolean));
-        const primaryTarget = contextMenu?.item || targets[0];
+            ? (selectedItems.length > 0 ? selectedItems : [actionContext?.item].filter(Boolean))
+            : (selectedSideItems.length > 0 ? selectedSideItems : [actionContext?.item].filter(Boolean));
+        const primaryTarget = actionContext?.item || targets[0];
 
         if (action === 'edit') { setEditingItem({ ...primaryTarget, editorMode: 'edit' }); return; }
         if (action === 'clone') {
@@ -449,6 +453,18 @@ export default function ItemsView({ db, onInspectItem }) {
         }
         if (action === 'newItem') { setEditingItem({ name: '', isCustom: true, editorMode: 'create' }); return; }
         if (action === 'inspect' && onInspectItem) { onInspectItem(primaryTarget); return; }
+        if (action === 'customizeOccurrence') {
+            setEditingItem({
+                ...primaryTarget,
+                editorMode: 'edit',
+                _occurrenceContext: {
+                    source,
+                    targetId: source === 'loot' ? selectedLootId : selectedTraderId,
+                    item: primaryTarget,
+                },
+            });
+            return;
+        }
 
         // Side panel specific actions
         if (action === 'removeFromSide') {
@@ -533,6 +549,78 @@ export default function ItemsView({ db, onInspectItem }) {
         if (isMobile) setMobileSideOpen(true);
     };
 
+    const handleEditSideTarget = async (entry) => {
+        if (!entry) return;
+        const name = await prompt({
+            title: sideMode === 'trader' ? 'Edit trader' : 'Edit loot bag',
+            message: 'Name',
+            inputLabel: 'Name',
+            initialValue: entry.name || '',
+            confirmLabel: 'Continue',
+        });
+        if (!name?.trim()) return;
+        if (sideMode === 'trader') {
+            const category = await prompt({
+                title: 'Edit trader',
+                message: 'Category',
+                inputLabel: 'Category',
+                initialValue: entry.category || 'General',
+                confirmLabel: 'Save',
+            });
+            if (category === null) return;
+            runDataAction(dataActions.shop.updateTrader(entry.id, {
+                name: name.trim(),
+                category: category.trim() || 'General',
+            }));
+            return;
+        }
+        const gold = await prompt({
+            title: 'Edit loot bag',
+            message: 'Gold value',
+            inputLabel: 'Gold (gp)',
+            inputType: 'number',
+            initialValue: String(entry.goldValue || 0),
+            confirmLabel: 'Save',
+        });
+        if (gold === null || !activeCampaign) return;
+        runDataAction(dataActions.loot.updateLootBag(activeCampaign.id, entry.id, (bag) => ({
+            ...bag,
+            name: name.trim(),
+            goldValue: Math.max(0, Number(gold) || 0),
+        })));
+    };
+
+    const handleDeleteSideTarget = async (entry) => {
+        if (!entry) return;
+        const confirmed = await confirm({
+            title: sideMode === 'trader' ? 'Delete trader' : 'Archive loot bag',
+            message: `${sideMode === 'trader' ? 'Delete' : 'Archive'} "${entry.name}"?`,
+            confirmLabel: sideMode === 'trader' ? 'Delete' : 'Archive',
+            danger: true,
+        });
+        if (!confirmed) return;
+        if (sideMode === 'trader') {
+            runDataAction(dataActions.shop.deleteTrader(entry.id));
+            if (sameId(selectedTraderId, entry.id)) setSelectedTraderId(null);
+        } else if (activeCampaign) {
+            runDataAction(dataActions.loot.softDeleteLootBag(activeCampaign.id, entry.id));
+            if (sameId(selectedLootId, entry.id)) setSelectedLootId(null);
+        }
+    };
+
+    const handleShowSideTargetInMain = (entry) => {
+        if (!entry) return;
+        const sourceEntries = sideMode === 'trader' ? entry.inventory || [] : entry.items || [];
+        const entryIds = [...new Set(sourceEntries.flatMap((item) => {
+            if (typeof item === 'string') return [item];
+            return [item?.id, item?._id, item?.name].filter(Boolean);
+        }).map(String))];
+        setFocusScope({ type: sideMode, id: entry.id, label: entry.name, entryIds });
+        setSideMode('none');
+        setMobileSideOpen(false);
+        setPage(1);
+    };
+
     const handleLootGoldDraftChange = (lootBagId, value) => {
         if (lootBagId == null) return;
         setLootGoldDrafts(prev => ({ ...prev, [lootBagId]: value }));
@@ -568,9 +656,7 @@ export default function ItemsView({ db, onInspectItem }) {
             activeTrader={activeTrader}
             applySideFilters={applySideFilters}
             campaignLootBags={campaignLootBags}
-            closeContextMenu={closeContextMenu}
             contextMenu={contextMenu}
-            contextSubMenu={contextSubMenu}
             COLUMNS_CONFIG={COLUMNS_CONFIG}
             dataActions={dataActions}
             db={db}
@@ -588,9 +674,13 @@ export default function ItemsView({ db, onInspectItem }) {
             handleSideSelect={handleSideSelect}
             handleSideSort={handleSideSort}
             handleSort={handleSort}
+            handleDeleteSideTarget={handleDeleteSideTarget}
+            handleEditSideTarget={handleEditSideTarget}
+            handleShowSideTargetInMain={handleShowSideTargetInMain}
             isMobile={isMobile}
             itemsPerPage={itemsPerPage}
             mobileSideOpen={mobileSideOpen}
+            mobileWorkspaceMode={mobileWorkspaceMode}
             onInspectItem={onInspectItem}
             page={page}
             paginatedItems={paginatedItems}
@@ -607,12 +697,13 @@ export default function ItemsView({ db, onInspectItem }) {
             selectedLootId={selectedLootId}
             selectedSideItems={selectedSideItems}
             selectedTraderId={selectedTraderId}
+            focusScope={focusScope}
             setActiveFilters={setActiveFilters}
             setApplySideFilters={setApplySideFilters}
-            setContextSubMenu={setContextSubMenu}
             setEditingItem={setEditingItem}
             setItemsPerPage={setItemsPerPage}
             setMobileSideOpen={setMobileSideOpen}
+            setMobileWorkspaceMode={setMobileWorkspaceMode}
             setPage={setPage}
             setPendingSpellAction={setPendingSpellAction}
             setSearch={setSearch}
@@ -623,6 +714,7 @@ export default function ItemsView({ db, onInspectItem }) {
             setSideMode={setSideMode}
             setSidePage={setSidePage}
             setVisibleColumns={setVisibleColumns}
+            clearFocusScope={() => { setFocusScope(null); setPage(1); }}
             showColSelector={showColSelector}
             shopState={shopState}
             sideLists={sideLists}

@@ -17,6 +17,11 @@ import {
     isStaticCatalogEdit,
 } from '../../shared/catalog/catalogEditorContract';
 import CatalogEditorShell from '../components/editor/CatalogEditorShell';
+import CreatureSpellcastingEditor from './CreatureSpellcastingEditor';
+import {
+    buildCreatureSpellcastingModel,
+    serializeCreatureSpellcastingModel,
+} from '../../shared/bestiary/creatureSpellcasting';
 
 const AbilityPicker = React.lazy(() => import('../../shared/components/AbilityPicker'));
 
@@ -55,7 +60,7 @@ const SKILL_LIST = [
     'religion', 'society', 'stealth', 'survival', 'thievery'
 ];
 
-export default function CreatureEditor({ initialCreature: initialCreatureProp, initialPayload, baseEntry, editorMode, catalogType = 'creature', onSave, onCancel, onSaveToDb, onSaveCatalogEntry, customAbilities = [] }) {
+export default function CreatureEditor({ initialCreature: initialCreatureProp, initialPayload, baseEntry, editorMode, catalogType = 'creature', onSave, onCancel, onSaveToDb, onSaveCatalogEntry, customAbilities = [], spellCatalog = [] }) {
     const initialCreature = getCatalogEditorInitialItem({ initialItem: initialCreatureProp, initialPayload, baseEntry });
     const { isMobile } = useWindowSize();
 
@@ -87,6 +92,7 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
 
     // Items (attacks + abilities) - keep as array of items
     const [items, setItems] = useState([]);
+    const [spellcastingModel, setSpellcastingModel] = useState([]);
 
     // Description
     const [description, setDescription] = useState('');
@@ -113,7 +119,8 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
         activeAbilities: true,
         defenses: true,
         skills: false,
-        json: false
+        json: false,
+        spellcasting: true,
     });
 
     // Load initial data
@@ -146,6 +153,7 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
             setSkills(sys.skills || {});
             const itemsCopy = deepClone(data.items || []);
             setItems(itemsCopy);
+            setSpellcastingModel(buildCreatureSpellcastingModel(itemsCopy));
             setRawItemsJson(JSON.stringify(itemsCopy, null, 2));
 
             setDescription(sys.details?.publicNotes || sys.description?.value || '');
@@ -187,7 +195,7 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
                 perception: { mod: parseInt(perception) },
                 skills
             },
-            items
+            items: serializeCreatureSpellcastingModel(spellcastingModel, items)
         };
     };
 
@@ -196,7 +204,7 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
         id: initialCreature?.id || 'preview',
         type,
         data: buildCreatureJson()
-    }), [name, unknownName, level, type, rarity, size, traits, hp, ac, fortitude, reflex, will, perception, speed, immunities, resistances, weaknesses, skills, items, description]);
+    }), [name, unknownName, level, type, rarity, size, traits, hp, ac, fortitude, reflex, will, perception, speed, immunities, resistances, weaknesses, skills, items, spellcastingModel, description]);
 
     const handleSave = async () => {
         if (!name) return setError("Name is required");
@@ -312,7 +320,6 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
     const attacks = items.filter(i => i.type === 'melee' || i.type === 'ranged');
     const passiveAbilities = items.filter(i => i.type === 'action' && i.system?.actionType?.value === 'passive');
     const activeAbilities = items.filter(i => i.type === 'action' && i.system?.actionType?.value !== 'passive');
-    const otherItems = items.filter(i => !['melee', 'ranged', 'action'].includes(i.type));
 
     const updateItem = (itemId, updates) => {
         setItems(prev => prev.map(item => item._id === itemId ? { ...item, ...updates } : item));
@@ -472,6 +479,7 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
         try {
             const parsed = JSON.parse(rawItemsJson);
             setItems(parsed);
+            setSpellcastingModel(buildCreatureSpellcastingModel(parsed));
             setJsonError('');
         } catch (e) {
             setJsonError('Invalid JSON: ' + e.message);
@@ -496,8 +504,8 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
                 {/* Basic Info */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10, marginBottom: 20 }}>
                     <div>
-                        <label style={labelStyle}>Name</label>
-                        <input className="modal-input" value={name} onChange={e => setName(e.target.value)} style={{ width: '100%' }} />
+                        <label htmlFor="creature-editor-name" style={labelStyle}>Name</label>
+                        <input id="creature-editor-name" data-testid="creature-editor-name" className="modal-input" value={name} onChange={e => setName(e.target.value)} style={{ width: '100%' }} />
                     </div>
                     <div>
                         <label style={labelStyle}>Unknown Name (shown to players)</label>
@@ -765,6 +773,25 @@ export default function CreatureEditor({ initialCreature: initialCreatureProp, i
                                 />
                             </div>
                         ))}
+                    </div>
+                )}
+
+                <button
+                    type="button"
+                    data-testid="creature-editor-toggle-spellcasting"
+                    aria-expanded={Boolean(expandedSections.spellcasting)}
+                    style={{ ...sectionHeaderStyle, width: '100%', border: 0, padding: 0, background: 'transparent', font: 'inherit', textAlign: 'left' }}
+                    onClick={() => toggleSection('spellcasting')}
+                >
+                    {expandedSections.spellcasting ? '▼' : '▶'} Spellcasting ({spellcastingModel.length})
+                </button>
+                {expandedSections.spellcasting && (
+                    <div style={{ marginBottom: 20 }}>
+                        <CreatureSpellcastingEditor
+                            model={spellcastingModel}
+                            onChange={setSpellcastingModel}
+                            spellCatalog={spellCatalog}
+                        />
                     </div>
                 )}
 

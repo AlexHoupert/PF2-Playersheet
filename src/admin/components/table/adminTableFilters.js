@@ -3,6 +3,13 @@ export function isFilterValueActive(value, defaultValue) {
         return !arraysEqual(normalizeArray(value), normalizeArray(defaultValue || []));
     }
     if (typeof value === 'boolean') return value !== defaultValue;
+    if (value && typeof value === 'object') {
+        return Object.entries(value).some(([key, entry]) => {
+            const defaultEntry = defaultValue && typeof defaultValue === 'object' ? defaultValue[key] : undefined;
+            return String(entry ?? '').trim() !== String(defaultEntry ?? '').trim()
+                && String(entry ?? '').trim().length > 0;
+        });
+    }
     const text = String(value ?? '').trim();
     const defaultText = String(defaultValue ?? '').trim();
     return text !== defaultText && text.length > 0;
@@ -57,7 +64,39 @@ export function formatFilterValue(filter, value) {
         return value.map((item) => optionLabel(filter, item)).join(', ');
     }
     if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (filter.type === 'number-range') return formatNumberRange(value);
+    if (filter.type === 'keyed-number-range') {
+        const key = value?.key ? optionLabel(filter, value.key) : 'Any type';
+        return `${key}, ${formatNumberRange(value)}`;
+    }
     return String(value ?? '');
+}
+
+export function matchesNumberRange(value, range = {}) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return false;
+    const minimum = range?.min === '' || range?.min == null ? null : Number(range.min);
+    const maximum = range?.max === '' || range?.max == null ? null : Number(range.max);
+    if (Number.isFinite(minimum) && numeric < minimum) return false;
+    if (Number.isFinite(maximum) && numeric > maximum) return false;
+    return true;
+}
+
+export function matchesKeyedNumberRange(values = [], filterValue = {}) {
+    if (!Array.isArray(values)) return false;
+    return values.some((entry) => {
+        if (filterValue?.key && entry?.type !== filterValue.key && entry?.key !== filterValue.key) return false;
+        return matchesNumberRange(entry?.value ?? entry?.bonus, filterValue);
+    });
+}
+
+function formatNumberRange(value = {}) {
+    const hasMin = value?.min !== '' && value?.min != null;
+    const hasMax = value?.max !== '' && value?.max != null;
+    if (hasMin && hasMax) return `${value.min}–${value.max}`;
+    if (hasMin) return `At least ${value.min}`;
+    if (hasMax) return `At most ${value.max}`;
+    return 'Any';
 }
 
 export function optionLabel(filter, value) {

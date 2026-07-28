@@ -1,6 +1,6 @@
 # Data And Persistence
 
-Last updated: 2026-07-17.
+Last updated: 2026-07-28.
 
 ## Mental Model
 
@@ -120,6 +120,26 @@ Campaign catalog data merges in this order: static resources, global
 `catalogOverrides`, then campaign-scoped `catalogEntries`. Campaign writes emit
 immutable `catalogChangeEvents`; only an explicit global-admin promotion writes
 back to the global override collection.
+
+### Creature Catalog And Encounter-local Forks
+
+The generated Creature index uses compact schema version 2. Static rows carry
+the table summary needed for sorting and filtering without loading thousands of
+detail files: defenses, movement, perception, size, skills, resistances,
+weaknesses, immunities, attack/magic/shield flags, and spellcasting modes.
+`buildCreatureTableSummary` is also applied to custom and override Creatures so
+all Creature origins expose the same table contract.
+
+Full static Creature JSON remains detail-lazy. Creature spellcasting is stored
+in Foundry-compatible `spellcastingEntry` and linked `spell` items; the editor
+normalizes Prepared, Spontaneous, Innate, and Focus entries while preserving
+unknown source fields and stable IDs.
+
+Customizing one Encounter combatant creates a campaign-scoped Creature fork
+with `linkedOnly` metadata and repoints only that combatant. Linked-only forks
+remain resolvable by ID and in explicit Encounter scopes, but ordinary Bestiary
+catalog lists exclude them. Removing the combatant retains the fork and stamps
+it as a later cleanup candidate instead of deleting content implicitly.
 
 Campaign member roles are `player`, `trusted_player`, `assistant_gm`,
 `spectator`, `gm`, and `admin`. Runtime authorization derives capabilities from

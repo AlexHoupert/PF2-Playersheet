@@ -21,6 +21,13 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import {
     cloneFilterValue,
@@ -207,6 +214,51 @@ function FilterEditor({ filter, value, onChange, onClear }) {
                     }}
                 />
             </Field>
+        );
+    }
+
+    if (filter.type === 'number-range' || filter.type === 'keyed-number-range') {
+        const range = value && typeof value === 'object' ? value : {};
+        return (
+            <FieldGroup className="gap-4">
+                {filter.type === 'keyed-number-range' ? (
+                    <Field>
+                        <FieldLabel>{filter.keyLabel || 'Type'}</FieldLabel>
+                        <Select
+                            value={range.key || '__any__'}
+                            onValueChange={(next) => onChange({ ...range, key: next === '__any__' ? '' : next })}
+                        >
+                            <SelectTrigger><SelectValue placeholder="Any type" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__any__">Any type</SelectItem>
+                                {(filter.options || []).map(option => (
+                                    <SelectItem key={String(optionValue(option))} value={String(optionValue(option))}>
+                                        {optionLabel(filter, optionValue(option))}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </Field>
+                ) : null}
+                <div className="grid grid-cols-2 gap-3">
+                    <Field>
+                        <FieldLabel>Minimum</FieldLabel>
+                        <Input
+                            type="number"
+                            value={range.min ?? ''}
+                            onChange={(event) => onChange({ ...range, min: event.target.value })}
+                        />
+                    </Field>
+                    <Field>
+                        <FieldLabel>Maximum</FieldLabel>
+                        <Input
+                            type="number"
+                            value={range.max ?? ''}
+                            onChange={(event) => onChange({ ...range, max: event.target.value })}
+                        />
+                    </Field>
+                </div>
+            </FieldGroup>
         );
     }
 
