@@ -13,7 +13,11 @@ export function ConditionList({
     const active = Array.isArray(conditions) ? conditions : [];
 
     return (
-        <div className="condition-list" aria-label="Active conditions and effects">
+        <div
+            className="condition-list"
+            data-empty={active.length === 0}
+            aria-label="Active conditions and effects"
+        >
             {active.map((effect) => (
                 <ClosableEffectChip
                     key={effect.id}

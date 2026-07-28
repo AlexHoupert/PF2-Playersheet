@@ -354,8 +354,13 @@ test("player can inspect and remove an exact persisted effect from the status sc
   await gotoFixture(page);
   await expectFixtureRoute(page, "player");
 
-  await expect(page.getByTestId("condition-badge-e2e-effect-frightened")).toBeVisible();
-  await page.getByTestId("actor-effects-overview-button").click();
+  const conditionChip = page.getByTestId("condition-badge-e2e-effect-frightened");
+  const overviewButton = page.getByTestId("actor-effects-overview-button");
+  await expect(conditionChip).toBeVisible();
+  const [overviewBox, chipBox] = await Promise.all([overviewButton.boundingBox(), conditionChip.boundingBox()]);
+  expect(overviewBox.width).toBeLessThanOrEqual(30.5);
+  expect(Math.abs(overviewBox.height - chipBox.height)).toBeLessThan(1);
+  await overviewButton.click();
   const drawer = page.getByTestId("actor-effects-drawer");
   await expect(drawer).toBeVisible();
   await expect(page.getByTestId("actor-effects-scope-all")).not.toBeChecked();
@@ -372,6 +377,14 @@ test("player can inspect and remove an exact persisted effect from the status sc
 
   await page.getByRole("button", { name: "Remove Frightened" }).click();
   await expect(page.getByTestId("condition-badge-e2e-effect-frightened")).toHaveCount(0);
+
+  const [sectionBox, addButtonBox, emptyOverviewBox] = await Promise.all([
+    page.locator(".actor-effects-section").boundingBox(),
+    page.getByTestId("condition-add-button").boundingBox(),
+    page.getByTestId("actor-effects-overview-button").boundingBox(),
+  ]);
+  expect(Math.abs((addButtonBox.x + addButtonBox.width / 2) - (sectionBox.x + sectionBox.width / 2))).toBeLessThan(1);
+  expect(Math.abs(emptyOverviewBox.height - addButtonBox.height)).toBeLessThan(1);
 
   await reloadFixture(page);
   await expect(page.getByTestId("condition-badge-e2e-effect-frightened")).toHaveCount(0);

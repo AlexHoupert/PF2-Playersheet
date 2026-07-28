@@ -8,6 +8,14 @@
     min-width: 0;
 }
 
+.condition-list[data-empty="true"] {
+    justify-content: center;
+}
+
+.condition-list[data-empty="true"] .condition-list__add {
+    transform: translateX(var(--condition-empty-center-offset, 0));
+}
+
 .effect-chip {
     --effect-chip-border: #666;
     --effect-chip-bg: #27272a;

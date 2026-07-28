@@ -752,6 +752,8 @@ test('actor stats use shared closable effect chips and explainable overview draw
     const statsSource = readSource('src/player/views/StatsView.jsx');
     const sectionSource = readSource('src/shared/components/ActorEffectsSection.jsx');
     const listSource = readSource('src/shared/components/ConditionList.jsx');
+    const sectionStyles = readSource('src/shared/components/ActorEffectsOverview.css');
+    const listStyles = readSource('src/shared/components/ConditionList.css');
     const drawerSource = readSource('src/shared/components/ActorEffectsDrawer.jsx');
     const overviewSource = readSource('src/shared/rules/actorEffectOverview.js');
 
@@ -760,6 +762,11 @@ test('actor stats use shared closable effect chips and explainable overview draw
     assert.match(sectionSource, /actor-effects-overview-button/);
     assert.match(listSource, /ClosableEffectChip/);
     assert.match(listSource, /condition-list__add/);
+    assert.match(listSource, /data-empty=\{active\.length === 0\}/);
+    assert.match(sectionStyles, /min-height: 30px/);
+    assert.match(sectionStyles, /flex: 0 0 30px/);
+    assert.match(listStyles, /condition-list\[data-empty="true"\]/);
+    assert.match(listStyles, /condition-empty-center-offset/);
     assert.match(drawerSource, /actor-effects-scope-all/);
     assert.match(drawerSource, /actor-effects-view-effects/);
     assert.match(drawerSource, /actor-effects-view-sources/);

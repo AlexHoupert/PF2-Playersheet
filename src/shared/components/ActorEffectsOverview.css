@@ -11,20 +11,22 @@
 }
 
 .actor-effects-section__content {
+    --condition-empty-center-offset: -20px;
     display: flex;
     align-items: stretch;
     gap: 10px;
-    min-height: 52px;
+    min-height: 30px;
 }
 
 .actor-effects-section__overview {
-    width: 58px;
+    width: 30px;
     height: auto;
-    min-height: 52px;
-    flex: 0 0 58px;
+    min-height: 30px;
+    flex: 0 0 30px;
     border-color: #73573e;
     background: #29282a;
     color: #c5a059;
+    padding: 0;
 }
 
 .actor-effects-section__overview:hover {
@@ -34,8 +36,8 @@
 }
 
 .actor-effects-section__overview svg {
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
 }
 
 .actor-effects-drawer {
@@ -295,8 +297,11 @@
 }
 
 @media (max-width: 640px) {
-    .actor-effects-section__content { gap: 7px; }
-    .actor-effects-section__overview { width: 50px; flex-basis: 50px; }
+    .actor-effects-section__content {
+        --condition-empty-center-offset: -17.5px;
+        gap: 7px;
+    }
+    .actor-effects-section__overview { width: 28px; flex-basis: 28px; }
     .actor-effects-drawer {
         width: min(90vw, 420px) !important;
         max-width: min(90vw, 420px) !important;
