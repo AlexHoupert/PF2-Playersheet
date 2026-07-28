@@ -19,6 +19,9 @@ function createHarness(role) {
         async setRole(_firestore, campaignId, email, nextRole) {
           calls.push({ campaignId, email, role: nextRole });
         },
+        async updateSettings(_firestore, campaignId, email, settings) {
+          calls.push({ campaignId, email, settings });
+        },
       },
     },
   });
@@ -45,4 +48,22 @@ test("player cannot change campaign member roles", async () => {
     /Only a campaign GM/
   );
   assert.deepEqual(calls, []);
+});
+
+test("member stores normalized personal settings through a targeted self update", async () => {
+  const { actions, calls } = createHarness("player");
+
+  await actions.member.updateOwnSettings("campaign", {
+    skillProficiencyDisplay: "STARS",
+    loopPages: false,
+  });
+
+  assert.deepEqual(calls, [{
+    campaignId: "campaign",
+    email: "gm@example.test",
+    settings: {
+      skillProficiencyDisplay: "stars",
+      loopPages: false,
+    },
+  }]);
 });

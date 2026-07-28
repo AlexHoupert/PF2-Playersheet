@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { getFeatIndexItemByName } from '../../shared/catalog/featIndex';
 import { LongPressable } from '../../shared/components/LongPressable';
+import PlayerCatalogActionBar from '../components/PlayerCatalogActionBar';
+import PlayerCatalogEditMarker from '../components/PlayerCatalogEditMarker';
 
 export const FeatsView = ({
     character,
@@ -11,9 +13,10 @@ export const FeatsView = ({
     readOnly = false,
     canAuthorCatalog = false,
     onAuthorCatalogEntry,
+    canEditCatalogEntry,
+    onEditCatalogEntry,
 }) => {
-
-
+    const [editMode, setEditMode] = useState(false);
 
     const featsByType = {};
 
@@ -21,7 +24,13 @@ export const FeatsView = ({
         const featName = typeof featRecord === 'string' ? featRecord : featRecord?.name;
         const featFromIndex = getFeatIndexItemByName(featName);
         if (featFromIndex || featRecord?.name) {
-            const feat = { ...(featFromIndex || {}), ...(typeof featRecord === 'object' ? featRecord : {}), name: featName, _entityType: 'feat' };
+            const feat = {
+                ...(featFromIndex || {}),
+                ...(typeof featRecord === 'object' ? featRecord : {}),
+                name: featName,
+                _entityType: 'feat',
+                _actorCatalogEditable: typeof featRecord === 'object' && featRecord?.isCustom === true,
+            };
             let rawType = feat.category || feat.type || 'General';
             // Capitalize first letter, lowercase rest for consistent keys
             let type = rawType.charAt(0).toUpperCase() + rawType.slice(1).toLowerCase();
@@ -47,34 +56,39 @@ export const FeatsView = ({
             {sortedKeys.map(type => (
                 <div key={type} style={{ marginBottom: 20 }}>
                     <h3 style={{ borderBottom: '1px solid #5c4033', paddingBottom: 5 }}>{type}</h3>
-                    {featsByType[type].map((feat, i) => (
-                        <LongPressable
-                            className="item-row"
-                            key={feat.catalogEntryId || feat.catalogOverrideId || feat.name}
-                            onLongPress={() => { if (!readOnly) onLongPress(feat, 'feat'); }}
-                            onClick={() => { setModalData({ ...feat, _entityType: 'feat' }); setModalMode('catalog_detail'); }}
-                        >
-                            <span className="item-name">{feat.name}</span>
-                        </LongPressable>
-                    ))}
+                    {featsByType[type].map(feat => {
+                        const editable = canEditCatalogEntry?.('feat', feat, { actorOwnedCustomOnly: true }) === true;
+                        return (
+                            <LongPressable
+                                className="item-row"
+                                key={feat.catalogEntryId || feat.catalogOverrideId || feat.name}
+                                onLongPress={() => { if (!readOnly && !editMode) onLongPress(feat, 'feat'); }}
+                                onClick={() => {
+                                    if (editMode) {
+                                        if (editable) onEditCatalogEntry?.('feat', feat);
+                                        return;
+                                    }
+                                    setModalData({ ...feat, _entityType: 'feat' });
+                                    setModalMode('catalog_detail');
+                                }}
+                            >
+                                <span className="item-name">{feat.name}</span>
+                                {editMode && editable ? <PlayerCatalogEditMarker label={feat.name} /> : null}
+                            </LongPressable>
+                        );
+                    })}
                 </div>
             ))}
-            {!readOnly && <button
-                className="btn-add-condition"
-                style={{ marginTop: 20, width: '100%' }}
-                onClick={() => setCatalogMode('feat')}
-            >
-                + Add Feat
-            </button>}
-            {canAuthorCatalog && (
-                <button
-                    className="btn-add-condition"
-                    style={{ marginTop: 10, width: '100%' }}
-                    onClick={() => onAuthorCatalogEntry?.('feat')}
-                >
-                    Create Feat
-                </button>
-            )}
+            {!readOnly ? (
+                <PlayerCatalogActionBar
+                    addLabel="Add Feat"
+                    onAdd={() => setCatalogMode('feat')}
+                    createLabel="Create Feat"
+                    onCreate={canAuthorCatalog ? () => onAuthorCatalogEntry?.('feat') : undefined}
+                    editMode={editMode}
+                    onEditModeChange={canAuthorCatalog ? setEditMode : undefined}
+                />
+            ) : null}
         </div>
     );
 };

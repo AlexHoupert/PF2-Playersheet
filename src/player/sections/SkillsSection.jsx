@@ -1,8 +1,9 @@
 import React from 'react';
 import { calculateStat } from '../../utils/rules';
 import { LongPressable } from '../../shared/components/LongPressable';
+import SkillProficiencyIndicator from '../components/SkillProficiencyIndicator';
 
-export function SkillsSection({ character, onOpenModal, onLongPress }) {
+export function SkillsSection({ character, onOpenModal, onLongPress, proficiencyDisplay = 'none' }) {
     const skillAbility = {
         acrobatics: 'Dex',
         arcana: 'Int',
@@ -61,6 +62,7 @@ export function SkillsSection({ character, onOpenModal, onLongPress }) {
                         {label} {calc.penalty < 0 && <span className="stat-penalty-sub">({calc.penalty})</span>}
                         {calc.bonus > 0 && <span className="stat-bonus-sub">(+{calc.bonus})</span>}
                     </span>
+                    <SkillProficiencyIndicator rank={val} displayMode={proficiencyDisplay} />
                     <span className={`skill-val ${calc.penalty < 0 ? 'stat-penalty' : (calc.bonus > 0 ? 'stat-bonus' : '')}`} style={{ color: isTrained && calc.penalty >= 0 && calc.bonus === 0 ? 'var(--text-gold)' : '' }}>
                         {calc.total >= 0 ? '+' : ''}{calc.total}
                     </span>

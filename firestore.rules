@@ -79,7 +79,15 @@ service cloud.firestore {
 
       match /members/{email} {
         allow read: if isCampaignGm(campaignId) || request.auth.token.email == email || isGlobalAdmin();
-        allow create, update, delete: if isCampaignGm(campaignId) || isGlobalAdmin();
+        allow create, delete: if isCampaignGm(campaignId) || isGlobalAdmin();
+        allow update: if isCampaignGm(campaignId)
+          || isGlobalAdmin()
+          || (request.auth.token.email == email
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'settings', 'updatedAt', 'schemaVersion'
+            ])
+            && request.resource.data.settings.skillProficiencyDisplay in ['none', 'short', 'full', 'stars']
+            && request.resource.data.settings.loopPages is bool);
       }
 
       match /characters/{characterId} {

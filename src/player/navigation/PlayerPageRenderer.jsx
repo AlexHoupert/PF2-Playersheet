@@ -49,6 +49,7 @@ export default function PlayerPageRenderer({
     characterConditions,
     characterEffects,
     capabilities,
+    canEditCatalogEntry,
     dataActions,
     db,
     fireWeapon,
@@ -64,6 +65,7 @@ export default function PlayerPageRenderer({
     onNavigateLoreCreature,
     onGoToPage,
     onAuthorCatalogEntry,
+    onEditCatalogEntry,
     ownedCompanionActors,
     playerQuests,
     readOnly = false,
@@ -75,6 +77,7 @@ export default function PlayerPageRenderer({
     setModalMode,
     toggleInventoryEquipped,
     updateCharacter,
+    userSettings,
 }) {
     if (activePageId === PLAYER_PAGE_IDS.STATUS) {
         return (
@@ -95,6 +98,7 @@ export default function PlayerPageRenderer({
                     return runDataAction(dataActions.effect.deleteEffect(activeCampaign.id, effect.id));
                 }}
                 readOnly={readOnly}
+                userSettings={userSettings}
             />
         );
     }
@@ -110,6 +114,8 @@ export default function PlayerPageRenderer({
                 readOnly={readOnly}
                 canAuthorCatalog={Boolean(capabilities?.canCreatePlayerContent)}
                 onAuthorCatalogEntry={onAuthorCatalogEntry}
+                canEditCatalogEntry={canEditCatalogEntry}
+                onEditCatalogEntry={onEditCatalogEntry}
             />
         );
     }
@@ -126,6 +132,8 @@ export default function PlayerPageRenderer({
                 readOnly={readOnly}
                 canAuthorCatalog={Boolean(capabilities?.canCreatePlayerContent)}
                 onAuthorCatalogEntry={onAuthorCatalogEntry}
+                canEditCatalogEntry={canEditCatalogEntry}
+                onEditCatalogEntry={onEditCatalogEntry}
             />
         );
     }
@@ -136,10 +144,13 @@ export default function PlayerPageRenderer({
                 character={rulesCharacter}
                 setModalData={setModalData}
                 setModalMode={setModalMode}
+                setCatalogMode={setCatalogMode}
                 onLongPress={handleLongPress}
                 readOnly={readOnly}
                 canAuthorCatalog={Boolean(capabilities?.canCreatePlayerContent)}
                 onAuthorCatalogEntry={onAuthorCatalogEntry}
+                canEditCatalogEntry={canEditCatalogEntry}
+                onEditCatalogEntry={onEditCatalogEntry}
             />
         );
     }
@@ -184,6 +195,9 @@ export default function PlayerPageRenderer({
                 readOnly={readOnly}
                 canAuthorCatalog={Boolean(capabilities?.canCreatePlayerContent)}
                 onAuthorCatalogEntry={onAuthorCatalogEntry}
+                setCatalogMode={setCatalogMode}
+                canEditCatalogEntry={canEditCatalogEntry}
+                onEditCatalogEntry={onEditCatalogEntry}
             />
         );
     }
@@ -207,6 +221,8 @@ export default function PlayerPageRenderer({
                 onUpdateCharacter={updateCharacter}
                 onAuthorCatalogEntry={onAuthorCatalogEntry}
                 canAuthorCatalog={Boolean(capabilities?.canCreatePlayerContent)}
+                canEditCatalogEntry={canEditCatalogEntry}
+                onEditCatalogEntry={onEditCatalogEntry}
                 onOpenModal={(mode, data) => {
                     setModalMode(mode);
                     setModalData(data);

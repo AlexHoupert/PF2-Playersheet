@@ -4,6 +4,14 @@ import { mergeCatalogIndexWithOverrides } from '../../shared/db/selectors/catalo
 import { ModalLayerMount } from '../../shared/overlays/ModalLayerProvider';
 
 const LOADERS = {
+    action: async () => {
+        const mod = await import('../../shared/catalog/actionIndex');
+        return {
+            title: 'Add Action',
+            items: mod.getAllActionIndexItems(),
+            filterOptions: mod.ACTION_INDEX_FILTER_OPTIONS,
+        };
+    },
     feat: async () => {
         const mod = await import('../../shared/catalog/featIndex');
         return {

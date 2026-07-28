@@ -66,7 +66,7 @@ test("player fixture route loads character, quests, loot, shop, and spell overri
   await expect(page.getByText("Uplifting Overture")).toBeVisible();
 
   await openPlayerPage(page, "Items", "items.equipment");
-  await page.getByRole("button", { name: /\+ Open Shop/i }).first().click();
+  await page.getByRole("button", { name: "Shop", exact: true }).first().click();
   await expect(page.getByText("Show all available Items")).toBeVisible();
 });
 
@@ -104,7 +104,7 @@ test("universal rounds load a slide pistol and versatile vials reuse formula fil
   await expect(page.locator(".item-name").filter({ hasText: "Alchemist's Fire (Moderate)" })).toBeVisible();
 });
 
-test("trusted player impulse customization stays separate from the impulse name", async ({ page }) => {
+test("trusted player edits impulses through the shared list edit mode", async ({ page }) => {
   await gotoFixture(page, "e2eRole=trusted_player");
   await expectFixtureRoute(page, "player");
 
@@ -113,7 +113,9 @@ test("trusted player impulse customization stays separate from the impulse name"
   await expect(impulseRow.getByText("Elemental Blast", { exact: true })).toBeVisible();
   await expect(impulseRow.getByText("Fork", { exact: true })).toHaveCount(0);
 
-  await impulseRow.getByRole("button", { name: "Customize Elemental Blast" }).click();
+  await page.getByRole("button", { name: "Edit", exact: true }).last().click();
+  await expect(impulseRow.getByLabel("Edit Elemental Blast")).toBeVisible();
+  await impulseRow.click();
   await expect(page.getByRole("heading", { name: "Edit Impulse", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
 });

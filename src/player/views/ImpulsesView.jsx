@@ -1,21 +1,23 @@
-import React from 'react';
-import { Pencil } from 'lucide-react';
+import React, { useState } from 'react';
 import { calculateImpulseAttackAndClassDC } from '../../utils/rules';
 import { parseFoundry, ACTION_ICONS } from '../../shared/utils/foundryParser';
 import { LongPressable } from '../../shared/components/LongPressable';
-import { Button } from '@/components/ui/button';
-
-const stopImpulseRowInteraction = event => event.stopPropagation();
+import PlayerCatalogActionBar from '../components/PlayerCatalogActionBar';
+import PlayerCatalogEditMarker from '../components/PlayerCatalogEditMarker';
 
 export const ImpulsesView = ({
     character,
     setModalData,
     setModalMode,
+    setCatalogMode,
     onLongPress,
     readOnly = false,
     canAuthorCatalog = false,
     onAuthorCatalogEntry,
+    canEditCatalogEntry,
+    onEditCatalogEntry,
 }) => {
+    const [editMode, setEditMode] = useState(false);
     const impulses = character.impulses || [];
 
     // Stats Calculation
@@ -66,6 +68,7 @@ export const ImpulsesView = ({
 
                 {impulses.length === 0 && <div style={{ textAlign: 'center', color: '#666', marginTop: 20 }}>No Impulses learned.</div>}
                 {impulses.sort((a, b) => a.name.localeCompare(b.name)).map(imp => {
+                    const editable = canEditCatalogEntry?.('impulse', imp) === true;
                     // Extract Meta Info (Time, Range, Target, Defense)
                     const rawTime = imp.time || imp.actions || imp.system?.actions?.value || "";
                     let timeIcon = "";
@@ -97,33 +100,19 @@ export const ImpulsesView = ({
                         <LongPressable
                             className="spell-row"
                             key={imp.name}
-                            onClick={() => { setModalData({ ...imp, _entityType: 'impulse' }); setModalMode('catalog_detail'); }}
-                            onLongPress={() => { if (!readOnly) onLongPress(imp, 'impulse'); }}
+                            onClick={() => {
+                                if (editMode) {
+                                    if (editable) onEditCatalogEntry?.('impulse', imp);
+                                    return;
+                                }
+                                setModalData({ ...imp, _entityType: 'impulse' });
+                                setModalMode('catalog_detail');
+                            }}
+                            onLongPress={() => { if (!readOnly && !editMode) onLongPress(imp, 'impulse'); }}
                         >
                             <div style={{ fontWeight: 'bold', color: '#ccc', display: 'flex', alignItems: 'center' }}>
                                 {imp.name}
-                                {canAuthorCatalog && (
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon-sm"
-                                        className="ml-auto border-border/70 text-muted-foreground hover:text-primary"
-                                        aria-label={`Customize ${imp.name}`}
-                                        title={`Customize ${imp.name}`}
-                                        onMouseDown={stopImpulseRowInteraction}
-                                        onMouseUp={stopImpulseRowInteraction}
-                                        onTouchStart={stopImpulseRowInteraction}
-                                        onTouchEnd={stopImpulseRowInteraction}
-                                        onTouchCancel={stopImpulseRowInteraction}
-                                        onContextMenu={stopImpulseRowInteraction}
-                                        onClick={event => {
-                                            event.stopPropagation();
-                                            onAuthorCatalogEntry?.('impulse', imp, { linkImpulse: imp });
-                                        }}
-                                    >
-                                        <Pencil aria-hidden="true" />
-                                    </Button>
-                                )}
+                                {editMode && editable ? <PlayerCatalogEditMarker label={imp.name} /> : null}
                             </div>
                             <div className="spell-meta">
                                 {metaParts.reduce((acc, curr, idx) => {
@@ -135,16 +124,16 @@ export const ImpulsesView = ({
                         </LongPressable>
                     );
                 })}
-                {canAuthorCatalog && (
-                    <button
-                        type="button"
-                        className="btn-add-condition"
-                        style={{ marginTop: 20, width: '100%' }}
-                        onClick={() => onAuthorCatalogEntry?.('impulse')}
-                    >
-                        Create Impulse
-                    </button>
-                )}
+                {!readOnly ? (
+                    <PlayerCatalogActionBar
+                        addLabel="Add Impulse"
+                        onAdd={() => setCatalogMode('impulse')}
+                        createLabel="Create Impulse"
+                        onCreate={canAuthorCatalog ? () => onAuthorCatalogEntry?.('impulse') : undefined}
+                        editMode={editMode}
+                        onEditModeChange={canAuthorCatalog ? setEditMode : undefined}
+                    />
+                ) : null}
             </div>
         </div>
     );

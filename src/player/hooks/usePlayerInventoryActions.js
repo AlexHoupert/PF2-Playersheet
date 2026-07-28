@@ -408,7 +408,12 @@ export function usePlayerInventoryActions({
                 c.magic.list.push(newItem);
             } else if (type === 'impulse') {
                 if (!c.impulses) c.impulses = [];
-                if (!c.impulses.find(i => i.name === newItem.name)) c.impulses.push({ ...item });
+                if (!c.impulses.find(i => i.name === newItem.name)) c.impulses.push(newItem);
+            } else if (type === 'action') {
+                if (!c.actions) c.actions = [];
+                if (!c.actions.find(i => (i.catalogEntryId && i.catalogEntryId === newItem.catalogEntryId) || i.name === newItem.name)) {
+                    c.actions.push(newItem);
+                }
             }
         });
         setCatalogMode(null);

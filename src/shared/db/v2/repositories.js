@@ -225,6 +225,11 @@ export const memberRepo = {
         const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.members, email);
         await updateDoc(ref, cleanForFirestore(stampRuntime({ role })));
     },
+
+    async updateSettings(firestore, campaignId, email, settings) {
+        const ref = campaignChildDocRef(firestore, campaignId, V2_COLLECTIONS.members, email);
+        await updateDoc(ref, cleanForFirestore(stampRuntime({ settings })));
+    },
 };
 
 export const globalRepo = {

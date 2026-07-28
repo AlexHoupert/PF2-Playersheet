@@ -33,7 +33,7 @@ export function getPlayerSubpagesForActivePage(pageId, navigationContext) {
     return getVisiblePlayerCategory(categoryId, navigationContext)?.pages || [];
 }
 
-export function getAdjacentPlayerSubpageId(pageId, direction, navigationContext) {
+export function getAdjacentPlayerSubpageId(pageId, direction, navigationContext, { loopPages = true } = {}) {
     if (!getPlayerPage(pageId)) return null;
     const pages = getPlayerSubpagesForActivePage(pageId, navigationContext);
     const index = pages.findIndex((page) => page.id === pageId);
@@ -41,13 +41,14 @@ export function getAdjacentPlayerSubpageId(pageId, direction, navigationContext)
     if (pages.length <= 1) return null;
 
     const nextIndex = direction === 'next' ? index + 1 : index - 1;
+    if (!loopPages && (nextIndex < 0 || nextIndex >= pages.length)) return null;
     const wrappedIndex = ((nextIndex % pages.length) + pages.length) % pages.length;
     return pages[wrappedIndex]?.id || null;
 }
 
-export function getSwipeTargetPlayerPageId(pageId, distanceX, navigationContext) {
+export function getSwipeTargetPlayerPageId(pageId, distanceX, navigationContext, options) {
     if (!distanceX) return null;
-    return getAdjacentPlayerSubpageId(pageId, distanceX > 0 ? 'next' : 'previous', navigationContext);
+    return getAdjacentPlayerSubpageId(pageId, distanceX > 0 ? 'next' : 'previous', navigationContext, options);
 }
 
 export function shouldHandlePlayerSubpageSwipe({

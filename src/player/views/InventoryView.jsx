@@ -11,6 +11,9 @@ import { selectLootBagLists } from '../../shared/db/selectors/campaignSelectors'
 import { consumeWandCharge, getWandCharges, getWandMaxCharges, getWandSpell, isWandItem } from '../../shared/utils/wandUtils';
 import { findInventoryItemIndex } from '../../shared/utils/itemIdentity';
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
+import { BookOpen, ShoppingBag } from 'lucide-react';
+import PlayerCatalogActionBar from '../components/PlayerCatalogActionBar';
+import PlayerCatalogEditMarker from '../components/PlayerCatalogEditMarker';
 
 // Swallows the click that the browser fires after touchend once a
 // long-press has opened the context modal; without this the click lands
@@ -40,9 +43,12 @@ export function InventoryView({
     allowLoot = true,
     showUtilityActions = true,
     canAuthorCatalog = false,
+    canEditCatalogEntry,
+    onEditCatalogEntry,
     hideTabs = false
 }) {
     const [itemSubTab, setItemSubTab] = useState(initialSubTab);
+    const [editMode, setEditMode] = useState(false);
     const equipTapRef = useRef({ key: null, time: 0 });
     const equipTapTimeoutRef = useRef(null);
     // Firefox Android does not dispatch contextmenu for long-presses on
@@ -58,6 +64,7 @@ export function InventoryView({
     };
 
     const fireRowLongPress = (merged) => {
+        if (editMode) return;
         const state = rowLongPressRef.current;
         const rowKey = merged?._index ?? merged?.name ?? null;
         // Timer and contextmenu can both trigger for the same press.
@@ -211,9 +218,14 @@ export function InventoryView({
         const wandCharges = isWand ? getWandCharges(merged) : 0;
         const wandMax = isWand ? getWandMaxCharges(merged) : 1;
         const linkedSpell = getWandSpell(merged) || merged.system?.spell;
+        const editable = canEditCatalogEntry?.('item', merged) === true;
 
         let clickHandler;
-        if (enableEquipTap && isEquipableInventoryItem(item)) {
+        if (editMode) {
+            clickHandler = () => {
+                if (editable) onEditCatalogEntry?.('item', merged);
+            };
+        } else if (enableEquipTap && isEquipableInventoryItem(item)) {
             clickHandler = () => {
                 if (readOnly) {
                     onInspectItem(merged);
@@ -394,6 +406,10 @@ export function InventoryView({
                                                     data-testid={`weapon-ammo-slot-${item.instanceId || key}-${idx}`}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
+                                                        if (editMode) {
+                                                            if (editable) onEditCatalogEntry?.('item', merged);
+                                                            return;
+                                                        }
                                                         if (isFilled) {
                                                             onFireWeapon(index, idx);
                                                         } else {
@@ -421,6 +437,10 @@ export function InventoryView({
                             <div
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    if (editMode) {
+                                        if (editable) onEditCatalogEntry?.('item', merged);
+                                        return;
+                                    }
                                     onOpenModal('weapon_detail', { item: merged, type: 'weapon_prof', ...weaponAttackBonus });
                                 }}
                                 className={weaponHasPenalty ? 'stat-penalty' : (weaponHasBonus ? 'stat-bonus' : '')}
@@ -446,6 +466,10 @@ export function InventoryView({
                         <div
                             onClick={(e) => {
                                 e.stopPropagation();
+                                if (editMode) {
+                                    if (editable) onEditCatalogEntry?.('item', merged);
+                                    return;
+                                }
                                 onOpenModal('item', { ...linkedSpell, _entityType: 'spell' });
                             }}
                             style={{ fontSize: '0.85em', color: '#b39ddb', cursor: 'pointer', marginTop: 2, display: 'inline-block' }}
@@ -522,6 +546,7 @@ export function InventoryView({
                     </div>
                 </div>
                 {(!isEquipableInventoryItem(item)) && <div className="inventory-qty" style={{ marginLeft: 10, alignSelf: 'center' }}>x{qty}</div>}
+                {editMode && editable ? <PlayerCatalogEditMarker label={merged.name} /> : null}
             </div>
         );
     };
@@ -715,21 +740,18 @@ export function InventoryView({
                     });
                 })()
             )}
-            {showUtilityActions && !readOnly && (
-            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                <button className="btn-add-condition" style={{ flex: 1, margin: 0 }} onClick={onOpenShop}>
-                    + Open Shop
-                </button>
-                <button className="btn-add-condition" style={{ flex: 1, margin: 0 }} onClick={() => onOpenModal('formula_book', { title: "Formula Book" })}>
-                    📖 Formulas
-                </button>
-                {canAuthorCatalog && (
-                    <button className="btn-add-condition" style={{ flex: 1, margin: 0 }} onClick={() => onAuthorCatalogEntry?.('item')}>
-                        Create Item
-                    </button>
-                )}
-            </div>
-            )}
+            {showUtilityActions && !readOnly ? (
+                <PlayerCatalogActionBar
+                    leadingActions={[
+                        { id: 'shop', label: 'Shop', icon: ShoppingBag, onClick: onOpenShop },
+                        { id: 'formulas', label: 'Formulas', icon: BookOpen, onClick: () => onOpenModal('formula_book', { title: 'Formula Book' }) },
+                    ]}
+                    createLabel="Create Item"
+                    onCreate={canAuthorCatalog ? () => onAuthorCatalogEntry?.('item') : undefined}
+                    editMode={editMode}
+                    onEditModeChange={canAuthorCatalog ? setEditMode : undefined}
+                />
+            ) : null}
         </div>
     );
 }

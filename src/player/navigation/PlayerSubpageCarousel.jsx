@@ -11,6 +11,7 @@ export default function PlayerSubpageCarousel({
     navigationContext,
     alertsByPage = {},
     metadataByPage = {},
+    loopPages = true,
     onSelectPage,
 }) {
     const [api, setApi] = React.useState(null);
@@ -51,7 +52,7 @@ export default function PlayerSubpageCarousel({
                     align: 'center',
                     containScroll: false,
                     dragFree: false,
-                    loop: pages.length > 1,
+                    loop: loopPages && pages.length > 1,
                     skipSnaps: false,
                 }}
                 setApi={setApi}
@@ -64,7 +65,7 @@ export default function PlayerSubpageCarousel({
                         const pageMetadata = Object.prototype.hasOwnProperty.call(metadataByPage, page.id)
                             ? Math.max(0, Number(metadataByPage[page.id] || 0))
                             : null;
-                        const state = getCarouselState(index, activeIndex, pages.length);
+                        const state = getCarouselState(index, activeIndex, pages.length, loopPages);
                         return (
                             <CarouselItem key={page.id} className="player-subpage-carousel__item">
                                 <button
@@ -95,8 +96,9 @@ export default function PlayerSubpageCarousel({
     );
 }
 
-function getCarouselState(index, activeIndex, length) {
+function getCarouselState(index, activeIndex, length, loopPages = true) {
     if (index === activeIndex) return 'active';
+    if (!loopPages) return Math.abs(index - activeIndex) === 1 ? 'neighbor' : 'edge';
     const forward = ((index - activeIndex) % length + length) % length;
     const backward = ((activeIndex - index) % length + length) % length;
     const distance = Math.min(forward, backward);

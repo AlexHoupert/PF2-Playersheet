@@ -649,6 +649,7 @@ export function ContextModal({ character, modalData, updateCharacter, onClose, s
                         <>
                             <button className="set-btn" onClick={() => setModalMode('edit_level')}>Change Character Level</button>
                             <button className="set-btn" style={{ marginTop: 10, background: '#222', border: '1px solid #c5a059', color: '#c5a059' }} onClick={() => setModalMode('quicksheet')}>Open Quick Sheet</button>
+                            <button className="set-btn" onClick={() => setModalMode('user_settings')}>User Settings</button>
                             {onDailyPrep && (
                                 <button
                                     className="set-btn"

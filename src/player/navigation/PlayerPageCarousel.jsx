@@ -11,6 +11,7 @@ export default function PlayerPageCarousel({
     navigationContext,
     onSelectPageId,
     rendererProps,
+    loopPages = true,
 }) {
     const [api, setApi] = React.useState(null);
     const categoryId = getCategoryIdForPlayerPage(activePageId);
@@ -58,7 +59,7 @@ export default function PlayerPageCarousel({
                 align: 'start',
                 containScroll: false,
                 dragFree: false,
-                loop: pages.length > 1,
+                loop: loopPages && pages.length > 1,
                 skipSnaps: false,
                 watchDrag: false,
             }}

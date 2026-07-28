@@ -12,6 +12,7 @@ export function usePlayerSubpageSwipe({
     activePageId,
     disabled = false,
     navigationContext,
+    loopPages = true,
     onSelectPageId,
     threshold = PLAYER_SWIPE_THRESHOLD,
 }) {
@@ -70,11 +71,16 @@ export function usePlayerSubpageSwipe({
         const distanceY = start.y - y;
         if (!shouldHandlePlayerSubpageSwipe({ distanceX, distanceY, threshold })) return;
 
-        const targetPageId = getSwipeTargetPlayerPageId(activePageIdRef.current, distanceX, navigationContextRef.current);
+        const targetPageId = getSwipeTargetPlayerPageId(
+            activePageIdRef.current,
+            distanceX,
+            navigationContextRef.current,
+            { loopPages }
+        );
         if (targetPageId) {
             onSelectPageIdRef.current?.(targetPageId);
         }
-    }, [isLocked, reset, threshold]);
+    }, [isLocked, loopPages, reset, threshold]);
 
     const onTouchStart = useCallback((event) => {
         if (Date.now() - pointerStartedAtRef.current < 120) return;

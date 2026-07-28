@@ -23,6 +23,8 @@ import { selectCampaignLoreArticles } from '../shared/db/selectors/loreSelectors
 import { buildLoreAlertsByPage } from '../shared/lore/loreSelectors';
 import { usePlayerLoreStore } from '../shared/lore/useLoreStores';
 import { PLAYER_PAGE_IDS } from './navigation/playerPageRegistry';
+import { isPlayerCatalogEntryEditable, resolvePlayerCatalogEditorMode } from './catalog/playerCatalogEditing';
+import { normalizePlayerUserSettings } from './settings/playerUserSettings';
 export default function PlayerAppController() {
     const {
         activeCampaign,
@@ -36,6 +38,7 @@ export default function PlayerAppController() {
         ownedActors,
         dbMode,
         capabilities,
+        userInfo,
     } = useCampaign();
     const readOnly = Boolean(capabilities?.isReadOnly);
 
@@ -59,6 +62,7 @@ export default function PlayerAppController() {
     const [playerNavDrawerOpen, setPlayerNavDrawerOpen] = useState(false);
     const [loreTarget, setLoreTarget] = useState(null);
     const [catalogAuthoringRequest, setCatalogAuthoringRequest] = useState(null);
+    const userSettings = normalizePlayerUserSettings(userInfo?.settings);
     const ownedCompanionActors = (ownedActors || [])
         .filter(actor => ['animal_companion', 'familiar', 'pet'].includes(actor.kind));
     const playerNotificationQueue = [
@@ -89,6 +93,7 @@ export default function PlayerAppController() {
         isInteractionLocked: isPlayerInteractionLocked,
         myCharacter,
         ownedCompanionActors,
+        loopPages: userSettings.loopPages,
     });
 
     const actorRules = selectActorRulesViewModel(activeCampaign, myActor?.id || character?.id);
@@ -161,15 +166,45 @@ export default function PlayerAppController() {
 
     const openCatalogAuthoring = (catalogType, baseEntry = null, linkOptions = {}) => {
         if (!capabilities?.canCreatePlayerContent || readOnly) return;
+        const editor = baseEntry
+            ? resolvePlayerCatalogEditorMode({
+                entry: baseEntry,
+                catalogEntries: activeCampaign?.catalogEntries,
+                capabilities,
+                userEmail: userInfo?.email,
+            })
+            : { campaignEntry: null, editorMode: 'create' };
         setCatalogAuthoringRequest({
             catalogType,
             baseEntry,
+            campaignEntry: editor.campaignEntry,
+            editorMode: editor.editorMode,
             linkInventoryItem: linkOptions?.linkInventoryItem || null,
-            linkImpulse: linkOptions?.linkImpulse || null,
+            linkCatalogRecord: linkOptions?.linkCatalogRecord || null,
         });
     };
 
-    const handleCatalogAuthoringSaved = async ({ entryId, linkInventoryItem, override, addToActor }) => {
+    const canEditCatalogEntry = (catalogType, entry, options = {}) => isPlayerCatalogEntryEditable({
+        catalogType,
+        entry,
+        canAuthorCatalog: Boolean(capabilities?.canCreatePlayerContent) && !readOnly,
+        ...options,
+    });
+
+    const editCatalogEntry = (catalogType, entry) => {
+        if (!canEditCatalogEntry(catalogType, entry, {
+            actorOwnedCustomOnly: catalogType === 'action' || catalogType === 'feat',
+        })) return;
+        openCatalogAuthoring(
+            catalogType,
+            entry,
+            catalogType === 'item'
+                ? { linkInventoryItem: entry }
+                : { linkCatalogRecord: { catalogType, entry } }
+        );
+    };
+
+    const handleCatalogAuthoringSaved = async ({ entryId, linkInventoryItem, linkCatalogRecord, override, addToActor }) => {
         if (!activeCampaign?.id || !character?.id || !entryId) return;
         const payload = override?.payload || {};
         if (linkInventoryItem) {
@@ -190,22 +225,14 @@ export default function PlayerAppController() {
                 })
             ));
         }
-        if (catalogAuthoringRequest?.linkImpulse) {
-            const source = catalogAuthoringRequest.linkImpulse;
-            await updateCharacter(current => {
-                current.impulses = (current.impulses || []).map(impulse => {
-                    const matches = impulse === source
-                        || impulse?.catalogEntryId === source?.catalogEntryId
-                        || impulse?.name === source?.name;
-                    return matches ? {
-                        ...impulse,
-                        ...payload,
-                        name: payload.name || impulse.name,
-                        catalogEntryId: entryId,
-                        catalogOverrideId: entryId,
-                    } : impulse;
-                });
-            });
+        if (linkCatalogRecord?.entry) {
+            await updateCharacter(current => replaceLinkedCatalogRecord(
+                current,
+                linkCatalogRecord.catalogType,
+                linkCatalogRecord.entry,
+                payload,
+                entryId
+            ));
         }
         if (addToActor) {
             await runDataAction(dataActions.actor.attachCatalogEntry(
@@ -385,6 +412,7 @@ export default function PlayerAppController() {
                 onSelectPage={selectPage}
                 alertsByPage={alertsByPage}
                 metadataByPage={metadataByPage}
+                loopPages={userSettings.loopPages}
             />
 
             {/* VIEW CONTENT */}
@@ -393,6 +421,7 @@ export default function PlayerAppController() {
                     activePageId={activePageId}
                     navigationContext={navigationContext}
                     onSelectPageId={selectPageId}
+                    loopPages={userSettings.loopPages}
                     rendererProps={{
                         activeCampaign,
                         actorRules,
@@ -416,6 +445,9 @@ export default function PlayerAppController() {
                         onNavigateLoreCreature: navigateLoreCreature,
                         onGoToPage: selectPageId,
                         onAuthorCatalogEntry: openCatalogAuthoring,
+                        canEditCatalogEntry,
+                        onEditCatalogEntry: editCatalogEntry,
+                        userSettings,
                         ownedCompanionActors,
                         playerQuests,
                         readOnly,
@@ -466,10 +498,6 @@ export default function PlayerAppController() {
                         setModalData({ item, type: 'weapon_prof' }); // Reuse modalData to pass item
                         setModalMode('item_proficiencies');
                     }}
-                    onCustomize={(item) => {
-                        setActionModal({ mode: null, item: null });
-                        openCatalogAuthoring('item', item, { linkInventoryItem: item });
-                    }}
                 />
             )}
 
@@ -481,6 +509,17 @@ export default function PlayerAppController() {
             />
 
             {/* Catalog Overlay */}
+            {
+                catalogMode === 'action' && (
+                    <LazyCatalogOverlay
+                        mode="action"
+                        db={db}
+                        onSelect={(item) => addToCharacter(item, 'action')}
+                        onClose={() => setCatalogMode(null)}
+                    />
+                )
+            }
+
             {
                 catalogMode === 'feat' && (
                     <LazyCatalogOverlay
@@ -578,6 +617,10 @@ export default function PlayerAppController() {
                 saveNewAction={saveNewAction}
                 onDailyPrep={performDailyPrep}
                 readOnly={readOnly}
+                userSettings={userSettings}
+                onSaveUserSettings={(settings) => runDataAction(
+                    dataActions.member.updateOwnSettings(activeCampaign?.id, settings)
+                )}
             />
 
 
@@ -591,4 +634,34 @@ export default function PlayerAppController() {
             />
         </div>
     );
+}
+
+function replaceLinkedCatalogRecord(character, catalogType, source, payload, entryId) {
+    const replace = record => {
+        const recordName = typeof record === 'string' ? record : record?.name;
+        const matches = record === source
+            || record?.catalogEntryId === source?.catalogEntryId
+            || record?.catalogOverrideId === source?.catalogOverrideId
+            || (source?.name && recordName === source.name);
+        if (!matches) return record;
+        return {
+            ...(typeof record === 'object' ? record : { name: recordName }),
+            ...payload,
+            name: payload.name || recordName,
+            catalogEntryId: entryId,
+            catalogOverrideId: entryId,
+            isCustom: true,
+        };
+    };
+
+    if (catalogType === 'spell') {
+        character.magic = { ...(character.magic || {}), list: (character.magic?.list || []).map(replace) };
+    } else if (catalogType === 'feat') {
+        character.feats = (character.feats || []).map(replace);
+    } else if (catalogType === 'impulse') {
+        character.impulses = (character.impulses || []).map(replace);
+    } else if (catalogType === 'action') {
+        character.actions = (character.actions || []).map(replace);
+    }
+    return character;
 }

@@ -33,13 +33,23 @@ export default function PlayerCatalogEditorHost({ request, dataActions, onClose,
 
     const Editor = EDITORS[request.catalogType];
     if (!Editor) return null;
-    const editorMode = request.baseEntry ? 'clone' : 'create';
+    const editorMode = request.editorMode || (request.baseEntry ? 'clone' : 'create');
 
     const saveEntry = async override => {
+        const existingEntry = request.campaignEntry || null;
         savedEntryIdRef.current = await dataActions.catalog.saveCatalogOverride({
             ...override,
+            ...(editorMode === 'edit' && existingEntry ? {
+                id: existingEntry.id,
+                baseId: existingEntry.baseId || override.baseId || null,
+                createdAt: existingEntry.createdAt,
+                createdBy: existingEntry.createdBy,
+                ownerEmail: existingEntry.ownerEmail,
+            } : {}),
             mode: 'custom',
-            origin: request.baseEntry ? 'fork' : 'custom',
+            origin: editorMode === 'edit'
+                ? existingEntry?.origin || 'custom'
+                : request.baseEntry ? 'fork' : 'custom',
         });
         return savedEntryIdRef.current;
     };
@@ -50,6 +60,7 @@ export default function PlayerCatalogEditorHost({ request, dataActions, onClose,
             catalogType: request.catalogType,
             entryId: savedEntryIdRef.current,
             linkInventoryItem: request.linkInventoryItem || null,
+            linkCatalogRecord: request.linkCatalogRecord || null,
             override: result?.data || null,
             addToActor: !request.baseEntry && addToActor,
         });
@@ -72,7 +83,7 @@ export default function PlayerCatalogEditorHost({ request, dataActions, onClose,
                         editorMode={editorMode}
                         baseEntry={request.baseEntry || null}
                         initialItem={request.baseEntry || null}
-                        headerAction={!request.baseEntry ? (
+                        headerAction={editorMode === 'create' ? (
                             <div className="flex max-w-[50vw] items-center gap-2">
                                 <Checkbox
                                     id="player-catalog-add-to-actor"

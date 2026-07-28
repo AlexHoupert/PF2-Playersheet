@@ -18,6 +18,7 @@ export function StatsView({
     onLongPress,
     onRemoveEffect,
     readOnly = false,
+    userSettings = {},
 }) {
     if (!character) return null;
 
@@ -88,6 +89,7 @@ export function StatsView({
                             character={rulesCharacter}
                             onOpenModal={onOpenModal}
                             onLongPress={onLongPress}
+                            proficiencyDisplay={userSettings.skillProficiencyDisplay}
                         />
                     </div>
                 </div>

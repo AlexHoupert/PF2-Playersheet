@@ -4,6 +4,8 @@ import { calculateStat } from '../../utils/rules';
 import { parseFoundry, ACTION_ICONS } from '../../shared/utils/foundryParser';
 import { LongPressable } from '../../shared/components/LongPressable';
 import CampingView from '../../camping/CampingView';
+import PlayerCatalogActionBar from '../components/PlayerCatalogActionBar';
+import PlayerCatalogEditMarker from '../components/PlayerCatalogEditMarker';
 
 export function ActionsView({
     character,
@@ -14,8 +16,12 @@ export function ActionsView({
     readOnly = false,
     canAuthorCatalog = false,
     onAuthorCatalogEntry,
+    setCatalogMode,
+    canEditCatalogEntry,
+    onEditCatalogEntry,
 }) {
     const [activeTab, setActiveTab] = useState(initialTab);
+    const [editMode, setEditMode] = useState(false);
 
     useEffect(() => {
         setActiveTab(initialTab);
@@ -24,11 +30,12 @@ export function ActionsView({
     // 1. Collect Actions: Index based only (File System) & Flatten
     const categorizedActions = useMemo(() => {
         const actorActions = Array.isArray(character.actions) ? character.actions : [];
+        const actorActionIdentities = new Set(actorActions.map(actionIdentity).filter(Boolean));
         const allActions = dedupeActions([...getAllActionIndexItems(), ...actorActions]).map(a => ({
             ...a,
             type: a.userType || a.type || 'Other',
             subtype: a.userSubtype || a.subtype || 'General',
-            isCustom: a.sourceFile?.startsWith('actions/') || false
+            _actorCatalogEditable: actorActionIdentities.has(actionIdentity(a)),
         }));
 
         const knownFeats = new Set((character.feats || []).map(f => (typeof f === 'string' ? f : f.name)));
@@ -146,6 +153,7 @@ export function ActionsView({
                         if (ia === 999 && ib === 999) return a.name.localeCompare(b.name);
                         return ia - ib;
                     }).map(action => {
+                        const editable = canEditCatalogEntry?.('action', action, { actorOwnedCustomOnly: true }) === true;
                         // Calculate Bonus Logic
                         let bonusVal = null;
                         let bestLabel = null;
@@ -192,8 +200,14 @@ export function ActionsView({
                             <LongPressable
                                 className="item-row"
                                 key={`${action.name}-${action.type}`}
-                                onClick={() => onOpenModal('item', { ...action, _entityType: 'action' })}
-                                onLongPress={() => { if (!readOnly && onLongPress) onLongPress(action, 'action'); }}
+                                onClick={() => {
+                                    if (editMode) {
+                                        if (editable) onEditCatalogEntry?.('action', action);
+                                        return;
+                                    }
+                                    onOpenModal('item', { ...action, _entityType: 'action' });
+                                }}
+                                onLongPress={() => { if (!readOnly && !editMode && onLongPress) onLongPress(action, 'action'); }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                                     <div className="item-row-main" style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
@@ -220,22 +234,23 @@ export function ActionsView({
                                     {skillDef === 'ToHit' && (
                                         <div style={{ color: '#888', fontSize: '0.8em', fontStyle: 'italic' }}>Attack</div>
                                     )}
+                                    {editMode && editable ? <PlayerCatalogEditMarker label={action.name} /> : null}
                                 </div>
                             </LongPressable>
                         );
                     })}
                 </div>
             ))}
-            {canAuthorCatalog && activeTab !== 'Camping' && (
-                <button
-                    type="button"
-                    className="btn-add-condition"
-                    style={{ marginTop: 20, width: '100%' }}
-                    onClick={() => onAuthorCatalogEntry?.('action')}
-                >
-                    Create Action
-                </button>
-            )}
+            {!readOnly && activeTab !== 'Camping' ? (
+                <PlayerCatalogActionBar
+                    addLabel="Add Action"
+                    onAdd={() => setCatalogMode?.('action')}
+                    createLabel="Create Action"
+                    onCreate={canAuthorCatalog ? () => onAuthorCatalogEntry?.('action') : undefined}
+                    editMode={editMode}
+                    onEditModeChange={canAuthorCatalog ? setEditMode : undefined}
+                />
+            ) : null}
         </div>
     );
 }
@@ -248,4 +263,8 @@ function dedupeActions(actions) {
         byIdentity.set(identity, action);
     });
     return [...byIdentity.values()];
+}
+
+function actionIdentity(action) {
+    return action?.catalogEntryId || action?.catalogOverrideId || action?.id || action?.name || null;
 }

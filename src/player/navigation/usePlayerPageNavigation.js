@@ -17,6 +17,7 @@ export function usePlayerPageNavigation({
     isInteractionLocked = false,
     myCharacter,
     ownedCompanionActors = [],
+    loopPages = true,
 }) {
     const [activeCharIndex, setActiveCharIndex] = useState(0);
     const [activePageId, setActivePageId] = useState(readInitialPageId);
@@ -78,6 +79,7 @@ export function usePlayerPageNavigation({
         activePageId,
         disabled: isInteractionLocked,
         navigationContext,
+        loopPages,
         onSelectPageId: selectPageId,
     });
 

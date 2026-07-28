@@ -23,6 +23,7 @@ import {
 
 // Existing Legacy Modals (assuming they are in same folder or simple components)
 import QuickSheetModal from './QuickSheetModal';
+import UserSettingsDialog from './modals/UserSettingsDialog';
 
 // Helper for shop items in ItemDetailModal logic
 import { getShopIndexItemByName } from '../shared/catalog/shopIndex';
@@ -94,7 +95,9 @@ function ModalManagerContent({
     toggleBloodmagic,
     removeFromCharacter,
     saveNewAction,
-    onDailyPrep
+    onDailyPrep,
+    userSettings,
+    onSaveUserSettings
 }) {
 
     // --- SIMPLE EDIT MODALS ---
@@ -116,6 +119,17 @@ function ModalManagerContent({
                 toggleBloodmagic={toggleBloodmagic}
                 removeFromCharacter={removeFromCharacter}
                 onDailyPrep={onDailyPrep}
+            />
+        );
+    }
+
+    if (modalMode === 'user_settings') {
+        return (
+            <UserSettingsDialog
+                open
+                settings={userSettings}
+                onSave={onSaveUserSettings}
+                onClose={onClose}
             />
         );
     }

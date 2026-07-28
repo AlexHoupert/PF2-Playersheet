@@ -122,12 +122,23 @@ test('admin feats and impulses use catalog override production editing', () => {
     assert.equal(impulseEditorSource.includes('Deployed impulse overrides are not enabled yet'), false);
 });
 
-test('player impulse authoring keeps the customize action separate from impulse names', () => {
-    const source = readSource('src/player/views/ImpulsesView.jsx');
+test('player catalog lists share add create and edit controls', () => {
+    const actionBarSource = readSource('src/player/components/PlayerCatalogActionBar.jsx');
+    const editMarkerSource = readSource('src/player/components/PlayerCatalogEditMarker.jsx');
+    const viewSources = [
+        'src/player/views/FeatsView.jsx',
+        'src/player/views/MagicView.jsx',
+        'src/player/views/ImpulsesView.jsx',
+        'src/player/views/ActionsView.jsx',
+        'src/player/views/InventoryView.jsx',
+    ].map(readSource);
 
-    assert.match(source, /aria-label=\{`Customize \$\{imp\.name\}`\}/);
-    assert.match(source, /<Pencil aria-hidden="true"/);
-    assert.equal(/>\s*Fork\s*</.test(source), false);
+    viewSources.forEach(source => assert.match(source, /PlayerCatalogActionBar/));
+    viewSources.forEach(source => assert.match(source, /PlayerCatalogEditMarker/));
+    assert.match(actionBarSource, /<Plus data-icon="inline-start"/);
+    assert.match(actionBarSource, /<Pencil data-icon="inline-start"/);
+    assert.match(editMarkerSource, /aria-label=\{`Edit \$\{label\}`\}/);
+    assert.equal(viewSources.some(source => source.includes('Customize')), false);
 });
 
 test('admin item production editing skips file writes and uses database fallback', () => {
@@ -256,7 +267,7 @@ test('player page cutover uses registry renderer instead of header mode switch',
     assert.match(bottomNavSource, /onDrawerOpenChange/);
     assert.match(carouselSource, /CarouselContent/);
     assert.match(carouselSource, /containScroll: false/);
-    assert.match(carouselSource, /loop: pages\.length > 1/);
+    assert.match(carouselSource, /loop: loopPages && pages\.length > 1/);
     assert.match(carouselSource, /getPlayerNavIconSrc\(page\.icon\)/);
     assert.match(rendererSource, /<ActionsView[\s\S]*hideTabs=\{true\}/);
     assert.match(rendererSource, /<InventoryView[\s\S]*hideTabs=\{true\}/);

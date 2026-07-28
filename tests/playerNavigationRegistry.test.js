@@ -112,6 +112,21 @@ test('player subpage swipe stays within the active category', () => {
     assert.equal(getSwipeTargetPlayerPageId(PLAYER_PAGE_IDS.EQUIPMENT, -80), PLAYER_PAGE_IDS.LOOT);
 });
 
+test('player subpage swipe can stop at category boundaries when looping is disabled', () => {
+    assert.equal(
+        getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.STATUS, 'previous', undefined, { loopPages: false }),
+        null
+    );
+    assert.equal(
+        getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.PROFICIENCIES, 'next', undefined, { loopPages: false }),
+        null
+    );
+    assert.equal(
+        getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.STATUS, 'next', undefined, { loopPages: false }),
+        PLAYER_PAGE_IDS.FEATS
+    );
+});
+
 test('player navigation hides optional magic impulse and companion pages when unavailable', () => {
     const navigationContext = buildPlayerNavigationContext({
         character: {

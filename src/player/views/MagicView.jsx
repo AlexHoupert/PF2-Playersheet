@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { calculateSpellAttackAndDC } from '../../utils/rules';
 import { parseFoundry, ACTION_ICONS } from '../../shared/utils/foundryParser';
 import { getSpellIndexItemByName } from '../../shared/catalog/spellIndex';
 import { LongPressable } from '../../shared/components/LongPressable';
 import { getWandSpellCasts, getWandSpellKey } from '../../shared/utils/wandUtils';
+import PlayerCatalogActionBar from '../components/PlayerCatalogActionBar';
+import PlayerCatalogEditMarker from '../components/PlayerCatalogEditMarker';
 
 export const MagicView = ({
     character,
@@ -14,7 +17,10 @@ export const MagicView = ({
     readOnly = false,
     canAuthorCatalog = false,
     onAuthorCatalogEntry,
+    canEditCatalogEntry,
+    onEditCatalogEntry,
 }) => {
+    const [editMode, setEditMode] = useState(false);
     // Guard for missing magic data
     const magic = character.magic || { slots: {}, list: [] };
 
@@ -118,6 +124,7 @@ export const MagicView = ({
                 {spellsByLevel[lvl].map(spell => {
                     const isBloodline = spell.Bloodmagic === true;
                     const wandCasts = spell.wandCasts || null;
+                    const editable = canEditCatalogEntry?.('spell', spell) === true;
                     const openWandItem = (event) => {
                         if (event) event.stopPropagation();
                         if (!wandCasts?.openItem) return;
@@ -125,6 +132,10 @@ export const MagicView = ({
                         setModalMode('catalog_detail');
                     };
                     const openSpell = () => {
+                        if (editMode) {
+                            if (editable) onEditCatalogEntry?.('spell', spell);
+                            return;
+                        }
                         if (spell._wandOnly && wandCasts?.openItem) {
                             openWandItem();
                             return;
@@ -172,11 +183,12 @@ export const MagicView = ({
                         <LongPressable
                             className="spell-row"
                             key={`${lvl}-${spell.name}-${spell._wandOnly ? 'wand' : 'spell'}`}
-                            onLongPress={() => { if (!readOnly) onLongPress(spell, 'spell'); }}
+                            onLongPress={() => { if (!readOnly && !editMode) onLongPress(spell, 'spell'); }}
                             onClick={openSpell}
                         >
                             <div style={{ fontWeight: 'bold', color: '#ccc', display: 'flex', alignItems: 'center' }}>
                                 {spell.name}
+                                {editMode && editable ? <PlayerCatalogEditMarker label={spell.name} /> : null}
                                 {isBloodline && <span className="bloodline-drop">🩸</span>}
                                 {wandCasts && (
                                     <button
@@ -249,23 +261,17 @@ export const MagicView = ({
             </div>
             <div id="spellListColumn">
                 {renderSpellList()}
-                {!readOnly && <button
-                    className="btn-add-condition"
-                    data-testid="magic-add-spell"
-                    style={{ marginTop: 20, width: '100%' }}
-                    onClick={() => setCatalogMode('spell')}
-                >
-                    + Add Spell
-                </button>}
-                {canAuthorCatalog && (
-                    <button
-                        className="btn-add-condition"
-                        style={{ marginTop: 10, width: '100%' }}
-                        onClick={() => onAuthorCatalogEntry?.('spell')}
-                    >
-                        Create Spell
-                    </button>
-                )}
+                {!readOnly ? (
+                    <PlayerCatalogActionBar
+                        addLabel="Add Spell"
+                        addTestId="magic-add-spell"
+                        onAdd={() => setCatalogMode('spell')}
+                        createLabel="Create Spell"
+                        onCreate={canAuthorCatalog ? () => onAuthorCatalogEntry?.('spell') : undefined}
+                        editMode={editMode}
+                        onEditModeChange={canAuthorCatalog ? setEditMode : undefined}
+                    />
+                ) : null}
             </div>
         </div>
     );

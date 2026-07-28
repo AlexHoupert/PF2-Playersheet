@@ -8,6 +8,7 @@ import { cloneValue } from "./inventoryReducers.js";
 
 export function createMemberActions(context) {
   const {
+    actor,
     capabilities,
     db,
     firestore,
@@ -61,9 +62,37 @@ export function createMemberActions(context) {
     });
   };
 
+  const updateOwnSettings = (campaignId, settings) => {
+    const normalizedEmail = normalizeEmail(actor);
+    if (!campaignId || !normalizedEmail) return Promise.resolve();
+    const normalizedSettings = normalizeMemberSettings(settings);
+    if (useFirestoreV2) {
+      return repos.memberRepo.updateSettings(firestore, campaignId, normalizedEmail, normalizedSettings);
+    }
+    return updateDbLegacy((prev) => {
+      const next = cloneValue(prev) || {};
+      next.users = { ...(next.users || {}) };
+      const current = next.users[normalizedEmail];
+      if (!current || current.campaignId !== campaignId) return prev;
+      next.users[normalizedEmail] = { ...current, settings: normalizedSettings };
+      return next;
+    });
+  };
+
   return {
     assignUser,
     revokeUser,
     setRole,
+    updateOwnSettings,
+  };
+}
+
+function normalizeMemberSettings(settings = {}) {
+  const skillDisplay = String(settings?.skillProficiencyDisplay || "none").toLowerCase();
+  return {
+    skillProficiencyDisplay: ["none", "short", "full", "stars"].includes(skillDisplay)
+      ? skillDisplay
+      : "none",
+    loopPages: settings?.loopPages !== false,
   };
 }
