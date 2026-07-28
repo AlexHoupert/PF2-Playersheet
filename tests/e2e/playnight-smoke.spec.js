@@ -240,6 +240,18 @@ test("GM assembles and customizes an encounter from the creature workspace", asy
   const addedRow = combatantTable.locator("tbody tr").filter({ hasText: "Smoke Ember Bear" });
   await expect(addedRow).toBeVisible();
 
+  await addedRow.dblclick();
+  let detailDialog = page.getByRole("dialog").filter({ hasText: "Encounter creature details" });
+  await expect(detailDialog).toBeVisible();
+  await expect(detailDialog.getByText("Smoke Ember Bear", { exact: true }).first()).toBeVisible();
+  await detailDialog.getByRole("button", { name: "Close", exact: true }).click();
+
+  await addedRow.click({ button: "right" });
+  await page.getByTestId("gm-encounter-combatant-action-view-detail").click();
+  detailDialog = page.getByRole("dialog").filter({ hasText: "Encounter creature details" });
+  await expect(detailDialog).toBeVisible();
+  await detailDialog.getByRole("button", { name: "Close", exact: true }).click();
+
   await addedRow.click({ button: "right" });
   await page.getByTestId("gm-encounter-combatant-action-customize").click();
   await expect(page.getByRole("heading", { name: "Edit Creature" })).toBeVisible();

@@ -14,6 +14,7 @@ import CreatureCard from '../shared/components/CreatureCard';
 import CreatureAbilityModal from '../shared/components/CreatureAbilityModal';
 import CreatureSkillDetailDialog from '../shared/components/CreatureSkillDetailDialog';
 import { CatalogDetailDialog } from '../shared/components/catalog-detail';
+import AppDialogShell from '../shared/components/dialogs/AppDialogShell';
 import CreatureEditor from './editors/CreatureEditor';
 import { useWindowSize } from '../shared/hooks/useWindowSize';
 import { generateFalseData } from '../utils/bestiaryUtils';
@@ -1143,6 +1144,20 @@ export default function BestiaryView({ db, initialFilterType, onContentLinkClick
                 >
                     {previewContent}
                 </BottomSheet>
+            )}
+
+            {!isMobile && resourceMode === 'encounters' && (
+                <AppDialogShell
+                    open={Boolean(previewCreature)}
+                    onOpenChange={(open) => { if (!open) setPreviewCreature(null); }}
+                    layerId={`encounter-creature-detail-${previewCreature?.id || 'closed'}`}
+                    title={previewCreature?.name || 'Creature details'}
+                    description="Encounter creature details"
+                    size="viewport"
+                    bodyClassName="overflow-hidden p-0"
+                >
+                    {previewContent}
+                </AppDialogShell>
             )}
 
             {/* Ability Modal */}
