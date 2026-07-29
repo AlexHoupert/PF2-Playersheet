@@ -616,6 +616,11 @@ Success criteria:
   - raised the app-level swipe threshold to make accidental page changes less likely;
   - moved the bottom nav back into the Player shell after the body portal caused drawer interaction regressions;
   - removed the fixed-layer transform/containment that did not solve Firefox jitter and could make fixed positioning less predictable.
+- Phase 7 personal-order stability correction:
+  - restored Embla's direct viewport/container/slide structure and native drag handling for the visible tab carousel;
+  - removed Motion/Reorder wrappers, local shadow ordering, and manual swipe detection from carousel slides;
+  - a stationary two-second hold now opens a separate reorder panel, where drag changes a draft order that is saved only on confirmation;
+  - active-tab centering uses an immediate layout sync, while Embla reinitialization recenters instead of selecting a different page.
 - Phase 7 Firefox dynamic-toolbar follow-up:
   - isolated the remaining movement to Firefox Android's `Scroll to hide toolbar` handling of `position: fixed; bottom: 0`;
   - kept the bottom nav in the Player shell and added a Firefox-only `100dvh` top anchor for the existing fixed root;

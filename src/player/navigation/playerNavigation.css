@@ -91,6 +91,11 @@
     opacity: 0;
 }
 
+.player-subpage-carousel-wrap.is-reordering .player-subpage-carousel {
+    opacity: 0.34;
+    pointer-events: none;
+}
+
 .player-subpage-carousel-wrap::before {
     left: 0;
     background: linear-gradient(90deg, rgba(10, 10, 12, 0.94), transparent);
@@ -119,17 +124,6 @@
 .player-subpage-carousel__item {
     flex: 0 0 31%;
     padding-left: 0;
-}
-
-.player-subpage-carousel__item.is-reordering {
-    cursor: grabbing;
-}
-
-.player-subpage-carousel__item.is-reordering .player-subpage-carousel__tab {
-    border-color: rgba(244, 201, 108, 0.96);
-    outline: 2px solid rgba(244, 201, 108, 0.34);
-    outline-offset: 1px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
 }
 
 .player-nav-settings-error {
@@ -175,11 +169,6 @@
         color 180ms ease,
         background 180ms ease,
         border-color 180ms ease;
-}
-
-.player-subpage-carousel__tab.reorder-ready {
-    opacity: 0.86;
-    transform: none;
 }
 
 .player-subpage-carousel__tab.neighbor {
@@ -246,6 +235,136 @@
     font-size: 0.62rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+}
+
+.player-tab-reorder-panel {
+    position: relative;
+    z-index: 4;
+    margin-top: 6px;
+    padding: 8px;
+    border: 1px solid rgba(197, 160, 89, 0.46);
+    border-radius: 4px;
+    background: rgba(14, 14, 16, 0.98);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.46);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.player-tab-reorder-panel__header {
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 7px;
+    color: #d8d2c6;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.player-tab-reorder-panel__actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.player-tab-reorder-panel__action {
+    width: 30px;
+    height: 30px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid rgba(197, 160, 89, 0.34);
+    border-radius: 4px;
+    background: #171719;
+    color: #c8c2b7;
+    cursor: pointer;
+}
+
+.player-tab-reorder-panel__action.primary {
+    border-color: rgba(197, 160, 89, 0.84);
+    background: rgba(197, 160, 89, 0.18);
+    color: #f4c96c;
+}
+
+.player-tab-reorder-panel__action:disabled {
+    cursor: wait;
+    opacity: 0.5;
+}
+
+.player-tab-reorder-panel__action svg {
+    width: 16px;
+    height: 16px;
+}
+
+.player-tab-reorder-panel__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+}
+
+.player-tab-reorder-panel__item {
+    min-width: 0;
+    min-height: 38px;
+    display: grid;
+    grid-template-columns: 14px 20px minmax(0, 1fr);
+    align-items: center;
+    gap: 5px;
+    padding: 6px;
+    border: 1px solid rgba(197, 160, 89, 0.3);
+    border-radius: 3px;
+    background: #1d1d20;
+    color: #d2cdc4;
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-align: left;
+    touch-action: none;
+    cursor: grab;
+    transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.player-tab-reorder-panel__item > svg {
+    width: 14px;
+    height: 14px;
+    color: #837a6c;
+}
+
+.player-tab-reorder-panel__item > img {
+    width: 20px;
+    height: 20px;
+    display: block;
+    border-radius: 3px;
+    pointer-events: none;
+    -webkit-user-drag: none;
+}
+
+.player-tab-reorder-panel__item > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.player-tab-reorder-panel__item.is-dragging {
+    z-index: 1;
+    border-color: rgba(244, 201, 108, 0.96);
+    background: #29251d;
+    color: #f4c96c;
+    cursor: grabbing;
+    transform: scale(1.025);
+    animation: player-tab-reorder-wiggle 380ms ease-in-out infinite alternate;
+}
+
+@keyframes player-tab-reorder-wiggle {
+    from { rotate: -0.7deg; }
+    to { rotate: 0.7deg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .player-tab-reorder-panel__item.is-dragging {
+        animation: none;
+    }
 }
 
 .player-page-carousel {

@@ -71,6 +71,7 @@ function Carousel({
 
     return () => {
       api?.off("select", onSelect)
+      api?.off("reInit", onSelect)
     };
   }, [api, onSelect])
 
@@ -102,7 +103,6 @@ function Carousel({
 
 function CarouselContent({
   className,
-  trackComponent: TrackComponent = "div",
   ...props
 }) {
   const { carouselRef, orientation } = useCarousel()
@@ -112,7 +112,7 @@ function CarouselContent({
       ref={carouselRef}
       className="overflow-hidden"
       data-slot="carousel-content">
-      <TrackComponent
+      <div
         className={cn(
           "flex",
           orientation === "horizontal" ? "-ml-4" : "-mt-4 flex-col",
@@ -125,15 +125,12 @@ function CarouselContent({
 
 function CarouselItem({
   className,
-  as: ItemComponent = "div",
-  itemAs,
   ...props
 }) {
   const { orientation } = useCarousel()
 
   return (
-    <ItemComponent
-      {...(itemAs ? { as: itemAs } : {})}
+    <div
       role="group"
       aria-roledescription="slide"
       data-slot="carousel-item"
