@@ -792,6 +792,17 @@ test('actor stats use shared closable effect chips and explainable overview draw
     assert.match(overviewSource, /explainEffectModifiersForSelectors/);
 });
 
+test('actor effect editor supports named skill armor and weapon proficiency scaling', () => {
+    const editorSource = readSource('src/admin/editors/EffectDefinitionEditor.jsx');
+    const definitionSource = readSource('src/shared/rules/effectDefinitions.js');
+
+    assert.match(editorSource, /proficiency_tiers/);
+    assert.match(editorSource, /Tier minimum proficiency/);
+    assert.match(editorSource, /Weapon category or group/);
+    assert.match(definitionSource, /resolveActorProficiencyRank/);
+    assert.match(definitionSource, /EFFECT_PROFICIENCY_DOMAINS/);
+});
+
 test('player blocking overlays register with the modal layer', () => {
     const mainSource = readSource('src/main.jsx');
     const modalLayerSource = readSource('src/shared/overlays/ModalLayerProvider.jsx');

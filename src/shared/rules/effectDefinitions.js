@@ -20,6 +20,22 @@ export const EFFECT_MODES = Object.freeze([
   "persistent_damage",
 ]);
 export const EFFECT_BONUS_TYPES = Object.freeze(["item", "status", "circumstance", "untyped"]);
+export const EFFECT_PROFICIENCY_DOMAINS = Object.freeze(["skill", "armor", "weapon"]);
+export const EFFECT_PROFICIENCY_RANKS = Object.freeze([
+  { value: 0, label: "Untrained" },
+  { value: 2, label: "Trained" },
+  { value: 4, label: "Expert" },
+  { value: 6, label: "Master" },
+  { value: 8, label: "Legendary" },
+]);
+
+export const EFFECT_PROFICIENCY_SKILLS = Object.freeze([
+  "acrobatics", "arcana", "athletics", "crafting", "deception", "diplomacy",
+  "intimidation", "medicine", "nature", "occultism", "performance", "religion",
+  "society", "stealth", "survival", "thievery",
+]);
+export const EFFECT_PROFICIENCY_ARMOR = Object.freeze(["unarmored", "light", "medium", "heavy"]);
+export const EFFECT_PROFICIENCY_WEAPONS = Object.freeze(["unarmed", "simple", "martial", "advanced"]);
 
 export const EFFECT_SELECTOR_GROUPS = Object.freeze([
   { id: "defenses", label: "Defenses", order: 10 },
@@ -66,11 +82,7 @@ const RAW_EFFECT_SELECTOR_REGISTRY = [
   { value: "spell.damage", label: "Spell Damage" },
   { value: "impulse.damage", label: "Impulse Damage" },
   { value: "skill.lore", label: "Lore Skills" },
-  ...[
-    "acrobatics", "arcana", "athletics", "crafting", "deception", "diplomacy",
-    "intimidation", "medicine", "nature", "occultism", "performance", "religion",
-    "society", "stealth", "survival", "thievery",
-  ].map(skill => ({ value: `skill.${skill}`, label: skill.charAt(0).toUpperCase() + skill.slice(1) })),
+  ...EFFECT_PROFICIENCY_SKILLS.map(skill => ({ value: `skill.${skill}`, label: skill.charAt(0).toUpperCase() + skill.slice(1) })),
 ];
 
 export const EFFECT_SELECTOR_REGISTRY = Object.freeze(
@@ -82,7 +94,7 @@ export const EFFECT_SELECTOR_REGISTRY = Object.freeze(
 );
 
 const SELECTOR_SET = new Set(EFFECT_SELECTOR_REGISTRY.map(entry => entry.value));
-const VALUE_MODES = new Set(["fixed", "actor_level_multiplier", "actor_level_tiers", "source_level_tiers"]);
+const VALUE_MODES = new Set(["fixed", "actor_level_multiplier", "actor_level_tiers", "source_level_tiers", "proficiency_tiers"]);
 const PREDICATE_TYPES = new Set([
   "actor_level",
   "source_level",
@@ -208,8 +220,9 @@ export function validateEffectDefinition(definition) {
     if (["bonus", "penalty"].includes(modifier.mode) && !EFFECT_BONUS_TYPES.includes(modifier.bonusType)) {
       errors.push(`Modifier ${index + 1} uses an unsupported bonus type`);
     }
-    if (validateValueExpression(modifier.value).length) {
-      errors.push(...validateValueExpression(modifier.value).map(error => `Modifier ${index + 1}: ${error}`));
+    const valueValidation = validateValueExpression(rawModifier?.value ?? modifier.value);
+    if (valueValidation.length) {
+      errors.push(...valueValidation.map(error => `Modifier ${index + 1}: ${error}`));
     }
   }
   for (const predicate of [...normalized.predicates.all, ...normalized.predicates.any]) {
@@ -259,6 +272,9 @@ export function resolveEffectValue(expression, context = {}) {
   }
   if (normalized.mode === "actor_level_tiers") return resolveTier(normalized.tiers, actorLevel, normalized.value);
   if (normalized.mode === "source_level_tiers") return resolveTier(normalized.tiers, sourceLevel, normalized.value);
+  if (normalized.mode === "proficiency_tiers") {
+    return resolveTier(normalized.tiers, resolveActorProficiencyRank(context.actor, normalized.proficiency), normalized.value);
+  }
   return normalized.value;
 }
 
@@ -427,6 +443,7 @@ function normalizeValueExpression(expression) {
     mode,
     value: toFiniteNumber(expression?.value, 0),
     multiplier: toFiniteNumber(expression?.multiplier, 1),
+    ...(mode === "proficiency_tiers" ? { proficiency: normalizeProficiencyReference(expression?.proficiency) } : {}),
     tiers: (Array.isArray(expression?.tiers) ? expression.tiers : [])
       .map(tier => ({ min: toFiniteNumber(tier?.min, 0), value: toFiniteNumber(tier?.value, 0) }))
       .sort((a, b) => a.min - b.min),
@@ -436,10 +453,71 @@ function normalizeValueExpression(expression) {
 function validateValueExpression(expression) {
   const normalized = normalizeValueExpression(expression);
   if (!VALUE_MODES.has(normalized.mode)) return ["unsupported value mode"];
-  if (["actor_level_tiers", "source_level_tiers"].includes(normalized.mode) && normalized.tiers.length === 0) {
+  if (
+    normalized.mode === "proficiency_tiers"
+    && expression?.proficiency?.domain
+    && !EFFECT_PROFICIENCY_DOMAINS.includes(expression.proficiency.domain)
+  ) {
+    return ["unsupported proficiency type"];
+  }
+  if (["actor_level_tiers", "source_level_tiers", "proficiency_tiers"].includes(normalized.mode) && normalized.tiers.length === 0) {
     return ["tiered values require at least one tier"];
   }
+  if (normalized.mode === "proficiency_tiers" && !normalized.proficiency.key) {
+    return ["proficiency scaling requires a proficiency"];
+  }
   return [];
+}
+
+export function resolveActorProficiencyRank(actor = {}, reference = {}) {
+  const proficiency = normalizeProficiencyReference(reference);
+  if (!proficiency.key) return 0;
+
+  const sheet = actor.sheet || {};
+  if (proficiency.domain === "skill") {
+    const aliases = proficiency.key === "performance" ? ["performance", "perform"]
+      : proficiency.key === "intimidation" ? ["intimidation", "intimidate"]
+        : [proficiency.key];
+    return readCaseInsensitiveNumber(actor.skills, sheet.skills, aliases);
+  }
+  if (proficiency.domain === "armor") {
+    return readCaseInsensitiveNumber(
+      actor.stats?.proficiencies,
+      sheet.stats?.proficiencies,
+      actor.proficiencies,
+      sheet.proficiencies,
+      proficiency.key,
+    );
+  }
+  return readCaseInsensitiveNumber(
+    actor.proficiencies,
+    sheet.proficiencies,
+    actor.stats?.proficiencies,
+    sheet.stats?.proficiencies,
+    proficiency.key,
+  );
+}
+
+function normalizeProficiencyReference(reference = {}) {
+  const domain = EFFECT_PROFICIENCY_DOMAINS.includes(reference?.domain || reference?.type)
+    ? (reference.domain || reference.type)
+    : "skill";
+  return {
+    domain,
+    key: String(reference?.key || "").trim().toLowerCase(),
+  };
+}
+
+function readCaseInsensitiveNumber(...values) {
+  const requestedKeys = values.pop();
+  const keys = (Array.isArray(requestedKeys) ? requestedKeys : [requestedKeys])
+    .map(key => String(key || "").toLowerCase());
+  for (const value of values) {
+    if (!value || typeof value !== "object") continue;
+    const matchingKey = Object.keys(value).find(candidate => keys.includes(candidate.toLowerCase()));
+    if (matchingKey) return toFiniteNumber(value[matchingKey], 0);
+  }
+  return 0;
 }
 
 function evaluatePredicate(predicate, context) {

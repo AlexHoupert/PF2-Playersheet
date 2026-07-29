@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { Plus, Trash2, Zap } from "lucide-react";
 
 import {
@@ -6,6 +6,11 @@ import {
   EFFECT_BONUS_TYPES,
   EFFECT_DURATION_UNITS,
   EFFECT_MODES,
+  EFFECT_PROFICIENCY_ARMOR,
+  EFFECT_PROFICIENCY_DOMAINS,
+  EFFECT_PROFICIENCY_RANKS,
+  EFFECT_PROFICIENCY_SKILLS,
+  EFFECT_PROFICIENCY_WEAPONS,
   EFFECT_SELECTOR_REGISTRY,
   EFFECT_TICKS,
   EFFECT_TRIGGERS,
@@ -20,7 +25,7 @@ const PREDICATE_TYPES = [
 ];
 const PREDICATE_OPERATORS = ["eq", "neq", "gte", "lte", "includes", "not_includes"];
 const APPLY_ACTIONS = ["adjust_hp", "ensure_temp_hp", "add_condition", "remove_condition"];
-const VALUE_MODES = ["fixed", "actor_level_multiplier", "actor_level_tiers", "source_level_tiers"];
+const VALUE_MODES = ["fixed", "actor_level_multiplier", "actor_level_tiers", "source_level_tiers", "proficiency_tiers"];
 
 export default function EffectDefinitionEditor({ value = [], onChange, sourceType = "item", sourceSubtype = "" }) {
   const definitions = useMemo(() => normalizeEffectDefinitions(value), [value]);
@@ -211,32 +216,95 @@ function ModifierEditor({ modifier, onChange }) {
 
 function ValueEditor({ value = fixedValue(0), onChange, compact = false }) {
   const expression = typeof value === 'object' ? value : fixedValue(value);
+  const proficiency = expression.proficiency || { domain: 'skill', key: 'performance' };
+  const weaponListId = useId();
+  const canAddTier = expression.mode !== 'proficiency_tiers'
+    || Number(expression.tiers?.at(-1)?.min ?? -1) < EFFECT_PROFICIENCY_RANKS.at(-1).value;
   return (
     <div className={`effect-definition__value ${compact ? 'effect-definition__value--compact' : ''}`}>
       <Field label="Scaling">
-        <select value={expression.mode || 'fixed'} onChange={event => onChange({ ...expression, mode: event.target.value })}>
+        <select value={expression.mode || 'fixed'} onChange={event => onChange(changeValueMode(expression, event.target.value))}>
           {VALUE_MODES.map(option => <option key={option} value={option}>{formatLabel(option)}</option>)}
         </select>
       </Field>
-      <Field label={expression.mode === 'actor_level_multiplier' ? 'Base' : 'Value'}>
+      <Field label={expression.mode === 'actor_level_multiplier' || expression.mode?.includes('_tiers') ? 'Base value' : 'Value'}>
         <input type="number" value={expression.value ?? 0} onChange={event => onChange({ ...expression, value: Number(event.target.value) || 0 })} />
       </Field>
       {expression.mode === 'actor_level_multiplier' && (
         <Field label="Per actor level"><input type="number" step="0.1" value={expression.multiplier ?? 1} onChange={event => onChange({ ...expression, multiplier: Number(event.target.value) || 0 })} /></Field>
       )}
+      {expression.mode === 'proficiency_tiers' && (
+        <>
+          <Field label="Proficiency type">
+            <select
+              aria-label="Proficiency type"
+              value={proficiency.domain}
+              onChange={event => onChange({
+                ...expression,
+                proficiency: defaultProficiencyReference(event.target.value),
+              })}
+            >
+              {EFFECT_PROFICIENCY_DOMAINS.map(option => <option key={option} value={option}>{formatLabel(option)}</option>)}
+            </select>
+          </Field>
+          <ProficiencyTargetField expression={expression} proficiency={proficiency} weaponListId={weaponListId} onChange={onChange} />
+        </>
+      )}
       {expression.mode?.includes('_tiers') && (
         <div className="effect-definition__tiers">
           {(expression.tiers || []).map((tier, index) => (
             <div key={`${tier.min}-${index}`}>
-              <input type="number" min="0" value={tier.min} aria-label="Tier minimum level" onChange={event => onChange({ ...expression, tiers: expression.tiers.map((item, itemIndex) => itemIndex === index ? { ...item, min: Number(event.target.value) || 0 } : item) })} />
+              {expression.mode === 'proficiency_tiers' ? (
+                <select value={tier.min} aria-label="Tier minimum proficiency" onChange={event => onChange({ ...expression, tiers: expression.tiers.map((item, itemIndex) => itemIndex === index ? { ...item, min: Number(event.target.value) || 0 } : item) })}>
+                  {EFFECT_PROFICIENCY_RANKS.map(rank => <option key={rank.value} value={rank.value}>{rank.label}</option>)}
+                </select>
+              ) : (
+                <input type="number" min="0" value={tier.min} aria-label="Tier minimum level" onChange={event => onChange({ ...expression, tiers: expression.tiers.map((item, itemIndex) => itemIndex === index ? { ...item, min: Number(event.target.value) || 0 } : item) })} />
+              )}
               <input type="number" value={tier.value} aria-label="Tier value" onChange={event => onChange({ ...expression, tiers: expression.tiers.map((item, itemIndex) => itemIndex === index ? { ...item, value: Number(event.target.value) || 0 } : item) })} />
               <button type="button" onClick={() => onChange({ ...expression, tiers: expression.tiers.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 size={13} /></button>
             </div>
           ))}
-          <button type="button" onClick={() => onChange({ ...expression, tiers: [...(expression.tiers || []), { min: 1, value: 1 }] })}><Plus size={13} /> Tier</button>
+          <button
+            type="button"
+            disabled={!canAddTier}
+            onClick={() => onChange({ ...expression, tiers: [...(expression.tiers || []), createValueTier(expression)] })}
+          >
+            <Plus size={13} /> Tier
+          </button>
         </div>
       )}
     </div>
+  );
+}
+
+function ProficiencyTargetField({ expression, proficiency, weaponListId, onChange }) {
+  const patchKey = key => onChange({ ...expression, proficiency: { ...proficiency, key } });
+  if (proficiency.domain === 'skill') {
+    return (
+      <Field label="Skill">
+        <select aria-label="Skill" value={proficiency.key} onChange={event => patchKey(event.target.value)}>
+          {EFFECT_PROFICIENCY_SKILLS.map(option => <option key={option} value={option}>{formatLabel(option)}</option>)}
+        </select>
+      </Field>
+    );
+  }
+  if (proficiency.domain === 'armor') {
+    return (
+      <Field label="Armor category">
+        <select aria-label="Armor category" value={proficiency.key} onChange={event => patchKey(event.target.value)}>
+          {EFFECT_PROFICIENCY_ARMOR.map(option => <option key={option} value={option}>{formatLabel(option)}</option>)}
+        </select>
+      </Field>
+    );
+  }
+  return (
+    <Field label="Weapon category or group">
+      <input aria-label="Weapon category or group" list={weaponListId} value={proficiency.key} onChange={event => patchKey(event.target.value)} placeholder="e.g. martial or firearms" />
+      <datalist id={weaponListId}>
+        {EFFECT_PROFICIENCY_WEAPONS.map(option => <option key={option} value={option} />)}
+      </datalist>
+    </Field>
   );
 }
 
@@ -332,6 +400,36 @@ function createModifier(index) {
 
 function fixedValue(value) {
   return { mode: 'fixed', value: Number(value) || 0, multiplier: 0, tiers: [] };
+}
+
+function changeValueMode(expression, mode) {
+  if (mode !== 'proficiency_tiers' || expression.mode === mode) return { ...expression, mode };
+  const baseValue = Number(expression.value) || 0;
+  return {
+    ...expression,
+    mode,
+    proficiency: defaultProficiencyReference('skill'),
+    tiers: [{ min: 6, value: baseValue + 1 }],
+  };
+}
+
+function defaultProficiencyReference(domain) {
+  if (domain === 'armor') return { domain, key: EFFECT_PROFICIENCY_ARMOR[0] };
+  if (domain === 'weapon') return { domain, key: EFFECT_PROFICIENCY_WEAPONS[0] };
+  return { domain: 'skill', key: 'performance' };
+}
+
+function createValueTier(expression) {
+  const previous = expression.tiers?.at(-1);
+  if (expression.mode === 'proficiency_tiers') {
+    const currentIndex = EFFECT_PROFICIENCY_RANKS.findIndex(rank => rank.value === previous?.min);
+    const nextRank = EFFECT_PROFICIENCY_RANKS[Math.min(
+      currentIndex >= 0 ? currentIndex + 1 : 3,
+      EFFECT_PROFICIENCY_RANKS.length - 1,
+    )];
+    return { min: nextRank.value, value: Number(previous?.value ?? expression.value ?? 0) + 1 };
+  }
+  return { min: Number(previous?.min || 0) + 1, value: Number(previous?.value ?? expression.value ?? 0) };
 }
 
 function patchActivationMode(definition, mode, patchNested) {

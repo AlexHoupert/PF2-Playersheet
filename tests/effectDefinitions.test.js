@@ -5,6 +5,7 @@ import {
   advanceEffectDuration,
   applyEffectOnApplyActions,
   materializeEffectDefinition,
+  resolveActorProficiencyRank,
   validateEffectDefinition,
 } from "../src/shared/rules/effectDefinitions.js";
 import { buildDerivedSourceEffects } from "../src/shared/rules/derivedSourceEffects.js";
@@ -38,6 +39,96 @@ test("tiered source and actor scaling materialize to numeric modifiers", () => {
   assert.equal(quicksilver.modifiers.find(item => item.selector === "hp.max").value, -12);
   const applied = applyEffectOnApplyActions({ id: "actor", level: 6, stats: { hp: { current: 40, max: 40, temp: 0 } } }, quicksilver);
   assert.equal(applied.actor.stats.hp.current, 28);
+});
+
+test("proficiency tiers scale modifiers from skill, armor, and weapon ranks", () => {
+  const actor = {
+    id: "performer",
+    skills: { Performance: 6 },
+    stats: { proficiencies: { light: 4 } },
+    proficiencies: { Firearms: 8 },
+  };
+  const effect = materializeEffectDefinition({
+    id: "virtuosic_performer",
+    label: "Virtuosic Performer",
+    activation: { mode: "passive", trigger: "owned" },
+    modifiers: [
+      {
+        id: "performance_bonus",
+        selector: "skill.performance",
+        mode: "bonus",
+        bonusType: "circumstance",
+        value: {
+          mode: "proficiency_tiers",
+          value: 1,
+          proficiency: { domain: "skill", key: "performance" },
+          tiers: [{ min: 6, value: 2 }],
+        },
+      },
+      {
+        id: "armor_bonus",
+        selector: "ac",
+        mode: "bonus",
+        bonusType: "item",
+        value: {
+          mode: "proficiency_tiers",
+          value: 1,
+          proficiency: { domain: "armor", key: "light" },
+          tiers: [{ min: 6, value: 2 }],
+        },
+      },
+      {
+        id: "weapon_bonus",
+        selector: "attack.ranged",
+        mode: "bonus",
+        bonusType: "item",
+        value: {
+          mode: "proficiency_tiers",
+          value: 1,
+          proficiency: { domain: "weapon", key: "firearms" },
+          tiers: [{ min: 6, value: 2 }, { min: 8, value: 3 }],
+        },
+      },
+    ],
+  }, {
+    actor,
+    targetActorId: actor.id,
+    sourceType: "feat",
+    source: { id: "virtuosic", name: "Virtuosic Performer" },
+  });
+
+  assert.deepEqual(effect.modifiers.map(modifier => modifier.value), [2, 1, 3]);
+  assert.equal(resolveActorProficiencyRank({ skills: { Perform: 6 } }, { domain: "skill", key: "performance" }), 6);
+});
+
+test("proficiency scaling validates its target and tiers", () => {
+  const missingTarget = validateEffectDefinition({
+    id: "missing_target",
+    label: "Missing target",
+    activation: { mode: "passive", trigger: "owned" },
+    modifiers: [{
+      selector: "ac",
+      mode: "bonus",
+      bonusType: "status",
+      value: { mode: "proficiency_tiers", value: 1, proficiency: { domain: "skill", key: "" }, tiers: [{ min: 6, value: 2 }] },
+    }],
+  });
+  assert.equal(missingTarget.valid, false);
+  assert.match(missingTarget.errors.join(" "), /requires a proficiency/);
+
+  const invalidDomain = validateEffectDefinition({
+    id: "invalid_domain",
+    label: "Invalid domain",
+    activation: { mode: "passive", trigger: "owned" },
+    modifiers: [{
+      selector: "ac",
+      mode: "bonus",
+      bonusType: "status",
+      value: { mode: "proficiency_tiers", value: 1, proficiency: { domain: "arbitrary", key: "ac" }, tiers: [{ min: 6, value: 2 }] },
+    }],
+  });
+  assert.equal(invalidDomain.valid, false);
+  assert.match(invalidDomain.errors.join(" "), /unsupported proficiency type/);
 });
 
 test("passive Scaly Skin is derived while unarmored and disappears with armor", () => {

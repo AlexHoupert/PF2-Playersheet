@@ -335,7 +335,7 @@ test("creature ability library tolerates incomplete legacy abilities", async ({ 
   await expect(page.locator('input[value="Legacy Smoke Aura"]')).toBeVisible();
 });
 
-test("armor editor loads and persists AC bonus and Dexterity cap", async ({ page }) => {
+test("armor editor persists stats and proficiency-scaled effects", async ({ page }) => {
   await gotoFixture(page, "admin=true");
   await page.getByText("Items", { exact: true }).click();
   await page.getByPlaceholder("Search items...").fill("Ancestral Embrace");
@@ -348,12 +348,28 @@ test("armor editor loads and persists AC bonus and Dexterity cap", async ({ page
   await expect(page.getByTestId("item-editor-acBonus")).toHaveValue("1");
   await expect(page.getByTestId("item-editor-dexCap")).toHaveValue("4");
   await page.getByTestId("item-editor-dexCap").fill("3");
+
+  const effectEditor = page.getByRole("region", { name: "Actor effects" });
+  await effectEditor.getByRole("button", { name: "Add effect" }).click();
+  const proficiencyEffect = effectEditor.locator(".effect-definition").last();
+  await proficiencyEffect.getByLabel("Scaling").selectOption("proficiency_tiers");
+  await expect(proficiencyEffect.getByLabel("Proficiency type", { exact: true })).toHaveValue("skill");
+  await expect(proficiencyEffect.getByLabel("Skill", { exact: true })).toHaveValue("performance");
+  await expect(proficiencyEffect.getByLabel("Tier minimum proficiency", { exact: true })).toHaveValue("6");
+  await expect(proficiencyEffect.getByLabel("Tier value", { exact: true })).toHaveValue("2");
+
   await page.getByRole("button", { name: "Save Item" }).click();
 
   await expect(page.getByTestId("item-editor-dexCap")).toHaveCount(0);
   await armorRow.click({ button: "right" });
   await page.getByText("Edit Item", { exact: true }).click();
   await expect(page.getByTestId("item-editor-dexCap")).toHaveValue("3");
+  const persistedEffect = page.getByRole("region", { name: "Actor effects" }).locator(".effect-definition").last();
+  await expect(persistedEffect.getByLabel("Scaling")).toHaveValue("proficiency_tiers");
+  await expect(persistedEffect.getByLabel("Proficiency type", { exact: true })).toHaveValue("skill");
+  await expect(persistedEffect.getByLabel("Skill", { exact: true })).toHaveValue("performance");
+  await expect(persistedEffect.getByLabel("Tier minimum proficiency", { exact: true })).toHaveValue("6");
+  await expect(persistedEffect.getByLabel("Tier value", { exact: true })).toHaveValue("2");
 });
 
 test("campaign roles gate admin surfaces and spectator edits", async ({ page }) => {

@@ -152,7 +152,8 @@
   margin-bottom: 5px;
 }
 
-.effect-definition__tiers input {
+.effect-definition__tiers input,
+.effect-definition__tiers select {
   min-width: 0;
 }
 
