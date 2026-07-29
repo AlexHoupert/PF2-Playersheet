@@ -6,12 +6,18 @@ const readSource = (path) => readFileSync(new URL(`../${path}`, import.meta.url)
 
 test('the shared dialog shell owns accessibility, modal-layer, and scroll behavior', () => {
     const source = readSource('src/shared/components/dialogs/AppDialogShell.jsx');
+    const styles = readSource('src/shared/components/dialogs/AppDialogShell.css');
 
     assert.match(source, /<ModalLayerMount/);
     assert.match(source, /<Dialog open=/);
     assert.match(source, /grid-rows-\[auto_minmax\(0,1fr\)_auto\]/);
     assert.match(source, /onPointerDownOutside/);
-    assert.match(source, /pb-\[max\(1rem,env\(safe-area-inset-bottom\)\)\]/);
+    assert.match(source, /h-\[94svh\]/);
+    assert.doesNotMatch(source, /dvh/);
+    assert.doesNotMatch(source, /safe-area-inset-bottom/);
+    assert.match(styles, /padding-bottom:\s*1rem/);
+    assert.match(styles, /@media\s*\(display-mode:\s*standalone\)/);
+    assert.match(styles, /env\(safe-area-inset-bottom,\s*0px\)/);
     assert.doesNotMatch(source, /position:\s*['"]fixed/);
 });
 

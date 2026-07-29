@@ -59,6 +59,15 @@ The dev command runs `server/index.js`, not plain `vite`. Use it when testing ca
 - Run `npm run build` for changes affecting imports, generated data, routing, or deployment output when feasible.
 - When changing Firestore rules or v2 persistence on `v2-convergence`, test the V2 runtime path conceptually or manually; legacy is import/backup compatibility, not the normal app runtime.
 
+## Firefox Android Layout Checks
+
+- Treat Firefox Android with `Scroll to hide toolbar` enabled as a separate mobile layout target. GeckoView can update the visual viewport and safe-area environment values during taps, scrolling, and toolbar transitions even when Chromium-based mobile browsers remain stable.
+- For persistent mobile UI such as dialogs, drawers, sticky footers, and bottom navigation, do not use `dvh` or a dynamic `env(safe-area-inset-*)` directly unless the element is intentionally expected to resize with browser chrome.
+- Prefer stable `svh` sizing for bounded modal surfaces. Apply dynamic safe-area padding only in display modes that need it, such as an installed standalone PWA, and keep regular browser-mode footer dimensions stable.
+- Before accepting a mobile overlay change, check opening, tapping, vertical scrolling, horizontal swiping, and browser-toolbar hide/show transitions. Watch specifically for blank footer rows, jumping fixed controls, and changing scroll ownership.
+- Desktop Playwright Firefox does not reproduce GeckoView's dynamic toolbar. Keep automated layout guards, but record a real-device Firefox Android smoke as required whenever viewport-anchored mobile UI changes.
+- Do not introduce portals, VisualViewport JavaScript, or global fixed-position workarounds solely for a Firefox symptom until stable CSS sizing and inset handling have been ruled out.
+
 ## Documentation Maintenance
 
 `agent_context.md` should stay short and high-signal. Put deeper details in `docs/agent/`.

@@ -12,12 +12,13 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { ModalLayerMount } from '../../overlays/ModalLayerProvider';
+import './AppDialogShell.css';
 
 const SIZE_CLASSES = Object.freeze({
-    sm: 'sm:h-[min(90dvh,36rem)] sm:max-w-lg',
-    md: 'sm:h-[min(90dvh,44rem)] sm:max-w-2xl',
-    lg: 'sm:h-[min(90dvh,52rem)] sm:max-w-4xl',
-    viewport: 'sm:h-[90dvh] sm:max-w-[min(1100px,calc(100vw-2rem))]',
+    sm: 'sm:h-[min(90svh,36rem)] sm:max-w-lg',
+    md: 'sm:h-[min(90svh,44rem)] sm:max-w-2xl',
+    lg: 'sm:h-[min(90svh,52rem)] sm:max-w-4xl',
+    viewport: 'sm:h-[90svh] sm:max-w-[min(1100px,calc(100vw-2rem))]',
 });
 
 export default function AppDialogShell({
@@ -76,7 +77,7 @@ export default function AppDialogShell({
                     data-app-dialog-shell
                     data-player-interaction-lock="true"
                     className={cn(
-                        'grid h-[94dvh] w-[96vw] max-w-[96vw] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0',
+                        'grid h-[94svh] w-[96vw] max-w-[96vw] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0',
                         sizeClassName,
                         contentClassName
                     )}
@@ -126,7 +127,7 @@ export default function AppDialogShell({
                         {children}
                     </div>
 
-                    <DialogFooter data-app-dialog-footer className={cn('m-0 rounded-none border-t border-border/70 bg-muted/50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]', footerClassName)}>
+                    <DialogFooter data-app-dialog-footer className={cn('app-dialog-shell__footer m-0 rounded-none border-t border-border/70 bg-muted/50 p-4', footerClassName)}>
                         {resolvedFooter}
                         {showDefaultClose ? (
                             <Button type="button" variant="outline" onClick={() => requestClose('footer')}>

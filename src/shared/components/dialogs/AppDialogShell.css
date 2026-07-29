@@ -1,0 +1,9 @@
+.app-dialog-shell__footer {
+    padding-bottom: 1rem;
+}
+
+@media (display-mode: standalone) {
+    .app-dialog-shell__footer {
+        padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    }
+}
