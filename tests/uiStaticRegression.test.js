@@ -278,7 +278,8 @@ test('player page cutover uses registry renderer instead of header mode switch',
     assert.match(carouselSource, /containScroll: false/);
     assert.match(carouselSource, /loop: loopPages && displayPages\.length > 1/);
     assert.match(carouselSource, /Reorder\.Group/);
-    assert.match(carouselSource, /REORDER_HOLD_MS = 500/);
+    assert.match(carouselSource, /REORDER_HOLD_MS = 2000/);
+    assert.match(carouselSource, /TAB_SWIPE_THRESHOLD = 48/);
     assert.match(carouselSource, /getPlayerNavIconSrc\(page\.icon\)/);
     assert.match(rendererSource, /<ActionsView[\s\S]*hideTabs=\{true\}/);
     assert.match(rendererSource, /<InventoryView[\s\S]*hideTabs=\{true\}/);

@@ -96,23 +96,52 @@ test("player skill sorting and personal tab order persist across reload", async 
     .toHaveAttribute("data-testid", "player-carousel-page-character.feats");
 });
 
-test("player tabs enter reorder mode only after hold and can be dragged", async ({ page }) => {
+test("player tabs preserve taps and swipes before the two-second reorder hold", async ({ page }) => {
   await gotoFixture(page);
   await expectFixtureRoute(page, "player");
   await openPlayerPage(page, "Character", "character.status");
 
-  const statusTab = page.getByTestId("player-carousel-page-character.status");
-  const featsTab = page.getByTestId("player-carousel-page-character.feats");
-  const statusBox = await statusTab.boundingBox();
+  let statusTab = page.getByTestId("player-carousel-page-character.status");
+  let featsTab = page.getByTestId("player-carousel-page-character.feats");
+
+  await featsTab.click();
+  await expect(featsTab).toHaveAttribute("aria-current", "page");
+  await statusTab.click();
+  await expect(statusTab).toHaveAttribute("aria-current", "page");
+
+  let statusBox = await statusTab.boundingBox();
+  if (!statusBox) throw new Error("Status tab is not measurable");
+  await page.mouse.move(statusBox.x + statusBox.width * 0.75, statusBox.y + statusBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(statusBox.x - 70, statusBox.y + statusBox.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect(featsTab).toHaveAttribute("aria-current", "page");
+
+  await statusTab.click();
+  await expect(statusTab).toHaveAttribute("aria-current", "page");
+  statusBox = await statusTab.boundingBox();
+  if (!statusBox) throw new Error("Status tab is not measurable after swipe");
+  await page.mouse.move(statusBox.x + statusBox.width / 2, statusBox.y + statusBox.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(1000);
+  await expect(statusTab).not.toHaveAttribute("aria-grabbed", "true");
+  await page.mouse.up();
+  await expect(statusTab).toHaveAttribute("aria-current", "page");
+
+  statusTab = page.getByTestId("player-carousel-page-character.status");
+  featsTab = page.getByTestId("player-carousel-page-character.feats");
+  statusBox = await statusTab.boundingBox();
   const featsBox = await featsTab.boundingBox();
   if (!statusBox || !featsBox) throw new Error("Character tabs are not measurable");
 
   await page.mouse.move(statusBox.x + statusBox.width / 2, statusBox.y + statusBox.height / 2);
   await page.mouse.down();
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(1250);
   await expect(statusTab).not.toHaveAttribute("aria-grabbed", "true");
-  await page.waitForTimeout(320);
+  await page.waitForTimeout(850);
   await expect(statusTab).toHaveAttribute("aria-grabbed", "true");
+  await expect(page.getByTestId("player-subpage-carousel")).toHaveAttribute("data-reordering", "true");
+  await expect(featsTab).toBeVisible();
   await page.mouse.move(featsBox.x + featsBox.width / 2, featsBox.y + featsBox.height / 2, { steps: 12 });
   await page.mouse.up();
 
