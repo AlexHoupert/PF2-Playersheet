@@ -70,6 +70,57 @@ test("player fixture route loads character, quests, loot, shop, and spell overri
   await expect(page.getByText("Show all available Items")).toBeVisible();
 });
 
+test("player skill sorting and personal tab order persist across reload", async ({ page }) => {
+  await gotoFixture(page);
+  await expectFixtureRoute(page, "player");
+  await openPlayerPage(page, "Character", "character.status");
+
+  const skillRows = page.locator('[data-testid^="player-skill-row-"]');
+  await expect(skillRows.first()).toHaveAttribute("data-testid", "player-skill-row-arcana");
+  await page.getByTestId("player-skill-sort").click();
+  await expect(skillRows.first()).toHaveAttribute("data-testid", "player-skill-row-thievery");
+  await expect(page.getByTestId("player-skill-sort")).toHaveAttribute("aria-label", /highest value/i);
+
+  const statusTab = page.getByTestId("player-carousel-page-character.status");
+  await statusTab.focus();
+  await page.keyboard.press("Alt+ArrowRight");
+  await expect(page.locator('[data-testid^="player-carousel-page-character."]').first())
+    .toHaveAttribute("data-testid", "player-carousel-page-character.feats");
+  await expect(page.getByTestId("player-carousel-page-character.proficiencies")).toHaveCount(0);
+
+  await reloadFixture(page);
+  await expectFixtureRoute(page, "player");
+  await expect(page.locator('[data-testid^="player-skill-row-"]').first())
+    .toHaveAttribute("data-testid", "player-skill-row-thievery");
+  await expect(page.locator('[data-testid^="player-carousel-page-character."]').first())
+    .toHaveAttribute("data-testid", "player-carousel-page-character.feats");
+});
+
+test("player tabs enter reorder mode only after hold and can be dragged", async ({ page }) => {
+  await gotoFixture(page);
+  await expectFixtureRoute(page, "player");
+  await openPlayerPage(page, "Character", "character.status");
+
+  const statusTab = page.getByTestId("player-carousel-page-character.status");
+  const featsTab = page.getByTestId("player-carousel-page-character.feats");
+  const statusBox = await statusTab.boundingBox();
+  const featsBox = await featsTab.boundingBox();
+  if (!statusBox || !featsBox) throw new Error("Character tabs are not measurable");
+
+  await page.mouse.move(statusBox.x + statusBox.width / 2, statusBox.y + statusBox.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(250);
+  await expect(statusTab).not.toHaveAttribute("aria-grabbed", "true");
+  await page.waitForTimeout(320);
+  await expect(statusTab).toHaveAttribute("aria-grabbed", "true");
+  await page.mouse.move(featsBox.x + featsBox.width / 2, featsBox.y + featsBox.height / 2, { steps: 12 });
+  await page.mouse.up();
+
+  await expect(page.locator('[data-testid^="player-carousel-page-character."]').first())
+    .toHaveAttribute("data-testid", "player-carousel-page-character.feats");
+  await expect(page.getByTestId("player-carousel-page-character.status")).not.toHaveAttribute("aria-grabbed", "true");
+});
+
 test("universal rounds load a slide pistol and versatile vials reuse formula filters", async ({ page }) => {
   await gotoFixture(page);
 

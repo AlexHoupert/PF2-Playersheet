@@ -2,8 +2,15 @@ import React from 'react';
 import { calculateStat } from '../../utils/rules';
 import { LongPressable } from '../../shared/components/LongPressable';
 import SkillProficiencyIndicator from '../components/SkillProficiencyIndicator';
+import { sortPlayerSkillRows } from '../skills/playerSkillSorting';
 
-export function SkillsSection({ character, onOpenModal, onLongPress, proficiencyDisplay = 'none' }) {
+export function SkillsSection({
+    character,
+    onOpenModal,
+    onLongPress,
+    proficiencyDisplay = 'none',
+    sortMode = 'alphabetical',
+}) {
     const skillAbility = {
         acrobatics: 'Dex',
         arcana: 'Int',
@@ -26,12 +33,12 @@ export function SkillsSection({ character, onOpenModal, onLongPress, proficiency
     };
 
     const renderSkills = () => {
-        return Object.entries(character.skills).sort().map(([name, val]) => {
+        const rows = Object.entries(character?.skills || {}).flatMap(([name, val]) => {
             // Legacy check: some old dbs might have null values, ignore unless explicitly 0
-            if (!val && val !== 0) return null;
+            if (!val && val !== 0) return [];
 
             // Hide legacy Lore_1, Lore_2, etc. (User request)
-            if (name.match(/^Lore_\d+$/)) return null;
+            if (name.match(/^Lore_\d+$/)) return [];
 
             const calc = calculateStat(character, name, val);
             const isTrained = val > 0;
@@ -52,8 +59,14 @@ export function SkillsSection({ character, onOpenModal, onLongPress, proficiency
 
             const label = ability ? `${displayName} (${ability})` : displayName;
 
+            return [{ name, val, calc, isTrained, label, displayName }];
+        });
+
+        return sortPlayerSkillRows(rows, sortMode).map(({ name, val, calc, isTrained, label }) => {
             return (
                 <LongPressable className="item-row" key={name}
+                    data-testid={`player-skill-row-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                    data-skill-total={calc.total}
                     onClick={() => onOpenModal('detail', { title: name.replace('_', ' '), ...calc })}
                     onLongPress={() => onLongPress && onLongPress({ key: name, name: label }, 'skill')}
                     style={{ marginBottom: '4px' }}

@@ -11,6 +11,10 @@ export default function PlayerDesktopNav({
     alertsByPage = {},
     metadataByPage = {},
     loopPages = true,
+    onCommitPageOrder,
+    onReorderStateChange,
+    settingsError,
+    settingsSaving,
 }) {
     const activeCategoryId = getCategoryIdForPlayerPage(activePageId);
     const visibleCategories = getVisiblePlayerNavCategories(navigationContext);
@@ -39,6 +43,10 @@ export default function PlayerDesktopNav({
                 metadataByPage={metadataByPage}
                 loopPages={loopPages}
                 onSelectPage={onSelectPage}
+                onCommitPageOrder={onCommitPageOrder}
+                onReorderStateChange={onReorderStateChange}
+                settingsError={settingsError}
+                settingsSaving={settingsSaving}
             />
         </nav>
     );

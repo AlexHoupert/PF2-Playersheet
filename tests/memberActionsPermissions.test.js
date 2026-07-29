@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createDataActions } from "../src/shared/db/domain/createDataActions.js";
+import { normalizePlayerUserSettings } from "../src/player/settings/playerUserSettings.js";
 
 const firestore = { app: { options: { projectId: "test-project" } } };
 
@@ -55,15 +56,17 @@ test("member stores normalized personal settings through a targeted self update"
 
   await actions.member.updateOwnSettings("campaign", {
     skillProficiencyDisplay: "STARS",
+    skillSortMode: "value",
     loopPages: false,
   });
 
   assert.deepEqual(calls, [{
     campaignId: "campaign",
     email: "gm@example.test",
-    settings: {
+    settings: normalizePlayerUserSettings({
       skillProficiencyDisplay: "stars",
+      skillSortMode: "value",
       loopPages: false,
-    },
+    }),
   }]);
 });

@@ -48,7 +48,7 @@ export function createE2eV2Store() {
               speed: { land: 25 },
               class_dc: 20,
             },
-            skills: { Arcana: 7, Performance: 6 },
+            skills: { Arcana: 7, Performance: 6, Thievery: 8 },
             inventory: [
               {
                 instanceId: "e2e_item_alchemist_fire",

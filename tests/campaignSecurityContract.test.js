@@ -18,7 +18,9 @@ test("campaign Firestore contract encodes member roles and scoped writes", () =>
   assert.match(rules, /match \/members\/\{email\}[\s\S]*allow create, delete: if isCampaignGm/);
   assert.match(rules, /match \/members\/\{email\}[\s\S]*request\.auth\.token\.email == email[\s\S]*affectedKeys\(\)\.hasOnly/);
   assert.match(rules, /skillProficiencyDisplay in \['none', 'short', 'full', 'stars'\]/);
+  assert.match(rules, /skillSortMode in \['alphabetical', 'value'\]/);
   assert.match(rules, /settings\.loopPages is bool/);
+  assert.match(rules, /pageOrderByCategory\.character\.hasOnly/);
   assert.match(rules, /match \/catalogEntries\/\{entryId\}[\s\S]*request\.resource\.data\.mode == 'custom'[\s\S]*request\.resource\.data\.ownerEmail == request\.auth\.token\.email/);
   assert.match(rules, /match \/catalogChangeEvents\/\{eventId\}[\s\S]*allow delete: if false/);
   assert.match(rules, /match \/effectRequests\/\{requestId\}[\s\S]*isAssignedActor\(campaignId, request\.resource\.data\.sourceActorId\)/);

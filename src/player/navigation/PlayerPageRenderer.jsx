@@ -78,6 +78,7 @@ export default function PlayerPageRenderer({
     toggleInventoryEquipped,
     updateCharacter,
     userSettings,
+    onChangeSkillSort,
 }) {
     if (activePageId === PLAYER_PAGE_IDS.STATUS) {
         return (
@@ -99,6 +100,7 @@ export default function PlayerPageRenderer({
                 }}
                 readOnly={readOnly}
                 userSettings={userSettings}
+                onChangeSkillSort={onChangeSkillSort}
             />
         );
     }

@@ -52,7 +52,7 @@ export const PLAYER_NAV_CATEGORIES = [
             { id: PLAYER_PAGE_IDS.IMPULSES, label: 'Impulses', legacyTab: 'impulses', legacyMode: 'character', icon: 'lightning-arc', requires: 'impulses' },
             { id: PLAYER_PAGE_IDS.PACT, label: 'Pact', legacyTab: 'pact', legacyMode: 'character', icon: 'shaking-hands' },
             { id: PLAYER_PAGE_IDS.COMPANION, label: 'Companion', legacyTab: 'companion', legacyMode: 'character', icon: 'wolf-head', requires: 'companion' },
-            { id: PLAYER_PAGE_IDS.PROFICIENCIES, label: 'Proficiencies', future: true, icon: 'crossed-swords' },
+            { id: PLAYER_PAGE_IDS.PROFICIENCIES, label: 'Proficiencies', future: true, hidden: true, icon: 'crossed-swords' },
         ],
     },
     {
@@ -107,6 +107,13 @@ export const PLAYER_NAV_CATEGORIES = [
     },
 ];
 
+export const DEFAULT_PLAYER_PAGE_ORDER = Object.freeze(Object.fromEntries(
+    PLAYER_NAV_CATEGORIES.map((category) => [
+        category.id,
+        Object.freeze(category.pages.map((page) => page.id)),
+    ])
+));
+
 const PAGE_BY_ID = new Map(
     PLAYER_NAV_CATEGORIES.flatMap((category) =>
         category.pages.map((page) => [page.id, { ...page, categoryId: category.id }])
@@ -120,11 +127,12 @@ export function getPlayerCategory(categoryId) {
 }
 
 export function getVisiblePlayerNavCategories(navigationContext = {}) {
-    const capabilities = normalizeNavigationCapabilities(navigationContext);
+    const context = normalizeNavigationContext(navigationContext);
     return PLAYER_NAV_CATEGORIES
+        .map((category) => applyPlayerPageOrder(category, context.pageOrderByCategory))
         .map((category) => ({
             ...category,
-            pages: category.pages.filter((page) => isPlayerPageVisible(page, capabilities)),
+            pages: category.pages.filter((page) => isPlayerPageVisible(page, context)),
         }))
         .filter((category) => category.pages.length > 0);
 }
@@ -140,7 +148,7 @@ export function getPlayerPage(pageId) {
 export function getVisiblePlayerPage(pageId, navigationContext = {}) {
     const page = getPlayerPage(pageId);
     if (!page) return null;
-    return isPlayerPageVisible(page, normalizeNavigationCapabilities(navigationContext)) ? page : null;
+    return isPlayerPageVisible(page, normalizeNavigationContext(navigationContext)) ? page : null;
 }
 
 export function getDefaultPageForCategory(categoryId) {
@@ -206,9 +214,9 @@ export function getCategoryIdForPlayerPage(pageId) {
     return getPlayerPage(pageId)?.categoryId || PLAYER_CATEGORY_IDS.CHARACTER;
 }
 
-export function getPlayerSubpageCarouselItems(pageId, radius = 2) {
+export function getPlayerSubpageCarouselItems(pageId, radius = 2, navigationContext = {}) {
     const page = getPlayerPage(pageId);
-    const category = getPlayerCategory(page?.categoryId);
+    const category = getVisiblePlayerCategory(page?.categoryId, navigationContext);
     const pages = category?.pages || [];
     if (!page || pages.length === 0) return [];
 
@@ -235,11 +243,95 @@ export function isFuturePlayerPage(pageId) {
     return Boolean(getPlayerPage(pageId)?.future);
 }
 
-export function buildPlayerNavigationContext({ character, ownedCompanionActors } = {}) {
+export function buildPlayerNavigationContext({ character, ownedCompanionActors, pageOrderByCategory } = {}) {
     return {
         hasMagic: characterHasMagic(character),
         hasImpulses: characterHasImpulses(character),
         hasCompanion: characterHasCompanion(character, ownedCompanionActors),
+        pageOrderByCategory: normalizePlayerPageOrder(pageOrderByCategory),
+    };
+}
+
+export function normalizePlayerPageOrder(pageOrderByCategory = {}) {
+    const source = pageOrderByCategory && typeof pageOrderByCategory === 'object'
+        ? pageOrderByCategory
+        : {};
+
+    return Object.fromEntries(PLAYER_NAV_CATEGORIES.map((category) => {
+        const defaultOrder = DEFAULT_PLAYER_PAGE_ORDER[category.id];
+        const allowedIds = new Set(defaultOrder);
+        const seen = new Set();
+        const normalized = [];
+        const requested = Array.isArray(source[category.id]) ? source[category.id] : [];
+
+        requested.forEach((pageId) => {
+            if (!allowedIds.has(pageId) || seen.has(pageId)) return;
+            seen.add(pageId);
+            normalized.push(pageId);
+        });
+        defaultOrder.forEach((pageId) => {
+            if (seen.has(pageId)) return;
+            seen.add(pageId);
+            normalized.push(pageId);
+        });
+
+        return [category.id, normalized];
+    }));
+}
+
+export function applyPlayerPageOrder(category, pageOrderByCategory = {}) {
+    if (!category?.id || !Array.isArray(category.pages)) return category;
+    const normalized = normalizePlayerPageOrder(pageOrderByCategory);
+    const pageById = new Map(category.pages.map((page) => [page.id, page]));
+    return {
+        ...category,
+        pages: (normalized[category.id] || [])
+            .map((pageId) => pageById.get(pageId))
+            .filter(Boolean),
+    };
+}
+
+export function movePlayerPageWithinCategory({
+    categoryId,
+    pageId,
+    targetPageId,
+    pageOrderByCategory,
+}) {
+    const normalized = normalizePlayerPageOrder(pageOrderByCategory);
+    const order = [...(normalized[categoryId] || [])];
+    const sourceIndex = order.indexOf(pageId);
+    const targetIndex = order.indexOf(targetPageId);
+    if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) return normalized;
+
+    order.splice(sourceIndex, 1);
+    order.splice(targetIndex, 0, pageId);
+    return {
+        ...normalized,
+        [categoryId]: order,
+    };
+}
+
+export function mergeVisiblePlayerPageOrder({
+    categoryId,
+    visiblePageIds,
+    pageOrderByCategory,
+}) {
+    const normalized = normalizePlayerPageOrder(pageOrderByCategory);
+    const current = normalized[categoryId] || [];
+    const visibleSet = new Set(current.filter((pageId) => visiblePageIds.includes(pageId)));
+    const requested = visiblePageIds.filter((pageId, index) => (
+        visibleSet.has(pageId) && visiblePageIds.indexOf(pageId) === index
+    ));
+    let requestedIndex = 0;
+    const nextOrder = current.map((pageId) => {
+        if (!visibleSet.has(pageId)) return pageId;
+        const nextPageId = requested[requestedIndex];
+        requestedIndex += 1;
+        return nextPageId || pageId;
+    });
+    return {
+        ...normalized,
+        [categoryId]: nextOrder,
     };
 }
 
@@ -265,7 +357,7 @@ function inferModeForLegacyTab(activeTab) {
     return ['quests', 'lore', 'maps', 'progress', 'camp'].includes(activeTab) ? 'story' : 'character';
 }
 
-function normalizeNavigationCapabilities(navigationContext = {}) {
+function normalizeNavigationContext(navigationContext = {}) {
     if (
         Object.prototype.hasOwnProperty.call(navigationContext, 'hasMagic') ||
         Object.prototype.hasOwnProperty.call(navigationContext, 'hasImpulses') ||
@@ -275,6 +367,7 @@ function normalizeNavigationCapabilities(navigationContext = {}) {
             hasMagic: Boolean(navigationContext.hasMagic),
             hasImpulses: Boolean(navigationContext.hasImpulses),
             hasCompanion: Boolean(navigationContext.hasCompanion),
+            pageOrderByCategory: normalizePlayerPageOrder(navigationContext.pageOrderByCategory),
         };
     }
 
@@ -282,10 +375,12 @@ function normalizeNavigationCapabilities(navigationContext = {}) {
         hasMagic: true,
         hasImpulses: true,
         hasCompanion: true,
+        pageOrderByCategory: normalizePlayerPageOrder(navigationContext.pageOrderByCategory),
     };
 }
 
 function isPlayerPageVisible(page, capabilities) {
+    if (page?.hidden) return false;
     if (!page?.requires) return true;
     if (page.requires === 'magic') return capabilities.hasMagic;
     if (page.requires === 'impulses') return capabilities.hasImpulses;

@@ -174,6 +174,7 @@ Migrated paths:
 - Encounter creature reveal-state writes use `dataActions.bestiary.updateRevealState`.
 - Player root-notification clearing uses `dataActions.globalContent.clearRootNotification`.
 - Player skill-name runtime repair uses `dataActions.character.updateCharacter`.
+- Player member settings persist skill display/sort preferences, page looping, and a normalized per-category `pageOrderByCategory`. The same ordered registry drives the Player carousel, drawer, page renderer, and swipe adjacency; Proficiencies remains an internal hidden page until its feature is implemented.
 - Pacts, Abilities, Bestiary, Shop, Items, Encounter, Party, and Player inventory reads use selector helpers instead of component-local root-field fallbacks. Lore uses the dedicated shared model/store/selector layer under `src/shared/lore/`.
 
 Soft delete uses `deletedAt`/`deletedBy`; restore removes those fields and sets `restoredAt`/`restoredBy`. `CampaignContext.campaigns`, actor-first character selectors, `activeCampaign.quests`, `activeCampaign.encounters`, and `activeCampaign.maps` expose active records; `archivedCampaigns`, actor-first archived character selectors, `activeCampaign.archivedQuests`, `activeCampaign.archivedEncounters`, and `activeCampaign.archivedMaps` expose archived records.

@@ -10,6 +10,9 @@ import {
     getVisiblePlayerPageId,
     isFuturePlayerPage,
     isPlayerPageCompatibleWithLegacyNavigation,
+    mergeVisiblePlayerPageOrder,
+    movePlayerPageWithinCategory,
+    normalizePlayerPageOrder,
     PLAYER_NAV_CATEGORIES,
     PLAYER_PAGE_IDS,
 } from '../src/player/navigation/playerPageRegistry.js';
@@ -89,6 +92,7 @@ test('player navigation registry keeps future dummy pages explicit and non-legac
     assert.equal(isFuturePlayerPage(PLAYER_PAGE_IDS.EXPLORATION), true);
     assert.equal(isFuturePlayerPage(PLAYER_PAGE_IDS.CRAFTING), true);
     assert.equal(getLegacyNavigationForPlayerPage(PLAYER_PAGE_IDS.CRAFTING), null);
+    assert.equal(getVisiblePlayerPageId(PLAYER_PAGE_IDS.PROFICIENCIES), PLAYER_PAGE_IDS.STATUS);
 });
 
 test('player navigation registry validates subpage compatibility with legacy state', () => {
@@ -106,7 +110,7 @@ test('player navigation registry validates subpage compatibility with legacy sta
 test('player subpage swipe stays within the active category', () => {
     assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.STATUS, 'next'), PLAYER_PAGE_IDS.FEATS);
     assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.FEATS, 'previous'), PLAYER_PAGE_IDS.STATUS);
-    assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.PROFICIENCIES, 'next'), PLAYER_PAGE_IDS.STATUS);
+    assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.PROFICIENCIES, 'next'), null);
     assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.QUESTS, 'previous'), PLAYER_PAGE_IDS.CAMP);
     assert.equal(getSwipeTargetPlayerPageId(PLAYER_PAGE_IDS.EQUIPMENT, 80), PLAYER_PAGE_IDS.CONSUMABLES);
     assert.equal(getSwipeTargetPlayerPageId(PLAYER_PAGE_IDS.EQUIPMENT, -80), PLAYER_PAGE_IDS.LOOT);
@@ -147,10 +151,87 @@ test('player navigation hides optional magic impulse and companion pages when un
         PLAYER_PAGE_IDS.STATUS,
         PLAYER_PAGE_IDS.FEATS,
         PLAYER_PAGE_IDS.PACT,
-        PLAYER_PAGE_IDS.PROFICIENCIES,
     ]);
     assert.equal(getVisiblePlayerPageId(PLAYER_PAGE_IDS.MAGIC, navigationContext), PLAYER_PAGE_IDS.STATUS);
     assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.FEATS, 'next', navigationContext), PLAYER_PAGE_IDS.PACT);
+});
+
+test('player page order normalization removes invalid duplicates and appends missing pages', () => {
+    const normalized = normalizePlayerPageOrder({
+        character: [PLAYER_PAGE_IDS.FEATS, PLAYER_PAGE_IDS.FEATS, 'character.unknown'],
+    });
+
+    assert.equal(normalized.character[0], PLAYER_PAGE_IDS.FEATS);
+    assert.equal(normalized.character.filter((pageId) => pageId === PLAYER_PAGE_IDS.FEATS).length, 1);
+    assert.ok(normalized.character.includes(PLAYER_PAGE_IDS.STATUS));
+    assert.ok(normalized.character.includes(PLAYER_PAGE_IDS.PROFICIENCIES));
+});
+
+test('personal page order drives visible pages and swipe neighbors', () => {
+    const pageOrderByCategory = normalizePlayerPageOrder({
+        skills: [
+            PLAYER_PAGE_IDS.CAMPING_SKILLS,
+            PLAYER_PAGE_IDS.COMBAT,
+            PLAYER_PAGE_IDS.MOVEMENT,
+            PLAYER_PAGE_IDS.GENERAL,
+            PLAYER_PAGE_IDS.DOWNTIME,
+            PLAYER_PAGE_IDS.EXPLORATION,
+        ],
+    });
+    const navigationContext = { pageOrderByCategory };
+
+    assert.equal(
+        getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.CAMPING_SKILLS, 'next', navigationContext),
+        PLAYER_PAGE_IDS.COMBAT
+    );
+    assert.equal(
+        getAdjacentPlayerSubpageId(
+            PLAYER_PAGE_IDS.CAMPING_SKILLS,
+            'previous',
+            navigationContext,
+            { loopPages: false }
+        ),
+        null
+    );
+});
+
+test('reordering visible pages preserves the stored slot of a dynamically hidden page', () => {
+    const current = normalizePlayerPageOrder({
+        character: [
+            PLAYER_PAGE_IDS.STATUS,
+            PLAYER_PAGE_IDS.MAGIC,
+            PLAYER_PAGE_IDS.FEATS,
+            PLAYER_PAGE_IDS.PACT,
+        ],
+    });
+    const merged = mergeVisiblePlayerPageOrder({
+        categoryId: 'character',
+        visiblePageIds: [PLAYER_PAGE_IDS.FEATS, PLAYER_PAGE_IDS.STATUS, PLAYER_PAGE_IDS.PACT],
+        pageOrderByCategory: current,
+    });
+
+    assert.deepEqual(merged.character.slice(0, 4), [
+        PLAYER_PAGE_IDS.FEATS,
+        PLAYER_PAGE_IDS.MAGIC,
+        PLAYER_PAGE_IDS.STATUS,
+        PLAYER_PAGE_IDS.PACT,
+    ]);
+});
+
+test('keyboard page moves remain scoped to their category', () => {
+    const moved = movePlayerPageWithinCategory({
+        categoryId: 'campaign',
+        pageId: PLAYER_PAGE_IDS.MAPS,
+        targetPageId: PLAYER_PAGE_IDS.QUESTS,
+        pageOrderByCategory: {},
+    });
+
+    assert.deepEqual(moved.campaign, [
+        PLAYER_PAGE_IDS.MAPS,
+        PLAYER_PAGE_IDS.QUESTS,
+        PLAYER_PAGE_IDS.PROGRESS,
+        PLAYER_PAGE_IDS.CAMP,
+    ]);
 });
 
 test('player navigation shows optional pages when the character has matching features', () => {

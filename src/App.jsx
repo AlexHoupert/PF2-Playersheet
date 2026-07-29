@@ -32,13 +32,15 @@ function E2eFixtureApp() {
         const store = createE2eV2Store();
         const params = new URLSearchParams(window.location.search);
         const requestedRole = params.get('e2eRole');
+        const campaign = Object.values(store.campaigns || {})[0];
+        const member = campaign?.members?.['e2e.player@example.test'];
+        const persistedSettings = runtimeDb?.users?.['e2e.player@example.test']?.settings;
+        if (member && persistedSettings) member.settings = persistedSettings;
         if (requestedRole || params.get('admin') === 'true') {
-            const campaign = Object.values(store.campaigns || {})[0];
-            const member = campaign?.members?.['e2e.player@example.test'];
             if (member) member.role = requestedRole || 'gm';
         }
         return store;
-    }, []);
+    }, []); // The fixture store is rebuilt from persisted runtime data when the page reloads.
     React.useEffect(() => {
         localStorage.setItem('pf2:e2e-runtime-db', JSON.stringify(runtimeDb));
     }, [runtimeDb]);

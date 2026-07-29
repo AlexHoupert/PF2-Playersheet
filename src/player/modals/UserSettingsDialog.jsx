@@ -9,6 +9,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { normalizePlayerPageOrder } from '../navigation/playerPageRegistry';
 import {
     normalizePlayerUserSettings,
     SKILL_PROFICIENCY_DISPLAY,
@@ -77,6 +79,24 @@ export default function UserSettingsDialog({ open, settings, onSave, onClose }) 
                         checked={form.loopPages}
                         onCheckedChange={checked => setForm(current => ({ ...current, loopPages: checked }))}
                     />
+                </div>
+
+                <div className="flex items-center justify-between gap-4 rounded-md border border-border p-4">
+                    <div className="space-y-1">
+                        <Label>Tab Order</Label>
+                        <p className="text-sm text-muted-foreground">Restore the default page order in every category.</p>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setForm(current => ({
+                            ...current,
+                            pageOrderByCategory: normalizePlayerPageOrder(),
+                        }))}
+                    >
+                        Reset Tab Order
+                    </Button>
                 </div>
             </form>
         </FormDialog>

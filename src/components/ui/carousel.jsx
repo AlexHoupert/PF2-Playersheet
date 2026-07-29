@@ -48,6 +48,7 @@ function Carousel({
   }, [api])
 
   const handleKeyDown = React.useCallback((event) => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return
     if (event.key === "ArrowLeft") {
       event.preventDefault()
       scrollPrev()
@@ -101,6 +102,7 @@ function Carousel({
 
 function CarouselContent({
   className,
+  trackComponent: TrackComponent = "div",
   ...props
 }) {
   const { carouselRef, orientation } = useCarousel()
@@ -110,7 +112,7 @@ function CarouselContent({
       ref={carouselRef}
       className="overflow-hidden"
       data-slot="carousel-content">
-      <div
+      <TrackComponent
         className={cn(
           "flex",
           orientation === "horizontal" ? "-ml-4" : "-mt-4 flex-col",
@@ -123,12 +125,15 @@ function CarouselContent({
 
 function CarouselItem({
   className,
+  as: ItemComponent = "div",
+  itemAs,
   ...props
 }) {
   const { orientation } = useCarousel()
 
   return (
-    <div
+    <ItemComponent
+      {...(itemAs ? { as: itemAs } : {})}
       role="group"
       aria-roledescription="slide"
       data-slot="carousel-item"

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useCampaign } from '../shared/context/CampaignContext';
 
 import SpellScrollSelectorModal from './modals/SpellScrollSelectorModal';
@@ -22,9 +22,9 @@ import PlayerCatalogEditorHost from './components/PlayerCatalogEditorHost';
 import { selectCampaignLoreArticles } from '../shared/db/selectors/loreSelectors';
 import { buildLoreAlertsByPage } from '../shared/lore/loreSelectors';
 import { usePlayerLoreStore } from '../shared/lore/useLoreStores';
-import { PLAYER_PAGE_IDS } from './navigation/playerPageRegistry';
+import { mergeVisiblePlayerPageOrder, PLAYER_PAGE_IDS } from './navigation/playerPageRegistry';
 import { isPlayerCatalogEntryEditable, resolvePlayerCatalogEditorMode } from './catalog/playerCatalogEditing';
-import { normalizePlayerUserSettings } from './settings/playerUserSettings';
+import { usePlayerUserSettings } from './settings/usePlayerUserSettings';
 export default function PlayerAppController() {
     const {
         activeCampaign,
@@ -60,9 +60,21 @@ export default function PlayerAppController() {
 
     const [dailyPrepQueue, setDailyPrepQueue] = useState([]);
     const [playerNavDrawerOpen, setPlayerNavDrawerOpen] = useState(false);
+    const [playerTabReordering, setPlayerTabReordering] = useState(false);
     const [loreTarget, setLoreTarget] = useState(null);
     const [catalogAuthoringRequest, setCatalogAuthoringRequest] = useState(null);
-    const userSettings = normalizePlayerUserSettings(userInfo?.settings);
+    const persistPlayerSettings = useCallback((settings) => (
+        dataActions.member.updateOwnSettings(activeCampaign?.id, settings)
+    ), [activeCampaign?.id, dataActions.member]);
+    const {
+        error: playerSettingsError,
+        saving: playerSettingsSaving,
+        settings: userSettings,
+        updateSettings: updatePlayerSettings,
+    } = usePlayerUserSettings({
+        remoteSettings: userInfo?.settings,
+        onPersist: persistPlayerSettings,
+    });
     const ownedCompanionActors = (ownedActors || [])
         .filter(actor => ['animal_companion', 'familiar', 'pet'].includes(actor.kind));
     const playerNotificationQueue = [
@@ -90,11 +102,27 @@ export default function PlayerAppController() {
         swipeRef,
     } = usePlayerPageNavigation({
         activeCampaign,
-        isInteractionLocked: isPlayerInteractionLocked,
+        isInteractionLocked: isPlayerInteractionLocked || playerTabReordering,
         myCharacter,
         ownedCompanionActors,
         loopPages: userSettings.loopPages,
+        pageOrderByCategory: userSettings.pageOrderByCategory,
     });
+
+    const changeSkillSort = useCallback((skillSortMode) => {
+        updatePlayerSettings((current) => ({ ...current, skillSortMode })).catch(() => {});
+    }, [updatePlayerSettings]);
+
+    const commitVisiblePageOrder = useCallback((categoryId, visiblePageIds) => {
+        return updatePlayerSettings((current) => ({
+            ...current,
+            pageOrderByCategory: mergeVisiblePlayerPageOrder({
+                categoryId,
+                visiblePageIds,
+                pageOrderByCategory: current.pageOrderByCategory,
+            }),
+        }));
+    }, [updatePlayerSettings]);
 
     const actorRules = selectActorRulesViewModel(activeCampaign, myActor?.id || character?.id);
     const rulesCharacter = actorRules.character || character;
@@ -413,6 +441,10 @@ export default function PlayerAppController() {
                 alertsByPage={alertsByPage}
                 metadataByPage={metadataByPage}
                 loopPages={userSettings.loopPages}
+                onCommitPageOrder={commitVisiblePageOrder}
+                onReorderStateChange={setPlayerTabReordering}
+                settingsError={playerSettingsError}
+                settingsSaving={playerSettingsSaving}
             />
 
             {/* VIEW CONTENT */}
@@ -448,6 +480,7 @@ export default function PlayerAppController() {
                         canEditCatalogEntry,
                         onEditCatalogEntry: editCatalogEntry,
                         userSettings,
+                        onChangeSkillSort: changeSkillSort,
                         ownedCompanionActors,
                         playerQuests,
                         readOnly,
@@ -618,9 +651,7 @@ export default function PlayerAppController() {
                 onDailyPrep={performDailyPrep}
                 readOnly={readOnly}
                 userSettings={userSettings}
-                onSaveUserSettings={(settings) => runDataAction(
-                    dataActions.member.updateOwnSettings(activeCampaign?.id, settings)
-                )}
+                onSaveUserSettings={updatePlayerSettings}
             />
 
 

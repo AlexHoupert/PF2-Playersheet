@@ -99,12 +99,39 @@
     align-items: center;
     gap: 4px;
     margin-left: 0;
+    padding: 0;
+    list-style: none;
     touch-action: pan-y;
 }
 
 .player-subpage-carousel__item {
     flex: 0 0 31%;
     padding-left: 0;
+}
+
+.player-subpage-carousel__item.is-reordering {
+    cursor: grabbing;
+}
+
+.player-subpage-carousel__item.is-reordering .player-subpage-carousel__tab {
+    border-color: rgba(244, 201, 108, 0.96);
+    outline: 2px solid rgba(244, 201, 108, 0.34);
+    outline-offset: 1px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.player-nav-settings-error {
+    position: absolute;
+    right: 8px;
+    top: calc(100% + 4px);
+    z-index: 3;
+    max-width: min(320px, 90vw);
+    padding: 4px 7px;
+    border: 1px solid rgba(239, 83, 80, 0.58);
+    border-radius: 4px;
+    background: rgba(45, 12, 12, 0.96);
+    color: #ffb3b1;
+    font-size: 0.7rem;
 }
 
 .player-subpage-carousel__tab {

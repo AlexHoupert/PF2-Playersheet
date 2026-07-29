@@ -18,6 +18,7 @@ export function usePlayerPageNavigation({
     myCharacter,
     ownedCompanionActors = [],
     loopPages = true,
+    pageOrderByCategory,
 }) {
     const [activeCharIndex, setActiveCharIndex] = useState(0);
     const [activePageId, setActivePageId] = useState(readInitialPageId);
@@ -26,8 +27,8 @@ export function usePlayerPageNavigation({
     const swipeRef = useRef(null);
     const initializedActorRef = useRef(false);
     const navigationContext = useMemo(
-        () => buildPlayerNavigationContext({ character, ownedCompanionActors }),
-        [character, ownedCompanionActors]
+        () => buildPlayerNavigationContext({ character, ownedCompanionActors, pageOrderByCategory }),
+        [character, ownedCompanionActors, pageOrderByCategory]
     );
 
     useEffect(() => {

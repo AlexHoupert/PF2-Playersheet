@@ -4,8 +4,10 @@ import test from 'node:test';
 import {
     DEFAULT_PLAYER_USER_SETTINGS,
     normalizePlayerUserSettings,
+    SKILL_SORT_MODE,
     SKILL_PROFICIENCY_DISPLAY,
 } from '../src/player/settings/playerUserSettings.js';
+import { sortPlayerSkillRows } from '../src/player/skills/playerSkillSorting.js';
 import {
     isPlayerCatalogEntryEditable,
     resolvePlayerCatalogEditorMode,
@@ -15,12 +17,33 @@ test('player settings normalize missing and invalid values safely', () => {
     assert.deepEqual(normalizePlayerUserSettings(), DEFAULT_PLAYER_USER_SETTINGS);
     assert.deepEqual(normalizePlayerUserSettings({
         skillProficiencyDisplay: 'STARS',
+        skillSortMode: 'VALUE',
         loopPages: false,
     }), {
         skillProficiencyDisplay: SKILL_PROFICIENCY_DISPLAY.STARS,
+        skillSortMode: SKILL_SORT_MODE.VALUE,
         loopPages: false,
+        pageOrderByCategory: DEFAULT_PLAYER_USER_SETTINGS.pageOrderByCategory,
     });
     assert.equal(normalizePlayerUserSettings({ skillProficiencyDisplay: 'unknown' }).skillProficiencyDisplay, 'none');
+    assert.equal(normalizePlayerUserSettings({ skillSortMode: 'unknown' }).skillSortMode, 'alphabetical');
+});
+
+test('player skills sort by effective total with alphabetical tie breaks', () => {
+    const rows = [
+        { name: 'stealth', displayName: 'Stealth', calc: { total: 12 } },
+        { name: 'arcana', displayName: 'Arcana', calc: { total: 11 } },
+        { name: 'athletics', displayName: 'Athletics', calc: { total: 11 } },
+    ];
+
+    assert.deepEqual(
+        sortPlayerSkillRows(rows, SKILL_SORT_MODE.VALUE).map((row) => row.name),
+        ['stealth', 'arcana', 'athletics']
+    );
+    assert.deepEqual(
+        sortPlayerSkillRows(rows, SKILL_SORT_MODE.ALPHABETICAL).map((row) => row.name),
+        ['arcana', 'athletics', 'stealth']
+    );
 });
 
 test('player edit mode distinguishes generic actor forks from custom-only records', () => {

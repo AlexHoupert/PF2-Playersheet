@@ -5,6 +5,7 @@ import {
 } from "./campaignReducers.js";
 import { normalizeCampaignRole } from "../../auth/campaignCapabilities.js";
 import { cloneValue } from "./inventoryReducers.js";
+import { normalizePlayerUserSettings } from "../../../player/settings/playerUserSettings.js";
 
 export function createMemberActions(context) {
   const {
@@ -65,7 +66,7 @@ export function createMemberActions(context) {
   const updateOwnSettings = (campaignId, settings) => {
     const normalizedEmail = normalizeEmail(actor);
     if (!campaignId || !normalizedEmail) return Promise.resolve();
-    const normalizedSettings = normalizeMemberSettings(settings);
+    const normalizedSettings = normalizePlayerUserSettings(settings);
     if (useFirestoreV2) {
       return repos.memberRepo.updateSettings(firestore, campaignId, normalizedEmail, normalizedSettings);
     }
@@ -84,15 +85,5 @@ export function createMemberActions(context) {
     revokeUser,
     setRole,
     updateOwnSettings,
-  };
-}
-
-function normalizeMemberSettings(settings = {}) {
-  const skillDisplay = String(settings?.skillProficiencyDisplay || "none").toLowerCase();
-  return {
-    skillProficiencyDisplay: ["none", "short", "full", "stars"].includes(skillDisplay)
-      ? skillDisplay
-      : "none",
-    loopPages: settings?.loopPages !== false,
   };
 }

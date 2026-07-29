@@ -67,6 +67,52 @@ service cloud.firestore {
           || memberData(campaignId).characterId == actorId);
     }
 
+    function validPlayerSettings(settings) {
+      return settings is map
+        && settings.keys().hasOnly([
+          'skillProficiencyDisplay', 'skillSortMode', 'loopPages', 'pageOrderByCategory'
+        ])
+        && settings.skillProficiencyDisplay in ['none', 'short', 'full', 'stars']
+        && settings.loopPages is bool
+        && (!('skillSortMode' in settings)
+          || settings.skillSortMode in ['alphabetical', 'value'])
+        && (!('pageOrderByCategory' in settings) || (
+          settings.pageOrderByCategory is map
+          && settings.pageOrderByCategory.keys().hasOnly([
+            'character', 'skills', 'items', 'knowledge', 'campaign'
+          ])
+          && settings.pageOrderByCategory.character is list
+          && settings.pageOrderByCategory.character.size() <= 7
+          && settings.pageOrderByCategory.character.hasOnly([
+            'character.status', 'character.feats', 'character.magic', 'character.impulses',
+            'character.pact', 'character.owned-actor', 'character.proficiencies'
+          ])
+          && settings.pageOrderByCategory.skills is list
+          && settings.pageOrderByCategory.skills.size() <= 6
+          && settings.pageOrderByCategory.skills.hasOnly([
+            'skills.combat', 'skills.movement', 'skills.general', 'skills.downtime',
+            'skills.exploration', 'skills.camping'
+          ])
+          && settings.pageOrderByCategory.items is list
+          && settings.pageOrderByCategory.items.size() <= 6
+          && settings.pageOrderByCategory.items.hasOnly([
+            'items.equipment', 'items.consumables', 'items.misc', 'items.shop',
+            'items.crafting', 'items.loot'
+          ])
+          && settings.pageOrderByCategory.knowledge is list
+          && settings.pageOrderByCategory.knowledge.size() <= 6
+          && settings.pageOrderByCategory.knowledge.hasOnly([
+            'knowledge.history', 'knowledge.locations', 'knowledge.npcs',
+            'knowledge.bestiary', 'knowledge.other', 'knowledge.notes'
+          ])
+          && settings.pageOrderByCategory.campaign is list
+          && settings.pageOrderByCategory.campaign.size() <= 4
+          && settings.pageOrderByCategory.campaign.hasOnly([
+            'campaign.quests', 'campaign.progress', 'campaign.maps', 'campaign.camp'
+          ])
+        ));
+    }
+
     match /admins/{email} {
       allow read: if signedIn() && request.auth.token.email == email;
       allow write: if false;
@@ -86,8 +132,7 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'settings', 'updatedAt', 'schemaVersion'
             ])
-            && request.resource.data.settings.skillProficiencyDisplay in ['none', 'short', 'full', 'stars']
-            && request.resource.data.settings.loopPages is bool);
+            && validPlayerSettings(request.resource.data.settings));
       }
 
       match /characters/{characterId} {

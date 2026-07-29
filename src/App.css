@@ -1949,3 +1949,23 @@ body.swiping-active .app-container * {
         font-size: 0.7em;
     }
 }
+
+.player-skills-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #5c4033;
+}
+
+.player-skills-heading h3 {
+    margin: 0;
+    min-width: 0;
+}
+
+.player-skills-sort-button {
+    flex: 0 0 28px;
+    color: var(--text-gold);
+}

@@ -43,7 +43,9 @@ Player display is split into:
 - `src/player/views/ProgressView.jsx`
 - `src/player/views/CompanionTab.jsx`
 
-Player navigation is defined in `src/player/navigation/playerPageRegistry.js`. The five fixed categories are Character, Skills, Items, Knowledge, and Campaign. Their visible subpages are rendered by `PlayerPageRenderer`; optional Magic, Impulses, Pact, and Companion pages depend on the assigned Actor's data. Mobile uses the fixed bottom navigation plus category drawers, while the subpage carousel and swipe navigation stay synchronized.
+Player navigation is defined in `src/player/navigation/playerPageRegistry.js`. The five fixed categories are Character, Skills, Items, Knowledge, and Campaign. Their visible subpages are rendered by `PlayerPageRenderer`; optional Magic, Impulses, and Companion pages depend on the assigned Actor's data. Mobile uses the fixed bottom navigation plus category drawers, while the subpage carousel and swipe navigation stay synchronized.
+
+Campaign member settings own `skillSortMode`, `loopPages`, and `pageOrderByCategory`. The registry normalizes personal page order once and supplies the same ordered pages to the top carousel, category drawer, page carousel, defaults, and swipe selectors. Hidden pages such as the reserved Proficiencies page remain in the internal order contract but never appear in runtime navigation. Tabs can be reordered within their category by holding for 500 ms and dragging; `Alt+ArrowLeft` and `Alt+ArrowRight` provide the keyboard equivalent. Dynamic tabs retain their stored slot while unavailable.
 
 ## Lore And Knowledge Flow
 
