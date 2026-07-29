@@ -58,6 +58,7 @@ export function ActorEffectsSection({
           campaign={campaign}
           canManageEffects={canManageEffects}
           onRemoveEffect={onRemoveEffect}
+          onOpenCondition={onOpenEffect}
         />
         <ConditionList
           conditions={chipItems}

@@ -9,9 +9,11 @@ import {
 } from './effectDefinitions.js';
 import {
   explainEffectModifiersForSelectors,
+  normalizeEffectSelector,
   resolveDamageEffects,
   resolveResistanceWeakness,
 } from './effectResolver.js';
+import { actorHasImpulses, actorHasMagic } from '../actors/actorCapabilities.js';
 
 const SOURCE_GROUPS = Object.freeze([
   { id: 'conditions', label: 'Conditions & Afflictions', order: 10 },
@@ -23,6 +25,24 @@ const SOURCE_GROUPS = Object.freeze([
 const ATTRIBUTABLE_SOURCE_TYPES = new Set(['item', 'spell', 'feat', 'impulse', 'ability', 'action']);
 const ATTRIBUTABLE_TRIGGERS = new Set(['cast', 'activate', 'consume']);
 const SELECTOR_LABELS = new Map(EFFECT_SELECTOR_REGISTRY.map((entry) => [entry.value, entry.label]));
+const ATTACK_SELECTORS = new Set([
+  'attack.all',
+  'attack.strength',
+  'attack.dexterity',
+  'attack.melee',
+  'attack.ranged',
+  'spell.attack',
+  'impulse.attack',
+]);
+const SKILL_SELECTORS = EFFECT_SELECTOR_REGISTRY
+  .filter((entry) => entry.value.startsWith('skill.') && entry.value !== 'skill.lore')
+  .map((entry) => entry.value);
+const BROAD_CHECK_DOMAINS = Object.freeze([
+  { id: 'attacks', label: 'Attack Rolls', selectors: ['attack.all'] },
+  { id: 'skills', label: 'Skill Checks', selectors: SKILL_SELECTORS },
+  { id: 'saves', label: 'Saving Throws', selectors: ['save.fortitude', 'save.reflex', 'save.will'] },
+  { id: 'perception', label: 'Perception', selectors: ['perception'] },
+]);
 
 export function selectEffectChipItems(actorRules) {
   return buildEffectPresentationItems(
@@ -40,15 +60,18 @@ export function buildActorEffectOverview({ actorRules, campaign = null, scope = 
   const sourceActorByEffectId = new Map(
     effects.map((effect) => [effect.id, resolveVisibleSourceActor(effect, campaign)])
   );
-  const contributionByModifier = new Map();
+  const conditionReferenceByEffectId = new Map(
+    effects
+      .filter((effect) => effect.category === 'condition')
+      .map((effect) => [effect.id, buildConditionReference(effect)])
+  );
+  const conditionReferenceByModifierKey = buildConditionReferenceByModifierKey(effects);
+  const contributionByModifier = buildCanonicalContributionMap(effects);
 
-  const selectorRows = EFFECT_SELECTOR_REGISTRY
+  const rawSelectorRows = EFFECT_SELECTOR_REGISTRY
     .filter((selector) => selector.showInOverview !== false)
     .map((selector) => {
       const resolution = explainEffectModifiersForSelectors(effects, [selector.value]);
-      for (const contribution of resolution.contributions) {
-        contributionByModifier.set(toModifierKey(contribution.effectId, contribution.modifierId), contribution);
-      }
       if (resolution.contributions.length === 0) return null;
       return {
         id: selector.value,
@@ -64,17 +87,26 @@ export function buildActorEffectOverview({ actorRules, campaign = null, scope = 
         contributions: resolution.contributions.map((contribution) => enrichContribution(
           contribution,
           presentationByEffectId,
-          sourceActorByEffectId
+          sourceActorByEffectId,
+          conditionReferenceByEffectId,
+          conditionReferenceByModifierKey
         )),
         children: [],
       };
     })
     .filter(Boolean);
+  const selectorRows = selectVisibleAttackRows({
+    actorRules,
+    selectorRows: rawSelectorRows,
+    directContributions: effects.flatMap((effect) => effect.modifiers || []),
+  });
 
   const specialRows = buildSpecialEffectRows(
     effects,
     presentationByEffectId,
     sourceActorByEffectId,
+    conditionReferenceByEffectId,
+    conditionReferenceByModifierKey,
     contributionByModifier
   );
   const effectGroups = buildEffectGroups([...selectorRows, ...specialRows]);
@@ -82,6 +114,7 @@ export function buildActorEffectOverview({ actorRules, campaign = null, scope = 
     effects,
     presentationByEffectId,
     sourceActorByEffectId,
+    conditionReferenceByEffectId,
     contributionByModifier
   );
 
@@ -115,6 +148,30 @@ export function resolveVisibleSourceActor(effect, campaign) {
   return actor ? { id: actor.id, name: actor.name || 'Unknown actor' } : null;
 }
 
+export function selectVisibleAttackRows({ actorRules, selectorRows = [], directContributions = [] } = {}) {
+  const directSelectors = new Set(
+    (directContributions || []).map((modifier) => normalizeEffectSelector(modifier?.selector))
+  );
+  const actor = actorRules?.character || null;
+  const hasBroadAttackEffect = directSelectors.has('all.checks') || directSelectors.has('attack.all');
+  const showSpellAttacks = !actor || actorHasMagic(actor);
+  const showImpulseAttacks = !actor || actorHasImpulses(actor);
+
+  return (selectorRows || []).filter((row) => {
+    if (!ATTACK_SELECTORS.has(row.id)) return true;
+    if (row.id === 'attack.all') return hasBroadAttackEffect;
+    if (row.id === 'attack.strength') {
+      return directSelectors.has('attack.strength') || directSelectors.has('attribute.strength');
+    }
+    if (row.id === 'attack.dexterity') {
+      return directSelectors.has('attack.dexterity') || directSelectors.has('attribute.dexterity');
+    }
+    if (row.id === 'spell.attack') return showSpellAttacks && directSelectors.has('spell.attack');
+    if (row.id === 'impulse.attack') return showImpulseAttacks && directSelectors.has('impulse.attack');
+    return directSelectors.has(row.id);
+  });
+}
+
 function buildEffectGroups(rows) {
   const groupById = new Map(EFFECT_SELECTOR_GROUPS.map((group) => [group.id, { ...group, rows: [] }]));
   groupById.set('persistent', { id: 'persistent', label: 'Persistent Damage', order: 0, rows: [] });
@@ -128,7 +185,14 @@ function buildEffectGroups(rows) {
     .map((group) => ({ ...group, rows: group.rows.sort((left, right) => (left.order || 0) - (right.order || 0)) }));
 }
 
-function buildSpecialEffectRows(effects, presentationByEffectId, sourceActorByEffectId, contributionByModifier) {
+function buildSpecialEffectRows(
+  effects,
+  presentationByEffectId,
+  sourceActorByEffectId,
+  conditionReferenceByEffectId,
+  conditionReferenceByModifierKey,
+  contributionByModifier
+) {
   const rows = [];
   const persistent = resolveDamageEffects(effects).persistentByType;
   Object.entries(persistent).forEach(([damageType, modifier], index) => {
@@ -168,7 +232,9 @@ function buildSpecialEffectRows(effects, presentationByEffectId, sourceActorByEf
       contributions: bonusContributions.map((contribution) => enrichContribution(
         contribution,
         presentationByEffectId,
-        sourceActorByEffectId
+        sourceActorByEffectId,
+        conditionReferenceByEffectId,
+        conditionReferenceByModifierKey
       )),
       children: [],
     });
@@ -219,6 +285,7 @@ function buildSpecialEffectRows(effects, presentationByEffectId, sourceActorByEf
           value: 0,
           applied: true,
           suppressionReason: null,
+          conditionReference: conditionReferenceByEffectId.get(effect.id) || null,
         }],
         children: [],
       });
@@ -226,18 +293,25 @@ function buildSpecialEffectRows(effects, presentationByEffectId, sourceActorByEf
   return rows;
 }
 
-function buildSourceGroups(effects, presentationByEffectId, sourceActorByEffectId, contributionByModifier) {
+function buildSourceGroups(
+  effects,
+  presentationByEffectId,
+  sourceActorByEffectId,
+  conditionReferenceByEffectId,
+  contributionByModifier
+) {
   const sourceRows = effects.map((effect) => {
     const presentation = presentationByEffectId.get(effect.id) || buildFallbackPresentation(effect);
     const sourceActor = sourceActorByEffectId.get(effect.id);
     const modifiers = (effect.modifiers || [])
       .filter((modifier) => modifier.selector !== 'ac.dex_cap')
       .map((modifier, index) => enrichSourceModifier(effect, modifier, index, contributionByModifier));
+    const displayModifiers = expandBroadSourceModifiers(effect, modifiers, effects);
     const ruleTree = effect.category === 'condition'
       ? effect.ruleTree || buildStandardConditionRuleTree(effect.label || effect.name, effect.value)
       : null;
-    const tree = ruleTree ? buildRuleTreeView(ruleTree, modifiers) : null;
-    const persistentModifier = modifiers.find((modifier) => modifier.mode === 'persistent_damage');
+    const tree = ruleTree ? buildRuleTreeView(ruleTree, displayModifiers) : null;
+    const persistentModifier = displayModifiers.find((modifier) => modifier.mode === 'persistent_damage');
     return {
       id: effect.id,
       label: effect.category === 'damage_effect' ? 'Persistent Damage' : presentation.label,
@@ -253,10 +327,11 @@ function buildSourceGroups(effects, presentationByEffectId, sourceActorByEffectI
       derived: Boolean(effect.derived),
       removable: !effect.derived && Boolean(effect.id),
       summaryValue: persistentModifier ? formatPersistentFormula(effect, persistentModifier) : null,
-      modifiers: tree ? tree.modifiers : modifiers.filter((modifier) => modifier.mode !== 'persistent_damage'),
+      modifiers: tree ? tree.modifiers : displayModifiers.filter((modifier) => modifier.mode !== 'persistent_damage'),
       children: tree?.children || [],
       childSources: [],
       parentEffectId: effect.application?.parentEffectId || null,
+      conditionReference: conditionReferenceByEffectId.get(effect.id) || null,
     };
   });
 
@@ -288,6 +363,7 @@ function enrichSourceModifier(effect, modifier, index, contributionByModifier) {
   return {
     ...modifier,
     modifierId,
+    displayId: modifierId,
     selectorLabel: SELECTOR_LABELS.get(modifier.selector) || modifier.selector || formatSpecialModifierLabel(modifier),
     applied: explained ? explained.applied : true,
     suppressionReason: explained?.suppressionReason || null,
@@ -305,6 +381,14 @@ function buildRuleTreeView(node, modifiers) {
     id: current.id,
     label: current.label,
     kind: current.kind,
+    conditionReference: current.conditionName
+      ? {
+          effectId: null,
+          conditionName: current.conditionName,
+          value: current.value ?? 1,
+          derived: current.kind !== 'condition',
+        }
+      : null,
     modifiers: byNodeId.get(current.id) || [],
     children: (current.children || []).map(mapNode),
   });
@@ -318,7 +402,13 @@ function formatSpecialModifierLabel(modifier) {
   return 'Effect modifier';
 }
 
-function enrichContribution(contribution, presentationByEffectId, sourceActorByEffectId) {
+function enrichContribution(
+  contribution,
+  presentationByEffectId,
+  sourceActorByEffectId,
+  conditionReferenceByEffectId,
+  conditionReferenceByModifierKey
+) {
   const presentation = presentationByEffectId.get(contribution.effectId);
   return {
     ...contribution,
@@ -326,6 +416,123 @@ function enrichContribution(contribution, presentationByEffectId, sourceActorByE
     tone: presentation?.tone || contribution.bonusType || 'untyped',
     sourceName: contribution.source?.name || presentation?.label || contribution.sourceLabel || 'Effect',
     sourceActorName: sourceActorByEffectId.get(contribution.effectId)?.name || null,
+    conditionReference: conditionReferenceByModifierKey.get(toModifierKey(
+      contribution.effectId,
+      contribution.modifierId
+    )) || conditionReferenceByEffectId.get(contribution.effectId) || null,
+  };
+}
+
+function buildConditionReferenceByModifierKey(effects) {
+  const references = new Map();
+  for (const effect of effects) {
+    if (effect.category !== 'condition') continue;
+    const root = effect.ruleTree || buildStandardConditionRuleTree(
+      effect.label || effect.name,
+      effect.value
+    );
+    const rootReference = buildConditionReference(effect);
+    const visit = (node) => {
+      const reference = node.conditionName
+        ? {
+            effectId: node.kind === 'condition' ? effect.id : null,
+            conditionName: node.conditionName,
+            value: node.value ?? 1,
+            derived: node.kind !== 'condition',
+          }
+        : rootReference;
+      for (const modifier of node.modifiers || []) {
+        if (!modifier.id) continue;
+        references.set(toModifierKey(effect.id, modifier.id), reference);
+      }
+      for (const child of node.children || []) visit(child);
+    };
+    visit(root);
+  }
+  return references;
+}
+
+function buildCanonicalContributionMap(effects) {
+  const contributionByModifier = new Map();
+  const resolutionBySelector = new Map();
+
+  for (const effect of effects) {
+    (effect.modifiers || []).forEach((modifier, index) => {
+      const modifierId = modifier.id || `${effect.id}:${index}`;
+      const key = toModifierKey(effect.id, modifierId);
+      if (modifier.mode === 'persistent_damage') {
+        contributionByModifier.set(key, {
+          ...modifier,
+          effectId: effect.id,
+          modifierId,
+          applied: true,
+          suppressionReason: null,
+        });
+        return;
+      }
+
+      const selector = normalizeEffectSelector(modifier.selector);
+      if (!resolutionBySelector.has(selector)) {
+        resolutionBySelector.set(selector, explainEffectModifiersForSelectors(effects, [selector]));
+      }
+      const explained = resolutionBySelector.get(selector).contributions.find((entry) => (
+        toModifierKey(entry.effectId, entry.modifierId) === key
+      ));
+      if (explained) contributionByModifier.set(key, explained);
+    });
+  }
+
+  return contributionByModifier;
+}
+
+function expandBroadSourceModifiers(effect, modifiers, effects) {
+  return modifiers.flatMap((modifier) => {
+    const selector = normalizeEffectSelector(modifier.selector);
+    if (selector === 'all.checks') {
+      return BROAD_CHECK_DOMAINS.map((domain) => enrichDomainModifier(
+        effect,
+        modifier,
+        domain,
+        effects
+      ));
+    }
+    if (selector === 'all.dcs') {
+      return [enrichDomainModifier(effect, modifier, {
+        id: 'dcs',
+        label: 'DCs',
+        selectors: ['all.dcs'],
+      }, effects)];
+    }
+    return [modifier];
+  });
+}
+
+function enrichDomainModifier(effect, modifier, domain, effects) {
+  const key = toModifierKey(effect.id, modifier.modifierId);
+  const explanations = domain.selectors.map((selector) => (
+    explainEffectModifiersForSelectors(effects, [selector]).contributions.find((entry) => (
+      toModifierKey(entry.effectId, entry.modifierId) === key
+    ))
+  )).filter(Boolean);
+  const applied = explanations.some((entry) => entry.applied);
+  const suppressionReason = applied
+    ? null
+    : explanations.find((entry) => entry.suppressionReason)?.suppressionReason || modifier.suppressionReason;
+  return {
+    ...modifier,
+    displayId: `${modifier.modifierId}:domain:${domain.id}`,
+    selectorLabel: domain.label,
+    applied,
+    suppressionReason,
+  };
+}
+
+function buildConditionReference(effect) {
+  return {
+    effectId: effect.id || null,
+    conditionName: effect.label || effect.name || 'Condition',
+    value: Number(effect.value) || 1,
+    derived: false,
   };
 }
 

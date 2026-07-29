@@ -39,6 +39,17 @@ import {
     normalizeWandState,
     rechargeWand,
 } from '../src/shared/utils/wandUtils.js';
+import { isEquipableItemType } from '../src/shared/utils/itemEquipability.js';
+
+test('Mirror Cloak, Persona Mask, and custom equipment can be equipped without slot rules', () => {
+    const equipment = [
+        { name: 'Mirror Cloak', type: 'Equipment' },
+        { name: 'Persona Mask', type: 'equipment' },
+        { name: 'Custom Adventuring Gear', type: ' Equipment ' },
+    ];
+    assert.ok(equipment.every((item) => isEquipableItemType(item.type)));
+    assert.equal(isEquipableItemType('Consumable'), false);
+});
 
 test('scaly skin grants unarmored AC bonus with dex cap', () => {
     const lowLevel = buildDerivedSourceEffects({ actor: { id: 'pc', level: 4, feats: ['Scaly Skin'], inventory: [] } });
@@ -221,6 +232,42 @@ test('Prone and Grabbed expose the same rule hierarchy consumed by the resolver'
     assert.equal(resolveEffectModifiers([{ id: 'grabbed', modifiers: grabbedModifiers }], 'speed').set, 0);
 });
 
+test('durable condition hierarchies share their rule tree with resolver modifiers', () => {
+    const restrained = buildStandardConditionRuleTree('Restrained', 1);
+    const dying = buildStandardConditionRuleTree('Dying', 2);
+    const encumbered = buildStandardConditionRuleTree('Encumbered', 1);
+    const blinded = buildStandardConditionRuleTree('Blinded', 1);
+
+    assert.deepEqual(restrained.children.map((node) => node.conditionName), ['Off-Guard', 'Immobilized']);
+    assert.equal(resolveEffectModifiers([{ id: 'restrained', modifiers: flattenConditionRuleModifiers(restrained) }], 'ac').total, -2);
+    assert.equal(resolveEffectModifiers([{ id: 'restrained', modifiers: flattenConditionRuleModifiers(restrained) }], 'speed').set, 0);
+    assert.equal(dying.children[0].conditionName, 'Unconscious');
+    assert.deepEqual(dying.children[0].children.map((node) => node.conditionName), ['Blinded', 'Off-Guard']);
+    assert.deepEqual(encumbered.children.map((node) => node.label), ['Clumsy 1']);
+    assert.equal(flattenConditionRuleModifiers(blinded).some((modifier) => modifier.source === 'Off-Guard'), false);
+    assert.equal(resolveEffectModifiers([{
+        id: 'immobilized',
+        modifiers: flattenConditionRuleModifiers(buildStandardConditionRuleTree('Immobilized', 1)),
+    }], 'speed').set, 0);
+});
+
+test('frightened and off-guard both apply to AC without duplicate condition contributions', () => {
+    const frightened = { id: 'frightened', ...createStandardConditionEffectInput('Frightened', 1) };
+    const restrained = { id: 'restrained', ...createStandardConditionEffectInput('Restrained', 1) };
+    const result = explainEffectModifiersForSelectors([frightened, restrained], ['ac']);
+    const frightenedRows = result.contributions.filter((entry) => entry.effectId === 'frightened');
+    const restrainedRows = result.contributions.filter((entry) => entry.effectId === 'restrained');
+
+    assert.equal(frightenedRows.length, 1);
+    assert.equal(frightenedRows[0].applied, true);
+    assert.equal(frightenedRows[0].suppressionReason, null);
+    assert.equal(restrainedRows.length, 1);
+    assert.equal(restrainedRows[0].applied, true);
+    assert.equal(result.breakdown.status, -1);
+    assert.equal(result.breakdown.circumstance, -2);
+    assert.equal(result.total, -3);
+});
+
 test('canonical attack selectors separate attack geometry from attack attribute', () => {
     const character = {
         level: 1,
@@ -328,7 +375,8 @@ test('actor rules viewmodel hydrates legacy conditions for the shared explanatio
   const frightened = rules.effects.find((effect) => effect.id === 'legacy-frightened');
 
   assert.ok(frightened.modifiers.some((modifier) => modifier.selector === 'all.checks'));
-  assert.ok(frightened.modifiers.some((modifier) => modifier.selector === 'ac'));
+  assert.ok(frightened.modifiers.some((modifier) => modifier.selector === 'all.dcs'));
+  assert.equal(frightened.modifiers.some((modifier) => modifier.selector === 'ac'), false);
 });
 
 test('mutagen actorEffects provide modifiers and do not stack item AC with armor', () => {

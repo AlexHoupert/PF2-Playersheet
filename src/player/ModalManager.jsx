@@ -201,6 +201,9 @@ function ModalManagerContent({
     if (modalMode === 'conditions' || modalMode === 'conditionInfo') {
         const condName = typeof modalData === 'string' ? modalData : modalData?.name;
         const effectId = typeof modalData === 'object' ? modalData?.id : null;
+        const conditionValue = typeof modalData === 'object' ? modalData?.value : null;
+        const previewOnly = typeof modalData === 'object' && Boolean(modalData?.previewOnly);
+        const returnFocusKey = typeof modalData === 'object' ? modalData?.returnFocusKey : null;
         // If mode is 'conditions', initialCondition is likely null or undefined unless intended.
         // if mode is 'conditionInfo', initialCondition is condName.
         const initial = modalMode === 'conditionInfo' ? condName : null;
@@ -212,6 +215,9 @@ function ModalManagerContent({
                 onClose={onClose}
                 initialCondition={initial}
                 initialEffectId={effectId}
+                initialConditionValue={conditionValue}
+                initialPreviewOnly={previewOnly}
+                returnFocusKey={returnFocusKey}
                 onContentLinkClick={onContentLinkClick}
                 onBack={hasHistory ? onBack : undefined}
                 readOnly={readOnly}

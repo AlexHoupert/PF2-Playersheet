@@ -756,6 +756,9 @@ test('actor stats use shared closable effect chips and explainable overview draw
     const listStyles = readSource('src/shared/components/ConditionList.css');
     const drawerSource = readSource('src/shared/components/ActorEffectsDrawer.jsx');
     const overviewSource = readSource('src/shared/rules/actorEffectOverview.js');
+    const accordionSource = readSource('src/components/ui/accordion.jsx');
+    const modalManagerSource = readSource('src/player/ModalManager.jsx');
+    const conditionsSource = readSource('src/player/modals/ConditionsModal.jsx');
 
     assert.match(statsSource, /ActorEffectsSection/);
     assert.match(sectionSource, /selectEffectChipItems/);
@@ -775,6 +778,11 @@ test('actor stats use shared closable effect chips and explainable overview draw
     assert.match(drawerSource, /<Switch/);
     assert.match(drawerSource, /<Accordion/);
     assert.match(drawerSource, /direction=\{isMobile \? 'left' : 'right'\}/);
+    assert.match(drawerSource, /ConditionAccordionHeader/);
+    assert.match(drawerSource, /previewOnly: Boolean\(reference\.derived\)/);
+    assert.match(modalManagerSource, /initialPreviewOnly=\{previewOnly\}/);
+    assert.match(conditionsSource, /initialPreviewOnly \? null/);
+    assert.equal(accordionSource.includes('h-(--radix-accordion-content-height)'), false);
     assert.match(overviewSource, /ATTRIBUTABLE_TRIGGERS/);
     assert.match(overviewSource, /showInOverview !== false/);
     assert.match(overviewSource, /explainEffectModifiersForSelectors/);

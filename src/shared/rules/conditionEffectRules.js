@@ -19,22 +19,24 @@ export const DAMAGE_TYPES = [
   "vitality",
 ];
 
-const OFF_GUARD_AC_CONDITIONS = new Set([
-  "off-guard",
-  "blinded",
-  "paralyzed",
-  "restrained",
-  "unconscious",
-]);
-
 const ABILITY_SELECTORS = {
-  strength: ["attribute.strength", "skill.athletics", "attack.strength"],
-  dexterity: ["attribute.dexterity", "save.reflex", "skill.acrobatics", "skill.stealth", "skill.thievery", "attack.dexterity"],
-  constitution: ["attribute.constitution", "save.fortitude"],
-  intelligence: ["attribute.intelligence", "skill.arcana", "skill.crafting", "skill.occultism", "skill.society"],
-  wisdom: ["attribute.wisdom", "save.will", "perception", "skill.medicine", "skill.nature", "skill.religion", "skill.survival"],
-  charisma: ["attribute.charisma", "skill.deception", "skill.diplomacy", "skill.intimidation", "skill.performance"],
+  strength: ["attribute.strength"],
+  dexterity: ["attribute.dexterity"],
+  constitution: ["attribute.constitution"],
+  intelligence: ["attribute.intelligence"],
+  wisdom: ["attribute.wisdom"],
+  charisma: ["attribute.charisma"],
 };
+
+const DURABLE_CONDITION_CHILDREN = Object.freeze({
+  confused: [{ name: "Off-Guard" }],
+  dying: [{ name: "Unconscious" }],
+  encumbered: [{ name: "Clumsy", value: 1 }],
+  grabbed: [{ name: "Off-Guard" }, { name: "Immobilized" }],
+  paralyzed: [{ name: "Off-Guard" }],
+  restrained: [{ name: "Off-Guard" }, { name: "Immobilized" }],
+  unconscious: [{ name: "Blinded" }, { name: "Off-Guard" }],
+});
 
 export function createStandardConditionEffectInput(conditionName, value = 1, options = {}) {
   const canonicalName = getCanonicalConditionName(conditionName);
@@ -117,27 +119,41 @@ export function buildStandardConditionModifiers(conditionName, value = 1) {
 
 export function buildStandardConditionRuleTree(conditionName, value = 1) {
   const canonicalName = getCanonicalConditionName(conditionName);
+  const val = normalizeConditionValue(canonicalName, value);
+  return buildConditionRuleNode(canonicalName, val, {
+    id: `condition:${slugify(canonicalName)}`,
+    kind: "condition",
+  });
+}
+
+function buildConditionRuleNode(conditionName, value, options = {}) {
+  const canonicalName = getCanonicalConditionName(conditionName);
   const lowerName = canonicalName.toLowerCase();
   const val = normalizeConditionValue(canonicalName, value);
   const source = isConditionValued(canonicalName) ? `${canonicalName} ${val}` : canonicalName;
-  const root = createRuleNode(`condition:${slugify(canonicalName)}`, source, "condition");
+  const node = createRuleNode(
+    options.id || `condition:${slugify(canonicalName)}`,
+    source,
+    options.kind || "derived_condition",
+    canonicalName,
+    val
+  );
 
   if (lowerName === "frightened" || lowerName === "sickened") {
-    addPenalty(root, ["all.checks", "all.dcs", "ac"], -val, "status", source);
+    addPenalty(node, ["all.checks", "all.dcs"], -val, "status", source);
   }
 
   if (lowerName === "clumsy") {
-    addPenalty(root, ABILITY_SELECTORS.dexterity, -val, "status", source);
-    addPenalty(root, ["ac"], -val, "status", source);
+    addPenalty(node, ABILITY_SELECTORS.dexterity, -val, "status", source);
   }
 
   if (lowerName === "enfeebled") {
-    addPenalty(root, ABILITY_SELECTORS.strength, -val, "status", source);
+    addPenalty(node, ABILITY_SELECTORS.strength, -val, "status", source);
   }
 
   if (lowerName === "drained") {
-    addPenalty(root, ABILITY_SELECTORS.constitution, -val, "status", source);
-    addModifier(root, {
+    addPenalty(node, ABILITY_SELECTORS.constitution, -val, "status", source);
+    addModifier(node, {
       selector: "hp.max",
       mode: "penalty",
       bonusType: "status",
@@ -148,19 +164,18 @@ export function buildStandardConditionRuleTree(conditionName, value = 1) {
   }
 
   if (lowerName === "stupefied") {
-    addPenalty(root, ABILITY_SELECTORS.intelligence, -val, "status", source);
-    addPenalty(root, ABILITY_SELECTORS.wisdom, -val, "status", source);
-    addPenalty(root, ABILITY_SELECTORS.charisma, -val, "status", source);
-    addPenalty(root, ["spell.attack", "spell.dc"], -val, "status", source);
+    addPenalty(node, ABILITY_SELECTORS.intelligence, -val, "status", source);
+    addPenalty(node, ABILITY_SELECTORS.wisdom, -val, "status", source);
+    addPenalty(node, ABILITY_SELECTORS.charisma, -val, "status", source);
+    addPenalty(node, ["spell.attack", "spell.dc"], -val, "status", source);
   }
 
   if (lowerName === "fatigued") {
-    addPenalty(root, ["ac", "save.fortitude", "save.reflex", "save.will"], -1, "status", source);
+    addPenalty(node, ["ac", "save.fortitude", "save.reflex", "save.will"], -1, "status", source);
   }
 
   if (lowerName === "encumbered") {
-    addPenalty(root, ABILITY_SELECTORS.dexterity, -1, "status", source);
-    addModifier(root, {
+    addModifier(node, {
       selector: "speed",
       mode: "penalty",
       bonusType: "status",
@@ -171,26 +186,23 @@ export function buildStandardConditionRuleTree(conditionName, value = 1) {
   }
 
   if (lowerName === "blinded") {
-    addPenalty(root, ["perception"], -4, "status", source);
+    addPenalty(node, ["perception"], -4, "status", source);
   }
 
   if (lowerName === "deafened") {
-    addPenalty(root, ["perception"], -2, "status", source);
+    addPenalty(node, ["perception"], -2, "status", source);
   }
 
   if (lowerName === "unconscious") {
-    addPenalty(root, ["perception"], -4, "status", source);
+    addPenalty(node, ["ac", "save.reflex"], -4, "status", source);
   }
 
-  if (OFF_GUARD_AC_CONDITIONS.has(lowerName)) {
-    addPenalty(root, ["ac"], -2, "circumstance", "Off-Guard");
+  if (lowerName === "off-guard") {
+    addPenalty(node, ["ac"], -2, "circumstance", "Off-Guard");
   }
 
-  if (lowerName === "grabbed") {
-    const offGuard = createRuleNode(`${root.id}:off-guard`, "Off-Guard", "derived_condition");
-    addPenalty(offGuard, ["ac"], -2, "circumstance", "Off-Guard");
-    const immobilized = createRuleNode(`${root.id}:immobilized`, "Immobilized", "derived_condition");
-    addModifier(immobilized, {
+  if (lowerName === "immobilized") {
+    addModifier(node, {
       selector: "speed",
       mode: "set",
       bonusType: "untyped",
@@ -198,18 +210,26 @@ export function buildStandardConditionRuleTree(conditionName, value = 1) {
       source: "Immobilized",
       stackingKey: "condition:immobilized:speed",
     });
-    root.children.push(offGuard, immobilized);
   }
 
   if (lowerName === "prone") {
-    const offGuard = createRuleNode(`${root.id}:off-guard`, "Off-Guard", "derived_condition");
-    addPenalty(offGuard, ["ac"], -2, "circumstance", "Off-Guard");
-    const attackPenalty = createRuleNode(`${root.id}:attack-penalty`, "Attack Penalty", "rule_consequence");
+    node.children.push(buildConditionRuleNode("Off-Guard", 1, {
+      id: `${node.id}:off-guard`,
+      kind: "derived_condition",
+    }));
+    const attackPenalty = createRuleNode(`${node.id}:attack-penalty`, "Attack Penalty", "rule_consequence");
     addPenalty(attackPenalty, ["attack.all"], -2, "circumstance", "Prone");
-    root.children.push(offGuard, attackPenalty);
+    node.children.push(attackPenalty);
   }
 
-  return root;
+  for (const child of DURABLE_CONDITION_CHILDREN[lowerName] || []) {
+    node.children.push(buildConditionRuleNode(child.name, child.value ?? 1, {
+      id: `${node.id}:${slugify(child.name)}`,
+      kind: "derived_condition",
+    }));
+  }
+
+  return node;
 }
 
 export function flattenConditionRuleModifiers(ruleTree) {
@@ -241,8 +261,8 @@ export function diceAverage(count, size) {
   return Math.max(1, Number(count) || 1) * ((Math.max(2, Number(size) || 6) + 1) / 2);
 }
 
-function createRuleNode(id, label, kind) {
-  return { id, label, kind, modifiers: [], children: [] };
+function createRuleNode(id, label, kind, conditionName = null, value = null) {
+  return { id, label, kind, conditionName, value, modifiers: [], children: [] };
 }
 
 function addModifier(node, modifier) {

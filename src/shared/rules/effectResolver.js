@@ -31,8 +31,8 @@ const SELECTOR_PARENTS = Object.freeze({
     "save.reflex": ["attribute.dexterity", "all.checks"],
     "save.will": ["attribute.wisdom", "all.checks"],
     "attack.all": ["all.checks"],
-    "attack.strength": ["attack.all", "all.checks"],
-    "attack.dexterity": ["attack.all", "all.checks"],
+    "attack.strength": ["attribute.strength", "attack.all", "all.checks"],
+    "attack.dexterity": ["attribute.dexterity", "attack.all", "all.checks"],
     "attack.melee": ["attack.all", "all.checks"],
     "attack.ranged": ["attack.all", "all.checks"],
     "spell.attack": ["attack.all", "all.checks"],
@@ -130,6 +130,7 @@ export function explainEffectModifiersForSelectors(effects = [], selectors = [])
             ...toPublicModifier(modifier),
             effectId: modifier.sourceEffectId,
             modifierId: modifier.id || modifier.resolutionKey,
+            declaredSelector: normalizeEffectSelector(modifier.selector),
             source: modifier.sourceEffect?.source || null,
             sourceActorId: modifier.sourceEffect?.source?.actorId
                 || modifier.sourceEffect?.application?.sourceActorId
@@ -189,14 +190,14 @@ export function resolveResistanceWeakness(effects = []) {
 function collectMatchingModifiers(effects, selector) {
     const normalizedSelectors = new Set(expandEffectResolutionSelectors(selector));
     return collectAllModifiers(effects).filter(modifier =>
-        normalizedSelectors.has(normalizeSelector(modifier.selector))
+        normalizedSelectors.has(normalizeEffectSelector(modifier.selector))
     );
 }
 
 export function expandEffectResolutionSelectors(selectors = []) {
     const expanded = new Set();
     const visit = (rawSelector) => {
-        const selector = normalizeSelector(rawSelector);
+        const selector = normalizeEffectSelector(rawSelector);
         if (!selector || expanded.has(selector)) return;
         expanded.add(selector);
 
@@ -212,7 +213,7 @@ export function expandEffectResolutionSelectors(selectors = []) {
     return [...expanded];
 }
 
-function normalizeSelector(selector) {
+export function normalizeEffectSelector(selector) {
     const normalized = String(selector || "").toLowerCase();
     return SELECTOR_ALIASES[normalized] || normalized;
 }

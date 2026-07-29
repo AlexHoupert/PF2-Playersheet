@@ -1,5 +1,6 @@
-import { getShopIndexItemByName } from '../catalog/shopIndex';
-import { getConditionEffects } from '../../utils/rules';
+import { getShopIndexItemByName } from '../catalog/shopIndex.js';
+import { getConditionEffects } from '../../utils/rules.js';
+import { isEquipableItemType } from './itemEquipability.js';
 
 /**
  * Calculates the ammunition capacity of a weapon based on its traits.
@@ -213,7 +214,7 @@ export const getInventoryBucket = (item) => {
 };
 
 /**
- * Checks if an item is equipable (Armor, Shield, Weapon).
+ * Checks if an item is equipable (Armor, Shield, Weapon, Equipment).
  * @param {object} item - The inventory item.
  * @returns {boolean} - True if equipable.
  */
@@ -223,5 +224,5 @@ export const isEquipableInventoryItem = (item) => {
         fromIndex = getShopIndexItemByName(item.system.originalName);
     }
     const type = String(item?.type || fromIndex?.type || '').toLowerCase();
-    return ['armor', 'shield', 'weapon'].includes(type);
+    return isEquipableItemType(type);
 };

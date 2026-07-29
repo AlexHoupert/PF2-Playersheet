@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { ShieldQuestion, X } from 'lucide-react';
+import { ChevronDown, ShieldQuestion, X } from 'lucide-react';
+import { Accordion as AccordionPrimitive } from 'radix-ui';
 import {
   Accordion,
   AccordionContent,
@@ -31,6 +32,7 @@ export function ActorEffectsDrawer({
   campaign,
   canManageEffects = false,
   onRemoveEffect,
+  onOpenCondition,
 }) {
   const { isMobile } = useWindowSize();
   const [view, setView] = useState('effects');
@@ -107,13 +109,14 @@ export function ActorEffectsDrawer({
               </div>
             )}
             {view === 'effects'
-              ? <EffectGroups groups={overview.effectGroups} />
+              ? <EffectGroups groups={overview.effectGroups} onOpenCondition={onOpenCondition} />
               : (
                 <SourceGroups
                   groups={overview.sourceGroups}
                   canManageEffects={canManageEffects}
                   removingIds={removingIds}
                   onRemove={removeEffect}
+                  onOpenCondition={onOpenCondition}
                 />
               )}
           </div>
@@ -123,18 +126,18 @@ export function ActorEffectsDrawer({
   );
 }
 
-function EffectGroups({ groups }) {
+function EffectGroups({ groups, onOpenCondition }) {
   return (groups || []).map((group) => (
     <section key={group.id} className="actor-effects-group">
       <h3>{group.label}</h3>
       <Accordion type="multiple" className="actor-effects-group__rows">
-        {group.rows.map((row) => <EffectRow key={row.id} row={row} />)}
+        {group.rows.map((row) => <EffectRow key={row.id} row={row} onOpenCondition={onOpenCondition} />)}
       </Accordion>
     </section>
   ));
 }
 
-function EffectRow({ row }) {
+function EffectRow({ row, onOpenCondition }) {
   return (
     <AccordionItem value={row.id} className="actor-effect-row" data-tone={row.tone}>
       <AccordionTrigger className="actor-effect-row__trigger" data-testid={`actor-effect-row-${row.id}`}>
@@ -154,7 +157,11 @@ function EffectRow({ row }) {
         )}
         {row.kind === 'persistent_damage' && <TypedBreakdown breakdown={row.breakdown} />}
         {row.contributions.map((contribution) => (
-          <ContributionRow key={`${contribution.effectId}:${contribution.modifierId}`} contribution={contribution} />
+          <ContributionRow
+            key={`${contribution.effectId}:${contribution.modifierId}`}
+            contribution={contribution}
+            onOpenCondition={onOpenCondition}
+          />
         ))}
       </AccordionContent>
     </AccordionItem>
@@ -183,17 +190,31 @@ function TypedBreakdown({ breakdown }) {
   );
 }
 
-function ContributionRow({ contribution }) {
+function ContributionRow({ contribution, onOpenCondition }) {
+  const label = formatSourceLabel(contribution);
+  const focusKey = `contribution:${contribution.effectId}:${contribution.modifierId}`;
   return (
     <div className="actor-effect-contribution" data-suppressed={!contribution.applied}>
-      <span data-tone={contribution.tone}>{formatSourceLabel(contribution)}</span>
+      {contribution.conditionReference && onOpenCondition ? (
+        <Button
+          type="button"
+          variant="link"
+          size="sm"
+          className="actor-effect-contribution__condition"
+          data-tone={contribution.tone}
+          data-condition-info-trigger={focusKey}
+          onClick={() => openConditionReference(contribution.conditionReference, onOpenCondition, focusKey)}
+        >
+          {label}
+        </Button>
+      ) : <span data-tone={contribution.tone}>{label}</span>}
       <span data-negative={Number(contribution.value) < 0}>{formatModifierValue(contribution)}</span>
       {contribution.suppressionReason && <small>{contribution.suppressionReason}</small>}
     </div>
   );
 }
 
-function SourceGroups({ groups, canManageEffects, removingIds, onRemove }) {
+function SourceGroups({ groups, canManageEffects, removingIds, onRemove, onOpenCondition }) {
   return (groups || []).map((group) => (
     <section key={group.id} className="actor-effects-group">
       <h3>{group.label}</h3>
@@ -205,6 +226,7 @@ function SourceGroups({ groups, canManageEffects, removingIds, onRemove }) {
             canManageEffects={canManageEffects}
             removingIds={removingIds}
             onRemove={onRemove}
+            onOpenCondition={onOpenCondition}
           />
         ))}
       </Accordion>
@@ -212,20 +234,36 @@ function SourceGroups({ groups, canManageEffects, removingIds, onRemove }) {
   ));
 }
 
-function SourceRow({ source, canManageEffects, removingIds, onRemove, nested = false }) {
+function SourceRow({ source, canManageEffects, removingIds, onRemove, onOpenCondition, nested = false }) {
+  const removable = canManageEffects && source.removable;
   return (
     <AccordionItem
       value={source.id}
       className="actor-effect-source"
       data-tone={source.tone}
       data-nested={nested || undefined}
-      data-removable={canManageEffects && source.removable || undefined}
+      data-removable={removable || undefined}
     >
-      <AccordionTrigger className="actor-effect-source__trigger" data-testid={`actor-effect-source-${source.id}`}>
-        <strong>{source.label}</strong>
-        {source.summaryValue && <b className="actor-effect-source__value" data-negative="true">{source.summaryValue}</b>}
-      </AccordionTrigger>
-      {canManageEffects && source.removable && (
+      {source.conditionReference && onOpenCondition ? (
+        <ConditionAccordionHeader
+          label={source.label}
+          summaryValue={source.summaryValue}
+          testId={`actor-effect-source-${source.id}`}
+          focusKey={`source:${source.id}`}
+          onOpen={() => openConditionReference(source.conditionReference, onOpenCondition, `source:${source.id}`)}
+          removeAction={removable ? {
+            label: `Remove ${source.label}`,
+            disabled: removingIds.has(source.id),
+            onRemove: () => onRemove(source),
+          } : null}
+        />
+      ) : (
+        <AccordionTrigger className="actor-effect-source__trigger" data-testid={`actor-effect-source-${source.id}`}>
+          <strong>{source.label}</strong>
+          {source.summaryValue && <b className="actor-effect-source__value" data-negative="true">{source.summaryValue}</b>}
+        </AccordionTrigger>
+      )}
+      {removable && !source.conditionReference && (
         <Button
           type="button"
           variant="ghost"
@@ -245,7 +283,7 @@ function SourceRow({ source, canManageEffects, removingIds, onRemove, nested = f
       <AccordionContent className="actor-effect-source__content">
         <SourceMeta source={source} />
         <ModifierList modifiers={source.modifiers} />
-        {source.children?.length > 0 && <RuleNodeList nodes={source.children} />}
+        {source.children?.length > 0 && <RuleNodeList nodes={source.children} onOpenCondition={onOpenCondition} />}
         {source.childSources?.length > 0 && (
           <Accordion type="multiple" className="actor-effect-source__children">
             {source.childSources.map((child) => (
@@ -255,6 +293,7 @@ function SourceRow({ source, canManageEffects, removingIds, onRemove, nested = f
                 canManageEffects={canManageEffects}
                 removingIds={removingIds}
                 onRemove={onRemove}
+                onOpenCondition={onOpenCondition}
                 nested
               />
             ))}
@@ -279,17 +318,26 @@ function SourceMeta({ source }) {
   return <div className="actor-effect-source__meta">{values.join(' / ')}</div>;
 }
 
-function RuleNodeList({ nodes }) {
+function RuleNodeList({ nodes, onOpenCondition }) {
   return (
     <Accordion type="multiple" className="actor-effect-rule-tree">
       {nodes.map((node) => (
         <AccordionItem key={node.id} value={node.id} className="actor-effect-rule-node">
-          <AccordionTrigger className="actor-effect-rule-node__trigger">
-            <span>{node.label}</span>
-          </AccordionTrigger>
+          {node.conditionReference && onOpenCondition ? (
+            <ConditionAccordionHeader
+              label={node.label}
+              compact
+              focusKey={`rule:${node.id}`}
+              onOpen={() => openConditionReference(node.conditionReference, onOpenCondition, `rule:${node.id}`)}
+            />
+          ) : (
+            <AccordionTrigger className="actor-effect-rule-node__trigger">
+              <span>{node.label}</span>
+            </AccordionTrigger>
+          )}
           <AccordionContent className="actor-effect-rule-node__content">
             <ModifierList modifiers={node.modifiers} />
-            {node.children?.length > 0 && <RuleNodeList nodes={node.children} />}
+            {node.children?.length > 0 && <RuleNodeList nodes={node.children} onOpenCondition={onOpenCondition} />}
           </AccordionContent>
         </AccordionItem>
       ))}
@@ -302,7 +350,7 @@ function ModifierList({ modifiers }) {
   return (
     <div className="actor-effect-source__modifiers">
       {modifiers.filter((modifier) => modifier.mode !== 'persistent_damage').map((modifier) => (
-        <div key={modifier.modifierId} data-suppressed={!modifier.applied}>
+        <div key={modifier.displayId || modifier.modifierId} data-suppressed={!modifier.applied}>
           <span>[{capitalize(modifier.bonusType || modifier.mode || 'effect')}] {modifier.selectorLabel}</span>
           <b data-negative={Number(modifier.value) < 0}>{formatModifierValue(modifier)}</b>
           {modifier.suppressionReason && <small>{modifier.suppressionReason}</small>}
@@ -310,6 +358,72 @@ function ModifierList({ modifiers }) {
       ))}
     </div>
   );
+}
+
+function ConditionAccordionHeader({
+  label,
+  summaryValue = null,
+  testId,
+  onOpen,
+  focusKey,
+  compact = false,
+  removeAction = null,
+}) {
+  return (
+    <AccordionPrimitive.Header
+      className="actor-effect-condition-header"
+      data-compact={compact || undefined}
+      data-has-remove={Boolean(removeAction) || undefined}
+      data-testid={testId}
+    >
+      <Button
+        type="button"
+        variant="ghost"
+        className="actor-effect-condition-header__info"
+        data-condition-info-trigger={focusKey}
+        onClick={onOpen}
+      >
+        {label}
+      </Button>
+      {summaryValue && (
+        <b className="actor-effect-source__value" data-negative="true">{summaryValue}</b>
+      )}
+      {removeAction && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          className="actor-effect-condition-header__remove"
+          aria-label={removeAction.label}
+          disabled={removeAction.disabled}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            removeAction.onRemove();
+          }}
+        >
+          <X />
+        </Button>
+      )}
+      <AccordionPrimitive.Trigger
+        className="actor-effect-condition-header__toggle"
+        aria-label={`Expand ${label}`}
+      >
+        <ChevronDown />
+      </AccordionPrimitive.Trigger>
+    </AccordionPrimitive.Header>
+  );
+}
+
+function openConditionReference(reference, onOpenCondition, returnFocusKey) {
+  onOpenCondition?.({
+    id: reference.effectId || null,
+    name: reference.conditionName,
+    value: reference.value,
+    derived: Boolean(reference.derived),
+    previewOnly: Boolean(reference.derived),
+    returnFocusKey,
+  });
 }
 
 function formatSourceLabel(contribution) {

@@ -507,8 +507,17 @@ test("player can inspect and remove an exact persisted effect from the status sc
   await expect(page.getByText("Frightened", { exact: true }).last()).toBeVisible();
 
   await page.getByTestId("actor-effects-view-sources").click();
-  await page.getByTestId("actor-effect-source-e2e_effect_frightened").click();
-  await expect(page.getByText(/\[Status\] All Checks/).first()).toBeVisible();
+  const frightenedSource = page.getByTestId("actor-effect-source-e2e_effect_frightened");
+  await frightenedSource.getByRole("button", { name: "Expand Frightened" }).click();
+  await expect(page.getByText(/\[Status\] Attack Rolls/).first()).toBeVisible();
+  await expect(page.getByText(/\[Status\] Skill Checks/).first()).toBeVisible();
+  const frightenedInfoTrigger = frightenedSource.getByRole("button", { name: "Frightened", exact: true });
+  await frightenedInfoTrigger.click();
+  const conditionDialog = page.locator("[data-app-dialog-shell]");
+  await expect(conditionDialog.getByRole("heading", { name: "Frightened", exact: true })).toBeVisible();
+  await conditionDialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(frightenedInfoTrigger).toBeFocused();
+  await expect(page.getByText(/\[Status\] Attack Rolls/).first()).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("actor-effects-desktop-sources.png") });
   await page.getByRole("button", { name: "Close active effects" }).click();
   await expect(page.getByTestId("actor-effects-overview-button")).toBeFocused();

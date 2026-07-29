@@ -221,6 +221,20 @@
 .actor-effect-contribution > span:first-child[data-tone="visibility"] { color: #c2a1f0; }
 .actor-effect-contribution > span:first-child[data-tone="harmful"] { color: #ff8a8a; }
 .actor-effect-contribution > span:first-child[data-tone="persistent"] { color: #ffad74; }
+.actor-effect-contribution__condition {
+    min-width: 0;
+    height: auto;
+    justify-content: flex-start;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+    text-align: left;
+    white-space: normal;
+}
+.actor-effect-contribution__condition[data-tone="status"] { color: #8bdd9d; }
+.actor-effect-contribution__condition[data-tone="circumstance"],
+.actor-effect-contribution__condition[data-tone="visibility"] { color: #c2a1f0; }
+.actor-effect-contribution__condition[data-tone="harmful"] { color: #ff8a8a; }
 .actor-effect-contribution > span[data-negative="true"] { color: #ff7777; }
 .actor-effect-contribution > small { grid-column: 1 / -1; color: #888; }
 .actor-effect-contribution[data-suppressed="true"] { opacity: 0.42; }
@@ -239,6 +253,76 @@
 
 .actor-effect-source__trigger {
     padding-right: 42px !important;
+}
+
+.actor-effect-condition-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 28px;
+    align-items: center;
+    min-height: 42px;
+    padding: 4px 8px 4px 2px;
+}
+
+.actor-effect-condition-header[data-has-remove="true"] {
+    grid-template-columns: minmax(0, 1fr) auto 28px 28px;
+}
+
+.actor-effect-condition-header[data-compact="true"] {
+    min-height: 34px;
+    padding-block: 2px;
+}
+
+.actor-effect-condition-header__info {
+    min-width: 0;
+    height: auto;
+    justify-content: flex-start;
+    padding: 5px 8px;
+    color: #f0f0f0;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    text-align: left;
+    white-space: normal;
+}
+
+.actor-effect-condition-header__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #999;
+    cursor: pointer;
+}
+
+.actor-effect-condition-header__remove {
+    color: #aaa;
+}
+
+.actor-effect-condition-header__remove:hover,
+.actor-effect-condition-header__remove:focus-visible {
+    color: #ff8a8a;
+}
+
+.actor-effect-condition-header__toggle:hover,
+.actor-effect-condition-header__toggle:focus-visible {
+    background: #2a292b;
+    color: #ddd;
+    outline: none;
+}
+
+.actor-effect-condition-header__toggle svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 160ms ease;
+}
+
+.actor-effect-condition-header__toggle[data-state="open"] svg {
+    transform: rotate(180deg);
 }
 
 .actor-effect-source[data-removable="true"] > [data-slot="accordion-header"] > .actor-effect-source__trigger {

@@ -27,6 +27,9 @@ export function ConditionsModal({
     onClose,
     initialCondition = null,
     initialEffectId = null,
+    initialConditionValue = null,
+    initialPreviewOnly = false,
+    returnFocusKey = null,
     onBack,
     onContentLinkClick,
     readOnly = false,
@@ -47,17 +50,20 @@ export function ConditionsModal({
             return;
         }
         if (initialCondition) {
-            const effect = safeEffects.find((item) => String(item.name || '').toLowerCase() === String(initialCondition).toLowerCase());
+            const effect = initialPreviewOnly ? null : safeEffects.find((item) => String(item.name || '').toLowerCase() === String(initialCondition).toLowerCase());
             if (effect) {
                 setActiveTab('ACTIVE');
                 setSelectedEffectId(effect.id);
                 setSelectedConditionName(null);
             } else {
                 setSelectedEffectId(null);
-                setSelectedConditionName(getConditionCatalogEntry(initialCondition)?.name || initialCondition);
+                setSelectedConditionName({
+                    name: getConditionCatalogEntry(initialCondition)?.name || initialCondition,
+                    value: initialConditionValue,
+                });
             }
         }
-    }, [initialCondition, initialEffectId, safeEffects]);
+    }, [initialCondition, initialConditionValue, initialEffectId, initialPreviewOnly, safeEffects]);
 
     const selectedEffect = safeEffects.find((effect) => effect.id === selectedEffectId)
         || buildConditionPreview(selectedConditionName);
@@ -165,7 +171,7 @@ export function ConditionsModal({
             <div className="conditions-modal__row" key={conditionName}>
                 <button type="button" className="conditions-modal__row-main" onClick={() => {
                     if (active?.id) setSelectedEffectId(active.id);
-                    else setSelectedConditionName(entry?.name || conditionName);
+                    else setSelectedConditionName({ name: entry?.name || conditionName, value: null });
                 }}>
                     {image ? <img src={image} alt="" /> : <span>{getConditionIcon(conditionName) || 'O'}</span>}
                     <span className={active ? 'conditions-modal__row-name--active' : ''}>{entry?.name || conditionName}</span>
@@ -220,6 +226,16 @@ export function ConditionsModal({
             backAction={selectedEffect ? { label: 'Back to conditions', onClick: returnToList } : null}
             size="md"
             bodyClassName="overflow-hidden p-0"
+            contentProps={{
+                onCloseAutoFocus: (event) => {
+                    if (!returnFocusKey) return;
+                    const target = [...document.querySelectorAll('[data-condition-info-trigger]')]
+                        .find((element) => element.dataset.conditionInfoTrigger === returnFocusKey);
+                    if (!target) return;
+                    event.preventDefault();
+                    window.requestAnimationFrame(() => target.focus());
+                },
+            }}
         >
             <div className="conditions-modal__content">{selectedEffect ? renderDetail() : renderList()}</div>
         </AppDialogShell>
@@ -240,14 +256,15 @@ function buildStandardRows(tab, query) {
 
 function buildConditionPreview(conditionName) {
     if (!conditionName) return null;
-    const entry = getConditionCatalogEntry(conditionName);
-    const name = entry?.name || conditionName;
+    const input = typeof conditionName === 'object' ? conditionName : { name: conditionName, value: null };
+    const entry = getConditionCatalogEntry(input.name);
+    const name = entry?.name || input.name;
     return {
         id: null,
         name,
         label: name,
         category: 'condition',
-        value: 0,
+        value: Number(input.value) || 0,
         canModifyValue: isConditionValued(name),
         description: entry?.description || 'No condition description is available.',
     };

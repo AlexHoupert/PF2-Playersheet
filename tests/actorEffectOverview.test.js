@@ -4,8 +4,12 @@ import {
   buildActorEffectOverview,
   resolveVisibleSourceActor,
   selectEffectChipItems,
+  selectVisibleAttackRows,
 } from '../src/shared/rules/actorEffectOverview.js';
-import { createPersistentDamageEffectInput } from '../src/shared/rules/conditionEffectRules.js';
+import {
+  createPersistentDamageEffectInput,
+  createStandardConditionEffectInput,
+} from '../src/shared/rules/conditionEffectRules.js';
 
 const persistedEffects = [
   {
@@ -165,4 +169,117 @@ test('overview combines all-check penalties with concrete save bonuses', () => {
   assert.equal(reflex.breakdown.item, 1);
   assert.equal(reflex.breakdown.status, -2);
   assert.deepEqual(new Set(reflex.contributions.map((entry) => entry.effectId)), new Set(['quicksilver-reflex', 'frightened']));
+});
+
+test('attack overview keeps broad rows and only directly affected specializations', () => {
+  const frightened = { id: 'frightened', ...createStandardConditionEffectInput('Frightened', 1) };
+  const frightenedOverview = buildActorEffectOverview({
+    actorRules: { character: { id: 'hero' }, effects: [frightened] },
+  });
+  const frightenedCombat = frightenedOverview.effectGroups.find((group) => group.id === 'combat');
+  assert.deepEqual(
+    frightenedCombat.rows.filter((row) => row.id.startsWith('attack.')).map((row) => row.id),
+    ['attack.all']
+  );
+
+  const enfeebled = { id: 'enfeebled', ...createStandardConditionEffectInput('Enfeebled', 2) };
+  const combinedOverview = buildActorEffectOverview({
+    actorRules: { character: { id: 'hero' }, effects: [frightened, enfeebled] },
+  });
+  const combinedCombat = combinedOverview.effectGroups.find((group) => group.id === 'combat');
+  assert.deepEqual(
+    combinedCombat.rows.filter((row) => row.id.startsWith('attack.')).map((row) => row.id),
+    ['attack.all', 'attack.strength']
+  );
+  assert.equal(combinedCombat.rows.find((row) => row.id === 'attack.all').total, -1);
+  assert.equal(combinedCombat.rows.find((row) => row.id === 'attack.strength').total, -2);
+});
+
+test('attack row selection respects direct geometry modifiers and actor capabilities', () => {
+  const rows = [
+    { id: 'attack.all' },
+    { id: 'attack.melee' },
+    { id: 'attack.ranged' },
+    { id: 'spell.attack' },
+    { id: 'impulse.attack' },
+  ];
+  const directContributions = [
+    { selector: 'all.checks' },
+    { selector: 'attack.melee' },
+    { selector: 'spell.attack' },
+    { selector: 'impulse.attack' },
+  ];
+  const martial = selectVisibleAttackRows({
+    actorRules: { character: { id: 'martial' } },
+    selectorRows: rows,
+    directContributions,
+  });
+  assert.deepEqual(martial.map((row) => row.id), ['attack.all', 'attack.melee']);
+
+  const casterKineticist = selectVisibleAttackRows({
+    actorRules: { character: { id: 'hybrid', isCaster: true, isKineticist: true } },
+    selectorRows: rows,
+    directContributions,
+  });
+  assert.deepEqual(casterKineticist.map((row) => row.id), [
+    'attack.all',
+    'attack.melee',
+    'spell.attack',
+    'impulse.attack',
+  ]);
+});
+
+test('condition sources use semantic check domains and expose condition references', () => {
+  const frightened = { id: 'frightened', ...createStandardConditionEffectInput('Frightened', 2) };
+  const overview = buildActorEffectOverview({
+    actorRules: { character: { id: 'hero' }, effects: [frightened] },
+  });
+  const conditionSource = overview.sourceGroups
+    .find((group) => group.id === 'conditions')
+    .sources.find((source) => source.id === 'frightened');
+
+  assert.deepEqual(conditionSource.modifiers.map((modifier) => modifier.selectorLabel), [
+    'Attack Rolls',
+    'Skill Checks',
+    'Saving Throws',
+    'Perception',
+    'DCs',
+  ]);
+  assert.ok(conditionSource.modifiers.every((modifier) => modifier.applied));
+  assert.deepEqual(conditionSource.conditionReference, {
+    effectId: 'frightened',
+    conditionName: 'Frightened',
+    value: 2,
+    derived: false,
+  });
+});
+
+test('derived condition contributions reference the derived condition instead of the root effect', () => {
+  const restrained = { id: 'restrained', ...createStandardConditionEffectInput('Restrained', 1) };
+  const actorRules = {
+    character: { id: 'hero' },
+    effects: [{
+      ...restrained,
+      ruleTree: restrained.ruleTree,
+    }],
+  };
+  const overview = buildActorEffectOverview({ actorRules });
+  const armorClass = overview.effectGroups
+    .find((group) => group.id === 'defenses')
+    .rows.find((row) => row.id === 'ac');
+  const conditionSource = overview.sourceGroups
+    .find((group) => group.id === 'conditions')
+    .sources.find((source) => source.id === 'restrained');
+
+  assert.equal(armorClass.contributions.length, 1);
+  assert.deepEqual(armorClass.contributions[0].conditionReference, {
+    effectId: null,
+    conditionName: 'Off-Guard',
+    value: 1,
+    derived: true,
+  });
+  assert.deepEqual(conditionSource.children.map((child) => child.conditionReference.conditionName), [
+    'Off-Guard',
+    'Immobilized',
+  ]);
 });

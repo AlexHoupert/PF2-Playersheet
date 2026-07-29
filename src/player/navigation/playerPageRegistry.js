@@ -1,3 +1,5 @@
+import { actorHasImpulses, actorHasMagic } from '../../shared/actors/actorCapabilities.js';
+
 export const PLAYER_CATEGORY_IDS = {
     CHARACTER: 'character',
     SKILLS: 'skills',
@@ -242,22 +244,11 @@ export function buildPlayerNavigationContext({ character, ownedCompanionActors }
 }
 
 export function characterHasMagic(character) {
-    if (!character) return false;
-    if (character.isCaster) return true;
-    if ((character.magic?.list || []).length > 0) return true;
-    if (Number(character.stats?.spell_proficiency || 0) > 0) return true;
-
-    const slots = character.magic?.slots || {};
-    return Object.entries(slots).some(([key, value]) =>
-        String(key).endsWith('_max') && Number(value || 0) > 0
-    );
+    return actorHasMagic(character);
 }
 
 export function characterHasImpulses(character) {
-    if (!character) return false;
-    if (character.isKineticist) return true;
-    if ((character.impulses || []).length > 0) return true;
-    return Number(character.stats?.impulse_proficiency || 0) > 0;
+    return actorHasImpulses(character);
 }
 
 export function characterHasCompanion(character, ownedCompanionActors = []) {

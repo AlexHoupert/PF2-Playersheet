@@ -140,11 +140,13 @@ Migrated paths:
 - Admin Player tab character updates and party XP set/add.
 - PC character lifecycle writes campaign-scoped `actors(kind="pc")`; `CampaignContext` exposes `actors`, `archivedActors`, and `myActor` in addition to transitional character viewmodels derived only from PC Actors.
 - `ConditionsModal`, Player Stats, Admin CharacterCard backlash, item mutagen effects, and Encounter condition/persistent-damage assignment use campaign-scoped `actorEffects`; runtime UI no longer writes `character.conditions`.
+- `src/shared/rules/conditionEffectRules.js` is the canonical source for durable condition hierarchies and their leaf modifiers. The Actor rules resolver consumes the flattened leaves while the Active Effects drawer consumes the same tree; do not duplicate derived condition rules in UI components.
 - `src/shared/effects/effectPresentation.js` is the shared UI contract for displayable standard conditions, persistent damage, afflictions, and custom badges. Owner/GM views include hidden display effects; Party views exclude only `hidden: true` effects.
 - Encounter turn state is canonicalized through `currentTurnCombatantId`; `currentTurnIndex` is a legacy read-normalization fallback. Defeated creature combatants remain visible to the GM but are excluded from Party initiative and turn advancement until HP is restored above zero.
 - Generic legacy `Persistent Damage` and `Fast Healing` conditions are deprecated. Use `actorEffects(category="damage_effect")` for persistent damage and `npm run cleanup:legacy-conditions` for the audited, dry-run-first maintenance pass.
 - `server/index.js` hosts Vite in middleware mode. Keep both `middlewareMode.server` and `hmr.server` bound to the Express HTTP parent; this prevents isolated Playwright dev servers from competing for Vite's fallback WebSocket port and stalling lazy routes.
 - Mutagens must be represented as `actorEffects.modifiers`; `currentMutagen` is guarded against returning as a runtime rules source.
+- Inventory items whose normalized catalog type is `equipment` are generally equipable through the shared item-equipability helper. Armor, shields, and weapons retain their specialized state handling, but general equipment has no slot-conflict enforcement.
 - `CompanionTab` reads and writes owned companion Actors (`animal_companion`, `familiar`, `pet`) instead of `character.companion`; companion conditions use `actorEffects`.
 - Deployed item, spell, action, feat, impulse, ability, and creature editing writes Firestore `catalogOverrides`; static resource file APIs remain local-dev helpers.
 

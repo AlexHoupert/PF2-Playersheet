@@ -37,7 +37,7 @@ const RAW_EFFECT_SELECTOR_REGISTRY = [
   { value: "hp.max", label: "Maximum HP" },
   { value: "speed", label: "Land Speed" },
   { value: "perception", label: "Perception" },
-  { value: "all.checks", label: "All Checks" },
+  { value: "all.checks", label: "All Checks", showInOverview: false },
   { value: "all.dcs", label: "All DCs" },
   { value: "save.fortitude", label: "Fortitude" },
   { value: "save.reflex", label: "Reflex" },
