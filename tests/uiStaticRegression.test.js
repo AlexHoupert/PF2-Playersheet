@@ -765,6 +765,8 @@ test('actor stats use shared closable effect chips and explainable overview draw
     assert.match(sectionSource, /actor-effects-overview-button/);
     assert.match(listSource, /ClosableEffectChip/);
     assert.match(listSource, /condition-list__add/);
+    assert.match(listSource, /shouldUseCompactAddButton/);
+    assert.match(listSource, /data-compact=\{compactAdd\}/);
     assert.match(listSource, /data-empty=\{active\.length === 0\}/);
     assert.match(sectionStyles, /min-height: 30px/);
     assert.match(sectionStyles, /flex: 0 0 30px/);
@@ -781,7 +783,9 @@ test('actor stats use shared closable effect chips and explainable overview draw
     assert.match(drawerSource, /ConditionAccordionHeader/);
     assert.match(drawerSource, /previewOnly: Boolean\(reference\.derived\)/);
     assert.match(modalManagerSource, /initialPreviewOnly=\{previewOnly\}/);
+    assert.match(modalManagerSource, /isConditionInfo && typeof modalData/);
     assert.match(conditionsSource, /initialPreviewOnly \? null/);
+    assert.match(conditionsSource, /conditions-modal__active-effect-icon/);
     assert.equal(accordionSource.includes('h-(--radix-accordion-content-height)'), false);
     assert.match(overviewSource, /ATTRIBUTABLE_TRIGGERS/);
     assert.match(overviewSource, /showInOverview !== false/);

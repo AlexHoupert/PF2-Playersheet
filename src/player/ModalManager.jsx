@@ -199,17 +199,21 @@ function ModalManagerContent({
     }
 
     if (modalMode === 'conditions' || modalMode === 'conditionInfo') {
-        const condName = typeof modalData === 'string' ? modalData : modalData?.name;
-        const effectId = typeof modalData === 'object' ? modalData?.id : null;
-        const conditionValue = typeof modalData === 'object' ? modalData?.value : null;
-        const previewOnly = typeof modalData === 'object' && Boolean(modalData?.previewOnly);
-        const returnFocusKey = typeof modalData === 'object' ? modalData?.returnFocusKey : null;
+        const isConditionInfo = modalMode === 'conditionInfo';
+        const condName = isConditionInfo
+            ? (typeof modalData === 'string' ? modalData : modalData?.name)
+            : null;
+        const effectId = isConditionInfo && typeof modalData === 'object' ? modalData?.id : null;
+        const conditionValue = isConditionInfo && typeof modalData === 'object' ? modalData?.value : null;
+        const previewOnly = isConditionInfo && typeof modalData === 'object' && Boolean(modalData?.previewOnly);
+        const returnFocusKey = isConditionInfo && typeof modalData === 'object' ? modalData?.returnFocusKey : null;
         // If mode is 'conditions', initialCondition is likely null or undefined unless intended.
         // if mode is 'conditionInfo', initialCondition is condName.
         const initial = modalMode === 'conditionInfo' ? condName : null;
 
         return (
             <ConditionsModal
+                key={modalMode}
                 character={character}
                 effects={effects || conditions}
                 onClose={onClose}

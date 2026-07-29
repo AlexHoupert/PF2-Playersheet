@@ -202,7 +202,8 @@ export function ConditionsModal({
                         activeEffects.length
                             ? activeEffects.map((effect) => (
                                 <button type="button" key={effect.id} className={`conditions-modal__active-effect conditions-modal__active-effect--${effect.variant}`} onClick={() => setSelectedEffectId(effect.id)}>
-                                    <span>{getEffectIcon(effect)}</span><span>{effect.label}</span>
+                                    {renderEffectIcon(effect)}
+                                    <span>{effect.label}</span>
                                 </button>
                             ))
                             : <p className="conditions-modal__empty">No active conditions found.</p>
@@ -280,6 +281,13 @@ function getEffectIcon(effect) {
     if (effect.category === 'affliction') return 'AFF';
     if (effect.category === 'custom') return 'NOTE';
     return getConditionIcon(effect.name) || 'O';
+}
+
+function renderEffectIcon(effect) {
+    const image = effect.category === 'condition' ? getConditionImgSrc(effect.name) : null;
+    return image
+        ? <img className="conditions-modal__active-effect-icon" src={image} alt="" />
+        : <span className="conditions-modal__effect-icon">{getEffectIcon(effect)}</span>;
 }
 
 function toConditionSlug(value) {

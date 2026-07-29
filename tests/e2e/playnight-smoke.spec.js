@@ -496,6 +496,15 @@ test("player can inspect and remove an exact persisted effect from the status sc
   const conditionChip = page.getByTestId("condition-badge-e2e-effect-frightened");
   const overviewButton = page.getByTestId("actor-effects-overview-button");
   await expect(conditionChip).toBeVisible();
+  await conditionChip.getByRole("button", { name: "Frightened", exact: true }).click();
+  let conditionDialog = page.locator("[data-app-dialog-shell]");
+  await expect(conditionDialog.getByRole("heading", { name: "Frightened", exact: true })).toBeVisible();
+  await conditionDialog.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByTestId("condition-add-button").click();
+  conditionDialog = page.locator("[data-app-dialog-shell]");
+  await expect(conditionDialog.getByRole("heading", { name: "Conditions", exact: true })).toBeVisible();
+  await expect(conditionDialog.locator(".conditions-modal__active-effect-icon")).toBeVisible();
+  await conditionDialog.getByRole("button", { name: "Close", exact: true }).click();
   const [overviewBox, chipBox] = await Promise.all([overviewButton.boundingBox(), conditionChip.boundingBox()]);
   expect(overviewBox.width).toBeLessThanOrEqual(30.5);
   expect(Math.abs(overviewBox.height - chipBox.height)).toBeLessThan(1);
@@ -513,7 +522,7 @@ test("player can inspect and remove an exact persisted effect from the status sc
   await expect(page.getByText(/\[Status\] Skill Checks/).first()).toBeVisible();
   const frightenedInfoTrigger = frightenedSource.getByRole("button", { name: "Frightened", exact: true });
   await frightenedInfoTrigger.click();
-  const conditionDialog = page.locator("[data-app-dialog-shell]");
+  conditionDialog = page.locator("[data-app-dialog-shell]");
   await expect(conditionDialog.getByRole("heading", { name: "Frightened", exact: true })).toBeVisible();
   await conditionDialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(frightenedInfoTrigger).toBeFocused();

@@ -89,8 +89,8 @@ export default function PlayerPageRenderer({
                 displayEffects={characterEffects}
                 characterActions={characterActions}
                 onOpenModal={(mode, data) => {
+                    setModalData(data ?? null);
                     setModalMode(mode);
-                    if (data) setModalData(data);
                 }}
                 onLongPress={handleLongPress}
                 onRemoveEffect={(effect) => {

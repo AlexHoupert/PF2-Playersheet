@@ -85,5 +85,19 @@
     font-weight: 700;
 }
 
+.condition-list__add[data-compact="true"] {
+    width: 30px;
+    justify-content: center;
+    padding-inline: 0;
+    font-size: 1em;
+}
+
+.condition-list__add-measure {
+    position: absolute;
+    visibility: hidden;
+    width: max-content;
+    pointer-events: none;
+}
+
 .condition-list__add:hover { border-color: #c5a059; color: #d7bc82; }
 .condition-list__empty { align-self: center; color: #777; font-size: 0.8em; font-style: italic; }
