@@ -180,4 +180,8 @@ test('legacy pact offer flow sets offers, accepts valid abilities, and spends aw
     await harness.actions.pact.spendAwakeningPoint('camp1', 'char1', 'spark', 1);
     assert.equal(harness.state.campaigns.camp1.characters[0].pact.awakeningPoints, 0);
     assert.equal(harness.state.campaigns.camp1.characters[0].pact.unlockedAwakenings.spark, 1);
+
+    await harness.actions.pact.resetAwakenings('camp1', 'char1');
+    assert.equal(harness.state.campaigns.camp1.characters[0].pact.awakeningPoints, 1);
+    assert.deepEqual(harness.state.campaigns.camp1.characters[0].pact.unlockedAwakenings, {});
 });

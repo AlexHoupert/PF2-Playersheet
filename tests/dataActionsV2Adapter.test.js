@@ -526,9 +526,12 @@ test('v2 adapter uses targeted actor updates for pact offers and awakening point
         },
     });
     await pointActions.pact.spendAwakeningPoint('camp1', 'actor1', 'spark', 1);
+    await pointActions.pact.resetAwakenings('camp1', 'actor1');
 
-    assert.deepEqual(pointCalls.map(call => call[0]), ['actor.updateActor']);
+    assert.deepEqual(pointCalls.map(call => call[0]), ['actor.updateActor', 'actor.updateActor']);
     assert.equal(pointCalls[0][3].sheet.pact.unlockedAwakenings.spark, 1);
+    assert.equal(pointCalls[1][3].sheet.pact.awakeningPoints, 1);
+    assert.deepEqual(pointCalls[1][3].sheet.pact.unlockedAwakenings, {});
 });
 
 test('v2 pact reject clears stale sheet-level offers', async () => {

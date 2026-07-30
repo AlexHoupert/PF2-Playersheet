@@ -105,13 +105,15 @@ test('player navigation registry validates subpage compatibility with legacy sta
         false
     );
     assert.equal(getCategoryIdForPlayerPage(PLAYER_PAGE_IDS.BESTIARY), 'knowledge');
+    assert.equal(getCategoryIdForPlayerPage(PLAYER_PAGE_IDS.PACT), 'campaign');
+    assert.equal(getCategoryIdForPlayerPage(PLAYER_PAGE_IDS.DEVIANT), 'character');
 });
 
 test('player subpage swipe stays within the active category', () => {
     assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.STATUS, 'next'), PLAYER_PAGE_IDS.FEATS);
     assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.FEATS, 'previous'), PLAYER_PAGE_IDS.STATUS);
     assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.PROFICIENCIES, 'next'), null);
-    assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.QUESTS, 'previous'), PLAYER_PAGE_IDS.CAMP);
+    assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.QUESTS, 'previous'), PLAYER_PAGE_IDS.PACT);
     assert.equal(getSwipeTargetPlayerPageId(PLAYER_PAGE_IDS.EQUIPMENT, 80), PLAYER_PAGE_IDS.CONSUMABLES);
     assert.equal(getSwipeTargetPlayerPageId(PLAYER_PAGE_IDS.EQUIPMENT, -80), PLAYER_PAGE_IDS.LOOT);
 });
@@ -150,10 +152,10 @@ test('player navigation hides optional magic impulse and companion pages when un
     assert.deepEqual(characterPages, [
         PLAYER_PAGE_IDS.STATUS,
         PLAYER_PAGE_IDS.FEATS,
-        PLAYER_PAGE_IDS.PACT,
     ]);
     assert.equal(getVisiblePlayerPageId(PLAYER_PAGE_IDS.MAGIC, navigationContext), PLAYER_PAGE_IDS.STATUS);
-    assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.FEATS, 'next', navigationContext), PLAYER_PAGE_IDS.PACT);
+    assert.equal(getVisiblePlayerPageId(PLAYER_PAGE_IDS.DEVIANT, navigationContext), PLAYER_PAGE_IDS.STATUS);
+    assert.equal(getAdjacentPlayerSubpageId(PLAYER_PAGE_IDS.FEATS, 'next', navigationContext), PLAYER_PAGE_IDS.STATUS);
 });
 
 test('player page order normalization removes invalid duplicates and appends missing pages', () => {
@@ -201,12 +203,12 @@ test('reordering visible pages preserves the stored slot of a dynamically hidden
             PLAYER_PAGE_IDS.STATUS,
             PLAYER_PAGE_IDS.MAGIC,
             PLAYER_PAGE_IDS.FEATS,
-            PLAYER_PAGE_IDS.PACT,
+            PLAYER_PAGE_IDS.DEVIANT,
         ],
     });
     const merged = mergeVisiblePlayerPageOrder({
         categoryId: 'character',
-        visiblePageIds: [PLAYER_PAGE_IDS.FEATS, PLAYER_PAGE_IDS.STATUS, PLAYER_PAGE_IDS.PACT],
+        visiblePageIds: [PLAYER_PAGE_IDS.FEATS, PLAYER_PAGE_IDS.STATUS, PLAYER_PAGE_IDS.DEVIANT],
         pageOrderByCategory: current,
     });
 
@@ -214,7 +216,7 @@ test('reordering visible pages preserves the stored slot of a dynamically hidden
         PLAYER_PAGE_IDS.FEATS,
         PLAYER_PAGE_IDS.MAGIC,
         PLAYER_PAGE_IDS.STATUS,
-        PLAYER_PAGE_IDS.PACT,
+        PLAYER_PAGE_IDS.DEVIANT,
     ]);
 });
 
@@ -231,6 +233,7 @@ test('keyboard page moves remain scoped to their category', () => {
         PLAYER_PAGE_IDS.QUESTS,
         PLAYER_PAGE_IDS.PROGRESS,
         PLAYER_PAGE_IDS.CAMP,
+        PLAYER_PAGE_IDS.PACT,
     ]);
 });
 
@@ -239,6 +242,7 @@ test('player navigation shows optional pages when the character has matching fea
         character: {
             isCaster: true,
             impulses: [{ name: 'Elemental Blast' }],
+            pact: { pactId: 'ember' },
         },
         ownedCompanionActors: [{ id: 'wolf', kind: 'animal_companion' }],
     });
@@ -249,6 +253,7 @@ test('player navigation shows optional pages when the character has matching fea
 
     assert.ok(characterPages.includes(PLAYER_PAGE_IDS.MAGIC));
     assert.ok(characterPages.includes(PLAYER_PAGE_IDS.IMPULSES));
+    assert.ok(characterPages.includes(PLAYER_PAGE_IDS.DEVIANT));
     assert.ok(characterPages.includes(PLAYER_PAGE_IDS.COMPANION));
 });
 

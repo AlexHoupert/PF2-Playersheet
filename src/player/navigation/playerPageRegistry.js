@@ -13,6 +13,7 @@ export const PLAYER_PAGE_IDS = {
     FEATS: 'character.feats',
     MAGIC: 'character.magic',
     IMPULSES: 'character.impulses',
+    DEVIANT: 'character.deviant',
     PACT: 'character.pact',
     COMPANION: 'character.owned-actor',
     PROFICIENCIES: 'character.proficiencies',
@@ -50,7 +51,7 @@ export const PLAYER_NAV_CATEGORIES = [
             { id: PLAYER_PAGE_IDS.FEATS, label: 'Feats', legacyTab: 'feats', legacyMode: 'character', icon: 'laurels-trophy' },
             { id: PLAYER_PAGE_IDS.MAGIC, label: 'Magic', legacyTab: 'magic', legacyMode: 'character', icon: 'magic-swirl', requires: 'magic' },
             { id: PLAYER_PAGE_IDS.IMPULSES, label: 'Impulses', legacyTab: 'impulses', legacyMode: 'character', icon: 'lightning-arc', requires: 'impulses' },
-            { id: PLAYER_PAGE_IDS.PACT, label: 'Pact', legacyTab: 'pact', legacyMode: 'character', icon: 'shaking-hands' },
+            { id: PLAYER_PAGE_IDS.DEVIANT, label: 'Deviant', icon: 'magic-swirl', requires: 'pact' },
             { id: PLAYER_PAGE_IDS.COMPANION, label: 'Companion', legacyTab: 'companion', legacyMode: 'character', icon: 'wolf-head', requires: 'companion' },
             { id: PLAYER_PAGE_IDS.PROFICIENCIES, label: 'Proficiencies', future: true, hidden: true, icon: 'crossed-swords' },
         ],
@@ -103,6 +104,7 @@ export const PLAYER_NAV_CATEGORIES = [
             { id: PLAYER_PAGE_IDS.PROGRESS, label: 'Progress', legacyTab: 'progress', legacyMode: 'story', icon: 'progression' },
             { id: PLAYER_PAGE_IDS.MAPS, label: 'Maps', legacyTab: 'maps', legacyMode: 'story', icon: 'treasure-map' },
             { id: PLAYER_PAGE_IDS.CAMP, label: 'Camp', legacyTab: 'camp', legacyMode: 'story', icon: 'campfire' },
+            { id: PLAYER_PAGE_IDS.PACT, label: 'Pact', legacyTab: 'pact', legacyMode: 'story', icon: 'shaking-hands' },
         ],
     },
 ];
@@ -248,6 +250,7 @@ export function buildPlayerNavigationContext({ character, ownedCompanionActors, 
         hasMagic: characterHasMagic(character),
         hasImpulses: characterHasImpulses(character),
         hasCompanion: characterHasCompanion(character, ownedCompanionActors),
+        hasPact: Boolean(character?.pact?.pactId),
         pageOrderByCategory: normalizePlayerPageOrder(pageOrderByCategory),
     };
 }
@@ -354,19 +357,21 @@ function wrapIndex(index, length) {
 }
 
 function inferModeForLegacyTab(activeTab) {
-    return ['quests', 'lore', 'maps', 'progress', 'camp'].includes(activeTab) ? 'story' : 'character';
+    return ['quests', 'lore', 'maps', 'progress', 'camp', 'pact'].includes(activeTab) ? 'story' : 'character';
 }
 
 function normalizeNavigationContext(navigationContext = {}) {
     if (
         Object.prototype.hasOwnProperty.call(navigationContext, 'hasMagic') ||
         Object.prototype.hasOwnProperty.call(navigationContext, 'hasImpulses') ||
-        Object.prototype.hasOwnProperty.call(navigationContext, 'hasCompanion')
+        Object.prototype.hasOwnProperty.call(navigationContext, 'hasCompanion') ||
+        Object.prototype.hasOwnProperty.call(navigationContext, 'hasPact')
     ) {
         return {
             hasMagic: Boolean(navigationContext.hasMagic),
             hasImpulses: Boolean(navigationContext.hasImpulses),
             hasCompanion: Boolean(navigationContext.hasCompanion),
+            hasPact: Boolean(navigationContext.hasPact),
             pageOrderByCategory: normalizePlayerPageOrder(navigationContext.pageOrderByCategory),
         };
     }
@@ -375,6 +380,7 @@ function normalizeNavigationContext(navigationContext = {}) {
         hasMagic: true,
         hasImpulses: true,
         hasCompanion: true,
+        hasPact: true,
         pageOrderByCategory: normalizePlayerPageOrder(navigationContext.pageOrderByCategory),
     };
 }
@@ -385,5 +391,6 @@ function isPlayerPageVisible(page, capabilities) {
     if (page.requires === 'magic') return capabilities.hasMagic;
     if (page.requires === 'impulses') return capabilities.hasImpulses;
     if (page.requires === 'companion') return capabilities.hasCompanion;
+    if (page.requires === 'pact') return capabilities.hasPact;
     return true;
 }

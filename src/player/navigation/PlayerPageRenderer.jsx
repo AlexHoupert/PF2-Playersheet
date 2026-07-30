@@ -12,6 +12,7 @@ import MapsView from '../views/MapsView';
 import ProgressView from '../views/ProgressView';
 import CampScreen from '../../camping/CampScreen';
 import PactView from '../../pacts/PactView';
+import DeviantView from '../../pacts/DeviantView';
 import PlayerPlaceholderPage from './PlayerPlaceholderPage';
 import PlayerKnowledgeNotesOverview from '../lore/PlayerKnowledgeNotesOverview.jsx';
 import { PLAYER_PAGE_IDS } from './playerPageRegistry';
@@ -157,8 +158,12 @@ export default function PlayerPageRenderer({
         );
     }
 
+    if (activePageId === PLAYER_PAGE_IDS.DEVIANT) {
+        return <DeviantView character={rulesCharacter} db={db} readOnly={readOnly} />;
+    }
+
     if (activePageId === PLAYER_PAGE_IDS.PACT) {
-        return <PactView character={character} db={db} />;
+        return <PactView character={character} db={db} readOnly={readOnly} />;
     }
 
     if (activePageId === PLAYER_PAGE_IDS.COMPANION) {

@@ -199,7 +199,9 @@ Data:
 - Deviant abilities live in `db.abilities.deviant`.
 - Character pact assignment lives on `character.pact`.
 
-Player view resolves the assigned pact and selected abilities, then displays awakenings and backlash reference.
+The Campaign `Pact` page resolves the assigned pact and displays its dedication, awakening-point pool, parsed Backlash reference, and the rules explanation. The Character `Deviant` page is visible only after a pact has been accepted. It resolves only the abilities selected in `character.pact.choices`, calculates the deviation DC from the higher effective Class DC or Spell DC, and exposes Awakening purchases without copying ability data into the actor.
+
+`dataActions.pact.resetAwakenings` clears `character.pact.unlockedAwakenings` and refunds the represented number of Awakening tiers in the same targeted Actor update. Awakening 2 requires Awakening 1, which keeps the numeric unlock level and refund count consistent.
 
 ## Content Rendering
 

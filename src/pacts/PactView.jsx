@@ -1,248 +1,168 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { HelpCircle, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useCampaign } from '../shared/context/CampaignContext';
-import { ELEMENTS, BACKLASH_TIERS, BACKLASH_LABELS, BACKLASH_COLORS } from './pactsData';
-import { selectDeviantAbility } from '../shared/db/selectors/abilitySelectors';
-import { selectPact } from '../shared/db/selectors/pactSelectors';
+import AppDialogShell from '../shared/components/dialogs/AppDialogShell';
+import { RichDescription } from '../shared/components/catalog-detail';
 import { useAppFeedback } from '../shared/feedback/AppFeedback';
+import { countUnlockedAwakeningPoints } from '../shared/pacts/pactState.js';
+import { selectPact } from '../shared/db/selectors/pactSelectors';
+import { BACKLASH_RULES } from './deviantRules.js';
+import { BACKLASH_COLORS, BACKLASH_LABELS, BACKLASH_TIERS, ELEMENTS } from './pactsData';
 
-/**
- * Player-facing pact view.
- * Shows the character's assigned pact, ability choices per level group,
- * unlocked awakenings, and backlash reference.
- *
- * Props:
- *   character  — character object (has .pact: { pactId, choices, unlockedAwakenings })
- *   db         — full db for selector-backed pact and deviant ability reads
- */
-export default function PactView({ character, db }) {
+export default function PactView({ character, db, readOnly = false }) {
     const { activeCampaignId, dataActions } = useCampaign();
-    const { notifyError } = useAppFeedback();
-    const pactData = character?.pact || {};
-    const [expandedAbility, setExpandedAbility] = useState(null);
-
-    const assignedPact = useMemo(() => {
-        return selectPact(db, pactData.pactId);
-    }, [pactData.pactId, db]);
+    const { confirm, notifyError, notifySuccess } = useAppFeedback();
+    const [rulesOpen, setRulesOpen] = useState(false);
+    const [resetting, setResetting] = useState(false);
+    const pactState = character?.pact || {};
+    const assignedPact = useMemo(
+        () => selectPact(db, pactState.pactId),
+        [db, pactState.pactId]
+    );
 
     if (!assignedPact) {
-        return (
-            <div style={{ padding: 20, textAlign: 'center', color: '#555' }}>
-                No elemental pact assigned.
-            </div>
-        );
+        return <div className="p-5 text-center text-muted-foreground">No pact assigned.</div>;
     }
 
-    const el = ELEMENTS[assignedPact.element] || ELEMENTS.Fire;
-    const awakeningPoints = Number(pactData.awakeningPoints) || 0;
+    const element = ELEMENTS[assignedPact.element] || ELEMENTS.Fire;
+    const awakeningPoints = Number(pactState.awakeningPoints) || 0;
+    const refundablePoints = countUnlockedAwakeningPoints(pactState.unlockedAwakenings);
+    const dedicationName = pactState.dedicationName
+        || (typeof assignedPact.dedication === 'string'
+            ? assignedPact.dedication
+            : assignedPact.dedication?.name);
 
-    const resolveAbility = (id) => selectDeviantAbility(db, id);
-    const runPactAction = (action) => {
-        Promise.resolve(action).catch(err => {
-            console.error(err);
-            notifyError(err);
+    const resetAwakenings = async () => {
+        if (readOnly || resetting || refundablePoints <= 0 || !activeCampaignId || !character?.id) return;
+        const accepted = await confirm({
+            title: 'Reset awakenings?',
+            message: `Reset all selected awakenings and refund ${refundablePoints} Awakening Point${refundablePoints === 1 ? '' : 's'}?`,
+            confirmLabel: 'Reset Awakenings',
+            danger: true,
         });
-    };
-    const spendAwakeningPoint = (abilityId, awakeningIndex) => {
-        if (!activeCampaignId || !character?.id || awakeningPoints <= 0) return;
-        runPactAction(dataActions.pact.spendAwakeningPoint(activeCampaignId, character.id, abilityId, awakeningIndex));
+        if (!accepted) return;
+
+        setResetting(true);
+        try {
+            await dataActions.pact.resetAwakenings(activeCampaignId, character.id);
+            notifySuccess('Awakenings reset and points refunded.');
+        } catch (error) {
+            console.error(error);
+            notifyError(error);
+        } finally {
+            setResetting(false);
+        }
     };
 
     return (
-        <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {/* Pact Header */}
-            <div style={{ background: el.bg, border: `1px solid ${el.dim}`, borderRadius: 8, padding: '12px 14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                    <span style={{ fontSize: '1.5em' }}>{el.icon}</span>
-                    <div>
-                        <div style={{ color: el.color, fontFamily: 'Cinzel, serif', fontSize: '1em', fontWeight: 'bold' }}>
+        <div className="flex flex-col gap-4 py-3">
+            <section
+                className="rounded-lg border p-4"
+                style={{ background: element.bg, borderColor: element.dim }}
+            >
+                <div className="flex items-start gap-3">
+                    <span className="text-2xl" aria-hidden="true">{element.icon}</span>
+                    <div className="min-w-0 flex-1">
+                        <h2 className="font-cinzel text-base font-bold" style={{ color: element.color }}>
                             {assignedPact.name}
-                        </div>
-                        <div style={{ fontSize: '0.75em', color: '#888' }}>{assignedPact.element} Element</div>
+                        </h2>
+                        <p className="text-xs text-muted-foreground">{assignedPact.element} Element</p>
                     </div>
                 </div>
-                {assignedPact.description && (
-                    <div
-                        style={{ fontSize: '0.82em', color: '#bbb', marginTop: 8, lineHeight: 1.5 }}
-                        dangerouslySetInnerHTML={{ __html: assignedPact.description }}
-                    />
-                )}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-                    {(pactData.dedicationName || assignedPact.dedication?.name) && (
-                        <span style={pillStyle(el)}>
-                            Dedication: {pactData.dedicationName || assignedPact.dedication.name}
-                        </span>
-                    )}
-                    <span style={pillStyle(el)}>Awakening Points: {awakeningPoints}</span>
-                </div>
-            </div>
-
-            {/* Ability Groups */}
-            {(assignedPact.abilityGroups || []).length > 0 && (
-                <div>
-                    <div style={{ fontSize: '0.7em', color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                        Deviant Abilities
+                {assignedPact.description ? (
+                    <div className="mt-3 text-muted-foreground">
+                        <RichDescription description={assignedPact.description} actor={character} />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {assignedPact.abilityGroups.map((group, gIdx) => {
-                            const chosenId = pactData.choices?.[gIdx];
-                            const abilities = (group.abilityIds || []).map(resolveAbility).filter(Boolean);
-                            if (abilities.length === 0) return null;
-                            return (
-                                <div key={gIdx}>
-                                    {group.label && (
-                                        <div style={{ fontSize: '0.72em', color: el.color, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                            {group.label}
-                                        </div>
-                                    )}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                        {abilities.map(ab => {
-                                            const isChosen = chosenId === ab.id;
-                                            const unlockedLevel = pactData.unlockedAwakenings?.[ab.id] || 0;
-                                            const isExpanded = expandedAbility === ab.id;
-                                            return (
-                                                <div
-                                                    key={ab.id}
-                                                    style={{
-                                                        background: isChosen ? el.bg : '#1a1a1d',
-                                                        border: `1px solid ${isChosen ? el.color : '#2a2a2a'}`,
-                                                        borderRadius: 6, overflow: 'hidden'
-                                                    }}
-                                                >
-                                                    <div
-                                                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', cursor: 'pointer' }}
-                                                        onClick={() => setExpandedAbility(isExpanded ? null : ab.id)}
-                                                    >
-                                                        <div style={{ flex: 1 }}>
-                                                            <span style={{ color: isChosen ? el.color : '#aaa', fontWeight: isChosen ? 'bold' : 'normal', fontSize: '0.9em' }}>
-                                                                {isChosen && '✓ '}{ab.name}
-                                                            </span>
-                                                            <span style={{ color: '#555', fontSize: '0.75em', marginLeft: 6 }}>Lv {ab.level}</span>
-                                                        </div>
-                                                        {unlockedLevel > 0 && (
-                                                            <div style={{ display: 'flex', gap: 4 }}>
-                                                                {[1, 2].filter(n => n <= unlockedLevel).map(n => (
-                                                                    <span key={n} style={{ fontSize: '0.7em', padding: '1px 5px', background: '#1a3a1a', border: '1px solid #4caf50', color: '#81c784', borderRadius: 10 }}>
-                                                                        Aw{n}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                        <span style={{ color: '#555', fontSize: '0.75em' }}>{isExpanded ? '▲' : '▼'}</span>
-                                                    </div>
-
-                                                    {isExpanded && (
-                                                        <div style={{ borderTop: `1px solid ${isChosen ? el.dim : '#222'}`, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                                            {/* Main description */}
-                                                            {ab.description && (
-                                                                <div
-                                                                    style={{ fontSize: '0.82em', color: '#ccc', lineHeight: 1.5 }}
-                                                                    dangerouslySetInnerHTML={{ __html: ab.description }}
-                                                                />
-                                                            )}
-
-                                                            {/* Awakenings */}
-                                                            {[1, 2].map(awLevel => {
-                                                                const awKey = `awakening${awLevel}`;
-                                                                const aw = ab[awKey];
-                                                                if (!aw?.name) return null;
-                                                                const isUnlocked = unlockedLevel >= awLevel;
-                                                                return (
-                                                                    <div
-                                                                        key={awLevel}
-                                                                        style={{
-                                                                            background: isUnlocked ? '#0a1a0a' : '#0f0f0f',
-                                                                            border: `1px solid ${isUnlocked ? '#2a4a2a' : '#222'}`,
-                                                                            borderRadius: 4, padding: '8px 10px',
-                                                                            opacity: isUnlocked ? 1 : 0.45
-                                                                        }}
-                                                                    >
-                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                                                                            <span style={{ fontSize: '0.7em', padding: '1px 6px', background: isUnlocked ? '#1a3a1a' : '#1a1a1d', border: `1px solid ${isUnlocked ? '#4caf50' : '#444'}`, color: isUnlocked ? '#81c784' : '#555', borderRadius: 10 }}>
-                                                                                Awakening {awLevel}
-                                                                            </span>
-                                                                            <span style={{ fontSize: '0.85em', color: isUnlocked ? '#c8e6c9' : '#666', fontWeight: 'bold' }}>{aw.name}</span>
-                                                                            {aw.levelNote && <span style={{ fontSize: '0.7em', color: '#555' }}>({aw.levelNote})</span>}
-                                                                        </div>
-                                                                        {aw.description && (
-                                                                            <div
-                                                                                style={{ fontSize: '0.8em', color: isUnlocked ? '#bbb' : '#555', lineHeight: 1.5 }}
-                                                                                dangerouslySetInnerHTML={{ __html: aw.description }}
-                                                                            />
-                                                                        )}
-                                                                        {!isUnlocked && (
-                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                                                                                <span style={{ fontSize: '0.72em', color: '#444' }}>Locked</span>
-                                                                                {isChosen && awakeningPoints > 0 && (
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        onClick={() => spendAwakeningPoint(ab.id, awLevel)}
-                                                                                        style={{ padding: '3px 8px', background: '#1a3a1a', border: '1px solid #4caf50', color: '#c8e6c9', borderRadius: 4, cursor: 'pointer', fontSize: '0.72em' }}
-                                                                                    >
-                                                                                        Spend Point
-                                                                                    </button>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                ) : null}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {dedicationName ? (
+                        <PactPill element={element}>
+                            Dedication: {dedicationName}
+                        </PactPill>
+                    ) : null}
+                    <PactPill element={element}>Awakening Points: {awakeningPoints}</PactPill>
+                    {!readOnly && refundablePoints > 0 ? (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            disabled={resetting}
+                            onClick={resetAwakenings}
+                            title="Reset selected awakenings and refund their points"
+                        >
+                            <RotateCcw aria-hidden="true" />
+                            {resetting ? 'Resetting...' : 'Reset Awakenings'}
+                        </Button>
+                    ) : null}
                 </div>
-            )}
+            </section>
 
-            {/* Backlash Reference */}
-            <div style={{ background: '#1a1010', border: '1px solid #3a1a1a', borderRadius: 6, padding: '10px 12px' }}>
-                <div style={{ fontSize: '0.7em', color: '#ef9a9a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                    Backlash Reference
+            <section className="rounded-md border border-red-950 bg-red-950/20 p-3">
+                <div className="mb-3 flex items-center gap-2">
+                    <h2 className="text-xs font-semibold uppercase tracking-widest text-red-300">
+                        Backlash Reference
+                    </h2>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="Explain backlash rules"
+                        title="Explain backlash rules"
+                        onClick={() => setRulesOpen(true)}
+                    >
+                        <HelpCircle aria-hidden="true" />
+                    </Button>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {BACKLASH_TIERS.map(tier => {
+                <div className="flex flex-col gap-3">
+                    {BACKLASH_TIERS.map((tier) => {
                         const tierData = assignedPact.backlash?.[tier] || {};
                         const tierColor = BACKLASH_COLORS[tier];
                         const effects = tierData.effects || [];
                         return (
-                            <div key={tier} style={{ borderLeft: `2px solid ${tierColor}`, paddingLeft: 10 }}>
-                                <div style={{ fontSize: '0.75em', color: tierColor, fontWeight: 'bold', marginBottom: 2 }}>
+                            <article key={tier} className="border-l-2 pl-3" style={{ borderColor: tierColor }}>
+                                <h3 className="mb-1 text-sm font-bold" style={{ color: tierColor }}>
                                     {BACKLASH_LABELS[tier]}
-                                </div>
-                                {effects.length > 0 && (
-                                    <div style={{ fontSize: '0.75em', color: '#888', marginBottom: tierData.description ? 4 : 0 }}>
-                                        {effects.map((e, i) => (
-                                            <span key={i}>{i > 0 ? ', ' : ''}{e.conditionName}{e.value ? ` ${e.value}` : ''}</span>
-                                        ))}
-                                    </div>
+                                </h3>
+                                {effects.length > 0 ? (
+                                    <p className="mb-1 text-xs text-muted-foreground">
+                                        {effects.map((effect) => `${effect.conditionName}${effect.value ? ` ${effect.value}` : ''}`).join(', ')}
+                                    </p>
+                                ) : null}
+                                {tierData.description ? (
+                                    <RichDescription description={tierData.description} actor={character} />
+                                ) : (
+                                    <p className="text-sm italic text-muted-foreground">No backlash description defined.</p>
                                 )}
-                                {tierData.description && (
-                                    <div
-                                        style={{ fontSize: '0.78em', color: '#aaa', lineHeight: 1.4 }}
-                                        dangerouslySetInnerHTML={{ __html: tierData.description }}
-                                    />
-                                )}
-                            </div>
+                            </article>
                         );
                     })}
                 </div>
-            </div>
+            </section>
+
+            <AppDialogShell
+                open={rulesOpen}
+                onOpenChange={setRulesOpen}
+                layerId="backlash-rules"
+                title="Backlash"
+                description="Rules for using deviations and escalating backlash"
+                size="md"
+            >
+                <div className="space-y-4 text-sm leading-6">
+                    {BACKLASH_RULES.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+                </div>
+            </AppDialogShell>
         </div>
     );
 }
 
-function pillStyle(el) {
-    return {
-        fontSize: '0.74em',
-        color: el.color,
-        background: '#111',
-        border: `1px solid ${el.dim}`,
-        borderRadius: 999,
-        padding: '3px 8px',
-    };
+function PactPill({ element, children }) {
+    return (
+        <span
+            className="rounded-full border bg-background px-2 py-1 text-xs"
+            style={{ color: element.color, borderColor: element.dim }}
+        >
+            {children}
+        </span>
+    );
 }

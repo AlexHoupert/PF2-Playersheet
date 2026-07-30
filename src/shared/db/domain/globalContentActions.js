@@ -1,5 +1,6 @@
 import { createCatalogOverrideRecord } from "./actorReducers.js";
 import { cloneValue } from "./inventoryReducers.js";
+import { countUnlockedAwakeningPoints } from "../../pacts/pactState.js";
 import { selectDeviantAbility, selectDeviantAbilityList } from "../selectors/abilitySelectors.js";
 import { selectPact, selectPactAbilityOptions } from "../selectors/pactSelectors.js";
 import {
@@ -212,6 +213,7 @@ export function createGlobalContentActions(actionContext) {
       if (points <= 0) throw new Error("No awakening points available.");
       const currentLevel = Number(character.pact.unlockedAwakenings?.[ability.id]) || 0;
       if (currentLevel >= level) throw new Error("This awakening is already unlocked.");
+      if (level === 2 && currentLevel < 1) throw new Error("Unlock Awakening 1 first.");
       const next = cloneValue(character);
       next.pact = {
         ...next.pact,
@@ -220,6 +222,20 @@ export function createGlobalContentActions(actionContext) {
           ...(next.pact.unlockedAwakenings || {}),
           [ability.id]: level,
         },
+      };
+      return next;
+    });
+
+  const resetAwakenings = (campaignId, actorId) =>
+    updatePcActorAsCharacter(campaignId, actorId, (character) => {
+      if (!character?.pact?.pactId) throw new Error("This character has no pact.");
+      const refundedPoints = countUnlockedAwakeningPoints(character.pact.unlockedAwakenings);
+      if (refundedPoints <= 0) return character;
+      const next = cloneValue(character);
+      next.pact = {
+        ...next.pact,
+        awakeningPoints: (Number(next.pact.awakeningPoints) || 0) + refundedPoints,
+        unlockedAwakenings: {},
       };
       return next;
     });
@@ -376,6 +392,7 @@ export function createGlobalContentActions(actionContext) {
       acceptPactOffer,
       grantAwakeningPoints,
       spendAwakeningPoint,
+      resetAwakenings,
     },
     shop: {
       createTrader,
