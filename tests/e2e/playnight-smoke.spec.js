@@ -269,6 +269,27 @@ test("admin fixture route loads campaign, player, items, quests, and encounter s
   await expect(page.getByText("Smoke Goblin", { exact: true })).toBeVisible();
 });
 
+test("admin quest editor keeps document fixed and scrolls its own content", async ({ page }) => {
+  await gotoFixture(page, "admin=true");
+  await expectFixtureRoute(page, "admin");
+  await page.getByText("Quests", { exact: true }).click();
+  await page.getByTitle("Edit").first().click();
+
+  const editor = page.getByTestId("gm-quest-editor-scroll");
+  await expect(editor).toBeVisible();
+  const dimensions = await editor.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+  }));
+  expect(dimensions.scrollHeight).toBeGreaterThan(dimensions.clientHeight);
+
+  await editor.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(page.getByRole("button", { name: "Save Quest", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.scrollingElement?.scrollTop || 0)).toBe(0);
+});
+
 test("GM item workspace persists resizing and edits loot quantity inline", async ({ page }) => {
   await gotoFixture(page, "admin=true");
   await page.getByRole("button", { name: /Items$/ }).first().click();

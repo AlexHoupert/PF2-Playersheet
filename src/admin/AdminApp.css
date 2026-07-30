@@ -1,8 +1,24 @@
 /* Admin App Layout */
+html.admin-app-active,
+body.admin-app-active {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body.admin-app-active {
+    padding: 0;
+}
+
+.admin-shell,
+.admin-content-area {
+    min-height: 0;
+}
+
 .admin-content-area {
     padding: 10px;
     height: calc(100vh - 60px);
-    overflow-y: auto;
+    overflow: hidden;
     box-sizing: border-box;
 }
 

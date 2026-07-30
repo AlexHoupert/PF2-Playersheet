@@ -172,12 +172,16 @@ export default function QuestsView({ db }) {
 
     if (isEditing && editingQuest) {
         return (
-            <div className="quest-editor-container">
-                <div className="editor-header">
+            <div className="quest-editor-container flex h-full min-h-0 flex-col overflow-hidden">
+                <div className="editor-header shrink-0">
                     <h2>{editingQuest.id && quests.find(q => q.id === editingQuest.id) ? 'Edit Quest' : 'New Quest'}</h2>
                 </div>
-                {/* Edit Form */}
-                <div className="quest-editor" style={{ padding: 20, maxWidth: 800, margin: '0 auto', background: '#1a1a1a', borderRadius: 8 }}>
+                <div
+                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+                    data-testid="gm-quest-editor-scroll"
+                >
+                    {/* Edit Form */}
+                    <div className="quest-editor" style={{ width: '100%', padding: 20, maxWidth: 800, margin: '0 auto', background: '#1a1a1a', borderRadius: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
                         {editingQuest.parentId && <span className="qc-badge badge-side">Subquest</span>}
                     </div>
@@ -454,10 +458,11 @@ export default function QuestsView({ db }) {
                         </div>
                     </div>
 
-                    <div className="form-actions" style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                        <button className="set-btn" style={{ background: '#d32f2f', marginRight: 'auto' }} onClick={() => handleDelete(editingQuest.id)}>Delete</button>
-                        <button className="set-btn" style={{ background: '#555' }} onClick={() => setIsEditing(false)}>Cancel</button>
-                        <button className="set-btn" onClick={handleSaveEdit}>Save Quest</button>
+                        <div className="form-actions" style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                            <button className="set-btn" style={{ background: '#d32f2f', marginRight: 'auto' }} onClick={() => handleDelete(editingQuest.id)}>Delete</button>
+                            <button className="set-btn" style={{ background: '#555' }} onClick={() => setIsEditing(false)}>Cancel</button>
+                            <button className="set-btn" onClick={handleSaveEdit}>Save Quest</button>
+                        </div>
                     </div>
                 </div>
             </div>

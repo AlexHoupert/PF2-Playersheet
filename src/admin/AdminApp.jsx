@@ -29,6 +29,15 @@ export default function AdminApp() {
     const [modalData, setModalData] = useState(null);
 
     useEffect(() => {
+        document.documentElement.classList.add('admin-app-active');
+        document.body.classList.add('admin-app-active');
+        return () => {
+            document.documentElement.classList.remove('admin-app-active');
+            document.body.classList.remove('admin-app-active');
+        };
+    }, []);
+
+    useEffect(() => {
         if (!canAccessAdminTab(capabilities, activeTab)) {
             setActiveTab(firstAccessibleAdminTab(capabilities));
         }

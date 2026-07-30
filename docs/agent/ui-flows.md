@@ -131,6 +131,12 @@ Admin tabs:
 
 Admin uses the same `ModalManager` as the player app for detail previews.
 
+While `AdminApp` is mounted, the GM shell owns document scrolling and keeps the
+browser page fixed to the viewport. Individual admin views must provide their
+own bounded scroll container. The Quest editor follows this contract through
+`gm-quest-editor-scroll`, so long forms scroll internally without moving or
+clipping the overall GM shell.
+
 ## Session And User Flow
 
 File: `src/admin/views/SessionManager.jsx`

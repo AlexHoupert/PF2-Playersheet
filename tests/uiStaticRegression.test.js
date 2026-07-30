@@ -233,6 +233,19 @@ test('quest fallback reads stay centralized in selectors', () => {
     assert.match(gmSource, /selectQuestLists/);
 });
 
+test('admin shell owns document scroll and quest editor scrolls internally', () => {
+    const adminSource = readSource('src/admin/AdminApp.jsx');
+    const adminCss = readSource('src/admin/AdminApp.css');
+    const questSource = readSource('src/admin/QuestsView.jsx');
+
+    assert.match(adminSource, /document\.body\.classList\.add\('admin-app-active'\)/);
+    assert.match(adminSource, /document\.body\.classList\.remove\('admin-app-active'\)/);
+    assert.match(adminCss, /body\.admin-app-active[\s\S]*overflow:\s*hidden/);
+    assert.match(questSource, /quest-editor-container flex h-full min-h-0 flex-col overflow-hidden/);
+    assert.match(questSource, /data-testid="gm-quest-editor-scroll"/);
+    assert.match(questSource, /min-h-0 flex-1 overflow-y-auto overscroll-contain/);
+});
+
 test('player page cutover uses registry renderer instead of header mode switch', () => {
     const playerSource = readSource('src/player/PlayerAppController.jsx');
     const pageCarouselSource = readSource('src/player/navigation/PlayerPageCarousel.jsx');
