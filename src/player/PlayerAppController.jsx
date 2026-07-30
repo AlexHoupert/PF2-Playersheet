@@ -13,6 +13,7 @@ import { selectActorRulesViewModel } from '../shared/rules/actorRulesViewModel';
 import { selectActorEffectPresentationItems } from '../shared/db/selectors/effectSelectors';
 import LazyCatalogOverlay from './components/LazyCatalogOverlay';
 import PlayerBottomNav from './navigation/PlayerBottomNav';
+import { replaceLinkedCatalogRecord } from './catalog/playerCatalogRecordLinks.js';
 import PlayerDesktopNav from './navigation/PlayerDesktopNav';
 import PlayerPageCarousel from './navigation/PlayerPageCarousel';
 import { buildPlayerInteractionLockState } from './navigation/playerSubpageSwipe';
@@ -665,34 +666,4 @@ export default function PlayerAppController() {
             />
         </div>
     );
-}
-
-function replaceLinkedCatalogRecord(character, catalogType, source, payload, entryId) {
-    const replace = record => {
-        const recordName = typeof record === 'string' ? record : record?.name;
-        const matches = record === source
-            || record?.catalogEntryId === source?.catalogEntryId
-            || record?.catalogOverrideId === source?.catalogOverrideId
-            || (source?.name && recordName === source.name);
-        if (!matches) return record;
-        return {
-            ...(typeof record === 'object' ? record : { name: recordName }),
-            ...payload,
-            name: payload.name || recordName,
-            catalogEntryId: entryId,
-            catalogOverrideId: entryId,
-            isCustom: true,
-        };
-    };
-
-    if (catalogType === 'spell') {
-        character.magic = { ...(character.magic || {}), list: (character.magic?.list || []).map(replace) };
-    } else if (catalogType === 'feat') {
-        character.feats = (character.feats || []).map(replace);
-    } else if (catalogType === 'impulse') {
-        character.impulses = (character.impulses || []).map(replace);
-    } else if (catalogType === 'action') {
-        character.actions = (character.actions || []).map(replace);
-    }
-    return character;
 }

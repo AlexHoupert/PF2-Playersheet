@@ -1,5 +1,6 @@
 import { normalizeCharacterRuntimeShape } from "./characterShape.js";
 import { addItemToCharacter } from "./inventoryReducers.js";
+import { catalogRecordsShareExplicitIdentity } from "../../catalog/catalogRecordIdentity.js";
 
 export const PLAYER_CATALOG_ATTACH_LABELS = {
   item: "Add to my inventory",
@@ -60,8 +61,7 @@ export function attachCatalogEntryToCharacter(character, input, options = {}) {
 function containsCatalogEntry(records = [], candidate) {
   return records.some(record => {
     if (typeof record === "string") return record === candidate.name;
-    return record?.catalogEntryId === candidate.catalogEntryId
-      || record?.catalogOverrideId === candidate.catalogOverrideId
+    return catalogRecordsShareExplicitIdentity(record, candidate)
       || (candidate.name && record?.name === candidate.name);
   });
 }

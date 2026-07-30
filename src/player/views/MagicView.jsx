@@ -81,9 +81,14 @@ export const MagicView = ({
     const wandCastsByKey = new Map(wandSpellCasts.map(group => [group.key, group]));
     const attachedWandKeys = new Set();
 
-    spellList.forEach(s => {
+    spellList.forEach((s, actorRecordIndex) => {
         const spellFromIndex = getSpellIndexItemByName(s.name);
-        const spellData = { ...(spellFromIndex || {}), ...s, _entityType: 'spell' };
+        const spellData = {
+            ...(spellFromIndex || {}),
+            ...s,
+            _entityType: 'spell',
+            _actorRecordIndex: actorRecordIndex,
+        };
         const lvl = String(s.level ?? spellData.level ?? '1');
         const wandKey = getWandSpellKey({ ...spellData, level: lvl });
         const wandCasts = wandCastsByKey.get(wandKey);
