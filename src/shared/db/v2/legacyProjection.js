@@ -3,6 +3,7 @@
 // migration verification and explicit compatibility checks.
 import { V2_COLLECTIONS, V2_GLOBAL_CONFIG_PATH } from './schema.js';
 import { normalizeCharacterRuntimeShape } from '../domain/characterShape.js';
+import { actorToCharacterRuntimeView } from '../../actors/actorRuntimeFields.js';
 
 export function composeLegacyDbFromV2Documents(documents, baseDb = {}) {
     const db = {
@@ -208,18 +209,9 @@ function groupByTargetActorId(effects) {
 }
 
 function actorToLegacyCharacter(actor, effects = []) {
-    const sheet = actor.sheet || {};
-    const stats = actor.stats || sheet.stats || {};
-    const magic = actor.magic || sheet.magic || {};
+    const character = actorToCharacterRuntimeView(actor);
     return normalizeCharacterRuntimeShape({
-        ...sheet,
-        id: actor.id,
-        name: actor.name,
-        level: actor.level,
-        campaignId: actor.campaignId,
-        stats,
-        inventory: actor.inventory || sheet.inventory || [],
-        magic,
+        ...character,
         deletedAt: actor.deletedAt,
         deletedBy: actor.deletedBy,
         restoredAt: actor.restoredAt,

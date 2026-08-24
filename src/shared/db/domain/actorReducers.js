@@ -1,6 +1,11 @@
 import { normalizeCharacterRuntimeShape } from "./characterShape.js";
 import { cloneValue, createInstanceId } from "./inventoryReducers.js";
 import { applyRecordUpdater } from "./updateHelpers.js";
+import {
+  actorToCharacterRuntimeView,
+  readActorRuntimeField,
+  stripActorRuntimeFieldsFromSheet,
+} from "../../actors/actorRuntimeFields.js";
 
 export const ACTOR_KINDS = new Set([
   "pc",
@@ -40,18 +45,23 @@ export function createActorRecord(actor, options = {}) {
     controllerActorId: actor?.controllerActorId || null,
     commandMode: actor?.commandMode || (kind === "pc" ? "self" : "command_animal"),
     ruleset: actor?.ruleset || "pf2e_remaster",
-    sheet: cloneValue(actor?.sheet || {}),
-    stats: cloneValue(actor?.stats || {}),
-    skills: cloneValue(actor?.skills || actor?.sheet?.skills || {}),
-    inventory: cloneValue(actor?.inventory || []),
-    magic: cloneValue(actor?.magic || { slots: {}, list: [] }),
-    formulaBook: cloneValue(actor?.formulaBook || actor?.sheet?.formulaBook || []),
-    languages: cloneValue(actor?.languages || actor?.sheet?.languages || []),
-    senses: cloneValue(actor?.senses || actor?.sheet?.senses || []),
-    proficiencies: cloneValue(actor?.proficiencies || actor?.sheet?.proficiencies || {}),
-    gold: toFiniteNumber(actor?.gold ?? actor?.sheet?.gold, 0),
-    xp: cloneValue(actor?.xp || actor?.sheet?.xp || { current: 0, max: 1000 }),
-    dailyCraftingMax: actor?.dailyCraftingMax ?? actor?.sheet?.dailyCraftingMax,
+    sheet: stripActorRuntimeFieldsFromSheet(actor?.sheet || {}),
+    stats: cloneValue(readActorRuntimeField(actor, "stats")),
+    skills: cloneValue(readActorRuntimeField(actor, "skills")),
+    inventory: cloneValue(readActorRuntimeField(actor, "inventory")),
+    magic: cloneValue(readActorRuntimeField(actor, "magic")),
+    formulaBook: cloneValue(readActorRuntimeField(actor, "formulaBook")),
+    languages: cloneValue(readActorRuntimeField(actor, "languages")),
+    senses: cloneValue(readActorRuntimeField(actor, "senses")),
+    proficiencies: cloneValue(readActorRuntimeField(actor, "proficiencies")),
+    gold: toFiniteNumber(readActorRuntimeField(actor, "gold"), 0),
+    xp: cloneValue(readActorRuntimeField(actor, "xp")),
+    dailyCraftingMax: readActorRuntimeField(actor, "dailyCraftingMax"),
+    feats: cloneValue(readActorRuntimeField(actor, "feats")),
+    actions: cloneValue(readActorRuntimeField(actor, "actions")),
+    impulses: cloneValue(readActorRuntimeField(actor, "impulses")),
+    isCaster: Boolean(readActorRuntimeField(actor, "isCaster")),
+    isKineticist: Boolean(readActorRuntimeField(actor, "isKineticist")),
     baseTemplateId: actor?.baseTemplateId || null,
     progression: cloneValue(actor?.progression || {}),
     selectionSlots: cloneValue(actor?.selectionSlots || {}),
@@ -59,19 +69,18 @@ export function createActorRecord(actor, options = {}) {
   };
 
   if (kind === "pc") {
-    const normalized = normalizeCharacterRuntimeShape({
-      ...base.sheet,
-      id,
-      name: base.name,
-      level: base.level,
-      stats: base.stats,
-      inventory: base.inventory,
-      magic: base.magic,
+    const normalized = normalizeCharacterRuntimeShape(actorToCharacterRuntimeView({
+      ...actor,
+      ...base,
+      sheet: {
+        ...(actor?.sheet || {}),
+        ...(base.sheet || {}),
+      },
+    }, id));
+    base.sheet = stripActorRuntimeFieldsFromSheet({
+      ...(base.sheet || {}),
+      legacyCharacterId: actor?.sheet?.legacyCharacterId || normalized.id || id,
     });
-    base.sheet = {
-      ...normalized,
-      legacyCharacterId: base.sheet.legacyCharacterId || normalized.id || id,
-    };
     base.stats = normalized.stats;
     base.skills = normalized.skills || {};
     base.inventory = normalized.inventory;
@@ -83,7 +92,14 @@ export function createActorRecord(actor, options = {}) {
     base.gold = normalized.gold ?? base.gold;
     base.xp = normalized.xp || base.xp;
     base.dailyCraftingMax = normalized.dailyCraftingMax ?? base.dailyCraftingMax;
+    base.feats = normalized.feats || [];
+    base.actions = normalized.actions || [];
+    base.impulses = normalized.impulses || [];
+    base.isCaster = Boolean(normalized.isCaster);
+    base.isKineticist = Boolean(normalized.isKineticist);
   }
+
+  if (base.dailyCraftingMax === undefined) delete base.dailyCraftingMax;
 
   if (actor?.deletedAt) base.deletedAt = actor.deletedAt;
   if (actor?.deletedBy) base.deletedBy = actor.deletedBy;

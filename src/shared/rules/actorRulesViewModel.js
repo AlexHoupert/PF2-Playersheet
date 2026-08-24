@@ -6,6 +6,7 @@ import {
     buildStandardConditionRuleTree,
 } from "./conditionEffectRules.js";
 import { resolveEffectModifiers } from "./effectResolver.js";
+import { actorToCharacterRuntimeView } from "../actors/actorRuntimeFields.js";
 
 export function buildActorRulesContext({ actor, campaign = null, effects = null, catalog = null } = {}) {
     if (!actor) {
@@ -95,27 +96,7 @@ function isDrainedCondition(effect) {
 }
 
 function toRulesCharacter(actor) {
-    const sheet = actor?.sheet || {};
-    return normalizeCharacterRuntimeShape({
-        ...actor,
-        ...sheet,
-        id: sheet.id || sheet.legacyCharacterId || actor?.id,
-        name: sheet.name || actor?.name,
-        level: sheet.level ?? actor?.level,
-        stats: sheet.stats || actor?.stats || {},
-        skills: sheet.skills || actor?.skills || {},
-        inventory: sheet.inventory || actor?.inventory || [],
-        magic: sheet.magic || actor?.magic || { slots: {}, list: [] },
-        formulaBook: sheet.formulaBook || actor?.formulaBook || [],
-        languages: sheet.languages || actor?.languages || [],
-        senses: sheet.senses || actor?.senses || [],
-        feats: sheet.feats || actor?.feats || [],
-        actions: sheet.actions || actor?.actions || [],
-        impulses: sheet.impulses || actor?.impulses || [],
-        proficiencies: sheet.proficiencies || actor?.proficiencies || {},
-        gold: sheet.gold ?? actor?.gold ?? 0,
-        xp: sheet.xp || actor?.xp || { current: 0, max: 1000 },
-    });
+    return normalizeCharacterRuntimeShape(actorToCharacterRuntimeView(actor));
 }
 
 export function selectActorRulesViewModel(campaign, actorId) {

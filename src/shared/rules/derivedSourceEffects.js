@@ -4,6 +4,7 @@ import {
 } from "./effectDefinitions.js";
 import { selectSeededEffectDefinitions } from "./declarativeRuleSeeds.js";
 import { readCatalogEffectDefinitions } from "./catalogEffectDefinitions.js";
+import { actorToCharacterRuntimeView } from "../actors/actorRuntimeFields.js";
 
 export function buildDerivedSourceEffects({ actor, campaign = null, catalog = null, persistedEffects = [] } = {}) {
   if (!actor) return [];
@@ -37,8 +38,8 @@ export function selectSourceEffectDefinitions(sourceType, source) {
 }
 
 export function collectActorRuleSources(actor) {
-  const sheet = actor.sheet || {};
-  const inventory = actor.inventory || sheet.inventory || [];
+  const runtimeActor = actorToCharacterRuntimeView(actor);
+  const inventory = runtimeActor.inventory || [];
   return [
     ...inventory.map((source, index) => ({
       source,
@@ -46,9 +47,9 @@ export function collectActorRuleSources(actor) {
       instanceKey: source.instanceId || source.id || source._id || `inventory_${index}`,
       equipped: isItemEquipped(source),
     })),
-    ...collectList(actor, sheet, "feats").map((source, index) => ({ source, sourceType: "feat", instanceKey: getSourceId(source, index), equipped: true })),
-    ...collectSpellList(actor, sheet).map((source, index) => ({ source, sourceType: "spell", instanceKey: getSourceId(source, index), equipped: true })),
-    ...collectList(actor, sheet, "impulses").map((source, index) => ({ source, sourceType: "impulse", instanceKey: getSourceId(source, index), equipped: true })),
+    ...(runtimeActor.feats || []).map((source, index) => ({ source, sourceType: "feat", instanceKey: getSourceId(source, index), equipped: true })),
+    ...(runtimeActor.magic?.list || []).map((source, index) => ({ source, sourceType: "spell", instanceKey: getSourceId(source, index), equipped: true })),
+    ...(runtimeActor.impulses || []).map((source, index) => ({ source, sourceType: "impulse", instanceKey: getSourceId(source, index), equipped: true })),
   ];
 }
 
@@ -65,15 +66,6 @@ function resolveCatalogSource(sourceRecord, catalog) {
     .filter(Boolean)
     .map(normalizeKey)
     .some(key => keys.has(key))) || source;
-}
-
-function collectList(actor, sheet, field) {
-  const value = actor[field] || sheet[field] || [];
-  return Array.isArray(value) ? value : [];
-}
-
-function collectSpellList(actor, sheet) {
-  return actor.magic?.list || sheet.magic?.list || actor.spells?.known || sheet.spells?.known || [];
 }
 
 function isItemEquipped(item) {

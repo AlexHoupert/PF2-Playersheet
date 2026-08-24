@@ -286,14 +286,16 @@ test('v2 adapter routes character basis edits through actor repository', async (
         'actor.updateActor',
         'actor.updateActor',
     ]);
-    assert.equal(calls[0][3].sheet.gold, 7.25);
+    assert.equal(calls[0][3].gold, 7.25);
+    assert.equal(calls[0][3].sheet?.gold, undefined);
     assert.equal(calls[1][3].stats.attributes.dexterity, 2);
     assert.equal(calls[2][3].stats.hp.current, 5);
     assert.equal(calls[3][3].stats.hp.temp, 3);
     assert.equal(calls[4][3].stats.hp.max, 5);
     assert.equal(calls[5][3].stats.speed.land, 30);
     assert.equal(calls[6][3].stats.class_dc, 11);
-    assert.equal(calls[7][3].sheet.dailyCraftingMax, 4);
+    assert.equal(calls[7][3].dailyCraftingMax, 4);
+    assert.equal(calls[7][3].sheet?.dailyCraftingMax, undefined);
 });
 
 test('v2 adapter routes player sheet actor edits through actor repository', async () => {
@@ -313,10 +315,11 @@ test('v2 adapter routes player sheet actor edits through actor repository', asyn
 
     assert.deepEqual(calls.map(call => call[0]), Array.from({ length: 11 }, () => 'actor.updateActor'));
     assert.equal(calls[0][3].stats.skills['Lore: Fire'], 2);
-    assert.equal(calls[0][3].sheet.skills['Lore: Fire'], 2);
+    assert.equal(calls[0][3].sheet?.skills, undefined);
     assert.equal(calls[1][3].stats.saves.reflex, 4);
     assert.equal(calls[2][3].stats.proficiencies.light, 2);
-    assert.equal(calls[3][3].sheet.proficiencies.Simple, 2);
+    assert.equal(calls[3][3].proficiencies.Simple, 2);
+    assert.equal(calls[3][3].sheet?.proficiencies, undefined);
     assert.equal(calls[4][3].stats.spell_proficiency, 4);
     assert.equal(calls[5][3].stats.impulse_proficiency, 6);
     assert.equal(calls[6][3].stats.perception, 2);

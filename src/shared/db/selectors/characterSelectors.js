@@ -1,3 +1,5 @@
+import { actorToCharacterRuntimeView } from "../../actors/actorRuntimeFields.js";
+
 export function selectMyCharacter(activeCampaign, userInfo) {
     const characterId = userInfo?.characterId || userInfo?.assignedActorId || userInfo?.actorId;
     if (!characterId) return null;
@@ -15,25 +17,7 @@ export function selectArchivedCharacters(campaign) {
 }
 
 export function actorToCharacterView(actor) {
-    const sheet = actor?.sheet || {};
-    return {
-        ...sheet,
-        id: sheet.id || sheet.legacyCharacterId || actor?.id,
-        name: sheet.name || actor?.name,
-        level: sheet.level ?? actor?.level,
-        stats: sheet.stats || actor?.stats || {},
-        skills: sheet.skills || actor?.skills || {},
-        inventory: sheet.inventory || actor?.inventory || [],
-        magic: sheet.magic || actor?.magic || { slots: {}, list: [] },
-        formulaBook: sheet.formulaBook || actor?.formulaBook || [],
-        languages: sheet.languages || actor?.languages || [],
-        senses: sheet.senses || actor?.senses || [],
-        proficiencies: sheet.proficiencies || actor?.proficiencies || {},
-        gold: sheet.gold ?? actor?.gold ?? 0,
-        xp: sheet.xp || actor?.xp || { current: 0, max: 1000 },
-        deletedAt: sheet.deletedAt || actor?.deletedAt,
-        deletedBy: sheet.deletedBy || actor?.deletedBy,
-    };
+    return actorToCharacterRuntimeView(actor);
 }
 
 function selectPcActorDocs(campaign) {

@@ -2,6 +2,10 @@ import { applyActorUpdate } from "./actorReducers.js";
 import { selectCampaignCapabilities } from "../../auth/campaignCapabilities.js";
 import { normalizeEmail } from "./campaignReducers.js";
 import { applyCharacterUpdate, cloneValue, createInstanceId } from "./inventoryReducers.js";
+import {
+  actorToCharacterRuntimeView,
+  stripActorRuntimeFieldsFromSheet,
+} from "../../actors/actorRuntimeFields.js";
 
 export function createActionContext({
   db,
@@ -54,43 +58,14 @@ export function createActionContext({
       return next;
     });
 
-  const actorDocToCharacter = (actorDoc, actorId) => ({
-    ...(actorDoc?.sheet || {}),
-    id: actorDoc?.sheet?.id || actorDoc?.id || actorId,
-    name: actorDoc?.sheet?.name || actorDoc?.name,
-    level: actorDoc?.sheet?.level ?? actorDoc?.level,
-    stats: actorDoc?.stats || actorDoc?.sheet?.stats,
-    skills: actorDoc?.skills || actorDoc?.sheet?.skills || {},
-    inventory: actorDoc?.inventory || actorDoc?.sheet?.inventory,
-    magic: actorDoc?.magic || actorDoc?.sheet?.magic,
-    formulaBook: actorDoc?.formulaBook || actorDoc?.sheet?.formulaBook || [],
-    languages: actorDoc?.languages || actorDoc?.sheet?.languages || [],
-    senses: actorDoc?.senses || actorDoc?.sheet?.senses || [],
-    proficiencies: actorDoc?.proficiencies || actorDoc?.sheet?.proficiencies || {},
-    pact: actorDoc?.sheet?.pact || actorDoc?.pact,
-    pactOffer: actorDoc?.sheet?.pactOffer || actorDoc?.pactOffer,
-    gold: actorDoc?.gold ?? actorDoc?.sheet?.gold ?? 0,
-    xp: actorDoc?.xp || actorDoc?.sheet?.xp,
-    dailyCraftingMax: actorDoc?.dailyCraftingMax ?? actorDoc?.sheet?.dailyCraftingMax,
-  });
+  const actorDocToCharacter = (actorDoc, actorId) => actorToCharacterRuntimeView(actorDoc, actorId);
 
   const characterToPcActorDoc = (actorDoc, character, campaignId, actorId) => {
-    const sheet = {
+    const sheet = stripActorRuntimeFieldsFromSheet({
       ...(actorDoc?.sheet || {}),
       ...character,
-      id: character.id || actorDoc?.sheet?.id || actorDoc?.id || actorId,
-      stats: character.stats,
-      skills: character.skills,
-      inventory: character.inventory,
-      magic: character.magic,
-      formulaBook: character.formulaBook,
-      languages: character.languages,
-      senses: character.senses,
-      proficiencies: character.proficiencies,
-      gold: character.gold,
-      xp: character.xp,
-      dailyCraftingMax: character.dailyCraftingMax,
-    };
+      legacyCharacterId: actorDoc?.sheet?.legacyCharacterId || character.id || actorDoc?.id || actorId,
+    });
     if (!character.pact) delete sheet.pact;
     if (!character.pactOffer) delete sheet.pactOffer;
 
@@ -111,6 +86,11 @@ export function createActionContext({
       gold: character.gold,
       xp: character.xp,
       dailyCraftingMax: character.dailyCraftingMax,
+      feats: character.feats,
+      actions: character.actions,
+      impulses: character.impulses,
+      isCaster: character.isCaster,
+      isKineticist: character.isKineticist,
       sheet,
     }, (current) => current, {
       createId: () => createDomainId("actor"),

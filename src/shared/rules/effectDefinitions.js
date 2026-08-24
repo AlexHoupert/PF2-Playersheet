@@ -1,4 +1,5 @@
 import { createStandardConditionEffectInput } from "./conditionEffectRules.js";
+import { readActorRuntimeField } from "../actors/actorRuntimeFields.js";
 
 export const EFFECT_ACTIVATION_MODES = Object.freeze(["passive", "usable"]);
 export const EFFECT_TRIGGERS = Object.freeze(["owned", "equipped", "consume", "cast", "activate"]);
@@ -571,7 +572,7 @@ function normalizeMaterializedModifierValue(mode, value) {
 }
 
 function isActorUnarmored(actor) {
-  const inventory = actor.inventory || actor.sheet?.inventory || [];
+  const inventory = readActorRuntimeField(actor, "inventory", []);
   return !inventory.some(item => {
     const equipped = Boolean(item.equipped || item.isEquipped || item.system?.equipped?.value);
     if (!equipped) return false;
@@ -584,7 +585,7 @@ function isActorUnarmored(actor) {
 }
 
 function collectSourceNames(actor, field) {
-  const values = actor[field] || actor.sheet?.[field] || [];
+  const values = readActorRuntimeField(actor, field, []);
   return (Array.isArray(values) ? values : []).map(value => String(value?.name || value?.id || value).toLowerCase());
 }
 
@@ -594,7 +595,7 @@ function normalizeStringList(value) {
 }
 
 function readHp(actor) {
-  const hp = actor.stats?.hp || actor.sheet?.stats?.hp || {};
+  const hp = readActorRuntimeField(actor, "stats", {})?.hp || {};
   return {
     current: toFiniteNumber(hp.current, 0),
     max: Math.max(1, toFiniteNumber(hp.max, 1)),
@@ -604,7 +605,6 @@ function readHp(actor) {
 
 function writeHp(actor, hp) {
   actor.stats = { ...(actor.stats || {}), hp };
-  actor.sheet = { ...(actor.sheet || {}), stats: { ...(actor.sheet?.stats || {}), hp } };
 }
 
 function structuredCloneSafe(value) {

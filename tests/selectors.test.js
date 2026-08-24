@@ -108,8 +108,8 @@ test('character selectors derive compatibility characters from pc actors', () =>
         },
     };
 
-    assert.equal(selectMyCharacter(db.campaigns.camp1, { characterId: 'char1' }).name, 'Hero');
-    assert.equal(selectMyCharacter(db.campaigns.camp1, { assignedActorId: 'char1' }).name, 'Hero');
+    assert.equal(selectMyCharacter(db.campaigns.camp1, { characterId: 'char1' }).name, 'Actor Hero');
+    assert.equal(selectMyCharacter(db.campaigns.camp1, { assignedActorId: 'char1' }).name, 'Actor Hero');
     assert.equal(selectMyCharacter({ id: 'legacyOnly', characters: [{ id: 'char1', name: 'Legacy Hero' }] }, { characterId: 'char1' }), null);
 });
 
@@ -135,8 +135,8 @@ test('character selectors prefer pc actors over stale character projection', () 
         }],
     };
 
-    assert.deepEqual(selectActiveCharacters(campaign).map(character => character.name), ['Actor Sheet Hero']);
-    assert.equal(selectMyCharacter(campaign, { assignedActorId: 'pc1' }).level, 6);
+    assert.deepEqual(selectActiveCharacters(campaign).map(character => character.name), ['Actor Hero']);
+    assert.equal(selectMyCharacter(campaign, { assignedActorId: 'pc1' }).level, 5);
 });
 
 test('quest and lootbag selectors prefer campaign data and fall back to legacy roots', () => {

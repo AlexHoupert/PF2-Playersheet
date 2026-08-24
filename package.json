@@ -24,6 +24,8 @@
     "migrate:v2": "node scripts/migrate_master_to_v2.js --from-firestore --write --backup-file --report-out recovery/v2-migration-report.json",
     "cleanup:legacy-conditions": "node scripts/cleanup_legacy_condition_effects.js",
     "backfill:catalog-effects": "node scripts/backfill_catalog_effect_definitions.js",
+    "migrate:actor-runtime:dry-run": "node scripts/migrate_actor_runtime_fields.js",
+    "migrate:actor-runtime": "node scripts/migrate_actor_runtime_fields.js --write --confirm-write",
     "migrate:lore:dry-run": "node scripts/migrate_lore_to_campaign.js",
     "test": "node --test tests/*.test.js",
     "preview": "vite preview"
