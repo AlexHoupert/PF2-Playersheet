@@ -1950,6 +1950,10 @@ body.swiping-active .app-container * {
     }
 }
 
+body:has([data-testid="catalog-editor-shell"]) [data-effect-request-center] {
+    display: none;
+}
+
 .player-skills-heading {
     display: flex;
     align-items: center;

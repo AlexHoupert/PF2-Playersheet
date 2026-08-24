@@ -3,15 +3,17 @@ import { Check, ShieldQuestion, X } from 'lucide-react';
 
 import { useCampaign } from '../../shared/context/CampaignContext';
 import { useAppFeedback } from '../../shared/feedback/AppFeedback';
+import { useModalLayer } from '../../shared/overlays/ModalLayerProvider';
 
 export default function EffectRequestCenter() {
     const { activeCampaign, capabilities, dataActions, effectRequests } = useCampaign();
     const { notifyError, notifySuccess } = useAppFeedback();
+    const { hasActiveModal } = useModalLayer();
     const [open, setOpen] = useState(false);
     const [busyId, setBusyId] = useState(null);
     const pending = (effectRequests || []).filter(request => request.status === 'pending');
 
-    if (!capabilities.canViewEffectRequests || pending.length === 0) return null;
+    if (hasActiveModal || !capabilities.canViewEffectRequests || pending.length === 0) return null;
 
     const decide = async (request, decision) => {
         setBusyId(request.id);
@@ -31,7 +33,7 @@ export default function EffectRequestCenter() {
     };
 
     return (
-        <div className="fixed bottom-4 right-4 z-[2500]">
+        <div data-effect-request-center className="fixed bottom-4 right-4 z-40">
             <button type="button" className="set-btn flex items-center gap-2 shadow-lg" onClick={() => setOpen(value => !value)}>
                 <ShieldQuestion size={17} /> Effect Requests <span className="rounded bg-black/30 px-1.5">{pending.length}</span>
             </button>
